@@ -1,8 +1,9 @@
+from typing import Any
+
 import requests
 from bs4 import BeautifulSoup
 
 from base_logger import logger
-
 
 # URLe
 OAUTH_URL = 'https://api.librus.pl/OAuth/Authorization?client_id=46&response_type=code&scope=mydata'
@@ -10,6 +11,7 @@ AUTH_URL = 'https://api.librus.pl/OAuth/Authorization?client_id=46'
 GRANT_URL = 'https://api.librus.pl/OAuth/Authorization/Grant?client_id=46'
 MESSAGES_URL = 'https://synergia.librus.pl/wiadomosci'
 MESSAGE_BODY_URL = 'https://synergia.librus.pl'
+NOTIFICATIONS_URL = 'https://synergia.librus.pl/ogloszenia'
 
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36'
 
@@ -33,9 +35,11 @@ class Librus:
         self.__do_read_messages = config.get('read_messages', False)
         self.__librus_login = config.get('librus_login')
         self.__librus_password = config.get('librus_password')
-        self.__login()
+        self.__known_messages = {}
+        self.__known_notifications = {}
 
-    def __login(self):
+
+    def login(self):
         self.__session = requests.Session()
 
         logger.info(f"Autoryzuję w Librusie konto {self.__librus_login}")
@@ -101,15 +105,7 @@ class Librus:
             raise NotLogged()
 
         logger.info("Pobieram listę wiadomości")
-        res = self.__session.get(MESSAGES_URL,
-                                 cookies=self.__cookies,
-                                 headers=self.__headers)
-        if res.status_code != 200:
-            logger.error(
-                f"Pobieranie listy wiadomości: {res.status_code} {res.error}")
-            raise requests.HTTPError(res.status_code, res.error)
-
-        soup = BeautifulSoup(res.content, 'html.parser')
+        soup = self.parse_page(MESSAGES_URL)
 
         mess_tab = soup.find('table',
                              attrs={'class': 'decorated stretch'})
@@ -124,8 +120,12 @@ class Librus:
                 'is_unread': False,
                 'datetime': tds[4].get_text().strip(),
                 'link': tds[2].find('a').attrs.get('href').strip(),
-                'has_attachment': True if tds[1].find('img') else False
+                'has_attachment': True if tds[1].find('img') else False,
+                'id': tds[3].get_text().strip() + tds[4].get_text().strip() + tds[2].get_text()
             }
+
+            if message['id'] not in self.__known_messages:
+                message['is_unread'] = True
 
             # czy wiadomość przeczytana?
             if style := tds[2].attrs.get('style'):
@@ -142,3 +142,60 @@ class Librus:
         self.messages = messages
 
         self.unread_count = sum([m['is_unread'] for m in messages])
+
+    def get_not_known_messages_and_mark_as_known(self) -> list[dict[str, bool | str | Any]]:
+        resp = [message for message in self.messages if message['id'] not in self.__known_messages]
+        self.__known_messages = set([message['id'] for message in self.messages])
+        return resp
+
+    def get_not_known_notifications_and_mark_as_known(self) -> list[dict[str, bool | str | Any]]:
+        resp = [notification for notification in self.notifications if notification['id'] not in self.__known_notifications]
+        self.__known_notifications = set([notification['id'] for notification in self.notifications])
+        return resp
+
+    def fetch_notifications(self):
+        if not self.logged:
+            raise NotLogged()
+
+        logger.info("Pobieram listę ogłoszeń")
+        soup = self.parse_page(NOTIFICATIONS_URL)
+
+        notif_tab = soup.find('div',
+                             attrs={'class': 'container-background'})
+
+        notifications = []
+        for notif_row in notif_tab.find_all('table'):
+            tds = notif_row.find_all('td')
+            notification = {
+                'title': tds[0].get_text().strip(),
+                'sender': tds[1].get_text().strip(),
+                'datetime': tds[2].get_text().strip(),
+                'is_unread': False,
+                'body': tds[3].get_text().strip(),
+                'id': tds[0].get_text().strip() + tds[1].get_text().strip() + tds[2].get_text().strip(),
+                # 'has_attachment': True if tds[1].find('img') else False
+            }
+
+            if notification['id'] not in self.__known_notifications:
+                notification['is_unread'] = True
+
+            # # czy wiadomość przeczytana? nie widziałem jeszcze ogłoszenia jak wygląda
+            # if style := tds[2].attrs.get('style'):
+            #     notification['is_unread'] = style.find('bold') > 0
+
+            notifications.append(notification)
+
+        # sortowanie w kolejności od najnowszych
+        notifications = sorted(notifications, key=lambda m: m['datetime'], reverse=True)
+        self.notifications = notifications
+
+    def parse_page(self, url):
+        res = self.__session.get(url,
+                                 cookies=self.__cookies,
+                                 headers=self.__headers)
+        if res.status_code != 200:
+            logger.error(
+                f"Pobieranie listy wiadomości: {res.status_code} {res.error}")
+            raise requests.HTTPError(res.status_code, res.error)
+        soup = BeautifulSoup(res.content, 'html.parser')
+        return soup

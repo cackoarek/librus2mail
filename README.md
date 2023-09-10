@@ -40,6 +40,3 @@ Po szczegóły konfiguracji GMaila odsyłam na stronę biblioteki.
 
 #### Osługa SMTP
 Dodano obsługę protokołu SMTP jeśli nie posiada ktoś gmaila, bądź chce wysyłac maile z konta wygenrowanego u dostawcy hostingu.
-
-## TODO
-Czytanie ogłoszeń

@@ -15,19 +15,22 @@ class SmtpSender(MailSender):
         self.smtp_server = config['smtp_host']
         self.port = config['port']
 
-    def send_mail(self, user_config, messages):
-        mail_content = self.create_mail_content(user_config, messages)
-        # send mail
+    def send_mail_with_messages(self, user_config, messages):
+        mail_content = self.create_mail_content_for_messages(user_config, messages)
+        title = f"{user_config['librus_login_name']} ma nową wiadomość w Librusie (konto {user_config['librus_login']})"
+
+        self.__send_smtp(user_config, title, mail_content)
+
+    def send_mail_with_notifications(self, user_config, messages):
+        mail_content = self.create_mail_content_for_notifications(user_config, messages)
+        title = f"{user_config['librus_login_name']} ma nowe ogłoszenie w Librusie (konto {user_config['librus_login']})"
+        self.__send_smtp(user_config, title, mail_content)
+
+    def __send_smtp(self, user_config, title, contents):
         logger.info("Wysyłam maila z podsumowaniem")
-
-        self.__send_smtp(user_config, mail_content)
-
-        logger.info("Mail z podsumowaniem wysłany")
-
-    def __send_smtp(self, user_config, contents):
         receiver_emails = user_config['notification_receivers']
         message = MIMEMultipart("alternative")
-        message["Subject"] = f"{user_config['librus_login_name']} ma nową wiadomość w Librusie (konto {user_config['librus_login']})"
+        message["Subject"] = title
         message["From"] = self.sender_email
         message["To"] = ", ".join(receiver_emails)
 
@@ -51,6 +54,7 @@ class SmtpSender(MailSender):
             server.ehlo()  # Can be omitted
             server.login(self.sender_email, self.password)
             server.sendmail(self.sender_email, receiver_emails, message.as_string())
+            logger.info("Mail z podsumowaniem wysłany")
         except Exception as e:
             # Print any error messages to stdout
             print(e)

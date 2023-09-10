@@ -11,12 +11,12 @@ class GmailSender(MailSender):
         # wyslanie maila
         logger.info("Wysyłam maila z podsumowaniem")
 
-        self.__send_gmail(user_config, mail_content, self.password, self.sender_email)
+        self.__send_gmail(user_config, mail_content, self.sender_email, self.password)
 
         logger.info("Mail z podsumowaniem wysłany")
 
     @staticmethod
-    def __send_gmail(config, contents, mail_password, mail_user):
+    def __send_gmail(config, contents, mail_user, mail_password):
         yag = yagmail.SMTP(mail_user, mail_password)
         contents = contents.replace("\n", "")
         yag.send(config['notification_receivers'],

@@ -31,13 +31,15 @@ Konfiguracja zawarta jest w pliku *config.yaml*. Parametry podzielone są na kon
 
 ### Dodatkowo
 
-Skrypt do wysyłania powiadomień mailowych używa biblioteki *[yagmail](https://github.com/kootenpv/yagmail)*, w związki z tym muszą być ustawione zmienne środowiskowe:
+Skrypt do wysyłania powiadomień mailowych używa biblioteki *[yagmail](https://github.com/kootenpv/yagmail)*, w związki z tym muszą być ustawione zmienne w konfiuracji:
 
 * **GMAIL_USER** - użytkownik Google Mail z którego konta będzie wysyłane powiadomienie
 * **GMAIL_PASS** - hasło do tego konta
 
 Po szczegóły konfiguracji GMaila odsyłam na stronę biblioteki.
 
-## Do zrobienia
+#### Osługa SMTP
+Dodano obsługę protokołu SMTP jeśli nie posiada ktoś gmaila, bądź chce wysyłac maile z konta wygenrowanego u dostawcy hostingu.
 
-* wysyłanie treści wiadomości mailem
+## TODO
+Czytanie ogłoszeń

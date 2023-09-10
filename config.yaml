@@ -2,6 +2,7 @@ librus_users:
   - librus_login_name: nazwa pierwszego konta
     librus_login: login do pierwszego konta
     librus_password: hasło do pierwszego konta
+    send_message_body: false
     read_messages: false
     notification_receivers:
       - email pierwszej osoby powiadamianej dla pierwszego konta
@@ -9,6 +10,7 @@ librus_users:
   - librus_login_name: nazwa drugiego konta
     librus_login: login do drugiego konta
     librus_password: hasło do drugiego konta
+    send_message_body: true
     read_messages: false
     notification_receivers:
       - email pierwszej osoby powiadamianej dla drugiego konta

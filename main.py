@@ -1,9 +1,19 @@
 from time import sleep
 
-from config import read_config
+from GmailSender import GmailSender
+from MailSender import MailSender
+from SmtpSender import SmtpSender
 from base_logger import logger
+from config import read_config
 from librus import Librus
-from send_mail import send_mail
+
+
+def configure_mail_provider(config: dict) -> MailSender:
+    mail_config = config['mail']
+    if mail_config['use_gmail']:
+        return GmailSender(mail_config)
+    else:
+        return SmtpSender(mail_config)
 
 
 if __name__ == '__main__':
@@ -14,6 +24,8 @@ if __name__ == '__main__':
     known_msgs = {}
     for u in config['librus_users']:
         known_msgs[u['librus_login']] = []
+
+    mail_sender = configure_mail_provider(config)
 
     # nieskończona pętla sprawdzania ciągle i wciąż
     while True:
@@ -42,7 +54,7 @@ if __name__ == '__main__':
                     known_msgs[user_config['librus_login']] = new_messages
 
                     # wysyłamy mailowe powiadomienie
-                    send_mail(user_config, config['mail'], librus.messages)
+                    mail_sender.send_mail(user_config, librus.messages)
                 else:
                     logger.info("Brak nowych wiadomości")
 

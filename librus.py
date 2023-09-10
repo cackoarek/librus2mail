@@ -21,7 +21,7 @@ class NotLogged(Exception):
         super().__init__(self.message)
 
 
-class Librus():
+class Librus:
     """
     Klasa na podstawie kodu z https://github.com/Mati365/librus-api/blob/master/lib/api.js
     """
@@ -88,7 +88,7 @@ class Librus():
 
         return message_body
 
-    def get_messages(self):
+    def fetch_messages(self):
         def correct_sender(s):
             # wyrzucenie powtórzonego nazwiska w nawiasie
             sender = s.strip()

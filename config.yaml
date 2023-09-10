@@ -14,3 +14,10 @@ librus_users:
       - email pierwszej osoby powiadamianej dla drugiego konta
       - email drugiej osoby powiadamianej dla drugiego konta
 wait_time_s: [czas oczekiwania w sekundach]
+mail:
+  login: email_login
+  password: email_password
+  use_gmail: false/true
+  non_gmail_settings:
+    port: 587
+    smtp_host: s1.ct8.pl

@@ -23,8 +23,8 @@ if __name__ == '__main__':
 
             # próba pobrania danych z Librusa
             try:
-                l = Librus(user_config)
-                l.get_messages()
+                librus = Librus(user_config)
+                librus.fetch_messages()
                 checked = True
             except Exception as e:
                 logger.error(
@@ -34,7 +34,7 @@ if __name__ == '__main__':
             # czy udało się pobrać dane z Librusa?
             if checked:
                 # aktualna lista wszystkich wiadomości
-                new_messages = [m['link'] for m in l.messages]
+                new_messages = [m['link'] for m in librus.messages]
                 if set(known_msgs[user_config['librus_login']]) != set(new_messages):
                     logger.info("Pojawiły się nowe wiadomości")
 
@@ -42,11 +42,11 @@ if __name__ == '__main__':
                     known_msgs[user_config['librus_login']] = new_messages
 
                     # wysyłamy mailowe powiadomienie
-                    send_mail(user_config, l.messages)
+                    send_mail(user_config, config['mail'], librus.messages)
                 else:
                     logger.info("Brak nowych wiadomości")
 
-                del(l)
+                del(librus)
 
         logger.info(f"Czekam przez {config['wait_time_s']} sekund")
         sleep(config['wait_time_s'])

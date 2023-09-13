@@ -6,11 +6,25 @@ Jeśli pojawi się nowa wiadomość - wysyła mailem pełną listę wiadomości 
 
 Za wzór komunikacji z Librusem (głównie logowanie) posłużyło [repo](https://github.com/Mati365/librus-api/) [https://github.com/Mati365/librus-api/](https://github.com/Mati365/librus-api/)
 
+## Instalacja
+
+Zalecane jest użycie virtualenv. 
+
+```shell
+pip install --upgrade virtualenv
+virtualenv venv -p /usr/local/bin/python3.11
+source venv/bin/activate
+python -m pip install -r requirements.txt
+```
+
 ## Uruchomienie
 
 Uruchamia się to cudo przez
 
-`python main.py`
+```shell
+source venv/bin/activate
+python main.py
+```
 
 Potrzebny Python 3.8+ (walrus operator <3)
 

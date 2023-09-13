@@ -19,8 +19,10 @@ def configure_mail_provider(config: dict) -> MailSender:
 if __name__ == '__main__':
     config = read_config('config.yaml')
 
-    for idx, u in enumerate(config['librus_users']):
-        u['id'] = idx
+    for idx, user in enumerate(config['librus_users']):
+        user['id'] = idx
+        user['dry-parse'] = user['do_not_send_first_parse']
+
 
     mail_sender = configure_mail_provider(config)
 
@@ -46,7 +48,7 @@ if __name__ == '__main__':
                 checked = False
 
             # czy udało się pobrać dane z Librusa?
-            if checked:
+            if checked and not user_config['dry-parse']:
                 # aktualna lista wszystkich wiadomości
                 new_messages = librus.get_not_known_messages_and_mark_as_known()
                 if len(new_messages):
@@ -66,6 +68,10 @@ if __name__ == '__main__':
                     mail_sender.send_mail_with_notifications(user_config, new_notifications)
                 else:
                     logger.info("Brak nowych ogłoszeń")
+            else:
+                logger.info("Zebrano dane jako podstawę. Kolejne wpisy na liburs będą wysyłane mailem.")
+                user_config['dry-parse'] = False
+
 
         logger.info(f"Czekam przez {config['wait_time_s']} sekund")
         sleep(config['wait_time_s'])

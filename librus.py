@@ -126,14 +126,12 @@ class Librus:
 
             if message['id'] not in self.__known_messages:
                 message['is_unread'] = True
-
-            # czy wiadomość przeczytana?
-            if style := tds[2].attrs.get('style'):
-                message['is_unread'] = style.find('bold') > 0
-
-            # pobranie treści wiadomości
-            if self.__do_read_messages:
-                message['body'] = self.__get_message_body(message.get('link'))
+                # pobranie treści wiadomości
+                if self.__do_read_messages:
+                    message['body'] = self.__get_message_body(message.get('link'))
+                # czy wiadomość przeczytana?
+                if style := tds[2].attrs.get('style'):
+                    message['is_unread'] = style.find('bold') > 0
 
             messages.append(message)
 

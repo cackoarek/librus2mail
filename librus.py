@@ -1,3 +1,4 @@
+from time import sleep
 from typing import Any
 
 import requests
@@ -12,6 +13,7 @@ GRANT_URL = 'https://api.librus.pl/OAuth/Authorization/Grant?client_id=46'
 MESSAGES_URL = 'https://synergia.librus.pl/wiadomosci'
 MESSAGE_BODY_URL = 'https://synergia.librus.pl'
 NOTIFICATIONS_URL = 'https://synergia.librus.pl/ogloszenia'
+GRADES_URL = 'https://synergia.librus.pl/przegladaj_oceny/uczen'
 
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36'
 
@@ -90,6 +92,8 @@ class Librus:
                                  attrs={'class': 'container-message-content'})
         message_body = message_body.get_text()
 
+        sleep(1000)
+
         return message_body
 
     def fetch_messages(self):
@@ -157,6 +161,42 @@ class Librus:
 
         logger.info("Pobieram listę ogłoszeń")
         soup = self.parse_page(NOTIFICATIONS_URL)
+
+        notif_tab = soup.find('div',
+                             attrs={'class': 'container-background'})
+
+        notifications = []
+        for notif_row in notif_tab.find_all('table'):
+            tds = notif_row.find_all('td')
+            notification = {
+                'title': tds[0].get_text().strip(),
+                'sender': tds[1].get_text().strip(),
+                'datetime': tds[2].get_text().strip(),
+                'is_unread': False,
+                'body': tds[3].get_text().strip(),
+                'id': tds[0].get_text().strip() + tds[1].get_text().strip() + tds[2].get_text().strip(),
+                # 'has_attachment': True if tds[1].find('img') else False
+            }
+
+            if notification['id'] not in self.__known_notifications:
+                notification['is_unread'] = True
+
+            # # czy wiadomość przeczytana? nie widziałem jeszcze ogłoszenia jak wygląda
+            # if style := tds[2].attrs.get('style'):
+            #     notification['is_unread'] = style.find('bold') > 0
+
+            notifications.append(notification)
+
+        # sortowanie w kolejności od najnowszych
+        notifications = sorted(notifications, key=lambda m: m['datetime'], reverse=True)
+        self.notifications = notifications
+
+    def fetch_grades(self):
+        if not self.logged:
+            raise NotLogged()
+
+        logger.info("Pobieram oceny ucznia")
+        soup = self.parse_page(GRADES_URL)
 
         notif_tab = soup.find('div',
                              attrs={'class': 'container-background'})

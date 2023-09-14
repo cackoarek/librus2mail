@@ -3,6 +3,7 @@ from typing import Any
 
 import requests
 from bs4 import BeautifulSoup
+from fake_useragent import UserAgent
 
 from base_logger import logger
 
@@ -31,7 +32,7 @@ class Librus:
     """
     logged = False
     unread_count = None
-    __headers = {'User-Agent': USER_AGENT}
+    __headers = {'User-Agent': UserAgent().random}
 
     def __init__(self, config):
         self.__do_read_messages = config.get('read_messages', False)
@@ -39,7 +40,6 @@ class Librus:
         self.__librus_password = config.get('librus_password')
         self.__known_messages = {}
         self.__known_notifications = {}
-
 
     def login(self):
         self.__session = requests.Session()
@@ -151,7 +151,8 @@ class Librus:
         return resp
 
     def get_not_known_notifications_and_mark_as_known(self) -> list[dict[str, bool | str | Any]]:
-        resp = [notification for notification in self.notifications if notification['id'] not in self.__known_notifications]
+        resp = [notification for notification in self.notifications if
+                notification['id'] not in self.__known_notifications]
         self.__known_notifications = set([notification['id'] for notification in self.notifications])
         return resp
 
@@ -163,7 +164,7 @@ class Librus:
         soup = self.parse_page(NOTIFICATIONS_URL)
 
         notif_tab = soup.find('div',
-                             attrs={'class': 'container-background'})
+                              attrs={'class': 'container-background'})
 
         notifications = []
         for notif_row in notif_tab.find_all('table'):
@@ -199,7 +200,7 @@ class Librus:
         soup = self.parse_page(GRADES_URL)
 
         notif_tab = soup.find('div',
-                             attrs={'class': 'container-background'})
+                              attrs={'class': 'container-background'})
 
         notifications = []
         for notif_row in notif_tab.find_all('table'):

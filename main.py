@@ -18,6 +18,7 @@ def configure_mail_provider(config: dict) -> MailSender:
 
 if __name__ == '__main__':
     config = read_config('config.yaml')
+    # config = read_config('arek_config.yaml')
 
     for idx, user in enumerate(config['librus_users']):
         user['id'] = idx
@@ -39,7 +40,9 @@ if __name__ == '__main__':
                 librus_parsers.setdefault(user_config['id'], Librus(user_config))
                 librus = librus_parsers.get(user_config['id'])
                 librus.login()
+                sleep(1000)
                 librus.fetch_messages()
+                sleep(1000)
                 librus.fetch_notifications()
                 checked = True
             except Exception as e:

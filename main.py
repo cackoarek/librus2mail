@@ -24,7 +24,6 @@ if __name__ == '__main__':
         user['id'] = idx
         user['dry-parse'] = user['do_not_send_first_parse']
 
-
     mail_sender = configure_mail_provider(config)
 
     librus_parsers: dict[int, Librus] = {}
@@ -51,30 +50,32 @@ if __name__ == '__main__':
                 checked = False
 
             # czy udało się pobrać dane z Librusa?
-            if checked and not user_config['dry-parse']:
+            if checked:
                 # aktualna lista wszystkich wiadomości
                 new_messages = librus.get_not_known_messages_and_mark_as_known()
-                if len(new_messages):
-                    logger.info("Pojawiły się nowe wiadomości")
-
-                    # wysyłamy mailowe powiadomienie
-                    mail_sender.send_mail_with_messages(user_config, new_messages)
-                else:
-                    logger.info("Brak nowych wiadomości")
-
                 # aktualna lista wszystkich ogłoszeń
                 new_notifications = librus.get_not_known_notifications_and_mark_as_known()
-                if len(new_notifications):
-                    logger.info("Pojawiły się nowe powiadomienia")
 
-                    # wysyłamy mailowe powiadomienie
-                    mail_sender.send_mail_with_notifications(user_config, new_notifications)
+                if not user_config['dry-parse']:
+                    if len(new_messages):
+                        logger.info("Pojawiły się nowe wiadomości")
+
+                        # wysyłamy mailowe powiadomienie
+                        mail_sender.send_mail_with_messages(user_config, new_messages)
+                    else:
+                        logger.info("Brak nowych wiadomości")
+
+                    if len(new_notifications) and not user_config['dry-parse']:
+                        logger.info("Pojawiły się nowe powiadomienia")
+
+                        # wysyłamy mailowe powiadomienie
+                        mail_sender.send_mail_with_notifications(user_config, new_notifications)
+                    else:
+                        logger.info("Brak nowych ogłoszeń")
+
                 else:
-                    logger.info("Brak nowych ogłoszeń")
-            else:
-                logger.info("Zebrano dane jako podstawę. Kolejne wpisy na liburs będą wysyłane mailem.")
-                user_config['dry-parse'] = False
-
+                    logger.info("Zebrano dane jako podstawę. Kolejne wpisy na liburs będą wysyłane mailem.")
+                    user_config['dry-parse'] = False
 
         logger.info(f"Czekam przez {config['wait_time_s']} sekund")
         sleep(config['wait_time_s'])

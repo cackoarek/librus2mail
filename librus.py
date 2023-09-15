@@ -92,7 +92,7 @@ class Librus:
                                  attrs={'class': 'container-message-content'})
         message_body = message_body.get_text()
 
-        sleep(1000)
+        sleep(5)
 
         return message_body
 

@@ -39,9 +39,9 @@ if __name__ == '__main__':
                 librus_parsers.setdefault(user_config['id'], Librus(user_config))
                 librus = librus_parsers.get(user_config['id'])
                 librus.login()
-                sleep(1000)
+                sleep(5)
                 librus.fetch_messages()
-                sleep(1000)
+                sleep(5)
                 librus.fetch_notifications()
                 checked = True
             except Exception as e:

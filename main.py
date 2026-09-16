@@ -6,6 +6,7 @@ from SmtpSender import SmtpSender
 from base_logger import logger
 from config import read_config
 from librus import Librus
+from storage import create_storage
 
 
 def configure_mail_provider(config: dict) -> MailSender:
@@ -20,9 +21,17 @@ if __name__ == '__main__':
     # config = read_config('config.yaml')
     config = read_config('arek_config.yaml')
 
+    storage_type = config.get('storage_type', 'RAM')
+    storage = create_storage(storage_type)
+    logger.info(f"Typ pamięci stanu (storage_type): {storage_type.upper()}")
+
     for idx, user in enumerate(config['librus_users']):
         user['id'] = idx
-        user['dry-parse'] = user['do_not_send_first_parse']
+        # Jeśli dane z poprzednich uruchomień już istnieją w plikach, pomijamy dry-parse (znamy już historię)
+        if storage.has_existing_data(str(user.get('librus_login'))):
+            user['dry-parse'] = False
+        else:
+            user['dry-parse'] = user.get('do_not_send_first_parse', True)
 
     mail_sender = configure_mail_provider(config)
 
@@ -36,7 +45,7 @@ if __name__ == '__main__':
 
             # próba pobrania danych z Librusa
             try:
-                librus_parsers.setdefault(user_config['id'], Librus(user_config))
+                librus_parsers.setdefault(user_config['id'], Librus(user_config, storage=storage))
                 librus = librus_parsers.get(user_config['id'])
                 librus.login()
                 sleep(5)

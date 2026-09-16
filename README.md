@@ -94,6 +94,7 @@ librus_users:
       - "tata@example.com"
 
 wait_time_s: 300
+storage_type: "RAM" # "RAM" (domyślnie) lub "FILES" (stan zapisywany w katalogu storage/)
 
 mail:
   login: "twoj_email_powiadomien@gmail.com"
@@ -122,6 +123,9 @@ Każdy element listy `librus_users` reprezentuje jedno konto w e-dzienniku:
 ### Parametry globalne
 
 * `wait_time_s` (`int`): Czas oczekiwania w sekundach pomiędzy kolejnymi cyklami sprawdzania e-dziennika (zalecane: minimum `120`–`300` sekund, aby nie obciążać serwera i uniknąć blokad anty-botowych).
+* `storage_type` (`string`): Sposób zapamiętywania przeczytanych wpisów pomiędzy uruchomieniami:
+  * `"RAM"` (domyślnie) – stan przechowywany wyłącznie w pamięci operacyjnej; po restarcie skryptu historia jest indeksowana od nowa.
+  * `"FILES"` – stan zapisywany w plikach JSON w katalogu `storage/` (np. `storage/8979295.json`). Po restarcie aplikacji skrypt wczytuje poprzedni stan i natychmiast wykrywa wpisy, które pojawiły się w czasie, gdy usługa była wyłączona.
 
 ### Konfiguracja wysyłki e-mail (`mail`)
 

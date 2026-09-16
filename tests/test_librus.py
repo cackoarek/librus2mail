@@ -308,6 +308,68 @@ class TestLibrus(unittest.TestCase):
             smtp_sender.send_mail_with_summary(user_cfg, [], [{'title': 'O', 'sender': 'D', 'datetime': 'D', 'is_unread': True}], [])
             mock_smtp.return_value.sendmail.assert_called_once()
 
+    def test_memory_storage(self):
+        from storage import MemoryStorage
+        storage = MemoryStorage()
+        self.assertFalse(storage.has_existing_data("123"))
+
+        storage.save_known_items("123", {"msg1"}, {"notif1"}, {"grade1"})
+        self.assertTrue(storage.has_existing_data("123"))
+
+        data = storage.load_known_items("123")
+        self.assertEqual(data['messages'], {"msg1"})
+        self.assertEqual(data['notifications'], {"notif1"})
+        self.assertEqual(data['grades'], {"grade1"})
+
+    def test_file_storage_persistence(self):
+        import tempfile
+        from storage import FileStorage, create_storage
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            storage = FileStorage(storage_dir=tmpdir)
+            self.assertFalse(storage.has_existing_data("user1"))
+
+            storage.save_known_items("user1", {"m1", "m2"}, {"n1"}, {"g1"})
+            self.assertTrue(storage.has_existing_data("user1"))
+
+            # Now create a new FileStorage instance pointing to same directory
+            storage2 = FileStorage(storage_dir=tmpdir)
+            data = storage2.load_known_items("user1")
+            self.assertEqual(data['messages'], {"m1", "m2"})
+            self.assertEqual(data['notifications'], {"n1"})
+            self.assertEqual(data['grades'], {"g1"})
+
+            # Test factory function
+            ram_s = create_storage("RAM")
+            self.assertEqual(ram_s.__class__.__name__, "MemoryStorage")
+            file_s = create_storage("FILES", storage_dir=tmpdir)
+            self.assertEqual(file_s.__class__.__name__, "FileStorage")
+
+    def test_librus_with_storage_integration(self):
+        import tempfile
+        from storage import FileStorage
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            storage = FileStorage(storage_dir=tmpdir)
+            cfg = {
+                'librus_login': '999',
+                'librus_password': 'pass',
+                'read_grades': True
+            }
+
+            # 1. Instance A discovers a grade
+            librus_a = Librus(cfg, storage=storage)
+            librus_a.grades = [{'id': 'grade_99', 'subject': 'Fizyka', 'grade': '5'}]
+            new_grades = librus_a.get_not_known_grades_and_mark_as_known()
+            self.assertEqual(len(new_grades), 1)
+
+            # 2. Instance B (like after application restart) loads the same storage
+            librus_b = Librus(cfg, storage=storage)
+            librus_b.grades = [{'id': 'grade_99', 'subject': 'Fizyka', 'grade': '5'}]
+            new_grades_b = librus_b.get_not_known_grades_and_mark_as_known()
+            # Grade is already known from file!
+            self.assertEqual(len(new_grades_b), 0)
+
 
 if __name__ == '__main__':
     unittest.main()

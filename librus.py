@@ -35,14 +35,23 @@ class Librus:
     logged = False
     unread_count = None
 
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, storage=None):
+        self.__storage = storage
         self.__do_read_messages = config.get('read_messages', False)
         self.__do_read_grades = config.get('read_grades', False)
         self.__librus_login = config.get('librus_login')
         self.__librus_password = config.get('librus_password')
-        self.__known_messages = set()
-        self.__known_notifications = set()
-        self.__known_grades = set()
+
+        if self.__storage:
+            known = self.__storage.load_known_items(str(self.__librus_login))
+            self.__known_messages = known.get('messages', set())
+            self.__known_notifications = known.get('notifications', set())
+            self.__known_grades = known.get('grades', set())
+        else:
+            self.__known_messages = set()
+            self.__known_notifications = set()
+            self.__known_grades = set()
+
         self.grades = []
         try:
             self.__headers = {'User-Agent': UserAgent().random}
@@ -275,14 +284,25 @@ class Librus:
         self.messages = messages
         self.unread_count = sum(1 for m in messages if m.get('is_unread'))
 
+    def save_state(self) -> None:
+        if self.__storage:
+            self.__storage.save_known_items(
+                str(self.__librus_login),
+                self.__known_messages,
+                self.__known_notifications,
+                self.__known_grades
+            )
+
     def get_not_known_messages_and_mark_as_known(self) -> list[dict[str, bool | str | Any]]:
         resp = [message for message in self.messages if message['id'] not in self.__known_messages]
         self.__known_messages.update(message['id'] for message in self.messages)
+        self.save_state()
         return resp
 
     def get_not_known_notifications_and_mark_as_known(self) -> list[dict[str, bool | str | Any]]:
         resp = [notification for notification in self.notifications if notification['id'] not in self.__known_notifications]
         self.__known_notifications.update(notification['id'] for notification in self.notifications)
+        self.save_state()
         return resp
 
     def fetch_notifications(self):
@@ -440,6 +460,7 @@ class Librus:
     def get_not_known_grades_and_mark_as_known(self) -> list[dict[str, bool | str | Any]]:
         resp = [grade for grade in self.grades if grade['id'] not in self.__known_grades]
         self.__known_grades.update(grade['id'] for grade in self.grades)
+        self.save_state()
         return resp
 
     def parse_page(self, url: str) -> BeautifulSoup:

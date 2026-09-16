@@ -18,3 +18,7 @@ __pycache__/
 # IDE i edytory
 .idea/
 .vscode/
+
+# Pliki stanu aplikacji (storage)
+storage/
+*.tmp

@@ -1,0 +1,34 @@
+# Przykładowy plik konfiguracyjny dla librus2mail
+# Skopiuj ten plik jako config.yaml i uzupełnij swoimi danymi.
+# NIE COMMITUJ plików z prawdziwymi danymi do repozytorium!
+
+librus_users:
+  - librus_login_name: "Imię Ucznia / Nazwa Konta"
+    librus_login: "1234567"           # Login do konta rodzica w Librusie
+    librus_password: "twoje_haslo"     # Hasło do konta rodzica w Librusie
+    read_messages: false              # UWAGA: true pobiera treść, ale oznacza wiadomość jako przeczytaną w portalu Librus!
+    do_not_send_first_parse: true     # Przy pierwszym uruchomieniu zapisuje bazę i nie wysyła starych wiadomości
+    notification_receivers:
+      - "rodzic@example.com"
+      # - "drugi_rodzic@example.com"
+
+  # Możesz dodać kolejne konta (np. dla drugiego dziecka):
+  # - librus_login_name: "Drugie Dziecko"
+  #   librus_login: "7654321"
+  #   librus_password: "inne_haslo"
+  #   read_messages: false
+  #   do_not_send_first_parse: true
+  #   notification_receivers:
+  #     - "rodzic@example.com"
+
+# Czas oczekiwania w sekundach pomiędzy kolejnymi sprawdzeniami Librusa
+wait_time_s: 300
+
+# Konfiguracja wysyłki wiadomości e-mail
+mail:
+  login: "twoj_email_wysylajacy@example.com"
+  password: "haslo_lub_haslo_aplikacji"
+  use_gmail: false                    # Ustaw true, jeśli używasz Gmaila (wymaga hasła aplikacji)
+  non_gmail_settings:                 # Używane, gdy use_gmail: false
+    port: 587
+    smtp_host: "smtp.twoj-serwer.pl"

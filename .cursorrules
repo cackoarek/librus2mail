@@ -1,0 +1,17 @@
+# Cursor AI Rules for Librus2mail
+
+- You are working on Librus2mail, a Python scraper and email notification daemon for Librus Synergia.
+- Target environment is Python 3.10+.
+- Always consult `AGENTS.md` and `.agents/rules/` for full details.
+
+Security Guardrails:
+- NEVER output, commit, or stage sensitive credentials found in `config.yaml`, `arek_config.yaml`, or other local configs.
+- Always use `config.example.yaml` as the template.
+- Never execute `python main.py` in background commands without explicit user confirmation, as it triggers real web requests to Librus and sends live emails.
+
+Code Guidelines:
+- Use `from base_logger import logger` for logging; do not use `print()`.
+- Note: `requests.Response` has NO `error` attribute. Use `res.reason` / `res.text` / `res.raise_for_status()`.
+- Maintain `sleep(5)` rate-limiting delays to prevent Librus Synergia anti-bot blocks.
+- When creating or modifying classes related to notification delivery, inherit from `MailSender`.
+- Keep existing Polish log messages and comments consistent.

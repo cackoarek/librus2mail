@@ -1,4 +1,20 @@
+# Konfiguracje z danymi uwierzytelniającymi
 config.yaml
+arek_config.yaml
+*_config.yaml
+*.local.yaml
+.env
+
+# Logi
+*.log
 librus.log
-.idea
-__pycache__/**
+
+# Środowisko Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+
+# IDE i edytory
+.idea/
+.vscode/

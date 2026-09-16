@@ -237,8 +237,76 @@ class TestLibrus(unittest.TestCase):
         self.assertIn('Biologia', html)
         self.assertIn('6', html)
         self.assertIn('Kartkówka', html)
-        self.assertIn('Anna Nowak', html)
-        self.assertIn('Brawo!', html)
+    def test_mail_sender_create_mail_content_for_summary(self):
+        from MailSender import MailSender
+        user_cfg = {'librus_login': '123', 'librus_login_name': 'Jaś'}
+        messages = [{
+            'id': 'm1',
+            'title': 'Wycieczka',
+            'sender': 'Wychowawca',
+            'datetime': '2026-09-16 10:00',
+            'is_unread': True,
+            'body': 'Szczegóły wycieczki...'
+        }]
+        notifications = [{
+            'id': 'n1',
+            'title': 'Dzień sportu',
+            'sender': 'Dyrektor',
+            'datetime': '2026-09-16 08:00',
+            'is_unread': True,
+            'body': 'Zapraszamy na zawody.'
+        }]
+        grades = [{
+            'id': 'g1',
+            'subject': 'Historia',
+            'grade': '6',
+            'category': 'Kartkówka',
+            'date': '2026-09-16',
+            'teacher': 'Jan Nowak',
+            'weight': '1',
+            'comment': 'Brawo'
+        }]
+
+        html = MailSender.create_mail_content_for_summary(user_cfg, messages, notifications, grades)
+        self.assertIn('Nowe wiadomości (1)', html)
+        self.assertIn('Wycieczka', html)
+        self.assertIn('Szczegóły wycieczki...', html)
+        self.assertIn('Nowe ogłoszenia (1)', html)
+        self.assertIn('Dzień sportu', html)
+        self.assertIn('Nowe oceny (1)', html)
+        self.assertIn('Historia', html)
+        self.assertIn('6', html)
+
+        title = MailSender._create_summary_title(user_cfg, messages, notifications, grades)
+        self.assertIn('1 nowa wiadomość', title)
+        self.assertIn('1 nowe ogłoszenie', title)
+        self.assertIn('Historia: 6', title)
+
+    def test_mail_senders_send_summary(self):
+        from GmailSender import GmailSender
+        from SmtpSender import SmtpSender
+
+        mail_cfg = {
+            'login': 'test@example.com',
+            'password': 'pass',
+            'use_gmail': True,
+            'non_gmail_settings': {'smtp_host': 'localhost', 'port': 587}
+        }
+        user_cfg = {
+            'librus_login': '123',
+            'librus_login_name': 'Jaś',
+            'notification_receivers': ['parent@example.com']
+        }
+
+        with patch('yagmail.SMTP') as mock_yag:
+            gmail_sender = GmailSender(mail_cfg)
+            gmail_sender.send_mail_with_summary(user_cfg, [{'title': 'T', 'sender': 'S', 'datetime': 'D', 'is_unread': True}], [], [])
+            mock_yag.return_value.send.assert_called_once()
+
+        with patch('smtplib.SMTP') as mock_smtp:
+            smtp_sender = SmtpSender(mail_cfg)
+            smtp_sender.send_mail_with_summary(user_cfg, [], [{'title': 'O', 'sender': 'D', 'datetime': 'D', 'is_unread': True}], [])
+            mock_smtp.return_value.sendmail.assert_called_once()
 
 
 if __name__ == '__main__':

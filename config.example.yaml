@@ -8,6 +8,7 @@ librus_users:
     librus_password: "twoje_haslo"     # Hasło do konta rodzica w Librusie
     read_messages: false              # UWAGA: true pobiera treść, ale oznacza wiadomość jako przeczytaną w portalu Librus!
     read_grades: false                # true włącza monitorowanie i powiadomienia e-mail o nowych ocenach ucznia
+    one_summary_message: false        # true wysyła 1 zbiorczy e-mail ze wszystkimi nowymi wpisami zamiast kilku osobnych
     do_not_send_first_parse: true     # Przy pierwszym uruchomieniu zapisuje bazę i nie wysyła starych wiadomości
     notification_receivers:
       - "rodzic@example.com"
@@ -19,6 +20,7 @@ librus_users:
   #   librus_password: "inne_haslo"
   #   read_messages: false
   #   read_grades: false
+  #   one_summary_message: false
   #   do_not_send_first_parse: true
   #   notification_receivers:
   #     - "rodzic@example.com"

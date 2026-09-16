@@ -62,24 +62,36 @@ if __name__ == '__main__':
                 new_grades = librus.get_not_known_grades_and_mark_as_known() if user_config.get('read_grades', False) else []
 
                 if not user_config['dry-parse']:
-                    if len(new_messages):
-                        logger.info("Pojawiły się nowe wiadomości")
-                        mail_sender.send_mail_with_messages(user_config, new_messages)
-                    else:
-                        logger.info("Brak nowych wiadomości")
+                    one_summary = user_config.get('one_summary_message', False)
 
-                    if len(new_notifications):
-                        logger.info("Pojawiły się nowe powiadomienia")
-                        mail_sender.send_mail_with_notifications(user_config, new_notifications)
-                    else:
-                        logger.info("Brak nowych ogłoszeń")
-
-                    if user_config.get('read_grades', False):
-                        if len(new_grades):
-                            logger.info("Pojawiły się nowe oceny")
-                            mail_sender.send_mail_with_grades(user_config, new_grades)
+                    if one_summary:
+                        has_any_new = bool(new_messages or new_notifications or new_grades)
+                        if has_any_new:
+                            logger.info(
+                                f"Pojawiły się nowe wpisy (wiadomości: {len(new_messages)}, ogłoszenia: {len(new_notifications)}, oceny: {len(new_grades)}). Wysyłam zbiorcze podsumowanie."
+                            )
+                            mail_sender.send_mail_with_summary(user_config, new_messages, new_notifications, new_grades)
                         else:
-                            logger.info("Brak nowych ocen")
+                            logger.info("Brak nowych wiadomości, ogłoszeń i ocen")
+                    else:
+                        if len(new_messages):
+                            logger.info("Pojawiły się nowe wiadomości")
+                            mail_sender.send_mail_with_messages(user_config, new_messages)
+                        else:
+                            logger.info("Brak nowych wiadomości")
+
+                        if len(new_notifications):
+                            logger.info("Pojawiły się nowe powiadomienia")
+                            mail_sender.send_mail_with_notifications(user_config, new_notifications)
+                        else:
+                            logger.info("Brak nowych ogłoszeń")
+
+                        if user_config.get('read_grades', False):
+                            if len(new_grades):
+                                logger.info("Pojawiły się nowe oceny")
+                                mail_sender.send_mail_with_grades(user_config, new_grades)
+                            else:
+                                logger.info("Brak nowych ocen")
 
                 else:
                     logger.info("Zebrano dane jako podstawę. Kolejne wpisy na Librus będą wysyłane mailem.")

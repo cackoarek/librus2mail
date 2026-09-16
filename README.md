@@ -87,6 +87,7 @@ librus_users:
     librus_password: "twoje_haslo_librus"
     read_messages: false
     read_grades: true
+    one_summary_message: false
     do_not_send_first_parse: true
     notification_receivers:
       - "mama@example.com"
@@ -114,6 +115,7 @@ Każdy element listy `librus_users` reprezentuje jedno konto w e-dzienniku:
 | `librus_password` | `string` | Hasło do konta rodzica w Librus Synergia. |
 | `read_messages` | `bool` | Czy skrypt ma wchodzić w szczegóły wiadomości i pobierać jej treść (`true`/`false`).<br>**UWAGA:** Wejście w wiadomość oznacza ją w portalu Librus jako przeczytaną przez rodzica. Domyślnie zaleca się `false`. |
 | `read_grades` | `bool` | Czy włączyć sprawdzanie i wysyłanie alertów o nowych ocenach dla tego konta (`true`/`false`). Domyślnie `false`. |
+| `one_summary_message` | `bool` | Jeśli `true`, zamiast wysyłać osobne maile dla wiadomości, ogłoszeń i ocen, wyśle **jeden zbiorczy e-mail** podsumowujący wszystkie nowości z danego cyklu. Domyślnie `false`. |
 | `do_not_send_first_parse` | `bool` | Jeśli `true`, podczas pierwszego cyklu po uruchomieniu wiadomości zostaną tylko zaindeksowane, bez wysyłania e-maili o historii skrzynki. |
 | `notification_receivers` | `list` | Lista adresów e-mail odbiorców, którzy mają otrzymać powiadomienie dla tego konta. |
 

@@ -17,8 +17,8 @@ def configure_mail_provider(config: dict) -> MailSender:
 
 
 if __name__ == '__main__':
-    config = read_config('config.yaml')
-    # config = read_config('arek_config.yaml')
+    # config = read_config('config.yaml')
+    config = read_config('arek_config.yaml')
 
     for idx, user in enumerate(config['librus_users']):
         user['id'] = idx
@@ -76,6 +76,7 @@ if __name__ == '__main__':
                 else:
                     logger.info("Zebrano dane jako podstawę. Kolejne wpisy na liburs będą wysyłane mailem.")
                     user_config['dry-parse'] = False
+
 
         logger.info(f"Czekam przez {config['wait_time_s']} sekund")
         sleep(config['wait_time_s'])

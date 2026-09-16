@@ -47,6 +47,7 @@ class SmtpSender(MailSender):
         context = ssl.create_default_context()
 
         # Try to log in to server and send email
+        server = None
         try:
             server = smtplib.SMTP(self.smtp_server, self.port)
             server.ehlo()  # Can be omitted
@@ -56,7 +57,10 @@ class SmtpSender(MailSender):
             server.sendmail(self.sender_email, receiver_emails, message.as_string())
             logger.info("Mail z podsumowaniem wysłany")
         except Exception as e:
-            # Print any error messages to stdout
-            print(e)
+            logger.error(f"Błąd wysyłania SMTP: {e}")
         finally:
-            server.quit()
+            if server:
+                try:
+                    server.quit()
+                except Exception:
+                    pass

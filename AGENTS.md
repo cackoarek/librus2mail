@@ -88,19 +88,22 @@ librus2mail/
      3. Calls `librus.fetch_messages()`.
      4. Waits 5 seconds (`sleep(5)`).
      5. Calls `librus.fetch_notifications()`.
-     6. Retrieves newly discovered items (`get_not_known_messages_and_mark_as_known()`, `get_not_known_notifications_and_mark_as_known()`).
-     7. If not in `dry-parse` mode and new items exist, triggers `mail_sender.send_mail_with_messages` or `mail_sender.send_mail_with_notifications`.
-     8. If in `dry-parse` mode, marks baseline as initialized and sets `dry-parse = False`.
+     6. Waits 5 seconds (`sleep(5)`).
+     7. Calls `librus.fetch_grades()`.
+     8. Retrieves newly discovered items (`get_not_known_messages_and_mark_as_known()`, `get_not_known_notifications_and_mark_as_known()`, `get_not_known_grades_and_mark_as_known()`).
+     9. If not in `dry-parse` mode and new items exist, triggers `mail_sender.send_mail_with_messages`, `mail_sender.send_mail_with_notifications`, or `mail_sender.send_mail_with_grades`.
+     10. If in `dry-parse` mode, marks baseline as initialized and sets `dry-parse = False`.
    - Sleeps for `config['wait_time_s']` seconds before next round.
 
 3. **Librus Scraping (`librus.py`)**:
    - Simulates 3-step OAuth flow:
      - Step 1: GET `OAUTH_URL`
      - Step 2: POST `AUTH_URL` with user credentials (`login`, `pass`)
-     - Step 3: GET `GRANT_URL`
+     - Step 3: POST `2FA_URL` to skip 2FA prompt
+     - Step 4: GET `GRANT_URL` (follows redirect to `synergia.librus.pl/gateway`)
    - Keeps authentication cookies in `requests.Session`.
    - Parses HTML using BeautifulSoup.
-   - Generates composite string IDs for messages and notifications to detect unread/unseen entries across iterations.
+   - Generates composite string IDs for messages, notifications, and grade IDs to detect unread/unseen entries across iterations.
 
 ---
 
@@ -117,16 +120,13 @@ librus2mail/
 - **Message Read Side-Effect**: In Librus Synergia, visiting `/wiadomosci/szczegoly/...` marks the message as read in the official portal. Advise users to keep `read_messages: false` unless they explicitly want content extraction.
 - **HTML Layout Volatility**: Librus Synergia frequently tweaks table layouts, CSS classes, or forms. Always defensively check if elements exist before indexing (`soup.find(...)`).
 
-### 🐛 3. Known Bugs & Gotchas to Fix or Avoid
+### 🐛 3. Known Gotchas & Historical Fixes
 - **`res.error` does NOT exist in `requests.Response`**:
-  - In `librus.py`, error logging currently uses `res.error` (e.g. `logger.error(f"... {res.status_code} {res.error}")`). This will raise an `AttributeError` when an error actually happens. Always use `res.reason`, `res.text`, or `res.raise_for_status()`.
+  - Always use `res.reason`, `res.text`, or `res.raise_for_status()` when inspecting or logging HTTP failures.
 - **`SmtpSender.py` unhandled variable in `finally`**:
   - `server.quit()` in `finally:` can raise `UnboundLocalError` if `smtplib.SMTP(...)` failed on instantiation. Ensure `server = None` is set before `try`, and check `if server: server.quit()`.
-- **Missing explicit dependencies in `requirements.txt`**:
-  - `requests` is directly imported in `librus.py`, but missing in `requirements.txt`.
-  - `beautifulsoup4` should be specified directly rather than just `bs4`.
-- **Incomplete `fetch_grades()`**:
-  - `fetch_grades()` in `librus.py` is an unfinished stub copying notification code and assigning to `self.notifications`. Do not rely on it without a complete rewrite.
+- **Grades Scraping (`fetch_grades`)**:
+  - Handled via `librus.fetch_grades()` which extracts `a.ocena` links containing grade ID, subject row, and tooltip metadata (`Kategoria`, `Data`, `Nauczyciel`, `Waga`). Deduplicated by unique grade ID.
 
 ### 📝 4. Coding Conventions
 - Logging: Always use `from base_logger import logger`. Do NOT use bare `print()` statements.

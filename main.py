@@ -43,6 +43,9 @@ if __name__ == '__main__':
                 librus.fetch_messages()
                 sleep(5)
                 librus.fetch_notifications()
+                if user_config.get('read_grades', False):
+                    sleep(5)
+                    librus.fetch_grades()
                 checked = True
             except Exception as e:
                 logger.error(
@@ -55,26 +58,31 @@ if __name__ == '__main__':
                 new_messages = librus.get_not_known_messages_and_mark_as_known()
                 # aktualna lista wszystkich ogłoszeń
                 new_notifications = librus.get_not_known_notifications_and_mark_as_known()
+                # aktualna lista wszystkich ocen (jeśli włączone)
+                new_grades = librus.get_not_known_grades_and_mark_as_known() if user_config.get('read_grades', False) else []
 
                 if not user_config['dry-parse']:
                     if len(new_messages):
                         logger.info("Pojawiły się nowe wiadomości")
-
-                        # wysyłamy mailowe powiadomienie
                         mail_sender.send_mail_with_messages(user_config, new_messages)
                     else:
                         logger.info("Brak nowych wiadomości")
 
-                    if len(new_notifications) and not user_config['dry-parse']:
+                    if len(new_notifications):
                         logger.info("Pojawiły się nowe powiadomienia")
-
-                        # wysyłamy mailowe powiadomienie
                         mail_sender.send_mail_with_notifications(user_config, new_notifications)
                     else:
                         logger.info("Brak nowych ogłoszeń")
 
+                    if user_config.get('read_grades', False):
+                        if len(new_grades):
+                            logger.info("Pojawiły się nowe oceny")
+                            mail_sender.send_mail_with_grades(user_config, new_grades)
+                        else:
+                            logger.info("Brak nowych ocen")
+
                 else:
-                    logger.info("Zebrano dane jako podstawę. Kolejne wpisy na liburs będą wysyłane mailem.")
+                    logger.info("Zebrano dane jako podstawę. Kolejne wpisy na Librus będą wysyłane mailem.")
                     user_config['dry-parse'] = False
 
 

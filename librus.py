@@ -37,10 +37,13 @@ class Librus:
 
     def __init__(self, config: dict):
         self.__do_read_messages = config.get('read_messages', False)
+        self.__do_read_grades = config.get('read_grades', False)
         self.__librus_login = config.get('librus_login')
         self.__librus_password = config.get('librus_password')
         self.__known_messages = set()
         self.__known_notifications = set()
+        self.__known_grades = set()
+        self.grades = []
         try:
             self.__headers = {'User-Agent': UserAgent().random}
         except Exception:
@@ -329,21 +332,115 @@ class Librus:
         notifications = sorted(notifications, key=lambda m: m['datetime'], reverse=True)
         self.notifications = notifications
 
-    def fetch_grades(self):
+    @property
+    def do_read_grades(self) -> bool:
+        return self.__do_read_grades
+
+    def fetch_grades(self, force: bool = False):
+        if not self.__do_read_grades and not force:
+            logger.info("Pobieranie ocen jest wyłączone w konfiguracji (read_grades: false)")
+            self.grades = []
+            return
+
         if not self.logged:
             raise NotLogged()
 
         logger.info("Pobieram oceny ucznia")
         soup = self.parse_page(GRADES_URL)
 
-        grades_container = soup.find('div', attrs={'class': 'container-background'})
-        if not grades_container:
+        # Pobieramy widoczne tabele ocen, ignorując ukryte tabele-pułapki (np. z display: none przeciwko rozszerzeniom)
+        visible_tables = [
+            table for table in soup.find_all('table', class_='decorated')
+            if 'display:none' not in table.get('style', '').replace(' ', '').lower()
+        ]
+        if not visible_tables:
+            body = soup.find('div', id='body') or soup
+            visible_tables = [
+                table for table in body.find_all('table')
+                if 'display:none' not in table.get('style', '').replace(' ', '').lower()
+            ]
+
+        if not visible_tables:
+            logger.warning("Nie znaleziono tabeli ocen")
             self.grades = []
             return
 
-        grades = []
-        # Miejsce na przyszłą implementację parsowania ocen
+        raw_grades = []
+        for table in visible_tables:
+            for a in table.find_all('a', class_='ocena'):
+                href = a.get('href', '').strip()
+                if not href or '/przegladaj_oceny/szczegoly/' not in href:
+                    continue
+
+                grade_id = href.split('/')[-1].split('?')[0]
+                if not grade_id or grade_id == '000000':
+                    continue
+
+                val = a.get_text().strip()
+                title_attr = a.get('title', '')
+
+                tr = a.find_parent('tr')
+                subject = ''
+                if tr:
+                    tds = tr.find_all('td')
+                    if len(tds) > 1:
+                        subject = tds[1].get_text().strip()
+
+                if not subject:
+                    parent_table = a.find_parent('table')
+                    if parent_table:
+                        parent_tr = parent_table.find_parent('tr')
+                        if parent_tr:
+                            prev_tr = parent_tr.find_previous_sibling('tr')
+                            if prev_tr:
+                                prev_tds = prev_tr.find_all('td')
+                                if len(prev_tds) > 1:
+                                    subject = prev_tds[1].get_text().strip()
+
+                category = ''
+                date = ''
+                teacher = ''
+                weight = ''
+                comment = ''
+                for part in title_attr.replace('<br/>', '<br>').replace('<br />', '<br>').split('<br>'):
+                    part = part.strip()
+                    if part.startswith('Kategoria:'):
+                        category = part.replace('Kategoria:', '').strip()
+                    elif part.startswith('Data:'):
+                        date = part.replace('Data:', '').strip()
+                    elif part.startswith('Nauczyciel:'):
+                        teacher = part.replace('Nauczyciel:', '').strip()
+                    elif part.startswith('Waga:'):
+                        weight = part.replace('Waga:', '').strip()
+                    elif part.startswith('Komentarz:'):
+                        comment = part.replace('Komentarz:', '').strip()
+
+                raw_grades.append({
+                    'id': grade_id,
+                    'subject': subject or "Inny przedmiot",
+                    'grade': val,
+                    'category': category or "-",
+                    'date': date or "-",
+                    'teacher': teacher or "-",
+                    'weight': weight or "-",
+                    'comment': comment or "-",
+                    'href': href
+                })
+
+        # Deduplikacja po ID
+        unique_grades = {}
+        for g in raw_grades:
+            if g['id'] not in unique_grades:
+                unique_grades[g['id']] = g
+
+        grades = list(unique_grades.values())
+        logger.info(f"Pobrano {len(grades)} ocen")
         self.grades = grades
+
+    def get_not_known_grades_and_mark_as_known(self) -> list[dict[str, bool | str | Any]]:
+        resp = [grade for grade in self.grades if grade['id'] not in self.__known_grades]
+        self.__known_grades.update(grade['id'] for grade in self.grades)
+        return resp
 
     def parse_page(self, url: str) -> BeautifulSoup:
         headers = {

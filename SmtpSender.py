@@ -26,6 +26,14 @@ class SmtpSender(MailSender):
         title = f"{user_config['librus_login_name']} ma nowe ogłoszenie w Librusie (konto {user_config['librus_login']})"
         self.__send_smtp(user_config, title, mail_content)
 
+    def send_mail_with_grades(self, user_config, grades):
+        mail_content = self.create_mail_content_for_grades(user_config, grades)
+        grades_summary = ", ".join([f"{g['subject']}: {g['grade']}" for g in grades[:3]])
+        if len(grades) > 3:
+            grades_summary += f" (+{len(grades) - 3})"
+        title = f"{user_config['librus_login_name']} ma nowe oceny w Librusie ({grades_summary})"
+        self.__send_smtp(user_config, title, mail_content)
+
     def __send_smtp(self, user_config, title, contents):
         logger.info("Wysyłam maila z podsumowaniem")
         receiver_emails = user_config['notification_receivers']

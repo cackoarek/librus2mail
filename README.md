@@ -2,7 +2,7 @@
 
 Automatyczny demon / powiadamiacz e-mail dla systemu **Librus Synergia**. 
 
-Skrypt loguje się na konto rodzica w portalu Librus Synergia, cyklicznie monitoruje skrzynkę wiadomości (`/wiadomosci`) oraz tablicę ogłoszeń szkolnych (`/ogloszenia`), a w przypadku wykrycia nowych wpisów natychmiast wysyła estetyczne podsumowanie HTML na wskazane adresy e-mail.
+Skrypt loguje się na konto rodzica w portalu Librus Synergia, cyklicznie monitoruje skrzynkę wiadomości (`/wiadomosci`), tablicę ogłoszeń szkolnych (`/ogloszenia`) oraz oceny ucznia (`/przegladaj_oceny/uczen`), a w przypadku wykrycia nowych wpisów natychmiast wysyła estetyczne podsumowanie HTML na wskazane adresy e-mail.
 
 ---
 
@@ -29,12 +29,12 @@ Skrypt loguje się na konto rodzica w portalu Librus Synergia, cyklicznie monito
 
 * **Wsparcie dla wielu kont**: Możliwość jednoczesnego monitorowania kont dla kilkorga dzieci (każde konto może mieć przypisanych innych odbiorców powiadomień).
 * **Nowoczesny przepływ OAuth**: Zgodność z aktualnym procesem autoryzacji Librus Synergia (uwzględniającym przekierowania `portalRodzina`, pominięcie ekranu 2FA oraz grant autoryzacyjny).
-* **Obsługa wiadomości i ogłoszeń**: Monitorowanie zarówno wiadomości prywatnych od nauczycieli, jak i ogólnych ogłoszeń szkolnych.
+* **Obsługa wiadomości, ogłoszeń i ocen**: Monitorowanie wiadomości prywatnych od nauczycieli, ogólnych ogłoszeń szkolnych oraz nowo wystawionych ocen (cząstkowych, semestralnych i rocznych).
 * **Elastyczna wysyłka e-mail**:
   * **Gmail**: zoptymalizowana obsługa przez bibliotekę `yagmail` (wymagane hasło aplikacji Google).
   * **SMTP**: standardowy protokół SMTP z szyfrowaniem STARTTLS (działa z dowolnym serwerem pocztowym: hostingodawcy, OVH, Cyberfolks, WP, Onet itp.).
-* **Tryb pierwszego przebiegu (`do_not_send_first_parse`)**: Przy pierwszym uruchomieniu skrypt indeksuje aktualne wiadomości jako bazę i nie wysyła spamu ze wszystkimi historycznymi wpisami – kolejne uruchomienia wysyłają powiadomienia wyłącznie o nowych wpisach.
-* **Formatowanie HTML**: Czytelne tabele z wyróżnieniem nowych wiadomości **pogrubioną czcionką**, danymi nadawcy, tematem i datą nadania.
+* **Tryb pierwszego przebiegu (`do_not_send_first_parse`)**: Przy pierwszym uruchomieniu skrypt indeksuje aktualne wiadomości, ogłoszenia i oceny jako bazę i nie wysyła spamu ze wszystkimi historycznymi wpisami – kolejne uruchomienia wysyłają powiadomienia wyłącznie o nowych wpisach.
+* **Formatowanie HTML**: Czytelne tabele z wyróżnieniem nowych wiadomości **pogrubioną czcionką**, danymi nadawcy, tematem, datą nadania oraz tabelami ocen ze szczegółami (przedmiot, ocena, kategoria, waga, data, nauczyciel).
 
 ---
 
@@ -86,6 +86,7 @@ librus_users:
     librus_login: "1234567"
     librus_password: "twoje_haslo_librus"
     read_messages: false
+    read_grades: true
     do_not_send_first_parse: true
     notification_receivers:
       - "mama@example.com"
@@ -112,6 +113,7 @@ Każdy element listy `librus_users` reprezentuje jedno konto w e-dzienniku:
 | `librus_login` | `string` | Login rodzica w Librus Synergia (zazwyczaj ciąg cyfr). |
 | `librus_password` | `string` | Hasło do konta rodzica w Librus Synergia. |
 | `read_messages` | `bool` | Czy skrypt ma wchodzić w szczegóły wiadomości i pobierać jej treść (`true`/`false`).<br>**UWAGA:** Wejście w wiadomość oznacza ją w portalu Librus jako przeczytaną przez rodzica. Domyślnie zaleca się `false`. |
+| `read_grades` | `bool` | Czy włączyć sprawdzanie i wysyłanie alertów o nowych ocenach dla tego konta (`true`/`false`). Domyślnie `false`. |
 | `do_not_send_first_parse` | `bool` | Jeśli `true`, podczas pierwszego cyklu po uruchomieniu wiadomości zostaną tylko zaindeksowane, bez wysyłania e-maili o historii skrzynki. |
 | `notification_receivers` | `list` | Lista adresów e-mail odbiorców, którzy mają otrzymać powiadomienie dla tego konta. |
 
@@ -210,6 +212,7 @@ librus2mail/
    * Wykonywane jest logowanie OAuth ([`librus.login()`](file:///home/acacko/PycharmProjects/librus2mail/librus.py#L44)).
    * Pobierane są wiadomości ([`librus.fetch_messages()`](file:///home/acacko/PycharmProjects/librus2mail/librus.py#L185)).
    * Pobierane są ogłoszenia ([`librus.fetch_notifications()`](file:///home/acacko/PycharmProjects/librus2mail/librus.py#L254)).
+   * Pobierane są oceny ucznia ([`librus.fetch_grades()`](file:///home/acacko/PycharmProjects/librus2mail/librus.py#L309)).
    * Sprawdzane są nowe pozycje metodami `get_not_known_*`.
    * Jeśli pojawiły się nowe wpisy i nie jest to pierwszy przebieg (`dry-parse`), mailer generuje tabelę HTML i wysyła powiadomienie.
    * Skrypt odczekuje zdefiniowany czas `wait_time_s` przed kolejnym cyklem.

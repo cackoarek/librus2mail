@@ -10,6 +10,7 @@ class TestLibrus(unittest.TestCase):
             'librus_login': '123456',
             'librus_password': 'secret_password',
             'read_messages': False,
+            'read_grades': True,
         }
         self.librus = Librus(self.config)
 
@@ -113,6 +114,133 @@ class TestLibrus(unittest.TestCase):
         with self.assertRaises(NotLogged):
             self.librus.parse_page("https://synergia.librus.pl/wiadomosci")
 
+    def test_fetch_grades_with_valid_table(self):
+        sample_grades_html = """
+        <html>
+        <body>
+            <table class="decorated stretch">
+                <tbody>
+                    <tr>
+                        <td><img src="collapse.png" /></td>
+                        <td>Matematyka</td>
+                        <td>
+                            <span class="grade-box">
+                                <a class="ocena" href="/przegladaj_oceny/szczegoly/112233"
+                                   title="Kategoria: Sprawdzian<br>Data: 2026-09-16<br>Nauczyciel: Jan Kowalski<br>Waga: 3">5+</a>
+                            </span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </body>
+        </html>
+        """
+        self.librus.logged = True
+        with patch.object(self.librus, 'parse_page') as mock_parse:
+            from bs4 import BeautifulSoup
+            mock_parse.return_value = BeautifulSoup(sample_grades_html, 'html.parser')
+            self.librus.fetch_grades()
+
+            self.assertEqual(len(self.librus.grades), 1)
+            grade = self.librus.grades[0]
+            self.assertEqual(grade['id'], '112233')
+            self.assertEqual(grade['subject'], 'Matematyka')
+            self.assertEqual(grade['grade'], '5+')
+            self.assertEqual(grade['category'], 'Sprawdzian')
+            self.assertEqual(grade['date'], '2026-09-16')
+            self.assertEqual(grade['teacher'], 'Jan Kowalski')
+            self.assertEqual(grade['weight'], '3')
+
+            # Test wykrywania nowej oceny
+            new_grades = self.librus.get_not_known_grades_and_mark_as_known()
+            self.assertEqual(len(new_grades), 1)
+            self.assertEqual(new_grades[0]['id'], '112233')
+
+            # Drugie sprawdzenie - ocena już znana
+            new_grades_second = self.librus.get_not_known_grades_and_mark_as_known()
+            self.assertEqual(len(new_grades_second), 0)
+
+    def test_fetch_grades_with_honeypot_dummy_table(self):
+        # Symulacja rzeczywistego DOM Librusa z ukrytą tabelą-pułapką przeciwko rozszerzeniom
+        sample_html = """
+        <html>
+        <body>
+            <div id="body">
+                <table class="decorated stretch" style="display: none;">
+                    <tr>
+                        <td></td><td></td>
+                        <td>
+                            <span id="Ocena0" class="grade-box">
+                                <a class="ocena" href="/przegladaj_oceny/szczegoly/000000">1</a>
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+                <table class="decorated stretch">
+                    <tbody>
+                        <tr class="line0">
+                            <td><img src="icon.png" /></td>
+                            <td>Historia</td>
+                            <td>
+                                <span class="grade-box">
+                                    <a class="ocena" href="/przegladaj_oceny/szczegoly/278026"
+                                       title="Kategoria: Kartkówka<br>Data: 2026-09-11 (pt.)<br>Nauczyciel: Makowiec Małgorzata<br>Waga: 1<br>Komentarz: świetna odpowiedź">6</a>
+                                </span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </body>
+        </html>
+        """
+        self.librus.logged = True
+        with patch.object(self.librus, 'parse_page') as mock_parse:
+            from bs4 import BeautifulSoup
+            mock_parse.return_value = BeautifulSoup(sample_html, 'html.parser')
+            self.librus.fetch_grades()
+
+            self.assertEqual(len(self.librus.grades), 1)
+            grade = self.librus.grades[0]
+            self.assertEqual(grade['id'], '278026')
+            self.assertEqual(grade['subject'], 'Historia')
+            self.assertEqual(grade['grade'], '6')
+            self.assertEqual(grade['category'], 'Kartkówka')
+            self.assertEqual(grade['teacher'], 'Makowiec Małgorzata')
+            self.assertEqual(grade['weight'], '1')
+            self.assertEqual(grade['comment'], 'świetna odpowiedź')
+
+    def test_fetch_grades_disabled_when_read_grades_false(self):
+        librus = Librus({
+            'librus_login': '123456',
+            'librus_password': 'secret_password',
+            'read_grades': False,
+        })
+        librus.logged = True
+        librus.fetch_grades()
+        self.assertEqual(librus.grades, [])
+
+    def test_mail_sender_create_mail_content_for_grades(self):
+        from MailSender import MailSender
+        user_cfg = {'librus_login': '123', 'librus_login_name': 'Jaś'}
+        grades = [{
+            'id': '1',
+            'subject': 'Biologia',
+            'grade': '6',
+            'category': 'Kartkówka',
+            'date': '2026-09-16',
+            'teacher': 'Anna Nowak',
+            'weight': '2',
+            'comment': 'Brawo!'
+        }]
+        html = MailSender.create_mail_content_for_grades(user_cfg, grades)
+        self.assertIn('Biologia', html)
+        self.assertIn('6', html)
+        self.assertIn('Kartkówka', html)
+        self.assertIn('Anna Nowak', html)
+        self.assertIn('Brawo!', html)
+
 
 if __name__ == '__main__':
     unittest.main()
+

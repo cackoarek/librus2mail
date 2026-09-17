@@ -25,8 +25,13 @@ librus_users:
   #   notification_receivers:
   #     - "rodzic@example.com"
 
-# Czas oczekiwania w sekundach pomiędzy kolejnymi sprawdzeniami Librusa
+# Czas oczekiwania w sekundach pomiędzy kolejnymi sprawdzeniami Librusa (gdy work-in-loop: true)
 wait_time_s: 300
+
+# Tryb pracy w pętli:
+# - true: skrypt działa nieprzerwanie w pętli, czekając wait_time_s sekund pomiędzy cyklami (domyślnie)
+# - false: skrypt wykonuje pojedynczy przebieg i kończy działanie (idealne pod harmonogram cron)
+work-in-loop: true
 
 # Tryb przechowywania stanu (przeczytanych wiadomości, ogłoszeń i ocen):
 # - "RAM": pamięć podręczna procesu; restart aplikacji resetuje stan (domyślnie)

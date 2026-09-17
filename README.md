@@ -94,6 +94,7 @@ librus_users:
       - "tata@example.com"
 
 wait_time_s: 300
+work-in-loop: true  # true: pętla z oczekiwaniem wait_time_s (domyślnie), false: pojedynczy przebieg (np. pod crona)
 storage_type: "RAM" # "RAM" (domyślnie) lub "FILES" (stan zapisywany w katalogu storage/)
 
 mail:
@@ -122,10 +123,13 @@ Każdy element listy `librus_users` reprezentuje jedno konto w e-dzienniku:
 
 ### Parametry globalne
 
-* `wait_time_s` (`int`): Czas oczekiwania w sekundach pomiędzy kolejnymi cyklami sprawdzania e-dziennika (zalecane: minimum `120`–`300` sekund, aby nie obciążać serwera i uniknąć blokad anty-botowych).
+* `wait_time_s` (`int`): Czas oczekiwania w sekundach pomiędzy kolejnymi cyklami sprawdzania e-dziennika (zalecane: minimum `120`–`300` sekund, aby nie obciążać serwera i uniknąć blokad anty-botowych). Wykorzystywane, gdy `work-in-loop: true`.
+* `work-in-loop` (`bool`): Tryb pracy w pętli:
+  * `true` (domyślnie) – skrypt działa nieprzerwanie w pętli i po sprawdzeniu kont odczekuje `wait_time_s` sekund.
+  * `false` – skrypt wykonuje dokładnie jeden pełny przebieg (sprawdza konta, wysyła e-maile, zapisuje stan do pliku) i natychmiast kończy pracę. Idealne do uruchamiania przez systemowy harmonogram zadań `cron`.
 * `storage_type` (`string`): Sposób zapamiętywania przeczytanych wpisów pomiędzy uruchomieniami:
   * `"RAM"` (domyślnie) – stan przechowywany wyłącznie w pamięci operacyjnej; po restarcie skryptu historia jest indeksowana od nowa.
-  * `"FILES"` – stan zapisywany w plikach JSON w katalogu `storage/` (np. `storage/8979295.json`). Po restarcie aplikacji skrypt wczytuje poprzedni stan i natychmiast wykrywa wpisy, które pojawiły się w czasie, gdy usługa była wyłączona.
+  * `"FILES"` – stan zapisywany w plikach JSON w katalogu `storage/` (np. `storage/8979295.json`). Po restarcie aplikacji skrypt wczytuje poprzedni stan i natychmiast wykrywa wpisy, które pojawiły się w czasie, gdy usługa była wyłączona. Niezbędne przy `work-in-loop: false`.
 
 ### Konfiguracja wysyłki e-mail (`mail`)
 
@@ -190,6 +194,19 @@ sudo systemctl enable --now librus2mail
 sudo systemctl status librus2mail
 ```
 
+#### Wariant C: Harmonogram zadań `cron` (z `work-in-loop: false` oraz `storage_type: FILES`)
+
+Jeśli wolisz, aby skrypt nie działał jako ciągły demon w tle, lecz był wywoływany cyklicznie przez systemowego crona:
+1. W pliku `config.yaml` ustaw:
+   ```yaml
+   work-in-loop: false
+   storage_type: "FILES"
+   ```
+2. Dodaj wpis do `crontab -e` (np. uruchamianie co 15 minut):
+   ```cron
+   */15 * * * * cd /sciezka/do/librus2mail && venv/bin/python main.py >> librus.log 2>&1
+   ```
+
 ---
 
 ## Architektura projektu
@@ -202,6 +219,7 @@ librus2mail/
 ├── GmailSender.py              # Klasa wysyłająca wiadomości przez yagmail (Gmail)
 ├── SmtpSender.py               # Klasa wysyłająca wiadomości przez standardowe smtplib + STARTTLS
 ├── MailSender.py               # Klasa bazowa z generatorami szablonów e-mail HTML
+├── storage.py                  # Obsługa trwałego zapisu stanu (MemoryStorage / FileStorage)
 ├── librus.py                   # Klient autoryzacji OAuth i scraper portalu Librus Synergia
 ├── main.py                     # Główny punkt wejścia i pętla odpytująca demona
 ├── requirements.txt            # Wymagane biblioteki Pythona

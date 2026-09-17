@@ -25,6 +25,9 @@ if __name__ == '__main__':
     storage = create_storage(storage_type)
     logger.info(f"Typ pamięci stanu (storage_type): {storage_type.upper()}")
 
+    work_in_loop = config.get('work-in-loop', config.get('work_in_loop', True))
+    logger.info(f"Tryb pracy w pętli (work-in-loop): {work_in_loop}")
+
     for idx, user in enumerate(config['librus_users']):
         user['id'] = idx
         # Jeśli dane z poprzednich uruchomień już istnieją w plikach, pomijamy dry-parse (znamy już historię)
@@ -106,6 +109,10 @@ if __name__ == '__main__':
                     logger.info("Zebrano dane jako podstawę. Kolejne wpisy na Librus będą wysyłane mailem.")
                     user_config['dry-parse'] = False
 
+
+        if not work_in_loop:
+            logger.info("Zakończono pojedynczy przebieg (work-in-loop: false). Koniec pracy.")
+            break
 
         logger.info(f"Czekam przez {config['wait_time_s']} sekund")
         sleep(config['wait_time_s'])

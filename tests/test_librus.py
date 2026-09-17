@@ -370,6 +370,19 @@ class TestLibrus(unittest.TestCase):
             # Grade is already known from file!
             self.assertEqual(len(new_grades_b), 0)
 
+    def test_work_in_loop_config_handling(self):
+        # Domyślnie True
+        cfg_default = {}
+        self.assertTrue(cfg_default.get('work-in-loop', cfg_default.get('work_in_loop', True)))
+
+        # Wyłączona pętla (work-in-loop: false)
+        cfg_disabled_hyphen = {'work-in-loop': False}
+        self.assertFalse(cfg_disabled_hyphen.get('work-in-loop', cfg_disabled_hyphen.get('work_in_loop', True)))
+
+        # Wyłączona pętla (work_in_loop: false z podkreśleniem)
+        cfg_disabled_underscore = {'work_in_loop': False}
+        self.assertFalse(cfg_disabled_underscore.get('work-in-loop', cfg_disabled_underscore.get('work_in_loop', True)))
+
 
 if __name__ == '__main__':
     unittest.main()

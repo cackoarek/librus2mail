@@ -42,8 +42,34 @@ class SmtpSender(MailSender):
         title = self._create_summary_title(user_config, messages, notifications, grades)
         self.__send_smtp(user_config, title, mail_content)
 
+    def send_error_notification(self, user_config, error, step_name="", details=None, storage=None, cooldown_s=3600):
+        receivers = user_config.get('notification_receivers')
+        if not receivers:
+            logger.warning(f"Brak odbiorców powiadomień (notification_receivers) dla konta {user_config.get('librus_login')}")
+            return False
+
+        login = str(user_config.get('librus_login'))
+        error_str = f"{type(error).__name__}: {str(error)}"
+        if not self.should_send_error_notification(storage, login, error_str, cooldown_s=cooldown_s):
+            logger.warning(
+                f"Pominięto wysyłkę e-maila o błędzie dla konta {login} (aktywny cooldown {cooldown_s}s)"
+            )
+            return False
+
+        mail_content = self.create_mail_content_for_error(user_config, error, step_name, details, cooldown_s)
+        title = self._create_error_title(user_config, error, step_name)
+        try:
+            logger.info(f"Wysyłam powiadomienie o błędzie ({step_name}) dla {login} do {receivers}")
+            sent = self.__send_smtp(user_config, title, mail_content)
+            if sent and storage:
+                storage.save_last_error(login, error_str, step=step_name)
+            return sent
+        except Exception as e:
+            logger.error(f"Nie udało się wysłać powiadomienia o błędzie przez SMTP: {e}")
+            return False
+
     def __send_smtp(self, user_config, title, contents):
-        logger.info("Wysyłam maila z podsumowaniem")
+        logger.info("Wysyłam wiadomość e-mail")
         receiver_emails = user_config['notification_receivers']
         message = MIMEMultipart("alternative")
         message["Subject"] = title
@@ -71,9 +97,11 @@ class SmtpSender(MailSender):
             server.ehlo()  # Can be omitted
             server.login(self.sender_email, self.password)
             server.sendmail(self.sender_email, receiver_emails, message.as_string())
-            logger.info("Mail z podsumowaniem wysłany")
+            logger.info("Wiadomość e-mail wysłana")
+            return True
         except Exception as e:
             logger.error(f"Błąd wysyłania SMTP: {e}")
+            return False
         finally:
             if server:
                 try:

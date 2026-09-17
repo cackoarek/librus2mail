@@ -1,3 +1,7 @@
+import html
+from datetime import datetime
+
+
 class MailSender:
     def __init__(self, mail_config):
         self.sender_email = mail_config['login']
@@ -247,6 +251,183 @@ class MailSender:
         pass
 
     def send_mail_with_summary(self, user_config, messages=None, notifications=None, grades=None):
+        pass
+
+    @classmethod
+    def _get_error_diagnostics(cls, error: Exception) -> tuple[str, str, str]:
+        err_name = type(error).__name__
+        err_str = str(error)
+        err_lower = err_str.lower()
+
+        if err_name == 'NotLogged' or 'brak dostępu' in err_lower or 'sesja' in err_lower or 'nie zalogowany' in err_lower:
+            category = "Błąd autoryzacji / sesji Librus"
+            diagnosis = "Sesja w portalu Librus Synergia wygasła lub autoryzacja konta nie powiodła się."
+            recommendation = (
+                "1. Upewnij się, że login i hasło w pliku konfiguracyjnym są poprawne.<br>"
+                "2. <strong>Zaloguj się ręcznie przez przeglądarkę na portal.librus.pl</strong> (lub synergia.librus.pl) – "
+                "szkoła lub Librus może wymagać zaakceptowania nowego regulaminu, zgody na przetwarzanie danych, zmiany hasła "
+                "lub odczytania obowiązkowej wiadomości dyrekcji/ankiety, co blokuje automatyczny dostęp do dziennika.<br>"
+                "3. Upewnij się, że konto nie zostało tymczasowo zablokowane z powodu zbyt wielu nieudanych prób logowania."
+            )
+        elif (
+            'connection' in err_name.lower()
+            or 'timeout' in err_name.lower()
+            or 'ssl' in err_name.lower()
+            or 'http' in err_name.lower()
+            or 'resolution' in err_lower
+            or 'max retries' in err_lower
+            or 'failed to establish a new connection' in err_lower
+        ):
+            category = "Błąd połączenia sieciowego"
+            diagnosis = "Nie udało się nawiązać stabilnego połączenia z serwerami Librus (brak połączenia z siecią, timeout lub błąd SSL/DNS)."
+            recommendation = (
+                "1. Sprawdź połączenie internetowe na serwerze/komputerze uruchamiającym aplikację.<br>"
+                "2. Sprawdź w przeglądarce, czy portal https://synergia.librus.pl działa prawidłowo (możliwa przerwa techniczna Librusa).<br>"
+                "3. Jeśli problem występuje regularnie, upewnij się, że zapora sieciowa (firewall) nie blokuje zapytań HTTPS."
+            )
+        elif err_name in ('AttributeError', 'TypeError', 'KeyError', 'IndexError') or 'parse' in err_lower or 'soup' in err_lower:
+            category = "Błąd parsowania danych (zmiana struktury HTML)"
+            diagnosis = "Dane ze strony Librusa zostały pobrane, lecz skrypt nie był w stanie wyodrębnić z nich informacji. Prawdopodobnie Librus zaktualizował strukturę HTML dziennika."
+            recommendation = (
+                "1. Sprawdź szczegółowy log w pliku <code>librus.log</code>.<br>"
+                "2. Zaloguj się przez przeglądarkę i sprawdź, czy w dzienniku nie pojawił się niestandardowy komunikat lub okno modalne zastępujące widok danych.<br>"
+                "3. Jeśli struktura strony uległa trwałej zmianie, konieczna może być aktualizacja selektorów w kodzie."
+            )
+        else:
+            category = f"Błąd wykonania ({err_name})"
+            diagnosis = f"Wystąpił nieoczekiwany błąd podczas pracy aplikacji: {err_str}"
+            recommendation = "Sprawdź plik <code>librus.log</code> oraz poniższe szczegóły techniczne w celu zdiagnozowania problemu."
+
+        return category, diagnosis, recommendation
+
+    @staticmethod
+    def _create_error_title(user_config: dict, error: Exception, step_name: str = "") -> str:
+        step_labels = {
+            'inicjalizacja': 'Inicjalizacja',
+            'logowanie': 'Logowanie',
+            'wiadomości': 'Pobieranie wiadomości',
+            'ogłoszenia': 'Pobieranie ogłoszeń',
+            'oceny': 'Pobieranie ocen'
+        }
+        step_desc = step_labels.get(step_name, step_name or "Komunikacja")
+        name = user_config.get('librus_login_name') or user_config.get('librus_login')
+        login = user_config.get('librus_login', '')
+        return f"[ALERT] {name} - Librus: Błąd ({step_desc}) [konto {login}]"
+
+    @classmethod
+    def create_mail_content_for_error(
+        cls,
+        user_config: dict,
+        error: Exception,
+        step_name: str = "",
+        details: str = None,
+        cooldown_s: int = 3600
+    ) -> str:
+        step_labels = {
+            'inicjalizacja': 'Inicjalizacja parsera',
+            'logowanie': 'Logowanie do portalu Synergia',
+            'wiadomości': 'Pobieranie wiadomości',
+            'ogłoszenia': 'Pobieranie ogłoszeń',
+            'oceny': 'Pobieranie ocen'
+        }
+        step_label = step_labels.get(step_name, step_name or "Komunikacja z portalem")
+        category, diagnosis, recommendation = cls._get_error_diagnostics(error)
+
+        name = html.escape(str(user_config.get('librus_login_name') or user_config.get('librus_login', '')))
+        login = html.escape(str(user_config.get('librus_login', '')))
+        error_msg = html.escape(f"{type(error).__name__}: {str(error)}")
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        cooldown_min = max(1, cooldown_s // 60)
+
+        details_html = ""
+        if details:
+            escaped_details = html.escape(str(details))
+            details_html = f"""
+            <details style="margin: 15px 0;">
+                <summary style="cursor: pointer; color: #7f8c8d; font-size: 13px; font-weight: bold;">Szczegóły techniczne (traceback)</summary>
+                <pre style="background-color: #2c3e50; color: #ecf0f1; padding: 12px; border-radius: 4px; font-size: 12px; overflow-x: auto; white-space: pre-wrap; word-break: break-word; margin-top: 8px;">{escaped_details}</pre>
+            </details>
+            """
+
+        contents = f"""
+        <div style="font-family: Arial, sans-serif; color: #333333; max-width: 700px; line-height: 1.5;">
+            <div style="background-color: #e74c3c; color: #ffffff; padding: 15px 20px; border-radius: 6px 6px 0 0;">
+                <h2 style="margin: 0; font-size: 18px;">⚠️ Librus2mail: Błąd pobierania danych</h2>
+            </div>
+            
+            <div style="border: 1px solid #e0e0e0; border-top: none; padding: 20px; border-radius: 0 0 6px 6px; background-color: #ffffff;">
+                <p style="font-size: 14px; margin-top: 0;">
+                    Podczas cyklicznego sprawdzania dziennika Librus dla konta <strong>{name}</strong> 
+                    (login: <code>{login}</code>) wystąpił błąd uniemożliwiający pobranie aktualnych danych.
+                </p>
+
+                <table style="width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 14px;">
+                    <tr style="background-color: #f8f9fa;">
+                        <td style="padding: 10px; border: 1px solid #dee2e6; font-weight: bold; width: 28%;">Etap:</td>
+                        <td style="padding: 10px; border: 1px solid #dee2e6;">{step_label}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; border: 1px solid #dee2e6; font-weight: bold;">Kategoria błędu:</td>
+                        <td style="padding: 10px; border: 1px solid #dee2e6; color: #c0392b; font-weight: bold;">{category}</td>
+                    </tr>
+                    <tr style="background-color: #f8f9fa;">
+                        <td style="padding: 10px; border: 1px solid #dee2e6; font-weight: bold;">Komunikat:</td>
+                        <td style="padding: 10px; border: 1px solid #dee2e6;"><code>{error_msg}</code></td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; border: 1px solid #dee2e6; font-weight: bold;">Data wystąpienia:</td>
+                        <td style="padding: 10px; border: 1px solid #dee2e6;">{current_time}</td>
+                    </tr>
+                </table>
+
+                <div style="background-color: #e8f4f8; border-left: 4px solid #3498db; padding: 12px 16px; margin: 20px 0; border-radius: 4px;">
+                    <h4 style="margin: 0 0 8px 0; color: #2980b9;">🔍 Diagnoza</h4>
+                    <p style="margin: 0; font-size: 14px;">{diagnosis}</p>
+                </div>
+
+                <div style="background-color: #fef9e7; border-left: 4px solid #f39c12; padding: 12px 16px; margin: 20px 0; border-radius: 4px;">
+                    <h4 style="margin: 0 0 8px 0; color: #d68910;">💡 Zalecane działanie</h4>
+                    <div style="margin: 0; font-size: 14px;">{recommendation}</div>
+                </div>
+
+                {details_html}
+
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+                <p style="font-size: 12px; color: #7f8c8d; margin-bottom: 0;">
+                    ℹ️ <em>Powiadomienia o kolejnych wystąpieniach tego samego błędu są wyciszane na {cooldown_min} minut, aby nie zaśmiecać skrzynki. Gdy błąd ustąpi, stan zostanie automatycznie zresetowany.</em>
+                </p>
+            </div>
+        </div>
+        """
+        return contents
+
+    @staticmethod
+    def should_send_error_notification(storage, user_login: str, error_str: str, cooldown_s: int = 3600) -> bool:
+        if not storage:
+            return True
+        last_err = storage.get_last_error(str(user_login))
+        if not last_err:
+            return True
+        if cooldown_s <= 0:
+            return True
+        last_timestamp = last_err.get('timestamp', 0)
+        last_msg = last_err.get('error', '')
+        if error_str != last_msg:
+            return True
+        now = datetime.now().timestamp()
+        if now - last_timestamp >= cooldown_s:
+            return True
+        return False
+
+    def send_error_notification(
+        self,
+        user_config: dict,
+        error: Exception,
+        step_name: str = "",
+        details: str = None,
+        storage=None,
+        cooldown_s: int = 3600
+    ) -> bool:
         pass
 
 

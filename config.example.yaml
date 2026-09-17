@@ -38,6 +38,13 @@ work-in-loop: true
 # - "FILES": zapis stanu do plików JSON w katalogu storage/ (stan zachowywany po restarcie)
 storage_type: "RAM"
 
+# Powiadomienia o awariach i błędach (brak połączenia z portalem Librus, wygaśnięcie sesji, błąd parsowania HTML):
+# - send_error_notifications: true wysyła alert e-mail do notification_receivers danego konta w razie problemów (domyślnie: true)
+# - error_cooldown_s: minimalny odstęp czasu w sekundach pomiędzy wysyłkami tego samego błędu (domyślnie: 3600 = 1 godzina),
+#   aby zapobiec zalewaniu skrzynki podczas trwającej awarii.
+send_error_notifications: true
+error_cooldown_s: 3600
+
 # Konfiguracja wysyłki wiadomości e-mail
 mail:
   login: "twoj_email_wysylajacy@example.com"

@@ -383,6 +383,161 @@ class TestLibrus(unittest.TestCase):
         cfg_disabled_underscore = {'work_in_loop': False}
         self.assertFalse(cfg_disabled_underscore.get('work-in-loop', cfg_disabled_underscore.get('work_in_loop', True)))
 
+    def test_storage_error_tracking(self):
+        import tempfile
+        import time
+        from storage import MemoryStorage, FileStorage
+
+        # 1. MemoryStorage
+        mem = MemoryStorage()
+        self.assertIsNone(mem.get_last_error("user1"))
+        mem.save_last_error("user1", "Error 1", step="logowanie")
+        err = mem.get_last_error("user1")
+        self.assertIsNotNone(err)
+        self.assertEqual(err['error'], "Error 1")
+        self.assertEqual(err['step'], "logowanie")
+        self.assertIn('timestamp', err)
+        mem.clear_last_error("user1")
+        self.assertIsNone(mem.get_last_error("user1"))
+
+        # 2. FileStorage
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fs = FileStorage(storage_dir=tmpdir)
+            self.assertIsNone(fs.get_last_error("user2"))
+            fs.save_last_error("user2", "Error 2", step="wiadomości")
+            err_f = fs.get_last_error("user2")
+            self.assertIsNotNone(err_f)
+            self.assertEqual(err_f['error'], "Error 2")
+            self.assertEqual(err_f['step'], "wiadomości")
+
+            # Verify that saving known items does not overwrite last_error
+            fs.save_known_items("user2", {"m1"}, {"n1"}, {"g1"})
+            err_f2 = fs.get_last_error("user2")
+            self.assertIsNotNone(err_f2)
+            self.assertEqual(err_f2['error'], "Error 2")
+
+            # Verify clearing last_error
+            fs.clear_last_error("user2")
+            self.assertIsNone(fs.get_last_error("user2"))
+
+    def test_mail_sender_error_diagnostics_and_content(self):
+        from MailSender import MailSender
+        import requests
+
+        user_cfg = {
+            'librus_login': '12345',
+            'librus_login_name': 'Kasia Kowalska',
+            'notification_receivers': ['mama@example.com']
+        }
+
+        # 1. Test NotLogged diagnostics
+        nl_err = NotLogged("Sesja w portalu Synergia wygasła")
+        cat, diag, rec = MailSender._get_error_diagnostics(nl_err)
+        self.assertIn("autoryzacji", cat.lower())
+        self.assertIn("portal.librus.pl", rec)
+
+        # 2. Test ConnectionError diagnostics
+        conn_err = requests.exceptions.ConnectionError("Failed to establish a new connection")
+        cat_c, diag_c, rec_c = MailSender._get_error_diagnostics(conn_err)
+        self.assertIn("połączenia", cat_c.lower())
+        self.assertIn("internetowe", rec_c.lower())
+
+        # 3. Test Parsing / HTML error diagnostics
+        parse_err = AttributeError("'NoneType' object has no attribute 'find'")
+        cat_p, diag_p, rec_p = MailSender._get_error_diagnostics(parse_err)
+        self.assertIn("parsowania", cat_p.lower())
+        self.assertIn("HTML", cat_p)
+
+        # 4. Title formatting
+        title = MailSender._create_error_title(user_cfg, nl_err, step_name="logowanie")
+        self.assertIn("[ALERT]", title)
+        self.assertIn("Kasia Kowalska", title)
+        self.assertIn("Logowanie", title)
+        self.assertIn("12345", title)
+
+        # 5. Content formatting
+        content = MailSender.create_mail_content_for_error(
+            user_cfg,
+            nl_err,
+            step_name="logowanie",
+            details="Traceback line 1\nTraceback line 2",
+            cooldown_s=1800
+        )
+        self.assertIn("Kasia Kowalska", content)
+        self.assertIn("12345", content)
+        self.assertIn("Logowanie do portalu Synergia", content)
+        self.assertIn("Traceback line 1", content)
+        self.assertIn("30 minut", content)
+
+    def test_mail_sender_cooldown_logic(self):
+        import time
+        from MailSender import MailSender
+        from storage import MemoryStorage
+
+        storage = MemoryStorage()
+        user_login = "12345"
+
+        # Initially, no prior errors -> should send
+        self.assertTrue(MailSender.should_send_error_notification(storage, user_login, "Error A", cooldown_s=3600))
+
+        # Record error
+        storage.save_last_error(user_login, "Error A", step="logowanie")
+
+        # Immediate next check with same error -> should be throttled
+        self.assertFalse(MailSender.should_send_error_notification(storage, user_login, "Error A", cooldown_s=3600))
+
+        # Next check with a DIFFERENT error -> should send immediately!
+        self.assertTrue(MailSender.should_send_error_notification(storage, user_login, "Error B", cooldown_s=3600))
+
+        # Check after artificial timestamp aging past cooldown
+        storage._last_errors[user_login]['timestamp'] = time.time() - 3601
+        self.assertTrue(MailSender.should_send_error_notification(storage, user_login, "Error A", cooldown_s=3600))
+
+        # Check cooldown_s <= 0 disables throttling
+        storage.save_last_error(user_login, "Error A", step="logowanie")
+        self.assertTrue(MailSender.should_send_error_notification(storage, user_login, "Error A", cooldown_s=0))
+
+    def test_send_error_notification_gmail_and_smtp(self):
+        from GmailSender import GmailSender
+        from SmtpSender import SmtpSender
+        from storage import MemoryStorage
+
+        mail_cfg = {
+            'login': 'test@example.com',
+            'password': 'pass',
+            'use_gmail': True,
+            'non_gmail_settings': {'smtp_host': 'localhost', 'port': 587}
+        }
+        user_cfg = {
+            'librus_login': '12345',
+            'librus_login_name': 'Kasia',
+            'notification_receivers': ['parent@example.com']
+        }
+        storage = MemoryStorage()
+        test_err = NotLogged("Sesja wygasła")
+
+        # 1. Test GmailSender
+        with patch('yagmail.SMTP') as mock_yag:
+            gmail = GmailSender(mail_cfg)
+            sent = gmail.send_error_notification(user_cfg, test_err, step_name="logowanie", storage=storage, cooldown_s=3600)
+            self.assertTrue(sent)
+            mock_yag.return_value.send.assert_called_once()
+            # Verify error was saved to storage
+            self.assertIsNotNone(storage.get_last_error("12345"))
+
+            # Second attempt immediately should be throttled
+            sent_again = gmail.send_error_notification(user_cfg, test_err, step_name="logowanie", storage=storage, cooldown_s=3600)
+            self.assertFalse(sent_again)
+
+        # 2. Test SmtpSender
+        storage.clear_last_error("12345")
+        with patch('smtplib.SMTP') as mock_smtp:
+            smtp = SmtpSender(mail_cfg)
+            sent_smtp = smtp.send_error_notification(user_cfg, test_err, step_name="oceny", storage=storage, cooldown_s=3600)
+            self.assertTrue(sent_smtp)
+            mock_smtp.return_value.sendmail.assert_called_once()
+            self.assertIsNotNone(storage.get_last_error("12345"))
+
 
 if __name__ == '__main__':
     unittest.main()

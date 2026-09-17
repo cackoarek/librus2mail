@@ -1,3 +1,4 @@
+import traceback
 from time import sleep
 
 from GmailSender import GmailSender
@@ -45,27 +46,51 @@ if __name__ == '__main__':
         # dla każdego użytkownika przygotowujemy jego mini-konfigurację
         for user_config in config['librus_users']:
             checked = False
+            step = "inicjalizacja"
 
             # próba pobrania danych z Librusa
             try:
                 librus_parsers.setdefault(user_config['id'], Librus(user_config, storage=storage))
                 librus = librus_parsers.get(user_config['id'])
+                step = "logowanie"
                 librus.login()
+                step = "wiadomości"
                 sleep(5)
                 librus.fetch_messages()
+                step = "ogłoszenia"
                 sleep(5)
                 librus.fetch_notifications()
                 if user_config.get('read_grades', False):
+                    step = "oceny"
                     sleep(5)
                     librus.fetch_grades()
                 checked = True
             except Exception as e:
                 logger.error(
-                    f"Błąd w głównej pętli dla {user_config['librus_login']}: {e}")
+                    f"Błąd w głównej pętli dla {user_config['librus_login']} na etapie '{step}': {e}")
                 checked = False
+
+                send_error_notifications = config.get(
+                    'send_error_notifications', True
+                ) and user_config.get('send_error_notifications', True)
+
+                if send_error_notifications:
+                    cooldown = config.get('error_cooldown_s', 3600)
+                    tb_str = traceback.format_exc()
+                    mail_sender.send_error_notification(
+                        user_config=user_config,
+                        error=e,
+                        step_name=step,
+                        details=tb_str,
+                        storage=storage,
+                        cooldown_s=cooldown
+                    )
 
             # czy udało się pobrać dane z Librusa?
             if checked:
+                # Po udanym pobraniu danych czyścimy stan błędu dla tego konta
+                if storage:
+                    storage.clear_last_error(str(user_config['librus_login']))
                 # aktualna lista wszystkich wiadomości
                 new_messages = librus.get_not_known_messages_and_mark_as_known()
                 # aktualna lista wszystkich ogłoszeń

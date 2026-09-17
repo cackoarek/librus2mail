@@ -35,6 +35,7 @@ Skrypt loguje się na konto rodzica w portalu Librus Synergia, cyklicznie monito
   * **SMTP**: standardowy protokół SMTP z szyfrowaniem STARTTLS (działa z dowolnym serwerem pocztowym: hostingodawcy, OVH, Cyberfolks, WP, Onet itp.).
 * **Tryb pierwszego przebiegu (`do_not_send_first_parse`)**: Przy pierwszym uruchomieniu skrypt indeksuje aktualne wiadomości, ogłoszenia i oceny jako bazę i nie wysyła spamu ze wszystkimi historycznymi wpisami – kolejne uruchomienia wysyłają powiadomienia wyłącznie o nowych wpisach.
 * **Formatowanie HTML**: Czytelne tabele z wyróżnieniem nowych wiadomości **pogrubioną czcionką**, danymi nadawcy, tematem, datą nadania oraz tabelami ocen ze szczegółami (przedmiot, ocena, kategoria, waga, data, nauczyciel).
+* **Automatyczne alerty o awariach i błędach**: W razie braku połączenia do Librusa, problemów z sesją/autoryzacją lub błędu parsowania danych (np. po zmianie wyglądu dziennika), skrypt natychmiast wysyła e-mail z diagnozą i zalecanymi działaniami. Wbudowany mechanizm throttling / cooldown zapobiega zalewaniu skrzynki powtarzającymi się wiadomościami.
 
 ---
 
@@ -119,6 +120,7 @@ Każdy element listy `librus_users` reprezentuje jedno konto w e-dzienniku:
 | `read_grades` | `bool` | Czy włączyć sprawdzanie i wysyłanie alertów o nowych ocenach dla tego konta (`true`/`false`). Domyślnie `false`. |
 | `one_summary_message` | `bool` | Jeśli `true`, zamiast wysyłać osobne maile dla wiadomości, ogłoszeń i ocen, wyśle **jeden zbiorczy e-mail** podsumowujący wszystkie nowości z danego cyklu. Domyślnie `false`. |
 | `do_not_send_first_parse` | `bool` | Jeśli `true`, podczas pierwszego cyklu po uruchomieniu wiadomości zostaną tylko zaindeksowane, bez wysyłania e-maili o historii skrzynki. |
+| `send_error_notifications` | `bool` | Opcjonalne włączenie/wyłączenie wysyłania maili o błędach dla danego konta (domyślnie: `true`). |
 | `notification_receivers` | `list` | Lista adresów e-mail odbiorców, którzy mają otrzymać powiadomienie dla tego konta. |
 
 ### Parametry globalne
@@ -130,6 +132,8 @@ Każdy element listy `librus_users` reprezentuje jedno konto w e-dzienniku:
 * `storage_type` (`string`): Sposób zapamiętywania przeczytanych wpisów pomiędzy uruchomieniami:
   * `"RAM"` (domyślnie) – stan przechowywany wyłącznie w pamięci operacyjnej; po restarcie skryptu historia jest indeksowana od nowa.
   * `"FILES"` – stan zapisywany w plikach JSON w katalogu `storage/` (np. `storage/8979295.json`). Po restarcie aplikacji skrypt wczytuje poprzedni stan i natychmiast wykrywa wpisy, które pojawiły się w czasie, gdy usługa była wyłączona. Niezbędne przy `work-in-loop: false`.
+* `send_error_notifications` (`bool`): Czy wysyłać e-mail z alertem o problemach (brak połączenia internetowego, awaria Librusa, wygaśnięcie sesji / wymóg zalogowania przez www, błąd parsowania HTML). Domyślnie `true`.
+* `error_cooldown_s` (`int`): Minimalny czas w sekundach pomiędzy kolejnymi powiadomieniami o tym samym błędzie (domyślnie: `3600` sekund = 1h). Zapobiega zalewaniu skrzynki podczas trwającej awarii serwera. Po ustąpieniu problemu licznik resetuje się automatycznie.
 
 ### Konfiguracja wysyłki e-mail (`mail`)
 

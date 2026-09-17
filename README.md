@@ -196,16 +196,31 @@ sudo systemctl status librus2mail
 
 #### Wariant C: Harmonogram zadań `cron` (z `work-in-loop: false` oraz `storage_type: FILES`)
 
-Jeśli wolisz, aby skrypt nie działał jako ciągły demon w tle, lecz był wywoływany cyklicznie przez systemowego crona:
+Jeśli wolisz, aby skrypt nie działał jako ciągły proces w tle, lecz był wywoływany cyklicznie przez systemowego crona:
 1. W pliku `config.yaml` ustaw:
    ```yaml
    work-in-loop: false
    storage_type: "FILES"
    ```
-2. Dodaj wpis do `crontab -e` (np. uruchamianie co 15 minut):
-   ```cron
-   */15 * * * * cd /sciezka/do/librus2mail && venv/bin/python main.py >> librus.log 2>&1
-   ```
+2. Dodaj wpis do tabeli zadań użytkownika poleceniem `crontab -e`:
+
+   * **Uruchamianie co 15 minut:**
+     ```cron
+     */15 * * * * cd /sciezka/do/librus2mail && venv/bin/python main.py >> librus.log 2>&1
+     ```
+
+   * **Uruchamianie raz dziennie o 16:30 (codziennie):**
+     ```cron
+     30 16 * * * cd /sciezka/do/librus2mail && venv/bin/python main.py >> librus.log 2>&1
+     ```
+
+   * **Uruchamianie o 16:30 tylko w dni robocze/szkolne (od poniedziałku do piątku):**
+     ```cron
+     30 16 * * 1-5 cd /sciezka/do/librus2mail && venv/bin/python main.py >> librus.log 2>&1
+     ```
+
+> [!TIP]
+> Przy użyciu crona parametr `storage_type: "FILES"` jest kluczowy – dzięki niemu po każdym zakończeniu skrypt zapisuje stan do katalogu `storage/`, a przy kolejnym uruchomieniu (np. następnego dnia) wyśle powiadomienia tylko o faktycznie nowych wpisach.
 
 ---
 

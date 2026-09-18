@@ -138,8 +138,10 @@ class Librus:
         }
         grant_res = self.__session.get(next_url, headers=grant_headers)
 
-        # Sprawdzenie czy wylądowaliśmy na ekranie 2FA (wymaga potwierdzenia/pominięcia)
-        if '2FA' in grant_res.url or '2FA' in next_url:
+        # Sprawdzenie czy wylądowaliśmy na ekranie 2FA (wymaga potwierdzenia/pominięcia).
+        # Uwaga: weryfikujemy wyłącznie grant_res.url (a nie next_url), ponieważ jeśli Librus nie wymaga 2FA,
+        # zapytanie GET od razu przekierowuje do synergia.librus.pl z parametrami code i state.
+        if '2FA' in grant_res.url:
             logger.info("Wykryto krok 2FA - wysyłam pominięcie (action: requiredActions, skip: true)")
             two_fa_headers = {
                 **self.__headers,
@@ -163,13 +165,13 @@ class Librus:
                 logger.info("Pobieram docelowy grant autoryzacji")
                 grant_res = self.__session.get(final_grant, headers=grant_headers)
             else:
-                grant_url = 'https://api.librus.pl/OAuth/Authorization/Grant?client_id=46'
-                logger.info("Pobieram bezpośredni grant autoryzacji")
-                grant_res = self.__session.get(grant_url, headers=grant_headers)
+                err_info = two_fa_json or two_fa_res.text[:200]
+                logger.error(f"Pominięcie 2FA nie powiodło się: {err_info}")
+                raise NotLogged(f"Nie udało się pominąć kroku 2FA: {err_info}")
 
-        if grant_res.status_code not in (200, 302):
-            logger.error(f"Grant uprawnień nie powiódł się: {grant_res.status_code} {grant_res.reason}")
-            raise requests.HTTPError(f"HTTP {grant_res.status_code}: {grant_res.reason}", response=grant_res)
+        if grant_res.status_code not in (200, 302) or 'error=' in grant_res.url:
+            logger.error(f"Grant uprawnień nie powiódł się: {grant_res.status_code} {grant_res.url}")
+            raise NotLogged(f"Autoryzacja w Librusie nie powiodła się: {grant_res.url}")
 
         logger.info(f"Autoryzacja zakończona pomyślnie. URL docelowy: {grant_res.url}")
         self.__session.cookies.set('TestCookie', '1', domain='synergia.librus.pl', path='/')

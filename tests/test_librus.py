@@ -538,6 +538,52 @@ class TestLibrus(unittest.TestCase):
             mock_smtp.return_value.sendmail.assert_called_once()
             self.assertIsNotNone(storage.get_last_error("12345"))
 
+    def test_login_when_grant_redirects_directly_without_2fa(self):
+        mock_session = MagicMock()
+
+        # Step 1: portalRodzina
+        resp1 = MagicMock()
+        resp1.status_code = 200
+        resp1.url = 'https://api.librus.pl/OAuth/Authorization?client_id=46&state=123'
+        mock_session.get.side_effect = [
+            resp1,
+            # Step 3: GET next_url directly redirects to synergia with code=
+            MagicMock(status_code=200, url='https://synergia.librus.pl/loguj/portalRodzina?code=abc&state=123')
+        ]
+
+        # Step 2: POST login
+        resp2 = MagicMock()
+        resp2.status_code = 200
+        resp2.json.return_value = {'status': 'ok', 'goTo': '/OAuth/Authorization/2FA?client_id=46'}
+        mock_session.post.return_value = resp2
+
+        librus = Librus({
+            'librus_login': '123',
+            'librus_password': 'haslo!with!exclamation'
+        })
+        librus._Librus__session = mock_session
+
+        with patch('requests.Session', return_value=mock_session):
+            librus.login()
+            self.assertTrue(librus.logged)
+            # Verify no POST was made to 2FA because grant_res.url was already synergia with code=
+            self.assertEqual(mock_session.post.call_count, 1)
+
+    def test_login_when_grant_has_error_raises_not_logged(self):
+        mock_session = MagicMock()
+        resp1 = MagicMock(status_code=200, url='https://api.librus.pl/OAuth/Authorization?client_id=46')
+        resp2 = MagicMock(status_code=200)
+        resp2.json.return_value = {'status': 'ok', 'goTo': '/OAuth/Authorization/Grant?client_id=46'}
+        resp3 = MagicMock(status_code=200, url='https://synergia.librus.pl/loguj/portalRodzina?error=invalid_request')
+
+        mock_session.get.side_effect = [resp1, resp3]
+        mock_session.post.return_value = resp2
+
+        librus = Librus({'librus_login': '123', 'librus_password': 'p!'})
+        with patch('requests.Session', return_value=mock_session):
+            with self.assertRaises(NotLogged):
+                librus.login()
+
 
 if __name__ == '__main__':
     unittest.main()

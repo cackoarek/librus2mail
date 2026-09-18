@@ -29,8 +29,8 @@ dev = [
 ]
 
 [project.scripts]
-librus-collector = "librus2mail.librus_collector:run_collector"
-librus-report = "librus2mail.progress_report:run_progress_reports"
+librus-collector = "librus2mail.librus_collector:main"
+librus-report = "librus2mail.progress_report:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

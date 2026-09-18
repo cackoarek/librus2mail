@@ -20,7 +20,7 @@
 
 3. **Code Style**:
    - Standard: Python 3.10+ PEP 8 with type hints.
-   - Logger: Always use `from base_logger import logger`. Avoid `print()`.
+   - Logger: Use `logger = logging.getLogger(__name__)`. Configure handlers in CLI entrypoints (`setup_logging()`). Avoid `print()`.
    - Preserve existing Polish comments and log messages.
 
 ## Modular Rules Reference

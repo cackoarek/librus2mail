@@ -1,9 +1,10 @@
 import json
+import logging
 import os
 from abc import ABC, abstractmethod
 from datetime import datetime
 
-from .base_logger import logger
+logger = logging.getLogger(__name__)
 
 
 class BaseStorage(ABC):

@@ -7,7 +7,9 @@
    - Walrus operator (`:=`) is welcome where it improves clarity.
 
 2. **Logging**:
-   - Always use `from base_logger import logger`.
+   - In library modules, use `logger = logging.getLogger(__name__)`.
+   - In application entry points (`main()`), call `setup_logging()`.
+   - Never instantiate handlers (file, console) at module import level.
    - Never use `print()` for production logging.
    - Maintain Polish language log messages to be consistent with existing project logs.
 

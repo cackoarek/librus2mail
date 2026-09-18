@@ -9,9 +9,9 @@ if _src not in sys.path:
 
 from librus2mail.librus_collector import (  # noqa: F401, E402
     configure_mail_provider,
+    main,
     run_collector,
 )
 
 if __name__ == "__main__":
-    config_file = sys.argv[1] if len(sys.argv) > 1 else "config.yaml"
-    run_collector(config_file)
+    main()

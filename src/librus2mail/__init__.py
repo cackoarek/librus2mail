@@ -1,6 +1,8 @@
 """Librus2mail - Monitor dziennika Librus Synergia z powiadomieniami e-mail i raportami postępów."""
 
-from .base_logger import logger
+import logging
+
+from .base_logger import logger, setup_logging
 from .config import read_config
 from .gmail_sender import GmailSender
 from .librus import Librus, NotLogged
@@ -17,10 +19,13 @@ from .progress_report import run_progress_reports
 from .smtp_sender import SmtpSender
 from .storage import BaseStorage, FileStorage, create_storage
 
+logging.getLogger(__name__).addHandler(logging.NullHandler())
+
 __version__ = "1.0.0"
 
 __all__ = [
     "logger",
+    "setup_logging",
     "read_config",
     "GmailSender",
     "Librus",

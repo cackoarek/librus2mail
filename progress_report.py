@@ -8,9 +8,10 @@ if _src not in sys.path:
     sys.path.insert(0, _src)
 
 from librus2mail.progress_report import (  # noqa: F401, E402
+    main,
     parse_args,
     run_progress_reports,
 )
 
 if __name__ == "__main__":
-    run_progress_reports()
+    main()

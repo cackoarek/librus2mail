@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
+import logging
 import sys
 import traceback
 from time import sleep
 
-from .base_logger import logger
+from .base_logger import setup_logging
 from .config import read_config
 from .gmail_sender import GmailSender
 from .librus import Librus
 from .mail_sender import MailSender
 from .smtp_sender import SmtpSender
 from .storage import create_storage
+
+logger = logging.getLogger(__name__)
 
 
 def configure_mail_provider(config: dict) -> MailSender:
@@ -152,6 +155,12 @@ def run_collector(config_path: str = 'config.yaml'):
         sleep(config['wait_time_s'])
 
 
-if __name__ == '__main__':
+def main():
+    """Główny punkt wejścia CLI dla usługi monitorującej."""
+    setup_logging()
     config_file = sys.argv[1] if len(sys.argv) > 1 else 'config.yaml'
     run_collector(config_file)
+
+
+if __name__ == '__main__':
+    main()

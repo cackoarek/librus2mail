@@ -140,7 +140,7 @@ librus2mail/
   - Handled via `librus.fetch_grades()` which extracts `a.ocena` links containing grade ID, subject row, and tooltip metadata (`Kategoria`, `Data`, `Nauczyciel`, `Waga`). Deduplicated by unique grade ID.
 
 ### 📝 4. Coding Conventions
-- Logging: Always use `from base_logger import logger`. Do NOT use bare `print()` statements.
+- Logging: Use `logger = logging.getLogger(__name__)` in modules. Configure handlers (`setup_logging()`) only in CLI entrypoints (`main()`). Do NOT use bare `print()` statements.
 - Language: Keep existing Polish log messages and comments consistent.
 - Typing: Add type hints (`list[dict[str, Any]]`, `Optional[str]`, etc.) to new functions.
 - Class hierarchy: Keep `MailSender` as base, specialize subclasses.

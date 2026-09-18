@@ -1,3 +1,4 @@
+import logging
 import random
 import time
 from time import sleep
@@ -7,7 +8,7 @@ import requests
 from bs4 import BeautifulSoup
 from fake_useragent import UserAgent
 
-from .base_logger import logger
+logger = logging.getLogger(__name__)
 
 # URLe
 PORTAL_RODZINA_URL = 'https://synergia.librus.pl/loguj/portalRodzina'

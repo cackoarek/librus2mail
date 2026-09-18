@@ -91,3 +91,31 @@ class TestPackageLayout(unittest.TestCase):
             t = jinja_env.get_template(tmpl)
             self.assertIsNotNone(t)
             self.assertEqual(t.name, tmpl)
+
+    def test_logging_configuration_on_demand(self):
+        import logging
+        import os
+        import tempfile
+
+        from librus2mail.base_logger import setup_logging
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            test_log_file = os.path.join(tmpdir, "custom.log")
+            pkg_logger = setup_logging(log_file=test_log_file)
+            self.assertIsNotNone(pkg_logger)
+            self.assertTrue(any(isinstance(h, logging.FileHandler) for h in pkg_logger.handlers))
+            self.assertTrue(any(isinstance(h, logging.StreamHandler) for h in pkg_logger.handlers))
+
+            # Test logging through child logger
+            child = logging.getLogger("librus2mail.test_submodule")
+            child.info("Hello from child logger")
+
+            # Flush and close handlers
+            for h in pkg_logger.handlers:
+                h.flush()
+                h.close()
+
+            with open(test_log_file, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("librus2mail.test_submodule", content)
+            self.assertIn("Hello from child logger", content)

@@ -1,7 +1,10 @@
+import logging
+
 import yagmail
 
-from .base_logger import logger
 from .mail_sender import MailSender
+
+logger = logging.getLogger(__name__)
 
 
 class GmailSender(MailSender):

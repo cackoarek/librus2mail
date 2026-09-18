@@ -1,8 +1,9 @@
+import logging
 import os
 
 import yaml
 
-from .base_logger import logger
+logger = logging.getLogger(__name__)
 
 
 def read_config(config_file='config.yaml'):

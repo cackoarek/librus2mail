@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 import argparse
+import logging
 import re
 import sys
 from datetime import datetime, timedelta
 
-from .base_logger import logger
+from .base_logger import setup_logging
 from .config import read_config
 from .librus import Librus
 from .librus_collector import configure_mail_provider
 from .progress_analyzer import ProgressAnalyzer
 from .storage import create_storage
+
+logger = logging.getLogger(__name__)
 
 
 def parse_args():
@@ -267,5 +270,11 @@ def run_progress_reports():
                 logger.error(f"Wysyłka raportu postępów dla {name} ({login}) nie powiodła się.")
 
 
-if __name__ == '__main__':
+def main():
+    """Główny punkt wejścia CLI dla generatora raportów postępów."""
+    setup_logging()
     run_progress_reports()
+
+
+if __name__ == '__main__':
+    main()

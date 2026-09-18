@@ -2,18 +2,23 @@
 
 ## Commands
 - **Environment**: `source venv/bin/activate`
-- **Dependencies**: `pip install -r requirements.txt`
-- **Run**: `python main.py` (Caution: live scraper; do not run without user consent)
-- **Tests**: Currently no automated test suite. Use offline mock tests.
+- **Dependencies**: `pip install -e .` (or `pip install -r requirements.txt`)
+- **Dev tools**: `pip install -e ".[dev]"`
+- **Run**: `librus-collector` or `python main.py` (Caution: live scraper; do not run without user consent)
+- **Report**: `librus-report --dry-run` or `python progress_report.py --dry-run`
+- **Tests**: `pytest`
+- **Linter**: `ruff check`
 
 ## Architecture
-- `main.py`: Entrypoint with main loop (`while True`) checking messages and announcements per account.
-- `librus.py`: Web scraper for Librus Synergia. Handles OAuth login simulation, session cookies, HTML parsing with BeautifulSoup.
-- `config.py`: Reads YAML configuration (`yaml.safe_load`).
-- `base_logger.py`: Central logger named `librus`, outputs to console and `librus.log`.
-- `MailSender.py`: Base email class generating HTML table templates.
-- `GmailSender.py`: Subclass sending mail through `yagmail`.
-- `SmtpSender.py`: Subclass sending mail through `smtplib` with STARTTLS.
+- `src/librus2mail/`: Canonical package with `src/` layout.
+- `main.py` / `librus_collector.py`: Collector entrypoint daemon with main loop (`while True`).
+- `progress_report.py`: Offline progress report generator CLI.
+- `src/librus2mail/mail_sender.py`: Base email class generating HTML emails with Jinja2 templates (`templates/emails/`).
+- `src/librus2mail/gmail_sender.py`: Subclass sending mail through `yagmail`.
+- `src/librus2mail/smtp_sender.py`: Subclass sending mail through `smtplib` with STARTTLS.
+- `src/librus2mail/librus.py`: Web scraper for Librus Synergia. Handles OAuth login simulation, session cookies, HTML parsing with BeautifulSoup.
+- `src/librus2mail/progress_analyzer.py`: Analytical engine for grades, averages, thresholds, and parent insights.
+- `src/librus2mail/storage.py`: State and grade history persistence (`FileStorage`).
 
 ## Critical Rules
 1. **Secrets**: Never commit `config.yaml`, `arek_config.yaml`, or any `*_config.yaml`. Reference `config.example.yaml`.

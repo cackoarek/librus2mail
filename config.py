@@ -1,21 +1,11 @@
+"""Root wrapper for `librus2mail.config`."""
 import os
-import yaml
-from base_logger import logger
+import sys
 
+_src = os.path.join(os.path.dirname(os.path.abspath(__file__)), "src")
+if _src not in sys.path:
+    sys.path.insert(0, _src)
 
-def read_config(config_file='config.yaml'):
-    logger.info(f"Wczytuję konfigurację z {config_file}")
-    if not os.path.isfile(config_file):
-        error_msg = (
-            f"Nie znaleziono pliku konfiguracyjnego '{config_file}'! "
-            f"Utwórz plik konfiguracyjny na podstawie szablonu, wykonując: cp config.example.yaml {config_file}. "
-            f"Więcej informacji na temat konfiguracji znajdziesz w dokumentacji w pliku README.md."
-        )
-        logger.error(error_msg)
-        raise FileNotFoundError(error_msg)
+from librus2mail.config import read_config  # noqa: F401, E402
 
-    with open(config_file, 'r', encoding='utf-8') as f:
-        config = yaml.safe_load(f)
-
-    return config
-
+__all__ = ["read_config"]

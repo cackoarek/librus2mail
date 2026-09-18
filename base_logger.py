@@ -1,28 +1,18 @@
-import logging
+"""Root wrapper for `librus2mail.base_logger`."""
+import os
+import sys
 
+_src = os.path.join(os.path.dirname(os.path.abspath(__file__)), "src")
+if _src not in sys.path:
+    sys.path.insert(0, _src)
 
-LOG_FILE_NAME = 'librus.log'
-LOGGER_NAME = 'librus'
+from librus2mail.base_logger import (  # noqa: F401, E402
+    LOG_FILE_NAME,
+    LOGGER_NAME,
+    ch,
+    fh,
+    formatter,
+    logger,
+)
 
-
-logger = logging.getLogger(LOGGER_NAME)
-
-logger.setLevel(logging.INFO)
-
-# format logów
-formatter = logging.Formatter(
-    '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-# log do pliku
-fh = logging.FileHandler(LOG_FILE_NAME)
-fh.setFormatter(formatter)
-fh.setLevel(logging.DEBUG)
-
-# log na konsolę
-ch = logging.StreamHandler()
-ch.setFormatter(formatter)
-ch.setLevel(logging.INFO)
-
-# dodanie do handlera
-logger.addHandler(fh)
-logger.addHandler(ch)
+__all__ = ["logger", "LOG_FILE_NAME", "LOGGER_NAME", "formatter", "fh", "ch"]

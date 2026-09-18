@@ -16,17 +16,19 @@ Skrypt loguje się na konto rodzica w portalu Librus Synergia, cyklicznie monito
    - [Konfiguracja wysyłki e-mail (mail)](#konfiguracja-wysyłki-e-mail-mail)
 5. [Usługa zbierania danych i monitoringu (librus_collector.py / main.py)](#usługa-zbierania-danych-i-monitoringu-librus_collectorpy--mainpy)
    - [Uruchomienie standardowe](#uruchomienie-standardowe)
+   - [Dedykowane polecenie CLI (librus-collector)](#dedykowane-polecenie-cli-librus-collector)
    - [Uruchomienie w tle (systemd / nohup)](#uruchomienie-w-tle-systemd--nohup)
    - [Uruchomienie w cronie](#wariant-c-harmonogram-zadań-cron-z-work-in-loop-false)
 6. [Moduł raportu postępów dziecka (progress_report.py)](#moduł-raportu-postępów-dziecka-progress_reportpy)
    - [Możliwości analizy](#możliwości-analizy)
    - [Sposób użycia i parametry CLI](#sposób-użycia-i-parametry-cli)
    - [Harmonogram cron dla raportów](#harmonogram-cron-dla-raportów)
-7. [Architektura projektu](#architektura-projektu)
-8. [Testy i diagnostyka](#testy-i-diagnostyka)
-9. [Najczęstsze pytania i rozwiązywanie problemów (FAQ)](#najczęstsze-pytania-i-rozwiązywanie-problemów-faq)
-10. [Bezpieczeństwo](#bezpieczeństwo)
-11. [Podziękowania](#podziękowania)
+7. [Szablony wiadomości e-mail (Jinja2)](#szablony-wiadomości-e-mail-jinja2)
+8. [Architektura projektu](#architektura-projektu)
+9. [Testy i jakość kodu](#testy-i-jakość-kodu)
+10. [Najczęstsze pytania i rozwiązywanie problemów (FAQ)](#najczęstsze-pytania-i-rozwiązywanie-problemów-faq)
+11. [Bezpieczeństwo](#bezpieczeństwo)
+12. [Podziękowania](#podziękowania)
 
 ---
 
@@ -39,7 +41,7 @@ Skrypt loguje się na konto rodzica w portalu Librus Synergia, cyklicznie monito
   * **Gmail**: zoptymalizowana obsługa przez bibliotekę `yagmail` (wymagane hasło aplikacji Google).
   * **SMTP**: standardowy protokół SMTP z szyfrowaniem STARTTLS (działa z dowolnym serwerem pocztowym: hostingodawcy, OVH, Cyberfolks, WP, Onet itp.).
 * **Tryb pierwszego przebiegu (`do_not_send_first_parse`)**: Przy pierwszym uruchomieniu skrypt indeksuje aktualne wiadomości, ogłoszenia i oceny jako bazę i nie wysyła spamu ze wszystkimi historycznymi wpisami – kolejne uruchomienia wysyłają powiadomienia wyłącznie o nowych wpisach.
-* **Formatowanie HTML**: Czytelne tabele z wyróżnieniem nowych wiadomości **pogrubioną czcionką**, danymi nadawcy, tematem, datą nadania oraz tabelami ocen ze szczegółami (przedmiot, ocena, kategoria, waga, data, nauczyciel).
+* **Nowoczesne szablony Jinja2**: Wszystkie e-maile generowane są z responsywnych szablonów HTML (`templates/emails/`), łatwych w dostosowywaniu stylów i kolorów.
 * **Automatyczne alerty o awariach i błędach**: W razie braku połączenia do Librusa, problemów z sesją/autoryzacją lub błędu parsowania danych (np. po zmianie wyglądu dziennika), skrypt natychmiast wysyła e-mail z diagnozą i zalecanymi działaniami. Wbudowany mechanizm throttling / cooldown zapobiega zalewaniu skrzynki powtarzającymi się wiadomościami.
 * **Dedykowany moduł analizy postępów dziecka (`progress_report.py`)**: Niezależny skrypt analityczny przeliczający średnie ważone przedmiotowe i ogólne, wskaźniki trendu (↗, ↘, ➡), sugerowane oceny roczne, rozkład ocen (histogram) oraz automatyczne wnioski rodzicielskie (sukcesy, zagrożenia, nieprzygotowania). Raport wysyłany jest w postaci nowoczesnego dashboardu HTML.
 
@@ -47,7 +49,7 @@ Skrypt loguje się na konto rodzica w portalu Librus Synergia, cyklicznie monito
 
 ## Wymagania
 
-* **Python 3.10+** (projekt wykorzystuje nowoczesne unie typów `X | Y` oraz walrus operator `:=`).
+* **Python 3.10+** (projekt wykorzystuje unie typów `X | Y` oraz walrus operator `:=`).
 * Dostęp do internetu umożliwiający połączenie z `api.librus.pl` oraz `synergia.librus.pl`.
 * Skrzynka pocztowa (Gmail lub dowolny serwer SMTP) do wysyłania powiadomień.
 
@@ -68,8 +70,17 @@ python3 -m venv venv
 # 3. Aktywacja środowiska
 source venv/bin/activate
 
-# 4. Aktualizacja pip i instalacja zależności
+# 4. Aktualizacja menedżera pip
 pip install --upgrade pip
+
+# 5. Instalacja projektu:
+# Wariant A (zalecany): Nowoczesna instalacja standardem pyproject.toml (PEP 517/518):
+pip install -e .
+
+# Opcjonalnie: instalacja narzędzi deweloperskich (pytest, ruff):
+pip install -e ".[dev]"
+
+# Wariant B: Tradycyjna instalacja z pliku requirements.txt:
 pip install -r requirements.txt
 ```
 
@@ -171,8 +182,14 @@ Upewnij się, że wirtualne środowisko jest aktywne:
 
 ```bash
 source venv/bin/activate
+
+# Wariant 1: Dedykowane polecenie konsolowe CLI zainstalowane z pakietem:
+librus-collector
+
+# Wariant 2: Bezpośrednie wywołanie modułu kolektora:
 python librus_collector.py
-# lub:
+
+# Wariant 3: Główny skrypt wejściowy (alias wsteczny):
 python main.py
 ```
 
@@ -282,24 +299,28 @@ Dzięki takiemu podziałowi:
 
 ```bash
 # 1. Wygenerowanie i wysłanie raportu postępów (okres od ostatniego raportu lub domyślne 7 dni)
+librus-report
+# lub:
 venv/bin/python progress_report.py
 
 # 2. Tryb symulacji (--dry-run) - pełna analiza i wydruk tabeli w terminalu bez wysyłania e-maila
+librus-report --dry-run
+# lub:
 venv/bin/python progress_report.py --dry-run
 
 # 3. Wymuszenie analizy za określony czas, np. ostatnie 14 lub 30 dni (--days N)
-venv/bin/python progress_report.py --days 14
+librus-report --days 14
 
 # 4. Zawężenie do konkretnego konta dziecka (--user)
-venv/bin/python progress_report.py --user 1234567
+librus-report --user 1234567
 # albo po nazwie:
-venv/bin/python progress_report.py --user "Kasia"
+librus-report --user "Kasia"
 
 # 5. Opcjonalne wymuszenie pobrania świeżych ocen przez sieć (--fetch)
-venv/bin/python progress_report.py --fetch
+librus-report --fetch
 
 # 6. Wymuszenie wysyłki raportu nawet gdy w badanym okresie uczeń nie dostał nowych ocen (--force)
-venv/bin/python progress_report.py --force
+librus-report --force
 ```
 
 | Parametr | Krótka flaga | Opis |
@@ -335,51 +356,94 @@ Dzięki wydzieleniu skryptu do osobnego pliku, możesz w prosty i elastyczny spo
 
 ---
 
-## Architektura projektu
+## Szablony wiadomości e-mail (Jinja2)
 
-```text
-librus2mail/
-├── base_logger.py              # Konfiguracja loggera (zapis do librus.log oraz na konsolę)
-├── config.py                   # Moduł wczytujący konfigurację z pliku YAML
-├── config.example.yaml         # Bezpieczny szablon pliku konfiguracyjnego
-├── GmailSender.py              # Klasa wysyłająca wiadomości przez yagmail (Gmail)
-├── SmtpSender.py               # Klasa wysyłająca wiadomości przez standardowe smtplib + STARTTLS
-├── MailSender.py               # Klasa bazowa z generatorami szablonów e-mail HTML (w tym raportu postępów)
-├── storage.py                  # Trwały zapis stanu oraz historii ocen w plikach JSON (FileStorage)
-├── librus.py                   # Klient autoryzacji OAuth i scraper portalu Librus Synergia
-├── librus_collector.py         # Usługa zbierająca dane z Librusa i wysyłająca powiadomienia na żywo
-├── progress_analyzer.py        # Silnik analityczny postępów dziecka (średnie ważone, trendy, histogram, alerty)
-├── progress_report.py          # Samodzielny generator raportów postępów działający offline na danych ze storage
-├── main.py                     # Wstecznie kompatybilny alias uruchamiający librus_collector.py
-├── requirements.txt            # Wymagane biblioteki Pythona
-├── tests/
-│   └── test_librus.py          # Testy jednostkowe parsera, sesji, analityki postępów i wysyłki
-├── AGENTS.md                   # Instrukcje architektury dla agentów AI
-└── README.md                   # Niniejsza dokumentacja
-```
+Wszystkie wiadomości i raporty HTML generowane są za pomocą silnika szablonów **Jinja2**. Szablony znajdują się w katalogu `templates/emails/` (oraz wewnątrz pakietu `src/librus2mail/templates/emails/`):
+- `messages.html`: Powiadomienia o nowych wiadomościach od nauczycieli.
+- `notifications.html`: Powiadomienia o nowych ogłoszeniach szkolnych.
+- `grades.html`: Powiadomienia o nowo wystawionych ocenach.
+- `summary.html`: Zbiorcze podsumowanie (gdy włączona jest opcja `one_summary_message: true`).
+- `error_alert.html`: Alerty o błędach autoryzacji / połączenia z zaleceniami diagnostycznymi.
+- `progress_report.html`: Kompleksowy dashboard postępów ucznia (KPI, kalkulator progów, wagi, czerwony pasek, histogram).
 
-### Przepływ danych (Data Flow):
-1. [`main.py`](file:///home/acacko/PycharmProjects/librus2mail/main.py) wczytuje konfigurację za pomocą [`config.py`](file:///home/acacko/PycharmProjects/librus2mail/config.py) i inicjalizuje instancję mailera ([`GmailSender`](file:///home/acacko/PycharmProjects/librus2mail/GmailSender.py) lub [`SmtpSender`](file:///home/acacko/PycharmProjects/librus2mail/SmtpSender.py)).
-2. Dla każdego użytkownika tworzona jest instancja klasy [`Librus`](file:///home/acacko/PycharmProjects/librus2mail/librus.py).
-3. W każdym cyklu:
-   * Wykonywane jest logowanie OAuth ([`librus.login()`](file:///home/acacko/PycharmProjects/librus2mail/librus.py#L44)).
-   * Pobierane są wiadomości ([`librus.fetch_messages()`](file:///home/acacko/PycharmProjects/librus2mail/librus.py#L185)).
-   * Pobierane są ogłoszenia ([`librus.fetch_notifications()`](file:///home/acacko/PycharmProjects/librus2mail/librus.py#L254)).
-   * Pobierane są oceny ucznia ([`librus.fetch_grades()`](file:///home/acacko/PycharmProjects/librus2mail/librus.py#L309)).
-   * Sprawdzane są nowe pozycje metodami `get_not_known_*`.
-   * Jeśli pojawiły się nowe wpisy i nie jest to pierwszy przebieg (`dry-parse`), mailer generuje tabelę HTML i wysyła powiadomienie.
-   * Skrypt odczekuje zdefiniowany czas `wait_time_s` przed kolejnym cyklem.
+Dzięki rozdzieleniu logiki Pythona od warstwy prezentacji, możesz łatwo dostosować kolorystykę, czcionki i układ maili do własnych preferencji bez ingerencji w kod źródłowy.
 
 ---
 
-## Testy i diagnostyka
+## Architektura projektu
 
-Projekt zawiera automatyczne testy jednostkowe weryfikujące parsowanie, odporność na zmiany DOM oraz obsługę sesji:
+Projekt korzysta z nowoczesnego układu **`src/` layout** oraz pełnej zgodności ze standardem **PEP 8** (nazewnictwo `snake_case`):
+
+```text
+librus2mail/
+├── src/
+│   └── librus2mail/            # Kanoniczny pakiet Pythona (src/ layout, PEP 8)
+│       ├── __init__.py         # Eksporty kluczowych klas i funkcji pakietu
+│       ├── base_logger.py      # Konfiguracja loggera ('librus')
+│       ├── config.py           # Wczytywanie konfiguracji z pliku YAML
+│       ├── gmail_sender.py     # Obsługa wysyłki przez Gmail (yagmail)
+│       ├── librus.py           # Klient autoryzacji OAuth i scraping portalu Librus Synergia
+│       ├── librus_collector.py # Usługa monitoringu w czasie rzeczywistym
+│       ├── mail_sender.py      # Klasa bazowa z obsługą szablonów Jinja2
+│       ├── progress_analyzer.py# Silnik analizy postępów (średnie, wagi, alerty)
+│       ├── progress_report.py  # Samodzielny generator raportów postępów
+│       ├── smtp_sender.py      # Obsługa wysyłki SMTP (STARTTLS)
+│       ├── storage.py          # Trwały zapis stanu w plikach JSON (FileStorage)
+│       └── templates/emails/   # Szablony e-mail wewnątrz pakietu
+│           ├── messages.html
+│           ├── notifications.html
+│           ├── grades.html
+│           ├── summary.html
+│           ├── error_alert.html
+│           └── progress_report.html
+├── templates/emails/           # Szablony e-mail w katalogu projektu
+├── tests/                      # Pakiet testów jednostkowych
+│   ├── test_librus.py          # Testy logowania, scrapingu, formatowania i analityki
+│   └── test_package_layout.py  # Testy struktury pakietu i eksportów
+├── pyproject.toml              # Nowoczesna konfiguracja projektu (PEP 517/518/621)
+├── requirements.txt            # Tradycyjna lista zależności
+├── config.example.yaml         # Wzorcowy szablon konfiguracji
+├── main.py                     # Główny punkt wejścia demona (CLI)
+├── librus_collector.py         # Skrypt uruchamiający usługę zbierania danych (CLI)
+├── progress_report.py          # Skrypt generujący raport postępów (CLI)
+├── README.md                   # Niniejsza dokumentacja
+└── AGENTS.md                   # Instrukcje dla agentów AI i deweloperów
+```
+
+### Przepływ danych (Data Flow):
+1. Usługa (`librus-collector` lub `python main.py` / `python librus_collector.py`) wczytuje konfigurację za pomocą [`config.py`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/config.py) i inicjalizuje instancję dostawcy poczty ([`GmailSender`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/gmail_sender.py) lub [`SmtpSender`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/smtp_sender.py)).
+2. Dla każdego użytkownika tworzona jest instancja klasy [`Librus`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/librus.py) z podłączonym magazynem [`FileStorage`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/storage.py).
+3. W każdym cyklu:
+   * Wykonywane jest logowanie OAuth ([`librus.login()`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/librus.py)).
+   * Pobierane są wiadomości ([`librus.fetch_messages()`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/librus.py)).
+   * Pobierane są ogłoszenia ([`librus.fetch_notifications()`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/librus.py)).
+   * Pobierane są oceny ucznia ([`librus.fetch_grades()`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/librus.py)).
+   * Sprawdzane są nowe pozycje względem danych w pamięci i `storage/`.
+   * Jeśli pojawiły się nowe wpisy i nie jest to pierwszy przebieg (`dry-parse`), mailer renderuje odpowiedni szablon Jinja2 i wysyła powiadomienie.
+   * Skrypt odczekuje zdefiniowany czas `wait_time_s` przed kolejnym cyklem.
+4. Niezależny moduł raportowania (`librus-report` lub `python progress_report.py`) korzysta z bazy ocen zebranej w `storage/`, analizuje je przez [`ProgressAnalyzer`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/progress_analyzer.py) i generuje pełny raport okresowy.
+
+---
+
+## Testy i jakość kodu
+
+Projekt wyposażony jest w automatyczne testy jednostkowe oraz konfigurację lintera **Ruff**:
 
 ```bash
-# Uruchomienie zestawu testów
+# Aktywacja środowiska wirtualnego
 source venv/bin/activate
-python -m unittest discover -s tests
+
+# 1. Uruchomienie pełnego zestawu testów jednostkowych (pytest):
+pytest
+
+# 2. Uruchomienie testów z raportem pokrycia kodu (coverage):
+pytest --cov=librus2mail
+
+# 3. Sprawdzenie poprawności stylu kodu (Ruff):
+ruff check
+
+# 4. Automatyczna korekta drobnych niezgodności formatowania:
+ruff check --fix
 ```
 
 Bieżące zdarzenia i diagnostykę działania usługi można śledzić w pliku `librus.log`:

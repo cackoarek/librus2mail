@@ -5,10 +5,15 @@ from datetime import datetime
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from markupsafe import Markup
 
-TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates', 'emails')
+_pkg_templates = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates', 'emails')
+_root_templates = os.path.join(os.getcwd(), 'templates', 'emails')
+TEMPLATES_DIRS = [_pkg_templates]
+if os.path.isdir(_root_templates) and _root_templates != _pkg_templates:
+    TEMPLATES_DIRS.append(_root_templates)
+TEMPLATES_DIR = _pkg_templates if os.path.isdir(_pkg_templates) else _root_templates
 
 jinja_env = Environment(
-    loader=FileSystemLoader(TEMPLATES_DIR),
+    loader=FileSystemLoader(TEMPLATES_DIRS),
     autoescape=select_autoescape(['html', 'xml'])
 )
 

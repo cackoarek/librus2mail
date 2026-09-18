@@ -55,20 +55,27 @@ librus2mail/
 │       ├── security.md         # Secret protection & safe testing
 │       ├── scraping-and-librus.md # Scraping quirks, rate limiting, DOM tips
 │       └── code-style-and-arch.md # Python conventions, logging, typing
-├── base_logger.py              # Central logger config ('librus' logger, writes to librus.log & stdout)
-├── config.py                   # YAML configuration loader (read_config)
-├── config.example.yaml         # Clean configuration template for users and tests
-├── GmailSender.py              # MailSender subclass using yagmail for Gmail
-├── librus.py                   # Librus scraping & OAuth client class
-├── librus_collector.py         # Primary collector daemon & real-time monitoring loop
-├── MailSender.py               # Base class with HTML table formatting for emails
-├── main.py                     # Backward-compatible wrapper calling librus_collector.py
-├── progress_analyzer.py        # Progress analytics engine (weighted avgs, trends, alerts)
-├── progress_report.py          # Offline progress report generator CLI (reads from storage/)
-├── storage.py                  # State and grade history persistence (FileStorage)
-├── README.md                   # Human documentation
-├── requirements.txt            # Python dependencies
-├── SmtpSender.py               # MailSender subclass using standard smtplib + STARTTLS
+├── src/
+│   └── librus2mail/            # Canonical package (src/ layout, PEP 8)
+│       ├── __init__.py         # Package exports
+│       ├── base_logger.py      # Central logger config ('librus' logger)
+│       ├── config.py           # YAML configuration loader (read_config)
+│       ├── gmail_sender.py     # MailSender subclass using yagmail for Gmail
+│       ├── librus.py           # Librus scraping & OAuth client class
+│       ├── librus_collector.py # Primary collector daemon & real-time monitoring loop
+│       ├── mail_sender.py      # Base class with Jinja2 HTML email formatting
+│       ├── progress_analyzer.py# Progress analytics engine (weighted avgs, trends, alerts)
+│       ├── progress_report.py  # Offline progress report generator CLI
+│       ├── smtp_sender.py      # MailSender subclass using standard smtplib + STARTTLS
+│       ├── storage.py          # State and grade history persistence (FileStorage)
+│       └── templates/emails/   # Jinja2 email templates
+├── templates/emails/           # HTML templates (synced with package templates)
+├── tests/                      # Pytest test suite
+├── pyproject.toml              # Modern PEP 517/518/621 project configuration
+├── requirements.txt            # Python dependencies (legacy compatibility)
+├── main.py                     # Backward-compatible CLI wrapper calling librus_collector.py
+├── librus_collector.py         # Root CLI entrypoint & wrapper for librus2mail.librus_collector
+├── progress_report.py          # Root CLI entrypoint & wrapper for librus2mail.progress_report
 ├── AGENTS.md                   # Universal AI agent instructions (this file)
 ├── CLAUDE.md                   # Claude Code instructions
 ├── GEMINI.md                   # Google Antigravity / Gemini CLI instructions

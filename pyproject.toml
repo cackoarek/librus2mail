@@ -29,23 +29,14 @@ dev = [
 ]
 
 [project.scripts]
-librus-collector = "librus_collector:run_collector"
-librus-report = "progress_report:run_progress_reports"
+librus-collector = "librus2mail.librus_collector:run_collector"
+librus-report = "librus2mail.progress_report:run_progress_reports"
 
-[tool.setuptools]
-py-modules = [
-    "base_logger",
-    "config",
-    "librus",
-    "librus_collector",
-    "main",
-    "progress_analyzer",
-    "progress_report",
-    "storage",
-    "MailSender",
-    "GmailSender",
-    "SmtpSender",
-]
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+librus2mail = ["templates/emails/*.html"]
 
 [tool.ruff]
 line-length = 120
@@ -75,5 +66,5 @@ ignore = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["."]
+pythonpath = ["src", "."]
 addopts = "-v"

@@ -1,0 +1,67 @@
+name: CI - Code Quality & Tests
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'templates/**'
+      - 'tests/**'
+      - 'pyproject.toml'
+      - 'requirements.txt'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint:
+    name: Lint (Ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+
+      - name: Install Ruff
+        run: pip install ruff
+
+      - name: Run Ruff Lint Check
+        run: ruff check .
+
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Install package and dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .[dev]
+
+      - name: Run pytest with coverage
+        run: |
+          pytest --cov=librus2mail --cov-report=term --cov-report=xml
+
+      - name: Add Step Summary
+        if: matrix.python-version == '3.10'
+        run: |
+          echo "### 🧪 Wyniki testów i pokrycie kodu" >> $GITHUB_STEP_SUMMARY
+          echo "Wszystkie testy jednostkowe na Python ${{ matrix.python-version }} zakończyły się sukcesem." >> $GITHUB_STEP_SUMMARY

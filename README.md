@@ -4,6 +4,7 @@
 
 **Nowoczesny, bezobsługowy asystent e-mail i analityk postępów dla e-dziennika Librus Synergia**
 
+[![CI Status](https://img.shields.io/github/actions/workflow/status/cackoarek/librus2mail/ci.yml?branch=main&label=CI&style=flat-square&logo=githubactions&logoColor=white)](https://github.com/cackoarek/librus2mail/actions/workflows/ci.yml)
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-3776AB.svg?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![Code Style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg?style=flat-square&logo=ruff&logoColor=white)](https://github.com/astral-sh/ruff)
 [![Tests: pytest](https://img.shields.io/badge/tests-pytest%20(38%20passed)-success.svg?style=flat-square&logo=pytest&logoColor=white)](tests/)
@@ -461,6 +462,11 @@ Projekt korzysta z nowoczesnego układu **`src/` layout** oraz pełnej zgodnośc
 
 ```text
 librus2mail/
+├── .github/                    # Automatyzacja GitHub Actions i Dependabot
+│   ├── workflows/
+│   │   ├── ci.yml              # Pipeline CI (Ruff linter + pytest multi-Python 3.10-3.12)
+│   │   └── docker.yml          # Budowanie, testy dymne i publikacja obrazu GHCR
+│   └── dependabot.yml          # Cotygodniowe aktualizacje zależności i akcji
 ├── src/
 │   └── librus2mail/            # Kanoniczny pakiet Pythona (src/ layout, PEP 8)
 │       ├── __init__.py         # Eksporty kluczowych klas i funkcji pakietu

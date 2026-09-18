@@ -157,9 +157,19 @@ def run_collector(config_path: str = 'config.yaml'):
 
 def main():
     """Główny punkt wejścia CLI dla usługi monitorującej."""
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="Librus2mail - Usługa ciągłego monitorowania e-dziennika Librus Synergia i wysyłki powiadomień e-mail."
+    )
+    parser.add_argument(
+        'config',
+        nargs='?',
+        default='config.yaml',
+        help="Ścieżka do pliku konfiguracyjnego YAML (domyślnie: config.yaml)"
+    )
+    args = parser.parse_args()
     setup_logging()
-    config_file = sys.argv[1] if len(sys.argv) > 1 else 'config.yaml'
-    run_collector(config_file)
+    run_collector(args.config)
 
 
 if __name__ == '__main__':

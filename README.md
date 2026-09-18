@@ -279,6 +279,10 @@ Dzięki takiemu podziałowi:
 
 ### Możliwości analizy:
 * **Średnie ważone**: Wyliczanie precyzyjnej średniej ważonej dla każdego przedmiotu oraz średniej ogólnej ucznia w oparciu o oficjalne wagi ocen z Librusa (uwzględniając modyfikatory `+` jako +0.5, `-` jako -0.25).
+* **📈 Analiza wsteczna i porównanie z poprzednim okresem (Wskaźnik formy ucznia)**:
+  * Automatyczne zestawienie bieżącego okresu (np. ostatnie 7 dni lub od ostatniego raportu) z **identycznym wcześniejszym oknem czasowym** (np. wcześniejsze 7 dni).
+  * Wyliczanie dynamiki ocen: zmiana średniej okresowej ($\Delta$), przyrost ocen bdb/celujących (5–6), spadek lub wzrost ocen słabych (1–2), wpływ na średnią roczną ucznia oraz bilans nieprzygotowań.
+  * Natychmiastowa diagnoza formy dla rodzica: **Wyraźny progres 🚀**, **Lekka poprawa ↗️**, **Stabilnie ➡️** lub **Ostrzeżenie o spadku wyników ⚠️** wraz ze wskazaniem przedmiotów o największym skoku i spadku.
 * **Wskaźnik trendu wyników**: Analiza kierunku zmian średniej z danego przedmiotu w porównaniu z poprzednimi okresami:
   * ↗ *(np. +0.40)* – widoczna poprawa wyników,
   * ↘ *(np. -0.35)* – spadek średniej,

@@ -951,6 +951,72 @@ class TestLibrus(unittest.TestCase):
         self.assertIn('Kalkulator szans i zagrożeń', html)
         self.assertIn('Czerwony Pasek', html)
         self.assertIn('Ciche przedmioty', html)
+        self.assertIn('Dynamika i forma ucznia', html)
+
+    def test_progress_analyzer_period_comparison_metrics(self):
+        from datetime import datetime, timedelta
+
+        from librus2mail.mail_sender import MailSender
+        from librus2mail.progress_analyzer import ProgressAnalyzer
+
+        now = datetime(2026, 9, 20)
+        # Okres bieżący (T0): 13.09 - 20.09 (ostatnie 7 dni)
+        # Okres poprzedni (T-1): 06.09 - 13.09 (wcześniejsze 7 dni)
+        # Historia przed T-1: < 06.09
+        grades_progress = [
+            # Przed T-1
+            {'id': '1', 'subject': 'Matematyka', 'grade': '3', 'weight': '1', 'date': '2026-09-01'},
+            # T-1 (Poprzedni okres): słabsze oceny (średnia 2.50)
+            {'id': '2', 'subject': 'Matematyka', 'grade': '2', 'weight': '1', 'date': '2026-09-08'},
+            {'id': '3', 'subject': 'Fizyka', 'grade': '3', 'weight': '1', 'date': '2026-09-09'},
+            # T0 (Bieżący okres): znakomita poprawa (średnia 5.00)
+            {'id': '4', 'subject': 'Matematyka', 'grade': '5', 'weight': '2', 'date': '2026-09-15'},
+            {'id': '5', 'subject': 'Fizyka', 'grade': '5', 'weight': '1', 'date': '2026-09-16'},
+        ]
+
+        res = ProgressAnalyzer.analyze(grades_progress, period_start=now - timedelta(days=7), period_end=now)
+        pc = res['period_comparison']
+
+        self.assertTrue(pc['enabled'])
+        self.assertTrue(pc['has_prev_data'])
+        self.assertEqual(pc['current_count'], 2)
+        self.assertEqual(pc['prev_count'], 2)
+        self.assertGreater(pc['current_avg'], pc['prev_avg'])
+        self.assertGreater(pc['avg_diff'], 1.50)
+        self.assertEqual(pc['status'], 'significant_progress')
+        self.assertIn('PROGRES', pc['badge_text'])
+        self.assertTrue(any(s['subject'] == 'Matematyka' for s in pc['top_improved_subjects']))
+
+        # Test wygenerowania HTML
+        user_cfg = {'librus_login': '888', 'librus_login_name': 'Zosia'}
+        html = MailSender.create_mail_content_for_progress_report(user_cfg, res)
+        self.assertIn('PROGRES', html)
+        self.assertIn('Dynamika i forma ucznia', html)
+
+    def test_progress_analyzer_period_comparison_warning(self):
+        from datetime import datetime, timedelta
+
+        from librus2mail.progress_analyzer import ProgressAnalyzer
+
+        now = datetime(2026, 9, 20)
+        grades_drop = [
+            # T-1: bdb oceny (5, 5)
+            {'id': '1', 'subject': 'Matematyka', 'grade': '5', 'weight': '1', 'date': '2026-09-08'},
+            {'id': '2', 'subject': 'Fizyka', 'grade': '5', 'weight': '1', 'date': '2026-09-09'},
+            # T0: spadek ocen (2, 1)
+            {'id': '3', 'subject': 'Matematyka', 'grade': '2', 'weight': '1', 'date': '2026-09-15'},
+            {'id': '4', 'subject': 'Fizyka', 'grade': '1', 'weight': '1', 'date': '2026-09-16'},
+        ]
+
+        res = ProgressAnalyzer.analyze(grades_drop, period_start=now - timedelta(days=7), period_end=now)
+        pc = res['period_comparison']
+
+        self.assertTrue(pc['enabled'])
+        self.assertTrue(pc['has_prev_data'])
+        self.assertLess(pc['avg_diff'], -2.0)
+        self.assertEqual(pc['status'], 'warning')
+        self.assertIn('SPADEK', pc['badge_text'])
+        self.assertTrue(any(s['subject'] == 'Matematyka' for s in pc['declining_subjects']))
 
 
 if __name__ == '__main__':

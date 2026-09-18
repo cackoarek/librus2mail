@@ -69,6 +69,26 @@ def print_cli_summary(user_name: str, login: str, analysis: dict):
     print(f"📝 Ocen w okresie: {analysis['period_grades_count']} (łącznie zarejestrowanych: {analysis['total_grades_count']})")
     print(f"⭐ Aktywność: +{analysis['activity_pluses']} / -{analysis['activity_minuses']} | Nieprzygotowania: {analysis['unprepared_count']}")
 
+    # Porównanie z poprzednim okresem (Dynamika i Forma)
+    pc = analysis.get('period_comparison')
+    if pc and pc.get('enabled'):
+        print(f"\n📈 Dynamika i forma ucznia: {pc['badge_icon']} {pc['badge_text']}")
+        print(f"  🗓️  Porównanie: {pc['period_start_str']}–{pc['period_end_str']} vs {pc['prev_period_start_str']}–{pc['prev_period_end_str']}")
+        print(f"  💡 {pc['headline']}")
+        if pc.get('has_prev_data'):
+            p_avg = f"{pc['prev_avg']:.2f}" if pc['prev_avg'] is not None else "—"
+            c_avg = f"{pc['current_avg']:.2f}" if pc['current_avg'] is not None else "—"
+            diff_str = f"{pc['avg_diff']:+.2f}" if pc['avg_diff'] is not None else "—"
+            print(f"  • Średnia w okresie:  {p_avg} ➔ {c_avg} ({diff_str} pkt)")
+            print(f"  • Liczba ocen:        {pc['prev_count']} ➔ {pc['current_count']} ({pc['count_diff']:+d})")
+            print(f"  • Oceny 5–6 / 1–2:    {pc['prev_high_count']} / {pc['prev_low_count']} ➔ {pc['current_high_count']} / {pc['current_low_count']}")
+            if pc.get('overall_shift') is not None and pc.get('overall_before_period') is not None:
+                print(f"  • Średnia ogólna:     {pc['overall_before_period']:.2f} ➔ {pc['overall_after_period']:.2f} ({pc['overall_shift']:+.2f} pkt)")
+        if pc.get('takeaways'):
+            for t in pc['takeaways']:
+                clean_t = re.sub(r'<[^>]+>', '', t)
+                print(f"    - {clean_t}")
+
     # Symulator Czerwonego Paska
     hr = analysis.get('honor_roll', {})
     if hr.get('message'):

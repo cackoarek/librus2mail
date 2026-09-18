@@ -47,6 +47,122 @@
             </tr>
         </table>
 
+        <!-- Karta Porównania z Poprzednim Okresem (Dynamika i Forma Ucznia) -->
+        {% if analysis.period_comparison and analysis.period_comparison.enabled %}
+        {% set pc = analysis.period_comparison %}
+        <div style="background-color: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px 16px; margin-bottom: 16px; width: 100%; box-sizing: border-box; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; margin-bottom: 8px;">
+                <tr>
+                    <td align="left" valign="middle">
+                        <div style="font-size: 14px; font-weight: bold; color: #1e293b;">
+                            📈 Dynamika i forma ucznia (porównanie z poprzednim okresem)
+                        </div>
+                        <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
+                            Bieżący okres: <strong>{{ pc.period_start_str }} – {{ pc.period_end_str }}</strong> vs Poprzedni: <strong>{{ pc.prev_period_start_str }} – {{ pc.prev_period_end_str }}</strong>
+                        </div>
+                    </td>
+                    <td align="right" valign="middle">
+                        {% if pc.status == 'significant_progress' %}
+                        <span style="background-color: #dcfce7; color: #15803d; border: 1px solid #86efac; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; white-space: nowrap;">
+                            {{ pc.badge_icon }} {{ pc.badge_text }}
+                        </span>
+                        {% elif pc.status == 'slight_progress' %}
+                        <span style="background-color: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; white-space: nowrap;">
+                            {{ pc.badge_icon }} {{ pc.badge_text }}
+                        </span>
+                        {% elif pc.status == 'warning' %}
+                        <span style="background-color: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; white-space: nowrap;">
+                            {{ pc.badge_icon }} {{ pc.badge_text }}
+                        </span>
+                        {% else %}
+                        <span style="background-color: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; white-space: nowrap;">
+                            {{ pc.badge_icon }} {{ pc.badge_text }}
+                        </span>
+                        {% endif %}
+                    </td>
+                </tr>
+            </table>
+
+            <div style="background-color: #f8fafc; border-left: 3px solid #3b82f6; padding: 8px 12px; font-size: 13px; color: #334155; margin-bottom: 12px; border-radius: 0 4px 4px 0;">
+                {{ pc.headline }}
+            </div>
+
+            {% if pc.has_prev_data %}
+            <!-- Tabela porównawcza wskaźników -->
+            <table border="0" cellpadding="6" cellspacing="0" width="100%" style="width: 100%; font-size: 12px; border-collapse: collapse; margin-bottom: 8px;">
+                <tr style="background-color: #f1f5f9; color: #475569; font-weight: 600; text-align: center;">
+                    <th align="left" style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">Wskaźnik</th>
+                    <th style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; width: 22%;">Poprzednio</th>
+                    <th style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; width: 22%;">Obecnie</th>
+                    <th style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; width: 22%;">Zmiana</th>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9; text-align: center;">
+                    <td align="left" style="padding: 6px 8px; font-weight: 500;">Średnia ocen w okresie</td>
+                    <td style="color: #64748b;">{{ "%.2f"|format(pc.prev_avg) if pc.prev_avg is not none else "—" }}</td>
+                    <td style="font-weight: bold; color: #0f172a;">{{ "%.2f"|format(pc.current_avg) if pc.current_avg is not none else "—" }}</td>
+                    <td style="font-weight: bold;">
+                        {% if pc.avg_diff is not none %}
+                            {% if pc.avg_diff > 0 %}
+                            <span style="color: #16a34a;">+{{ "%.2f"|format(pc.avg_diff) }} ↗</span>
+                            {% elif pc.avg_diff < 0 %}
+                            <span style="color: #dc2626;">{{ "%.2f"|format(pc.avg_diff) }} ↘</span>
+                            {% else %}
+                            <span style="color: #64748b;">0.00 ➡</span>
+                            {% endif %}
+                        {% else %}
+                            <span style="color: #94a3b8;">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9; text-align: center;">
+                    <td align="left" style="padding: 6px 8px; font-weight: 500;">Liczba wystawionych ocen</td>
+                    <td style="color: #64748b;">{{ pc.prev_count }}</td>
+                    <td style="font-weight: bold; color: #0f172a;">{{ pc.current_count }}</td>
+                    <td style="font-weight: bold;">
+                        {% if pc.count_diff > 0 %}+{{ pc.count_diff }}{% else %}{{ pc.count_diff }}{% endif %}
+                    </td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9; text-align: center;">
+                    <td align="left" style="padding: 6px 8px; font-weight: 500;">Oceny bdb i celujące (5–6)</td>
+                    <td style="color: #64748b;">{{ pc.prev_high_count }}</td>
+                    <td style="font-weight: bold; color: #16a34a;">{{ pc.current_high_count }}</td>
+                    <td style="font-weight: bold; color: {% if pc.high_diff > 0 %}#16a34a{% elif pc.high_diff < 0 %}#dc2626{% else %}#64748b{% endif %};">
+                        {% if pc.high_diff > 0 %}+{{ pc.high_diff }}{% else %}{{ pc.high_diff }}{% endif %}
+                    </td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9; text-align: center;">
+                    <td align="left" style="padding: 6px 8px; font-weight: 500;">Oceny słabe (1–2)</td>
+                    <td style="color: #64748b;">{{ pc.prev_low_count }}</td>
+                    <td style="font-weight: bold; color: {% if pc.current_low_count > 0 %}#dc2626{% else %}#16a34a{% endif %};">{{ pc.current_low_count }}</td>
+                    <td style="font-weight: bold; color: {% if pc.low_diff < 0 %}#16a34a{% elif pc.low_diff > 0 %}#dc2626{% else %}#64748b{% endif %};">
+                        {% if pc.low_diff > 0 %}+{{ pc.low_diff }} ⚠️{% elif pc.low_diff < 0 %}{{ pc.low_diff }} 👏{% else %}0{% endif %}
+                    </td>
+                </tr>
+                {% if pc.overall_shift is not none and pc.overall_before_period is not none %}
+                <tr style="text-align: center; background-color: #faf5ff;">
+                    <td align="left" style="padding: 6px 8px; font-weight: 600; color: #6b21a8;">Średnia ogólna ucznia</td>
+                    <td style="color: #7e22ce;">{{ "%.2f"|format(pc.overall_before_period) }}</td>
+                    <td style="font-weight: bold; color: #6b21a8;">{{ "%.2f"|format(pc.overall_after_period) }}</td>
+                    <td style="font-weight: bold; color: {% if pc.overall_shift > 0 %}#16a34a{% elif pc.overall_shift < 0 %}#dc2626{% else %}#64748b{% endif %};">
+                        {% if pc.overall_shift > 0 %}+{{ "%.2f"|format(pc.overall_shift) }} ↗{% elif pc.overall_shift < 0 %}{{ "%.2f"|format(pc.overall_shift) }} ↘{% else %}0.00{% endif %}
+                    </td>
+                </tr>
+                {% endif %}
+            </table>
+            {% endif %}
+
+            {% if pc.takeaways %}
+            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e2e8f0;">
+                <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: #475569; line-height: 1.6;">
+                    {% for item in pc.takeaways %}
+                    <li>{{ item | safe }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
         <!-- Rekomendacje i wnioski: Sukcesy -->
         {% if analysis.insights_strengths %}
         <div style="background-color: #ecfdf5; border-left: 4px solid #10b981; border-radius: 6px; padding: 14px 18px; margin-bottom: 18px;">
@@ -237,7 +353,7 @@
                             <td valign="top" style="font-size: 13px; color: #334155;">
                                 Śr. ogólna: <strong style="font-size: 15px; color: #1e3a8a;">{{ "%.2f"|format(s.overall_avg) if s.overall_avg is not none else "—" }}</strong>
                                 <span style="color: {% if s.trend == 'up' %}#059669{% elif s.trend == 'down' %}#dc2626{% else %}#4b5563{% endif %}; font-weight: bold; margin-left: 3px;">{{ s.trend_label }}</span>
-                                <span style="color: #64748b; font-size: 12px; margin-left: 6px;">(okres: <strong>{{ "%.2f"|format(s.period_avg) if s.period_avg is not none else "—" }}</strong>)</span>
+                                <span style="color: #64748b; font-size: 12px; margin-left: 6px;">(okres: <strong>{{ "%.2f"|format(s.period_avg) if s.period_avg is not none else "—" }}</strong>{% if s.prev_period_avg is defined and s.prev_period_avg is not none %}, poprz.: {{ "%.2f"|format(s.prev_period_avg) }}{% endif %})</span>
                             </td>
                         </tr>
                     </table>

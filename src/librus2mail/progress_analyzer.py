@@ -184,10 +184,18 @@ class ProgressAnalyzer:
     ) -> dict[str, Any]:
         period_end = period_end or datetime.now()
 
-        # 1. Podział ocen na okres i całość
+        # 1. Podział ocen na bieżący okres, poprzedni okres odniesienia oraz historię
         all_grades_parsed: list[dict[str, Any]] = []
         period_grades: list[dict[str, Any]] = []
+        prev_period_grades: list[dict[str, Any]] = []
         prior_grades: list[dict[str, Any]] = []
+
+        prev_period_start = None
+        prev_period_end = None
+        if period_start is not None:
+            period_duration = period_end - period_start
+            prev_period_end = period_start
+            prev_period_start = period_start - period_duration
 
         for g in grades:
             g_val = g.get('grade', '').strip()
@@ -205,16 +213,13 @@ class ProgressAnalyzer:
 
             # Sprawdzenie czy wpada w okres
             if period_start is not None:
-                if g_date and g_date >= period_start:
+                effective_date = g_date or parse_grade_date(None, g.get('added_at'))
+                if effective_date and effective_date >= period_start:
                     period_grades.append(enriched)
-                elif not g_date:
-                    dt_added = parse_grade_date(None, g.get('added_at'))
-                    if dt_added and dt_added >= period_start:
-                        period_grades.append(enriched)
-                    else:
-                        prior_grades.append(enriched)
                 else:
                     prior_grades.append(enriched)
+                    if effective_date and prev_period_start and effective_date >= prev_period_start:
+                        prev_period_grades.append(enriched)
             else:
                 period_grades.append(enriched)
 
@@ -223,7 +228,7 @@ class ProgressAnalyzer:
         for g in all_grades_parsed:
             subj = g.get('subject') or 'Inny przedmiot'
             if subj not in subjects_map:
-                subjects_map[subj] = {'all': [], 'period': [], 'prior': []}
+                subjects_map[subj] = {'all': [], 'period': [], 'prior': [], 'prev_period': []}
             subjects_map[subj]['all'].append(g)
 
         for g in period_grades:
@@ -233,6 +238,11 @@ class ProgressAnalyzer:
         for g in prior_grades:
             subj = g.get('subject') or 'Inny przedmiot'
             subjects_map[subj]['prior'].append(g)
+
+        for g in prev_period_grades:
+            subj = g.get('subject') or 'Inny przedmiot'
+            if subj in subjects_map:
+                subjects_map[subj]['prev_period'].append(g)
 
         def calc_weighted_avg(g_list: list[dict]) -> float | None:
             total_sum = 0.0
@@ -280,19 +290,23 @@ class ProgressAnalyzer:
                 trend = 'new'
                 trend_label = "✨ (nowy wpis)"
 
+            avg_prev_period = calc_weighted_avg(data.get('prev_period', []))
             predicted = get_predicted_grade(avg_all)
 
             analyzed_subjects.append({
                 'subject': subj_name,
                 'overall_avg': avg_all,
                 'period_avg': avg_period,
+                'prev_period_avg': avg_prev_period,
                 'trend': trend,
                 'trend_label': trend_label,
                 'predicted_grade': predicted,
                 'all_grades': subj_all,
                 'period_grades': subj_period,
+                'prev_period_grades': data.get('prev_period', []),
                 'grades_count': len(subj_all),
-                'period_grades_count': len(subj_period)
+                'period_grades_count': len(subj_period),
+                'prev_period_grades_count': len(data.get('prev_period', []))
             })
 
         # Sortowanie przedmiotów: najpierw te z nowymi ocenami w okresie, potem alfabetycznie
@@ -663,8 +677,182 @@ class ProgressAnalyzer:
             'learning_style': "Porównanie sprawdzianów (wagi 2-3) z bieżącą pracą (kartkówki, odpowiedzi, waga 1). Pokazuje, czy dziecko ma trudności z powtórkami dużego materiału, czy z systematycznością.",
             'honor_roll': "Świadectwo z wyróżnieniem (czerwony pasek) przysługuje przy średniej ocen końcowych min. 4.75 i braku ocen niedostatecznych.",
             'stability': "Wskaźnik stabilności: niska zmienność oznacza pewne, stałe oceny; wysoka (sinusoida) wskazuje na przeplatankę 1 i 5, czyli nierówne przygotowanie do lekcji.",
-            'weight_impact': "Wpływ wag: średnia ważona kładzie nacisk na sprawdziany. Efekt ujemny oznacza, że testy wypadają gorzej niż drobne zadania, zaniżając ogólny wynik."
+            'weight_impact': "Wpływ wag: średnia ważona kładzie nacisk na sprawdziany. Efekt ujemny oznacza, że testy wypadają gorzej niż drobne zadania, zaniżając ogólny wynik.",
+            'period_comparison': "Porównanie z poprzednim okresem: zestawia wyniki z badanego okresu z identycznym wcześniejszym oknem czasowym (np. tydzień do tygodnia), wskazując kierunek formy i dynamikę ocen."
         }
+
+        # 14. Analiza porównawcza z poprzednim okresem (Period-over-Period Momentum)
+        period_comparison = {
+            'enabled': False,
+            'has_prev_data': False,
+        }
+
+        if period_start is not None:
+            prev_period_student_avg = calc_weighted_avg(prev_period_grades)
+            has_prev_data = bool(prev_period_grades)
+            current_count = len(period_grades)
+            prev_count = len(prev_period_grades)
+            count_diff = current_count - prev_count
+
+            current_high = sum(1 for g in period_grades if g.get('numeric_val') is not None and g['numeric_val'] >= 4.75)
+            prev_high = sum(1 for g in prev_period_grades if g.get('numeric_val') is not None and g['numeric_val'] >= 4.75)
+            high_diff = current_high - prev_high
+
+            current_low = sum(1 for g in period_grades if g.get('numeric_val') is not None and g['numeric_val'] <= 2.25)
+            prev_low = sum(1 for g in prev_period_grades if g.get('numeric_val') is not None and g['numeric_val'] <= 2.25)
+            low_diff = current_low - prev_low
+
+            current_np = sum(1 for g in period_grades if str(g.get('grade', '')).lower() in ('np', 'niepr', 'bz'))
+            prev_np = sum(1 for g in prev_period_grades if str(g.get('grade', '')).lower() in ('np', 'niepr', 'bz'))
+            np_diff = current_np - prev_np
+
+            current_weights = [g['parsed_weight'] for g in period_grades if g.get('numeric_val') is not None]
+            prev_weights = [g['parsed_weight'] for g in prev_period_grades if g.get('numeric_val') is not None]
+            current_avg_weight = round(sum(current_weights) / len(current_weights), 2) if current_weights else None
+            prev_avg_weight = round(sum(prev_weights) / len(prev_weights), 2) if prev_weights else None
+
+            # Średnia ogólna przed okresem vs obecnie
+            valid_subject_prior_averages = [
+                calc_weighted_avg(data['prior'])
+                for data in subjects_map.values()
+                if calc_weighted_avg(data['prior']) is not None
+            ]
+            overall_student_prior_avg = round(sum(valid_subject_prior_averages) / len(valid_subject_prior_averages), 2) if valid_subject_prior_averages else None
+            overall_shift = round(overall_student_avg - overall_student_prior_avg, 2) if (overall_student_avg is not None and overall_student_prior_avg is not None) else None
+
+            avg_diff = None
+            if period_student_avg is not None and prev_period_student_avg is not None:
+                avg_diff = round(period_student_avg - prev_period_student_avg, 2)
+
+            # Analiza na poziomie przedmiotów
+            top_improved_subjects = []
+            declining_subjects = []
+            for subj_name, data in subjects_map.items():
+                s_curr = calc_weighted_avg(data['period'])
+                s_prev = calc_weighted_avg(data['prev_period'])
+                if s_curr is not None and s_prev is not None:
+                    s_diff = round(s_curr - s_prev, 2)
+                    if s_diff >= 0.25:
+                        top_improved_subjects.append({
+                            'subject': subj_name,
+                            'current_avg': s_curr,
+                            'prev_avg': s_prev,
+                            'diff': s_diff
+                        })
+                    elif s_diff <= -0.25:
+                        declining_subjects.append({
+                            'subject': subj_name,
+                            'current_avg': s_curr,
+                            'prev_avg': s_prev,
+                            'diff': s_diff
+                        })
+
+            top_improved_subjects.sort(key=lambda x: -x['diff'])
+            declining_subjects.sort(key=lambda x: x['diff'])
+
+            # Klasyfikacja syntetyczna i wnioski
+            takeaways = []
+            if not has_prev_data:
+                status = 'neutral'
+                badge_icon = '🗓️'
+                badge_text = 'BIEŻĄCY OKRES'
+                headline = "Brak ocen w poprzednim okresie odniesienia – raport prezentuje aktualny stan i wyniki nauki."
+            else:
+                if avg_diff is not None:
+                    if avg_diff >= 0.30 or (avg_diff >= 0.15 and low_diff < 0):
+                        status = 'significant_progress'
+                        badge_icon = '🚀'
+                        badge_text = f"+{avg_diff:.2f} PROGRES"
+                        headline = f"Znakomity okres! Uczeń wyraźnie poprawił wyniki względem poprzedniego okresu (średnia ocen wzrosła z {prev_period_student_avg:.2f} do {period_student_avg:.2f}). Widać większe zaangażowanie i efekty pracy."
+                    elif avg_diff >= 0.10:
+                        status = 'slight_progress'
+                        badge_icon = '↗️'
+                        badge_text = f"+{avg_diff:.2f} POPRAWA"
+                        headline = f"Dobra tendencja. Średnia ocen w bieżącym okresie jest wyższa niż w poprzednim ({period_student_avg:.2f} vs {prev_period_student_avg:.2f})."
+                    elif avg_diff <= -0.25 or (current_low > prev_low and avg_diff < -0.10):
+                        status = 'warning'
+                        badge_icon = '⚠️'
+                        badge_text = f"{avg_diff:.2f} SPADEK"
+                        headline = f"W tym okresie nastąpił spadek wyników względem poprzedniego okresu (średnia okresowa: {period_student_avg:.2f} vs {prev_period_student_avg:.2f} wcześniej). Warto sprawdzić trudniejsze tematy i zaplanować powtórkę."
+                    else:
+                        status = 'stable'
+                        badge_icon = '➡️'
+                        badge_text = f"{avg_diff:+.2f} STABILNIE"
+                        headline = f"Uczeń utrzymuje równy, stabilny poziom nauki porównywalny z poprzednim okresem (średnia: {period_student_avg:.2f} vs {prev_period_student_avg:.2f})."
+                else:
+                    status = 'stable'
+                    badge_icon = '➡️'
+                    badge_text = 'STABILNIE'
+                    headline = "Brak ocen liczbowych do wyznaczenia różnicy średnich w obu okresach."
+
+                # Tworzenie punktów podsumowujących (takeaways)
+                if avg_diff is not None:
+                    sign = "+" if avg_diff > 0 else ""
+                    takeaways.append(f"Średnia ocen w okresie: <strong>{period_student_avg:.2f}</strong> (poprzednio: {prev_period_student_avg:.2f}, zmiana: <strong>{sign}{avg_diff:.2f} pkt</strong>).")
+
+                if high_diff > 0:
+                    takeaways.append(f"Więcej ocen bardzo dobrych i celujących (5 i 6): <strong>{current_high}</strong> (poprzednio: {prev_high}, wzrost o {high_diff}).")
+                elif current_high > 0:
+                    takeaways.append(f"Oceny bardzo dobre i celujące (5 i 6) w okresie: <strong>{current_high}</strong>.")
+
+                if low_diff < 0:
+                    takeaways.append(f"👏 Mniej potknięć i słabych ocen (1 i 2): <strong>{current_low}</strong> (poprzednio: {prev_low}, spadek o {abs(low_diff)}).")
+                elif low_diff > 0:
+                    takeaways.append(f"⚠️ Wzrost liczby ocen słabych (1 i 2): <strong>{current_low}</strong> (poprzednio: {prev_low}, przybyło: {low_diff}). Warto zaplanować powtórki.")
+
+                if np_diff < 0:
+                    takeaways.append(f"Poprawa w systematyczności: mniej nieprzygotowań/braków zadań ({current_np} vs {prev_np}).")
+                elif np_diff > 0:
+                    takeaways.append(f"Uwaga na nieprzygotowania do lekcji: pojawiły się {current_np} braki zadań/np (wcześniej: {prev_np}).")
+
+                if overall_shift is not None and abs(overall_shift) >= 0.01:
+                    dir_text = "podciągnięcie w górę" if overall_shift > 0 else "obniżenie"
+                    arrow = "↗" if overall_shift > 0 else "↘"
+                    takeaways.append(f"Wpływ na średnią roczną ucznia: <strong>{dir_text} {arrow}</strong> o {abs(overall_shift):.2f} pkt ({overall_student_prior_avg:.2f} ➔ <strong>{overall_student_avg:.2f}</strong>).")
+
+                if top_improved_subjects:
+                    subj_str = ", ".join([f"<strong>{s['subject']}</strong> (+{s['diff']:.2f})" for s in top_improved_subjects[:3]])
+                    takeaways.append(f"🚀 Wyraźny skok wyników z przedmiotów: {subj_str}.")
+
+                if declining_subjects:
+                    subj_str = ", ".join([f"<strong>{s['subject']}</strong> ({s['diff']:.2f})" for s in declining_subjects[:3]])
+                    takeaways.append(f"🔻 Spadek średniej z przedmiotów: {subj_str}.")
+
+            period_comparison = {
+                'enabled': True,
+                'has_prev_data': has_prev_data,
+                'period_start_str': period_start.strftime("%d.%m.%Y"),
+                'period_end_str': period_end.strftime("%d.%m.%Y"),
+                'prev_period_start_str': prev_period_start.strftime("%d.%m.%Y") if prev_period_start else "—",
+                'prev_period_end_str': prev_period_end.strftime("%d.%m.%Y") if prev_period_end else "—",
+                'current_avg': period_student_avg,
+                'prev_avg': prev_period_student_avg,
+                'avg_diff': avg_diff,
+                'current_count': current_count,
+                'prev_count': prev_count,
+                'count_diff': count_diff,
+                'current_high_count': current_high,
+                'prev_high_count': prev_high,
+                'high_diff': high_diff,
+                'current_low_count': current_low,
+                'prev_low_count': prev_low,
+                'low_diff': low_diff,
+                'current_np_count': current_np,
+                'prev_np_count': prev_np,
+                'np_diff': np_diff,
+                'current_avg_weight': current_avg_weight,
+                'prev_avg_weight': prev_avg_weight,
+                'overall_before_period': overall_student_prior_avg,
+                'overall_after_period': overall_student_avg,
+                'overall_shift': overall_shift,
+                'top_improved_subjects': top_improved_subjects,
+                'declining_subjects': declining_subjects,
+                'status': status,
+                'badge_icon': badge_icon,
+                'badge_text': badge_text,
+                'headline': headline,
+                'takeaways': takeaways,
+            }
 
         p_start_str = period_start.strftime("%d.%m.%Y") if period_start else "Początek roku"
         p_end_str = period_end.strftime("%d.%m.%Y")
@@ -693,6 +881,7 @@ class ProgressAnalyzer:
             'volatile_subjects': volatile_subjects,
             'weight_impact': weight_impact,
             'legend': legend,
+            'period_comparison': period_comparison,
             'activity_pluses': activity_pluses,
             'activity_minuses': activity_minuses,
             'unprepared_count': unprepared_count,

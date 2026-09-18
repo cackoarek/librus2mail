@@ -4,6 +4,7 @@ arek_config.yaml
 *_config.yaml
 *.local.yaml
 .env
+ai-continue.txt
 
 # Logi
 *.log

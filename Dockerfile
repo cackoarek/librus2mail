@@ -6,12 +6,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     TZ=Europe/Warsaw
 
-# Instalacja strefy czasowej tzdata oraz narzędzi bazowych
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    tzdata \
-    && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
-    && rm -rf /var/lib/apt/lists/*
-
 # Utworzenie dedykowanego nieuprzywilejowanego użytkownika (bezpieczeństwo kontenera)
 RUN groupadd -g 1000 librus && \
     useradd -u 1000 -g librus -s /bin/bash -m librus
@@ -21,15 +15,15 @@ WORKDIR /app
 # Utworzenie katalogów na dane ze stosownymi uprawnieniami
 RUN mkdir -p /app/storage && chown -R librus:librus /app
 
-# Kopiowanie plików definicji pakietu i instalacja zależności
-COPY pyproject.toml requirements.txt README.md /app/
+# Kopiowanie plików projektu i definicji pakietu
+COPY pyproject.toml requirements.txt README.md LICENSE /app/
 COPY src/ /app/src/
 COPY templates/ /app/templates/
 COPY main.py librus_collector.py progress_report.py /app/
 
-# Instalacja pakietu librus2mail wraz ze skryptami CLI
+# Instalacja pakietu librus2mail wraz ze skryptami CLI i wsparciem strefy czasowej
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir .
+    pip install --no-cache-dir tzdata .
 
 # Przełączenie na użytkownika nieuprzywilejowanego
 USER librus

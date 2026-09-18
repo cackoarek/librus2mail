@@ -1,8 +1,39 @@
-# Librus2mail
+<div align="center">
 
-Automatyczny demon / powiadamiacz e-mail dla systemu **Librus Synergia**. 
+# 📬 Librus2mail
 
-Skrypt loguje się na konto rodzica w portalu Librus Synergia, cyklicznie monitoruje skrzynkę wiadomości (`/wiadomosci`), tablicę ogłoszeń szkolnych (`/ogloszenia`) oraz oceny ucznia (`/przegladaj_oceny/uczen`), a w przypadku wykrycia nowych wpisów natychmiast wysyła estetyczne podsumowanie HTML na wskazane adresy e-mail.
+**Nowoczesny, bezobsługowy asystent e-mail i analityk postępów dla e-dziennika Librus Synergia**
+
+[![Python Version](https://img.shields.io/badge/python-3.10%2B-3776AB.svg?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![Code Style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg?style=flat-square&logo=ruff&logoColor=white)](https://github.com/astral-sh/ruff)
+[![Tests: pytest](https://img.shields.io/badge/tests-pytest%20(38%20passed)-success.svg?style=flat-square&logo=pytest&logoColor=white)](tests/)
+[![Packaging: PEP 517/518](https://img.shields.io/badge/packaging-PEP%20517%2F518-00599C.svg?style=flat-square)](pyproject.toml)
+[![Docker Ready](https://img.shields.io/badge/docker-ready-2496ED.svg?style=flat-square&logo=docker&logoColor=white)](Dockerfile)
+[![systemd Supported](https://img.shields.io/badge/systemd-supported-lightgrey.svg?style=flat-square&logo=linux&logoColor=white)](deploy/systemd/)
+[![Templates: Jinja2](https://img.shields.io/badge/templates-Jinja2-B41717.svg?style=flat-square&logo=jinja&logoColor=white)](templates/emails/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg?style=flat-square)](LICENSE)
+
+<p align="center">
+  Automatyczne powiadomienia e-mail o nowych ocenach, wiadomościach i ogłoszeniach<br>
+  oraz zaawansowany silnik analizy trendów, wag ocen i symulator świadectwa z wyróżnieniem.
+</p>
+
+[🚀 Szybki start](#instalacja) • [⚙️ Konfiguracja](#konfiguracja) • [🐳 Docker](#konteneryzacja-docker-i-docker-compose) • [📊 Raport postępów](#moduł-raportu-postępów-dziecka-progress_reportpy) • [❓ FAQ](#najczęstsze-pytania-i-rozwiązywanie-problemów-faq)
+
+</div>
+
+---
+
+### O projekcie
+
+**Librus2mail** to zautomatyzowana usługa działająca jako demon systemowy (lub kontener Docker), która loguje się na konto rodzica w portalu **Librus Synergia**, cyklicznie monitoruje skrzynkę wiadomości (`/wiadomosci`), tablicę ogłoszeń szkolnych (`/ogloszenia`) oraz oceny ucznia (`/przegladaj_oceny/uczen`), a po wykryciu nowych wpisów natychmiast wysyła przejrzyste i estetyczne powiadomienia HTML (oparte na Jinja2) na wskazane adresy e-mail (Gmail lub własny serwer SMTP).
+
+#### 🌟 Kluczowe wyróżniki:
+* 🔔 **Bieżące powiadomienia bez opóźnień**: Otrzymuj informacje o nowych wpisach ze szkoły bezpośrednio na swój telefon w skrzynce e-mail, bez konieczności ciągłego ręcznego odświeżania portalu czy korzystania z płatnych aplikacji mobilnych.
+* 👨‍👩‍👧‍👦 **Obsługa wielu dzieci (Multi-account)**: Monitorowanie wielu kont w jednej instancji z możliwością przypisania różnych odbiorców e-mail dla każdego dziecka (np. mama, tata, dziadkowie).
+* 📊 **Analityka i Symulator Czerwonego Paska (100% offline)**: Niezależny moduł analityczny przeliczający średnie ważone, wskaźniki trendu (↗, ↘, ➡), kalkulator szans/zagrożeń na granicy oceny, weryfikację warunków świadectwa z wyróżnieniem i pedagogiczną diagnozę stylu nauki (sprawdziany vs praca bieżąca).
+* 🐳 **Proste wdrożenie DevOps**: Gotowy obraz Docker, konfiguracja Docker Compose oraz produkcyjne jednostki `systemd` (usługa + timer) dla serwerów Linux, Raspberry Pi lub domowych serwerów NAS.
+* 🛡️ **Prywatność i bezpieczeństwo**: Żadne dane uwierzytelniające ani oceny dzieci nie trafiają do zewnętrznych chmur – całość działa lokalnie na Twojej własnej maszynie.
 
 ---
 
@@ -30,6 +61,7 @@ Skrypt loguje się na konto rodzica w portalu Librus Synergia, cyklicznie monito
 11. [Najczęstsze pytania i rozwiązywanie problemów (FAQ)](#najczęstsze-pytania-i-rozwiązywanie-problemów-faq)
 12. [Bezpieczeństwo](#bezpieczeństwo)
 13. [Podziękowania](#podziękowania)
+14. [Licencja](#licencja)
 
 ---
 
@@ -544,3 +576,9 @@ tail -f librus.log
 ## Podziękowania
 
 Projekt powstał w oparciu o analizę mechanizmu komunikacji z API Librusa zawartą w projekcie [Mati365/librus-api](https://github.com/Mati365/librus-api/).
+
+---
+
+## Licencja
+
+Projekt udostępniany jest na warunkach otwartej licencji **MIT**. Szczegółowe informacje znajdują się w pliku [LICENSE](LICENSE).

@@ -8,6 +8,7 @@ version = "1.0.0"
 description = "Monitor dziennika Librus Synergia z powiadomieniami e-mail i raportami postępów"
 readme = "README.md"
 requires-python = ">=3.10"
+license = { text = "MIT" }
 authors = [
     { name = "Arkadiusz Cacko" }
 ]

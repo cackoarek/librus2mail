@@ -1,0 +1,18 @@
+[Unit]
+Description=Librus2mail - Generator tygodniowych raportów postępów dziecka
+Documentation=https://github.com/cackoarek/librus2mail
+After=network-online.target
+
+[Service]
+Type=oneshot
+
+# Dostosuj użytkownika i ścieżkę do swojego serwera:
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/librus2mail
+
+# Wykonanie raportu:
+ExecStart=/home/pi/librus2mail/venv/bin/librus-report
+
+StandardOutput=journal
+StandardError=journal

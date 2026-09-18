@@ -1,0 +1,12 @@
+[Unit]
+Description=Librus2mail - Harmonogram tygodniowych raportów ocen (każdy piątek o 17:00)
+Documentation=https://github.com/cackoarek/librus2mail
+
+[Timer]
+# Uruchamia raport w każdy piątek o godzinie 17:00
+OnCalendar=Fri *-*-* 17:00:00
+# Jeśli serwer był wyłączony w planowanym czasie, uruchom natychmiast po starcie
+Persistent=true
+
+[Install]
+WantedBy=timers.target

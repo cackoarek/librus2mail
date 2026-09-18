@@ -1,0 +1,37 @@
+# Python & virtual environments
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Credentials & secrets (CRITICAL: never bake into image)
+config.yaml
+arek_config.yaml
+*_config.yaml
+.env
+*.pem
+*.key
+
+# Runtime data & logs
+storage/*.json
+*.log
+
+# Git & CI/CD
+.git/
+.gitignore
+.github/
+
+# Development & Test caches
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+tests/
+scratch/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/

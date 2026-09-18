@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  # Główna usługa demona monitorującego e-dziennik Librus
+  collector:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: librus2mail:latest
+    container_name: librus2mail-collector
+    restart: unless-stopped
+    volumes:
+      # Plik konfiguracyjny montowany w trybie tylko do odczytu (:ro)
+      - ./config.yaml:/app/config.yaml:ro
+      # Katalog storage z trwałym stanem i historią ocen
+      - ./storage:/app/storage
+    environment:
+      - TZ=Europe/Warsaw
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Pomocniczy kontener do uruchamiania raportów postępów na żądanie
+  # Przykład użycia (wysyłka):   docker-compose run --rm report
+  # Przykład użycia (symulacja): docker-compose run --rm report librus-report --dry-run
+  report:
+    image: librus2mail:latest
+    container_name: librus2mail-report
+    command: ["librus-report"]
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - ./storage:/app/storage
+    environment:
+      - TZ=Europe/Warsaw
+    profiles:
+      - tools

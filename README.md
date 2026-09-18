@@ -17,18 +17,19 @@ Skrypt loguje się na konto rodzica w portalu Librus Synergia, cyklicznie monito
 5. [Usługa zbierania danych i monitoringu (librus_collector.py / main.py)](#usługa-zbierania-danych-i-monitoringu-librus_collectorpy--mainpy)
    - [Uruchomienie standardowe](#uruchomienie-standardowe)
    - [Dedykowane polecenie CLI (librus-collector)](#dedykowane-polecenie-cli-librus-collector)
-   - [Uruchomienie w tle (systemd / nohup)](#uruchomienie-w-tle-systemd--nohup)
-   - [Uruchomienie w cronie](#wariant-c-harmonogram-zadań-cron-z-work-in-loop-false)
+   - [Uruchomienie w tle (nohup / cron)](#uruchomienie-w-tle-nohup--cron)
 6. [Moduł raportu postępów dziecka (progress_report.py)](#moduł-raportu-postępów-dziecka-progress_reportpy)
    - [Możliwości analizy](#możliwości-analizy)
    - [Sposób użycia i parametry CLI](#sposób-użycia-i-parametry-cli)
-   - [Harmonogram cron dla raportów](#harmonogram-cron-dla-raportów)
-7. [Szablony wiadomości e-mail (Jinja2)](#szablony-wiadomości-e-mail-jinja2)
-8. [Architektura projektu](#architektura-projektu)
-9. [Testy i jakość kodu](#testy-i-jakość-kodu)
-10. [Najczęstsze pytania i rozwiązywanie problemów (FAQ)](#najczęstsze-pytania-i-rozwiązywanie-problemów-faq)
-11. [Bezpieczeństwo](#bezpieczeństwo)
-12. [Podziękowania](#podziękowania)
+7. [Wdrożenie produkcyjne i konteneryzacja (Docker & systemd)](#wdrożenie-produkcyjne-i-konteneryzacja-docker--systemd)
+   - [Konteneryzacja Docker i Docker Compose](#konteneryzacja-docker-i-docker-compose)
+   - [Wdrożenie systemd (Linux / Raspberry Pi / VPS)](#wdrożenie-systemd-linux--raspberry-pi--vps)
+8. [Szablony wiadomości e-mail (Jinja2)](#szablony-wiadomości-e-mail-jinja2)
+9. [Architektura projektu](#architektura-projektu)
+10. [Testy i jakość kodu](#testy-i-jakość-kodu)
+11. [Najczęstsze pytania i rozwiązywanie problemów (FAQ)](#najczęstsze-pytania-i-rozwiązywanie-problemów-faq)
+12. [Bezpieczeństwo](#bezpieczeństwo)
+13. [Podziękowania](#podziękowania)
 
 ---
 
@@ -195,41 +196,17 @@ python main.py
 
 Skrypt uruchomi się w pętli nieskończonej, logując swoje działania jednocześnie do pliku `librus.log` oraz na konsolę.
 
-### Uruchomienie w tle (systemd / nohup)
+### Uruchomienie w tle (nohup / cron)
 
-#### Wariant A: `nohup`
+#### Wariant A: `nohup` (proste uruchomienie w tle)
 ```bash
-nohup venv/bin/python librus_collector.py >/dev/null 2>&1 &
+nohup librus-collector >/dev/null 2>&1 &
 ```
 
-#### Wariant B: Usługa `systemd` (zalecane dla serwerów Linux)
-Utwórz plik `/etc/systemd/system/librus2mail.service`:
+> [!TIP]
+> Do stałego wdrożenia produkcyjnego na serwerach Linux (VPS, Raspberry Pi, serwery domowe) zaleca się skorzystanie ze środowiska **Docker / Docker Compose** lub gotowych usług **systemd** z automatycznym wznawianiem po awarii. Szczegółowe instrukcje znajdziesz w sekcji [Wdrożenie produkcyjne i konteneryzacja (Docker & systemd)](#wdrożenie-produkcyjne-i-konteneryzacja-docker--systemd).
 
-```ini
-[Unit]
-Description=Librus2mail Collector Daemon
-After=network.target
-
-[Service]
-Type=simple
-User=twoj_uzytkownik
-WorkingDirectory=/sciezka/do/librus2mail
-ExecStart=/sciezka/do/librus2mail/venv/bin/python librus_collector.py
-Restart=always
-RestartSec=60
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Następnie aktywuj usługę:
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now librus2mail
-sudo systemctl status librus2mail
-```
-
-#### Wariant C: Harmonogram zadań `cron` (z `work-in-loop: false`)
+#### Wariant B: Harmonogram zadań `cron` (z `work-in-loop: false`)
 
 Jeśli wolisz, aby skrypt nie działał jako ciągły proces w tle, lecz był wywoływany cyklicznie przez systemowego crona:
 1. W pliku `config.yaml` ustaw:
@@ -356,6 +333,82 @@ Dzięki wydzieleniu skryptu do osobnego pliku, możesz w prosty i elastyczny spo
 
 ---
 
+## Wdrożenie produkcyjne i konteneryzacja (Docker & systemd)
+
+Dla środowisk produkcyjnych (serwer VPS, Raspberry Pi, serwer domowy / NAS) zaleca się uruchomienie usługi w kontenerze Docker lub jako demona `systemd` z automatycznym restartem po awarii.
+
+### Konteneryzacja Docker i Docker Compose
+
+Repozytorium zawiera gotowy [Dockerfile](file:///home/acacko/PycharmProjects/librus2mail/Dockerfile) oparty na lekkim obrazie `python:3.10-slim`.
+* Działa w bezpiecznym trybie na nieuprzywilejowanym użytkowniku `librus` (UID 1000).
+* Posiada skonfigurowaną polską strefę czasową (`TZ=Europe/Warsaw`) dla właściwego formatowania dat ocen i alertów.
+* Obsługuje montowanie konfiguracji `config.yaml` w trybie tylko do odczytu (`:ro`) oraz wolumen danych dla trwałego zapisu `storage/`.
+
+#### Szybki start z Docker Compose:
+
+1. **Przygotuj plik `config.yaml`**:
+   ```bash
+   cp config.example.yaml config.yaml
+   # uzupełnij dane logowania i listę odbiorców e-mail
+   ```
+
+2. **Uruchomienie demona monitorującego w tle**:
+   ```bash
+   docker-compose up -d --build
+   ```
+
+3. **Podgląd logów na żywo**:
+   ```bash
+   docker-compose logs -f collector
+   ```
+
+4. **Wygenerowanie raportu postępów ucznia z poziomu kontenera**:
+   ```bash
+   # Tryb testowy / symulacja (podgląd w terminalu bez wysyłania e-maila):
+   docker-compose run --rm report librus-report --dry-run
+
+   # Faktyczne wygenerowanie i wysłanie e-maila:
+   docker-compose run --rm report
+   ```
+
+5. **Zatrzymanie demona**:
+   ```bash
+   docker-compose down
+   ```
+
+#### Uruchomienie czystym poleceniem `docker`:
+
+```bash
+# Budowanie obrazu:
+docker build -t librus2mail .
+
+# Uruchomienie usługi w tle:
+docker run -d \
+  --name librus2mail \
+  --restart unless-stopped \
+  -v $(pwd)/config.yaml:/app/config.yaml:ro \
+  -v $(pwd)/storage:/app/storage \
+  librus2mail
+
+# Wygenerowanie raportu postępów:
+docker run --rm \
+  -v $(pwd)/config.yaml:/app/config.yaml:ro \
+  -v $(pwd)/storage:/app/storage \
+  librus2mail librus-report --dry-run
+```
+
+---
+
+### Wdrożenie systemd (Linux / Raspberry Pi / VPS)
+
+W katalogu [`deploy/systemd/`](file:///home/acacko/PycharmProjects/librus2mail/deploy/systemd/) przygotowano wzorcowe pliki jednostek dla menedżera usług `systemd`:
+* [`librus2mail.service`](file:///home/acacko/PycharmProjects/librus2mail/deploy/systemd/librus2mail.service): ciągły demon monitorujący z automatycznym restartem po awarii sieci i zaostrzonym profilem bezpieczeństwa (`ProtectSystem=full`, `PrivateTmp=true`, `NoNewPrivileges=true`).
+* [`librus2mail-report.service`](file:///home/acacko/PycharmProjects/librus2mail/deploy/systemd/librus2mail-report.service) & [`librus2mail-report.timer`](file:///home/acacko/PycharmProjects/librus2mail/deploy/systemd/librus2mail-report.timer): natywny zegar systemowy do cotygodniowej wysyłki raportu postępów (domyślnie w każdy piątek o 17:00), eliminujący konieczność konfiguracji crona.
+
+Szczegółowy opis instalacji krok po kroku znajduje się w przewodniku [deploy/systemd/README.md](file:///home/acacko/PycharmProjects/librus2mail/deploy/systemd/README.md).
+
+---
+
 ## Szablony wiadomości e-mail (Jinja2)
 
 Wszystkie wiadomości i raporty HTML generowane są za pomocą silnika szablonów **Jinja2**. Szablony znajdują się w katalogu `templates/emails/` (oraz wewnątrz pakietu `src/librus2mail/templates/emails/`):
@@ -400,6 +453,15 @@ librus2mail/
 ├── tests/                      # Pakiet testów jednostkowych
 │   ├── test_librus.py          # Testy logowania, scrapingu, formatowania i analityki
 │   └── test_package_layout.py  # Testy struktury pakietu i eksportów
+├── deploy/                     # Gotowe pliki wdrożeniowe
+│   └── systemd/                # Jednostki systemd dla Linuksa (Raspberry Pi / VPS)
+│       ├── librus2mail.service # Usługa demona zbierającego dane z restartem
+│       ├── librus2mail-report.service # Usługa generowania raportu postępów
+│       ├── librus2mail-report.timer   # Zegar cotygodniowej wysyłki raportu
+│       └── README.md           # Instrukcja instalacji usług systemd
+├── Dockerfile                  # Wielowarstwowy obraz kontenera OCI (Python 3.10-slim, non-root)
+├── docker-compose.yml          # Definicja usług (kolektor w tle + raporty na żądanie)
+├── .dockerignore               # Ochrona poufnych konfiguracji przed kopiowaniem do obrazu
 ├── pyproject.toml              # Nowoczesna konfiguracja projektu (PEP 517/518/621)
 ├── requirements.txt            # Tradycyjna lista zależności
 ├── config.example.yaml         # Wzorcowy szablon konfiguracji

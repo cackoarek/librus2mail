@@ -1,0 +1,36 @@
+[Unit]
+Description=Librus2mail - Demon monitorujący dziennik Librus Synergia
+Documentation=https://github.com/cackoarek/librus2mail
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+# Dostosuj użytkownika i ścieżkę do środowiska na serwerze (np. Raspberry Pi, VPS):
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/librus2mail
+
+# Ścieżka do wirtualnego środowiska venv:
+ExecStart=/home/pi/librus2mail/venv/bin/librus-collector config.yaml
+
+# Automatyczny restart w razie awarii sieci lub błędu
+Restart=always
+RestartSec=30
+TimeoutStopSec=30
+KillMode=mixed
+
+# Standardowe logowanie do systemd journal (przeglądanie przez: journalctl -u librus2mail -f)
+StandardOutput=journal
+StandardError=journal
+
+# Opcjonalne utwardzenie bezpieczeństwa procesu (systemd hardening)
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/home/pi/librus2mail/storage /home/pi/librus2mail/librus.log
+
+[Install]
+WantedBy=multi-user.target

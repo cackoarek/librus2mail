@@ -1,0 +1,26 @@
+<p>W Librusie dla konta {{ user_config.librus_login }} <strong>({{ user_config.librus_login_name or user_config.librus_login }})</strong> pojawiły się <strong>nowe wiadomości</strong>.</p>
+<p>&nbsp;</p>
+<p>Lista wszystkich wiadomości (nowe <strong>boldem</strong>):</p>
+<table border="1" cellspacing="0" cellpadding="10">
+<thead><tr><th>Tytuł</th><th>Nadawca</th><th>Data</th></tr></thead>
+<tbody>
+{% for message in messages %}
+  {% if message.is_unread %}
+    <tr>
+      <td><strong>{{ message.title }}</strong></td>
+      <td><strong>{{ message.sender }}</strong></td>
+      <td><strong>{{ message.datetime }}</strong></td>
+    {% if message.body %}
+    </tr><tr><td colspan="3">{{ message.body | replace('\n', '<br>') | safe }}</td>
+    {% endif %}
+    </tr>
+  {% else %}
+    <tr>
+      <td>{{ message.title }}</td>
+      <td>{{ message.sender }}</td>
+      <td>{{ message.datetime }}</td>
+    </tr>
+  {% endif %}
+{% endfor %}
+</tbody>
+</table>

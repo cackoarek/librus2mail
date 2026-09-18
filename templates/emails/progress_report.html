@@ -1,0 +1,373 @@
+<div style="width: 100%; max-width: 650px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1f2937; line-height: 1.5; background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; box-sizing: border-box; overflow: hidden;">
+    <!-- Nagłówek -->
+    <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color: #ffffff; padding: 16px;">
+        <h1 style="margin: 0; font-size: 19px; font-weight: 700; color: #ffffff;">📊 Raport postępów ucznia</h1>
+        <p style="margin: 4px 0 0 0; font-size: 14px; opacity: 0.95; color: #ffffff;">
+            <strong>{{ user_name }}</strong> (konto Librus: <code>{{ user_login }}</code>)
+        </p>
+        <div style="margin-top: 6px; font-size: 12px; opacity: 0.9; color: #ffffff;">
+            🗓️ Okres: <strong>{{ analysis.period_start_str }}</strong> – <strong>{{ analysis.period_end_str }}</strong>
+        </div>
+    </div>
+
+    <div style="padding: 14px; box-sizing: border-box;">
+        <!-- Kafelki KPI (Tabela 2x2 z szerokościami 50%) -->
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; margin-bottom: 16px; border-collapse: separate; border-spacing: 6px;">
+            <tr>
+                <td width="50%" valign="top" style="width: 50%; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 6px; text-align: center;">
+                    <div style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Średnia ogólna</div>
+                    <div style="font-size: 24px; font-weight: bold; color: #1e3a8a; margin: 3px 0;">
+                        {{ "%.2f"|format(analysis.overall_avg) if analysis.overall_avg is not none else "—" }}
+                    </div>
+                    {% if analysis.overall_avg is not none and analysis.overall_avg >= 4.75 %}
+                    <div style="margin-top: 4px; font-size: 11px; background-color: #fef3c7; color: #92400e; padding: 2px 6px; border-radius: 4px; display: inline-block; font-weight: bold;">🏅 Świadectwo z wyróżnieniem</div>
+                    {% endif %}
+                </td>
+                <td width="50%" valign="top" style="width: 50%; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 6px; text-align: center;">
+                    <div style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Średnia w okresie</div>
+                    <div style="font-size: 24px; font-weight: bold; color: #059669; margin: 3px 0;">
+                        {{ "%.2f"|format(analysis.period_avg) if analysis.period_avg is not none else "—" }}
+                    </div>
+                    <div style="font-size: 10px; color: #64748b;">{{ analysis.period_start_str }} – {{ analysis.period_end_str }}</div>
+                </td>
+            </tr>
+            <tr>
+                <td width="50%" valign="top" style="width: 50%; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 6px; text-align: center;">
+                    <div style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Oceny w okresie</div>
+                    <div style="font-size: 24px; font-weight: bold; color: #2563eb; margin: 3px 0;">{{ analysis.period_grades_count }}</div>
+                    <div style="font-size: 10px; color: #64748b;">z {{ analysis.total_grades_count }} zarejestrowanych</div>
+                </td>
+                <td width="50%" valign="top" style="width: 50%; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 6px; text-align: center;">
+                    <div style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Aktywność / Uwagi</div>
+                    <div style="font-size: 17px; font-weight: bold; color: #334155; margin: 4px 0;">
+                        +{{ analysis.activity_pluses }} / -{{ analysis.activity_minuses }}
+                    </div>
+                    <div style="font-size: 11px; color: #ef4444; font-weight: bold;">np/bz: {{ analysis.unprepared_count }}</div>
+                </td>
+            </tr>
+        </table>
+
+        <!-- Rekomendacje i wnioski: Sukcesy -->
+        {% if analysis.insights_strengths %}
+        <div style="background-color: #ecfdf5; border-left: 4px solid #10b981; border-radius: 6px; padding: 14px 18px; margin-bottom: 18px;">
+            <h4 style="margin: 0 0 8px 0; color: #065f46; font-size: 15px;">🌟 Sukcesy i mocne strony</h4>
+            <ul style="margin: 0; padding-left: 20px; color: #047857; font-size: 14px;">
+                {% for s in analysis.insights_strengths %}
+                <li style="margin-bottom: 6px;">{{ s | safe }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- Rekomendacje i wnioski: Ostrzeżenia -->
+        {% if analysis.insights_warnings %}
+        <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 6px; padding: 14px 18px; margin-bottom: 18px;">
+            <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 15px;">⚠️ Uwagi i obszary do poprawy</h4>
+            <ul style="margin: 0; padding-left: 20px; color: #b45309; font-size: 14px;">
+                {% for w in analysis.insights_warnings %}
+                <li style="margin-bottom: 6px;">{{ w | safe }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- Karta Symulatora Czerwonego Paska -->
+        {% set hr = honor_roll %}
+        {% if hr %}
+            {% if hr.get('qualified') %}
+            <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 14px 16px; margin-bottom: 16px; width: 100%; box-sizing: border-box;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                    <tr>
+                        <td width="36" valign="middle" style="font-size: 28px; padding-right: 12px;">🏅</td>
+                        <td valign="middle">
+                            <h4 style="margin: 0; color: #92400e; font-size: 15px; font-weight: bold;">Kwalifikacja do świadectwa z wyróżnieniem (czerwony pasek)!</h4>
+                            <p style="margin: 4px 0 0 0; color: #78350f; font-size: 13px;">{{ hr.get('message', '') }}</p>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            {% elif hr.get('current_avg') is not none and hr.get('current_avg') > 0 %}
+            {% set pct = [100, [0, (((hr.get('current_avg', 1.0) - 1.0) / (4.75 - 1.0)) * 100)|round|int]|max]|min %}
+            <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px 16px; margin-bottom: 16px; width: 100%; box-sizing: border-box;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                    <tr>
+                        <td valign="top">
+                            <h4 style="margin: 0; color: #166534; font-size: 15px;">🎯 Droga do świadectwa z wyróżnieniem (Czerwony Pasek)</h4>
+                            <p style="margin: 4px 0 0 0; color: #15803d; font-size: 13px;">
+                                Aktualna średnia: <strong>{{ "%.2f"|format(hr.get('current_avg', 0)) }}</strong> | Cel: <strong>4.75</strong> (brakuje <strong>{{ "%.2f"|format(hr.get('gap', 0)) }}</strong> pkt)
+                            </p>
+                        </td>
+                        <td align="right" valign="top" style="text-align: right; white-space: nowrap; padding-left: 8px;">
+                            <span style="font-size: 13px; font-weight: bold; color: #166534; background-color: #dcfce7; padding: 3px 8px; border-radius: 6px;">{{ pct }}% celu</span>
+                        </td>
+                    </tr>
+                </table>
+                <div style="background-color: #dcfce7; border-radius: 10px; height: 10px; width: 100%; margin-top: 10px; overflow: hidden;">
+                    <div style="background-color: #16a34a; width: {{ pct }}%; height: 100%; border-radius: 10px;"></div>
+                </div>
+                {% if hr.get('key_opportunities') %}
+                <div style="margin-top: 10px; font-size: 12px; color: #1e3a8a; border-top: 1px dashed #bbf7d0; padding-top: 8px;">
+                    <strong>Najszybsza droga do paska (kluczowe przedmioty o najmniejszej stracie):</strong>
+                    <ul style="margin: 4px 0 0 0; padding-left: 20px;">
+                        {% for o in hr.get('key_opportunities', []) %}
+                        <li><strong>{{ o.subject }}</strong>: aktualnie {{ "%.2f"|format(o.current_avg) }} (brakuje {{ "%.2f"|format(o.dist) }} do oceny {{ o.target_grade }})</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+        {% endif %}
+
+        <!-- Karta Na granicy oceny (Szanse i Zagrożenia) -->
+        {% if analysis.borderline_opportunities or analysis.borderline_risks %}
+        <div style="margin-bottom: 16px;">
+            <h3 style="color: #1f2937; margin: 0 0 10px 0; font-size: 15px; border-bottom: 2px solid #6366f1; padding-bottom: 5px;">
+                🎯 Analiza progów ocen (Kalkulator szans i zagrożeń)
+            </h3>
+            {% if analysis.borderline_opportunities %}
+            <div style="background-color: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px; width: 100%; box-sizing: border-box;">
+                <h4 style="margin: 0 0 6px 0; color: #15803d; font-size: 13px;">🎯 Szanse na wyższą ocenę (na wyciągnięcie ręki)</h4>
+                <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: #166534; line-height: 1.45;">
+                    {% for o in analysis.borderline_opportunities %}
+                    <li style="margin-bottom: 6px;"><strong>{{ o.subject }}</strong>: {{ o.advice }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            {% if analysis.borderline_risks %}
+            <div style="background-color: #fff7ed; border: 1px solid #fdba74; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px; width: 100%; box-sizing: border-box;">
+                <h4 style="margin: 0 0 6px 0; color: #c2410c; font-size: 13px;">⚖️ Ryzyko obniżenia oceny (mały margines bezpieczeństwa)</h4>
+                <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: #9a3412; line-height: 1.45;">
+                    {% for r in analysis.borderline_risks %}
+                    <li style="margin-bottom: 6px;"><strong>{{ r.subject }}</strong>: {{ r.warning }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Karta Styl nauki i wpływ wag -->
+        {% set ls = learning_style %}
+        {% set wi = weight_impact %}
+        {% if ls.get('exams_avg') is not none or wi.get('arithmetic_avg') is not none %}
+        <div style="margin-bottom: 16px;">
+            <h3 style="color: #1f2937; margin: 0 0 10px 0; font-size: 15px; border-bottom: 2px solid #8b5cf6; padding-bottom: 5px;">
+                🔍 Styl nauki i wpływ wag ocen
+            </h3>
+            <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px; width: 100%; box-sizing: border-box;">
+                <h4 style="margin: 0 0 8px 0; color: #334155; font-size: 13px;">Sprawdziany vs Bieżąca praca</h4>
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; text-align: center; margin-bottom: 8px;">
+                    <tr>
+                        <td width="50%" style="width: 50%; border-right: 1px solid #e2e8f0; padding-right: 6px;">
+                            <div style="font-size: 11px; color: #64748b;">SPRAWDZIANY (waga &ge; 2)</div>
+                            <div style="font-size: 20px; font-weight: bold; color: #1e3a8a;">
+                                {{ "%.2f"|format(ls.get('exams_avg', 0)) if ls.get('exams_avg') is not none else "—" }}
+                            </div>
+                            <div style="font-size: 10px; color: #64748b;">{{ ls.get('exams_count', 0) }} ocen</div>
+                        </td>
+                        <td width="50%" style="width: 50%; padding-left: 6px;">
+                            <div style="font-size: 11px; color: #64748b;">PRACA BIEŻĄCA (waga 1)</div>
+                            <div style="font-size: 20px; font-weight: bold; color: #059669;">
+                                {{ "%.2f"|format(ls.get('daily_avg', 0)) if ls.get('daily_avg') is not none else "—" }}
+                            </div>
+                            <div style="font-size: 10px; color: #64748b;">{{ ls.get('daily_count', 0) }} ocen</div>
+                        </td>
+                    </tr>
+                </table>
+                <div style="font-size: 12px; color: #475569; line-height: 1.4; border-top: 1px solid #e2e8f0; padding-top: 8px;">
+                    {{ ls.get('diagnosis', '') }}
+                </div>
+            </div>
+            <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px 14px; width: 100%; box-sizing: border-box;">
+                <h4 style="margin: 0 0 6px 0; color: #334155; font-size: 13px;">Wpływ wag i stabilność wyników</h4>
+                <div style="font-size: 12px; color: #475569; line-height: 1.4;">
+                    <div><strong>Efekt wagowy:</strong> {{ wi.get('description', '') }}</div>
+                    {% if analysis.stable_subjects %}
+                    <div style="margin-top: 6px;">
+                        <strong>Stabilne oceny:</strong>
+                        {% for s in analysis.stable_subjects[:3] %}{{ s.subject }}{% if not loop.last %}, {% endif %}{% endfor %}
+                    </div>
+                    {% endif %}
+                    {% if analysis.volatile_subjects %}
+                    <div style="margin-top: 6px; color: #b45309;">
+                        <strong>Duże wahania (sinusoida):</strong>
+                        {% for v in analysis.volatile_subjects[:2] %}{{ v.subject }} ({{ v.min }}–{{ v.max }}){% if not loop.last %}, {% endif %}{% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Karta Ciche przedmioty -->
+        {% if dormant_items %}
+        <div style="background-color: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; width: 100%; box-sizing: border-box;">
+            <h4 style="margin: 0 0 6px 0; color: #854d0e; font-size: 13px;">⏱️ Ciche przedmioty (brak ocen od ponad 30 dni)</h4>
+            <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: #713f12;">
+                {% for d in dormant_items %}
+                <li><strong>{{ d.subject }}</strong>: ostatnia ocena {{ d.last_date_str }} ({{ d.days_ago }} dni temu)</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- Karty ocen wg przedmiotów -->
+        <div style="margin-top: 20px;">
+            <h3 style="color: #1f2937; margin: 0 0 10px 0; font-size: 16px; border-bottom: 2px solid #1e3a8a; padding-bottom: 6px;">
+                📚 Zestawienie ocen według przedmiotów
+            </h3>
+            {% for s in analysis.subjects %}
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 10px; background-color: #ffffff; width: 100%; box-sizing: border-box; overflow: hidden;">
+                <div style="background-color: #f8fafc; padding: 10px 12px; border-bottom: 1px solid #e2e8f0;">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                        <tr>
+                            <td valign="top" style="padding-bottom: 4px;">
+                                <span style="font-size: 15px; font-weight: bold; color: #1e293b;">{{ s.subject }}</span>
+                                <span style="display: inline-block; font-size: 11px; background-color: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 4px;">Prognoza: {{ s.predicted_grade }}</span>
+                                {% if s.subject in borderline_opp_map %}
+                                <span style="display: inline-block; font-size: 11px; background-color: #dcfce7; color: #15803d; border: 1px solid #86efac; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 4px;">🎯 +{{ "%.2f"|format(borderline_opp_map[s.subject].gap) }} do wyższej</span>
+                                {% elif s.subject in borderline_risk_map %}
+                                <span style="display: inline-block; font-size: 11px; background-color: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 4px;">⚠️ margines {{ "%.2f"|format(borderline_risk_map[s.subject].margin) }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td valign="top" style="font-size: 13px; color: #334155;">
+                                Śr. ogólna: <strong style="font-size: 15px; color: #1e3a8a;">{{ "%.2f"|format(s.overall_avg) if s.overall_avg is not none else "—" }}</strong>
+                                <span style="color: {% if s.trend == 'up' %}#059669{% elif s.trend == 'down' %}#dc2626{% else %}#4b5563{% endif %}; font-weight: bold; margin-left: 3px;">{{ s.trend_label }}</span>
+                                <span style="color: #64748b; font-size: 12px; margin-left: 6px;">(okres: <strong>{{ "%.2f"|format(s.period_avg) if s.period_avg is not none else "—" }}</strong>)</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="padding: 10px 12px; font-size: 13px;">
+                    <div style="margin-bottom: 6px;">
+                        <span style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Oceny w okresie:</span>
+                        <div style="margin-top: 3px;">
+                            {% if s.period_grades %}
+                                {% for g in s.period_grades %}{{ g.grade | grade_badge }}{% endfor %}
+                            {% else %}
+                                <span style="color: #9ca3af; font-size: 12px;">brak</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div>
+                        <span style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Wszystkie oceny:</span>
+                        <div style="margin-top: 3px;">
+                            {% if s.all_grades %}
+                                {% for g in s.all_grades %}{{ g.grade | grade_badge }}{% endfor %}
+                            {% else %}
+                                <span style="color: #9ca3af; font-size: 12px;">brak</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Szczegóły nowych ocen w okresie -->
+        {% if analysis.period_grades %}
+        <div style="margin-top: 20px;">
+            <h3 style="color: #1f2937; margin: 0 0 10px 0; font-size: 16px; border-bottom: 2px solid #3b82f6; padding-bottom: 6px;">
+                📝 Oceny zarejestrowane w analizowanym okresie ({{ analysis.period_grades | length }})
+            </h3>
+            {% for g in analysis.period_grades %}
+            <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background-color: #ffffff; width: 100%; box-sizing: border-box;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                    <tr>
+                        <td valign="top" style="padding-bottom: 2px;">
+                            <span style="font-weight: bold; font-size: 14px; color: #1e293b;">{{ g.subject }}</span>
+                            {{ g.grade | grade_badge }}
+                            <span style="display: inline-block; font-size: 11px; background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 3px;">waga {{ g.weight or '-' }}</span>
+                            <span style="font-size: 12px; color: #475569; margin-left: 4px;">• {{ g.category or '-' }}</span>
+                        </td>
+                        <td align="right" valign="top" style="text-align: right; font-size: 12px; color: #64748b; white-space: nowrap; padding-left: 8px;">
+                            🗓️ {{ g.date or '-' }}
+                        </td>
+                    </tr>
+                </table>
+                {% if (g.teacher and g.teacher != '-') or (g.comment and g.comment != '-') %}
+                <div style="font-size: 12px; color: #64748b; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #f1f5f9;">
+                    {% if g.teacher and g.teacher != '-' %}<span>👤 <strong>Nauczyciel:</strong> {{ g.teacher }}</span>{% endif %}
+                    {% if (g.teacher and g.teacher != '-') and (g.comment and g.comment != '-') %} &nbsp;|&nbsp; {% endif %}
+                    {% if g.comment and g.comment != '-' %}<span>💬 <strong>Komentarz:</strong> {{ g.comment }}</span>{% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Rozkład ocen (Histogram) -->
+        <div style="margin-top: 20px;">
+            <h3 style="color: #1f2937; margin: 0 0 10px 0; font-size: 16px; border-bottom: 2px solid #64748b; padding-bottom: 6px;">
+                📈 Rozkład ocen (cały okres vs ostatni raport)
+            </h3>
+            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; border-collapse: separate; border-spacing: 3px;">
+                <tr>
+                    {% for grade_num in ['6', '5', '4', '3', '2', '1'] %}
+                    {% set cnt_all = analysis.distribution_overall.get(grade_num, 0) %}
+                    {% set cnt_p = analysis.distribution_period.get(grade_num, 0) %}
+                    <td width="16%" align="center" valign="top" style="width: 16.6%; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 6px 2px; text-align: center;">
+                        <div style="margin-bottom: 2px;">{{ grade_num | grade_badge }}</div>
+                        <div style="font-size: 16px; font-weight: bold; color: #1f2937;">{{ cnt_all }}</div>
+                        <div style="font-size: 10px; color: #6b7280; line-height: 1.1;">
+                            {% if cnt_p > 0 %}+{{ cnt_p }} w okresie{% else %}0 w okresie{% endif %}
+                        </div>
+                    </td>
+                    {% endfor %}
+                </tr>
+            </table>
+        </div>
+
+        <!-- Przewodnik rodzica (Legenda) - 2 porady na wiersz -->
+        {% set legend = analysis.legend %}
+        {% if legend %}
+        <div style="margin-top: 25px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; box-sizing: border-box; width: 100%;">
+            <h3 style="margin: 0 0 10px 0; color: #1e3a8a; font-size: 15px;">
+                📖 Przewodnik rodzica: Jak rozumieć wskaźniki w raporcie?
+            </h3>
+            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; border-collapse: separate; border-spacing: 6px;">
+                <tr>
+                    <td width="50%" valign="top" style="width: 50%; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; font-size: 12px; color: #475569; line-height: 1.45;">
+                        <strong style="color: #1e293b;">🎯 Skala i progi ocen:</strong><br>
+                        {{ legend.thresholds }}
+                    </td>
+                    <td width="50%" valign="top" style="width: 50%; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; font-size: 12px; color: #475569; line-height: 1.45;">
+                        <strong style="color: #1e293b;">📈 Wskaźniki trendu (↗, ↘, ➡, ✨):</strong><br>
+                        {{ legend.trends }}
+                    </td>
+                </tr>
+                <tr>
+                    <td width="50%" valign="top" style="width: 50%; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; font-size: 12px; color: #475569; line-height: 1.45;">
+                        <strong style="color: #1e293b;">⚖️ Średnia ważona a wagi ocen:</strong><br>
+                        {{ legend.weight_impact }}
+                    </td>
+                    <td width="50%" valign="top" style="width: 50%; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; font-size: 12px; color: #475569; line-height: 1.45;">
+                        <strong style="color: #1e293b;">🎯 Analiza na granicy ocen:</strong><br>
+                        {{ legend.borderline }}
+                    </td>
+                </tr>
+                <tr>
+                    <td width="50%" valign="top" style="width: 50%; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; font-size: 12px; color: #475569; line-height: 1.45;">
+                        <strong style="color: #1e293b;">🔍 Styl nauki (sprawdziany / kartkówki):</strong><br>
+                        {{ legend.learning_style }}
+                    </td>
+                    <td width="50%" valign="top" style="width: 50%; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; font-size: 12px; color: #475569; line-height: 1.45;">
+                        <strong style="color: #1e293b;">🎢 Stabilność ocen vs Sinusoida:</strong><br>
+                        {{ legend.stability }}
+                    </td>
+                </tr>
+            </table>
+        </div>
+        {% endif %}
+
+        <!-- Stopka -->
+        <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; text-align: center;">
+            Raport postępów wygenerowany automatycznie przez <strong>Librus2mail</strong>. Wartości średnich obliczone na podstawie wag przypisanych w Librus Synergia.
+        </div>
+    </div>
+</div>

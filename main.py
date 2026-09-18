@@ -1,3 +1,4 @@
+import sys
 import traceback
 from time import sleep
 
@@ -19,7 +20,10 @@ def configure_mail_provider(config: dict) -> MailSender:
 
 
 if __name__ == '__main__':
-    config = read_config('config.yaml')
+    try:
+        config = read_config('config.yaml')
+    except FileNotFoundError:
+        sys.exit(1)
 
     storage_type = config.get('storage_type', 'RAM')
     storage = create_storage(storage_type)

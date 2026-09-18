@@ -584,6 +584,27 @@ class TestLibrus(unittest.TestCase):
             with self.assertRaises(NotLogged):
                 librus.login()
 
+    def test_read_config_missing_file_raises_filenotfounderror(self):
+        from config import read_config
+        with self.assertRaises(FileNotFoundError) as ctx:
+            read_config('non_existent_config_file_12345.yaml')
+        self.assertIn("config.example.yaml", str(ctx.exception))
+        self.assertIn("README.md", str(ctx.exception))
+
+    def test_read_config_valid_file_loads_successfully(self):
+        import tempfile
+        from config import read_config
+        with tempfile.NamedTemporaryFile('w', suffix='.yaml', delete=False) as f:
+            f.write("test_key: test_value\n")
+            f_name = f.name
+        try:
+            cfg = read_config(f_name)
+            self.assertEqual(cfg.get('test_key'), 'test_value')
+        finally:
+            import os
+            if os.path.exists(f_name):
+                os.remove(f_name)
+
 
 if __name__ == '__main__':
     unittest.main()

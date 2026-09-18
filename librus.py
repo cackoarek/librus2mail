@@ -294,6 +294,11 @@ class Librus:
                 self.__known_notifications,
                 self.__known_grades
             )
+            if hasattr(self, 'grades') and self.grades:
+                self.__storage.save_grades_details(
+                    str(self.__librus_login),
+                    self.grades
+                )
 
     def get_not_known_messages_and_mark_as_known(self) -> list[dict[str, bool | str | Any]]:
         resp = [message for message in self.messages if message['id'] not in self.__known_messages]
@@ -458,6 +463,7 @@ class Librus:
         grades = list(unique_grades.values())
         logger.info(f"Pobrano {len(grades)} ocen")
         self.grades = grades
+        self.save_state()
 
     def get_not_known_grades_and_mark_as_known(self) -> list[dict[str, bool | str | Any]]:
         resp = [grade for grade in self.grades if grade['id'] not in self.__known_grades]

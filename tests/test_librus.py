@@ -308,18 +308,11 @@ class TestLibrus(unittest.TestCase):
             smtp_sender.send_mail_with_summary(user_cfg, [], [{'title': 'O', 'sender': 'D', 'datetime': 'D', 'is_unread': True}], [])
             mock_smtp.return_value.sendmail.assert_called_once()
 
-    def test_memory_storage(self):
-        from storage import MemoryStorage
-        storage = MemoryStorage()
-        self.assertFalse(storage.has_existing_data("123"))
-
-        storage.save_known_items("123", {"msg1"}, {"notif1"}, {"grade1"})
-        self.assertTrue(storage.has_existing_data("123"))
-
-        data = storage.load_known_items("123")
-        self.assertEqual(data['messages'], {"msg1"})
-        self.assertEqual(data['notifications'], {"notif1"})
-        self.assertEqual(data['grades'], {"grade1"})
+    def test_create_storage_defaults(self):
+        from storage import FileStorage, create_storage
+        st = create_storage()
+        self.assertIsInstance(st, FileStorage)
+        self.assertEqual(st.storage_dir, "storage")
 
     def test_file_storage_persistence(self):
         import tempfile
@@ -339,10 +332,8 @@ class TestLibrus(unittest.TestCase):
             self.assertEqual(data['notifications'], {"n1"})
             self.assertEqual(data['grades'], {"g1"})
 
-            # Test factory function
-            ram_s = create_storage("RAM")
-            self.assertEqual(ram_s.__class__.__name__, "MemoryStorage")
-            file_s = create_storage("FILES", storage_dir=tmpdir)
+            # Test factory function with storage_dir
+            file_s = create_storage(storage_dir=tmpdir)
             self.assertEqual(file_s.__class__.__name__, "FileStorage")
 
     def test_librus_with_storage_integration(self):
@@ -385,40 +376,27 @@ class TestLibrus(unittest.TestCase):
 
     def test_storage_error_tracking(self):
         import tempfile
-        import time
-        from storage import MemoryStorage, FileStorage
+        from storage import FileStorage
 
-        # 1. MemoryStorage
-        mem = MemoryStorage()
-        self.assertIsNone(mem.get_last_error("user1"))
-        mem.save_last_error("user1", "Error 1", step="logowanie")
-        err = mem.get_last_error("user1")
-        self.assertIsNotNone(err)
-        self.assertEqual(err['error'], "Error 1")
-        self.assertEqual(err['step'], "logowanie")
-        self.assertIn('timestamp', err)
-        mem.clear_last_error("user1")
-        self.assertIsNone(mem.get_last_error("user1"))
-
-        # 2. FileStorage
         with tempfile.TemporaryDirectory() as tmpdir:
             fs = FileStorage(storage_dir=tmpdir)
-            self.assertIsNone(fs.get_last_error("user2"))
-            fs.save_last_error("user2", "Error 2", step="wiadomości")
-            err_f = fs.get_last_error("user2")
-            self.assertIsNotNone(err_f)
-            self.assertEqual(err_f['error'], "Error 2")
-            self.assertEqual(err_f['step'], "wiadomości")
+            self.assertIsNone(fs.get_last_error("user1"))
+            fs.save_last_error("user1", "Error 1", step="logowanie")
+            err = fs.get_last_error("user1")
+            self.assertIsNotNone(err)
+            self.assertEqual(err['error'], "Error 1")
+            self.assertEqual(err['step'], "logowanie")
+            self.assertIn('timestamp', err)
 
             # Verify that saving known items does not overwrite last_error
-            fs.save_known_items("user2", {"m1"}, {"n1"}, {"g1"})
-            err_f2 = fs.get_last_error("user2")
-            self.assertIsNotNone(err_f2)
-            self.assertEqual(err_f2['error'], "Error 2")
+            fs.save_known_items("user1", {"m1"}, {"n1"}, {"g1"})
+            err2 = fs.get_last_error("user1")
+            self.assertIsNotNone(err2)
+            self.assertEqual(err2['error'], "Error 1")
 
             # Verify clearing last_error
-            fs.clear_last_error("user2")
-            self.assertIsNone(fs.get_last_error("user2"))
+            fs.clear_last_error("user1")
+            self.assertIsNone(fs.get_last_error("user1"))
 
     def test_mail_sender_error_diagnostics_and_content(self):
         from MailSender import MailSender
@@ -471,36 +449,46 @@ class TestLibrus(unittest.TestCase):
 
     def test_mail_sender_cooldown_logic(self):
         import time
+        import json
+        import tempfile
         from MailSender import MailSender
-        from storage import MemoryStorage
+        from storage import FileStorage
 
-        storage = MemoryStorage()
-        user_login = "12345"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            storage = FileStorage(storage_dir=tmpdir)
+            user_login = "12345"
 
-        # Initially, no prior errors -> should send
-        self.assertTrue(MailSender.should_send_error_notification(storage, user_login, "Error A", cooldown_s=3600))
+            # Initially, no prior errors -> should send
+            self.assertTrue(MailSender.should_send_error_notification(storage, user_login, "Error A", cooldown_s=3600))
 
-        # Record error
-        storage.save_last_error(user_login, "Error A", step="logowanie")
+            # Record error
+            storage.save_last_error(user_login, "Error A", step="logowanie")
 
-        # Immediate next check with same error -> should be throttled
-        self.assertFalse(MailSender.should_send_error_notification(storage, user_login, "Error A", cooldown_s=3600))
+            # Immediate next check with same error -> should be throttled
+            self.assertFalse(MailSender.should_send_error_notification(storage, user_login, "Error A", cooldown_s=3600))
 
-        # Next check with a DIFFERENT error -> should send immediately!
-        self.assertTrue(MailSender.should_send_error_notification(storage, user_login, "Error B", cooldown_s=3600))
+            # Next check with a DIFFERENT error -> should send immediately!
+            self.assertTrue(MailSender.should_send_error_notification(storage, user_login, "Error B", cooldown_s=3600))
 
-        # Check after artificial timestamp aging past cooldown
-        storage._last_errors[user_login]['timestamp'] = time.time() - 3601
-        self.assertTrue(MailSender.should_send_error_notification(storage, user_login, "Error A", cooldown_s=3600))
+            # Check after artificial timestamp aging past cooldown
+            fpath = storage._get_file_path(user_login)
+            with open(fpath, 'r', encoding='utf-8') as f:
+                d = json.load(f)
+            d['last_error']['timestamp'] = time.time() - 3601
+            with open(fpath, 'w', encoding='utf-8') as f:
+                json.dump(d, f)
 
-        # Check cooldown_s <= 0 disables throttling
-        storage.save_last_error(user_login, "Error A", step="logowanie")
-        self.assertTrue(MailSender.should_send_error_notification(storage, user_login, "Error A", cooldown_s=0))
+            self.assertTrue(MailSender.should_send_error_notification(storage, user_login, "Error A", cooldown_s=3600))
+
+            # Check cooldown_s <= 0 disables throttling
+            storage.save_last_error(user_login, "Error A", step="logowanie")
+            self.assertTrue(MailSender.should_send_error_notification(storage, user_login, "Error A", cooldown_s=0))
 
     def test_send_error_notification_gmail_and_smtp(self):
+        import tempfile
         from GmailSender import GmailSender
         from SmtpSender import SmtpSender
-        from storage import MemoryStorage
+        from storage import FileStorage
 
         mail_cfg = {
             'login': 'test@example.com',
@@ -513,30 +501,32 @@ class TestLibrus(unittest.TestCase):
             'librus_login_name': 'Kasia',
             'notification_receivers': ['parent@example.com']
         }
-        storage = MemoryStorage()
         test_err = NotLogged("Sesja wygasła")
 
-        # 1. Test GmailSender
-        with patch('yagmail.SMTP') as mock_yag:
-            gmail = GmailSender(mail_cfg)
-            sent = gmail.send_error_notification(user_cfg, test_err, step_name="logowanie", storage=storage, cooldown_s=3600)
-            self.assertTrue(sent)
-            mock_yag.return_value.send.assert_called_once()
-            # Verify error was saved to storage
-            self.assertIsNotNone(storage.get_last_error("12345"))
+        with tempfile.TemporaryDirectory() as tmpdir:
+            storage = FileStorage(storage_dir=tmpdir)
 
-            # Second attempt immediately should be throttled
-            sent_again = gmail.send_error_notification(user_cfg, test_err, step_name="logowanie", storage=storage, cooldown_s=3600)
-            self.assertFalse(sent_again)
+            # 1. Test GmailSender
+            with patch('yagmail.SMTP') as mock_yag:
+                gmail = GmailSender(mail_cfg)
+                sent = gmail.send_error_notification(user_cfg, test_err, step_name="logowanie", storage=storage, cooldown_s=3600)
+                self.assertTrue(sent)
+                mock_yag.return_value.send.assert_called_once()
+                # Verify error was saved to storage
+                self.assertIsNotNone(storage.get_last_error("12345"))
 
-        # 2. Test SmtpSender
-        storage.clear_last_error("12345")
-        with patch('smtplib.SMTP') as mock_smtp:
-            smtp = SmtpSender(mail_cfg)
-            sent_smtp = smtp.send_error_notification(user_cfg, test_err, step_name="oceny", storage=storage, cooldown_s=3600)
-            self.assertTrue(sent_smtp)
-            mock_smtp.return_value.sendmail.assert_called_once()
-            self.assertIsNotNone(storage.get_last_error("12345"))
+                # Second attempt immediately should be throttled
+                sent_again = gmail.send_error_notification(user_cfg, test_err, step_name="logowanie", storage=storage, cooldown_s=3600)
+                self.assertFalse(sent_again)
+
+            # 2. Test SmtpSender
+            storage.clear_last_error("12345")
+            with patch('smtplib.SMTP') as mock_smtp:
+                smtp = SmtpSender(mail_cfg)
+                sent_smtp = smtp.send_error_notification(user_cfg, test_err, step_name="oceny", storage=storage, cooldown_s=3600)
+                self.assertTrue(sent_smtp)
+                mock_smtp.return_value.sendmail.assert_called_once()
+                self.assertIsNotNone(storage.get_last_error("12345"))
 
     def test_login_when_grant_redirects_directly_without_2fa(self):
         mock_session = MagicMock()
@@ -606,6 +596,351 @@ class TestLibrus(unittest.TestCase):
                 os.remove(f_name)
 
 
+    def test_progress_analyzer_helpers(self):
+        from progress_analyzer import parse_numeric_grade, parse_weight, parse_grade_date, get_predicted_grade
+
+        # Grades parsing
+        self.assertEqual(parse_numeric_grade('5'), 5.0)
+        self.assertEqual(parse_numeric_grade('5+'), 5.5)
+        self.assertEqual(parse_numeric_grade('4-'), 3.75)
+        self.assertEqual(parse_numeric_grade('3='), 2.5)
+        self.assertEqual(parse_numeric_grade('2-'), 1.75)
+        self.assertEqual(parse_numeric_grade('+'), None)
+        self.assertEqual(parse_numeric_grade('np'), None)
+        self.assertEqual(parse_numeric_grade(None), None)
+
+        # Weight parsing
+        self.assertEqual(parse_weight('3'), 3.0)
+        self.assertEqual(parse_weight('2.5'), 2.5)
+        self.assertEqual(parse_weight('-'), 1.0)
+        self.assertEqual(parse_weight(None), 1.0)
+
+        # Date parsing
+        d1 = parse_grade_date('2026-09-15')
+        self.assertEqual(d1.year, 2026)
+        self.assertEqual(d1.month, 9)
+        self.assertEqual(d1.day, 15)
+
+        d2 = parse_grade_date('18.09.2026')
+        self.assertEqual(d2.year, 2026)
+        self.assertEqual(d2.month, 9)
+        self.assertEqual(d2.day, 18)
+
+        d3 = parse_grade_date('-', added_at_iso='2026-09-10T12:00:00')
+        self.assertEqual(d3.day, 10)
+
+        # Predicted grade
+        self.assertIn("6", get_predicted_grade(5.75))
+        self.assertIn("5", get_predicted_grade(4.80))
+        self.assertIn("4", get_predicted_grade(3.90))
+        self.assertIn("3", get_predicted_grade(2.80))
+        self.assertIn("2", get_predicted_grade(1.90))
+        self.assertIn("1", get_predicted_grade(1.50))
+        self.assertEqual(get_predicted_grade(None), "-")
+
+    def test_progress_analyzer_full_analysis(self):
+        from progress_analyzer import ProgressAnalyzer
+        from datetime import datetime
+
+        grades = [
+            # Matematyka: historyczna 4 (waga 1), nowa 5 (waga 2) -> trend up
+            {'id': '1', 'subject': 'Matematyka', 'grade': '4', 'weight': '1', 'date': '2026-09-01'},
+            {'id': '2', 'subject': 'Matematyka', 'grade': '5', 'weight': '2', 'date': '2026-09-15', 'category': 'Sprawdzian'},
+            # Język polski: historyczna 5 (waga 2), nowa 2 (waga 3) -> trend down, warning
+            {'id': '3', 'subject': 'Język polski', 'grade': '5', 'weight': '2', 'date': '2026-09-02'},
+            {'id': '4', 'subject': 'Język polski', 'grade': '2', 'weight': '3', 'date': '2026-09-16', 'category': 'Wypracowanie'},
+            # Aktywność
+            {'id': '5', 'subject': 'Historia', 'grade': '+', 'weight': '1', 'date': '2026-09-17'},
+            {'id': '6', 'subject': 'Historia', 'grade': 'np', 'weight': '1', 'date': '2026-09-17'},
+        ]
+
+        period_start = datetime(2026, 9, 10)
+        analysis = ProgressAnalyzer.analyze(grades, period_start=period_start)
+
+        self.assertEqual(analysis['total_grades_count'], 6)
+        self.assertEqual(analysis['period_grades_count'], 4)
+        self.assertEqual(analysis['activity_pluses'], 1)
+        self.assertEqual(analysis['unprepared_count'], 1)
+
+        subjects_dict = {s['subject']: s for s in analysis['subjects']}
+        self.assertIn('Matematyka', subjects_dict)
+        mat = subjects_dict['Matematyka']
+        self.assertEqual(mat['period_avg'], 5.0)
+        self.assertEqual(mat['trend'], 'up')
+
+        pol = subjects_dict['Język polski']
+        self.assertEqual(pol['period_avg'], 2.0)
+        self.assertEqual(pol['trend'], 'down')
+
+        # Sprawdzenie wygenerowanych ostrzeżeń (niska ocena z dużą wagą w okresie)
+        warnings_text = " ".join(analysis['insights_warnings'])
+        self.assertIn('Język polski', warnings_text)
+        self.assertIn('nieprzygotowań', warnings_text)
+
+    def test_storage_grades_history_and_report_date(self):
+        import tempfile
+        import shutil
+        from storage import FileStorage
+
+        temp_dir = tempfile.mkdtemp()
+        try:
+            st = FileStorage(storage_dir=temp_dir)
+            user = "uczen_testowy_123"
+            test_grades = [
+                {'id': 'g1', 'subject': 'Fizyka', 'grade': '5', 'weight': '2', 'date': '2026-09-15'},
+                {'id': 'g2', 'subject': 'Informatyka', 'grade': '6', 'weight': '1', 'date': '2026-09-16'}
+            ]
+            st.save_grades_details(user, test_grades)
+            history = st.get_grades_history(user)
+            self.assertEqual(len(history), 2)
+            hist_ids = {g['id'] for g in history}
+            self.assertEqual(hist_ids, {'g1', 'g2'})
+
+            # Test zapisu daty ostatniego raportu
+            self.assertIsNone(st.get_last_progress_report_date(user))
+            now_iso = "2026-09-18T17:00:00"
+            st.save_last_progress_report_date(user, now_iso)
+            self.assertEqual(st.get_last_progress_report_date(user), now_iso)
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+    def test_mail_sender_progress_report_html_and_title(self):
+        from MailSender import MailSender
+        user_cfg = {'librus_login': '888', 'librus_login_name': 'Zosia'}
+        analysis = {
+            'period_start_str': '11.09.2026',
+            'period_end_str': '18.09.2026',
+            'overall_avg': 4.85,
+            'period_avg': 5.00,
+            'total_grades_count': 12,
+            'period_grades_count': 3,
+            'activity_pluses': 2,
+            'activity_minuses': 0,
+            'unprepared_count': 0,
+            'insights_strengths': ['Wysoka średnia ogólna.'],
+            'insights_warnings': [],
+            'subjects': [{
+                'subject': 'Matematyka',
+                'overall_avg': 5.0,
+                'period_avg': 5.0,
+                'trend': 'up',
+                'trend_label': '↗ (+0.50)',
+                'predicted_grade': '5 (bardzo dobry)',
+                'period_grades': [{'grade': '5+'}],
+                'all_grades': [{'grade': '5'}, {'grade': '5+'}]
+            }],
+            'period_grades': [{
+                'subject': 'Matematyka',
+                'grade': '5+',
+                'weight': '2',
+                'category': 'Klasówka',
+                'date': '2026-09-15',
+                'teacher': 'Nowak Jan',
+                'comment': 'Bardzo dobra praca'
+            }],
+            'distribution_overall': {'6': 2, '5': 8, '4': 2, '3': 0, '2': 0, '1': 0},
+            'distribution_period': {'6': 0, '5': 3, '4': 0, '3': 0, '2': 0, '1': 0},
+        }
+
+        title = MailSender._create_progress_report_title(user_cfg, analysis)
+        self.assertIn("Zosia", title)
+        self.assertIn("4.85", title)
+        self.assertIn("11.09.2026", title)
+
+        content = MailSender.create_mail_content_for_progress_report(user_cfg, analysis)
+        self.assertIn("Zosia", content)
+        self.assertIn("Matematyka", content)
+        self.assertIn("Klasówka", content)
+        self.assertIn("Świadectwo z wyróżnieniem", content)
+        self.assertIn("Wysoka średnia ogólna.", content)
+
+    def test_send_progress_report_gmail_and_smtp(self):
+        from GmailSender import GmailSender
+        from SmtpSender import SmtpSender
+
+        mail_cfg = {
+            'login': 'sender@example.com',
+            'password': 'secret_pass',
+            'use_gmail': True,
+            'non_gmail_settings': {'smtp_host': 'localhost', 'port': 587}
+        }
+        user_cfg = {
+            'librus_login': '999',
+            'librus_login_name': 'Bartek',
+            'notification_receivers': ['parent@example.com']
+        }
+        analysis = {
+            'period_start_str': '10.09.2026',
+            'period_end_str': '17.09.2026',
+            'overall_avg': 4.20,
+            'period_avg': 4.50,
+            'total_grades_count': 5,
+            'period_grades_count': 2,
+            'activity_pluses': 0,
+            'activity_minuses': 0,
+            'unprepared_count': 0,
+            'insights_strengths': [],
+            'insights_warnings': [],
+            'subjects': [],
+            'period_grades': [],
+            'distribution_overall': {},
+            'distribution_period': {},
+        }
+
+        # 1. GmailSender
+        with patch('yagmail.SMTP') as mock_yag:
+            gmail = GmailSender(mail_cfg)
+            sent = gmail.send_progress_report(user_cfg, analysis)
+            self.assertTrue(sent)
+            mock_yag.return_value.send.assert_called_once()
+
+        # 2. SmtpSender
+        with patch('smtplib.SMTP') as mock_smtp:
+            smtp = SmtpSender(mail_cfg)
+            sent_smtp = smtp.send_progress_report(user_cfg, analysis)
+            self.assertTrue(sent_smtp)
+            mock_smtp.return_value.sendmail.assert_called_once()
+
+    def test_progress_report_cli_dry_run(self):
+        import sys
+        import tempfile
+        import os
+        import yaml
+        from progress_report import run_progress_reports
+        from storage import FileStorage
+
+        temp_dir = tempfile.mkdtemp()
+        cfg_path = os.path.join(temp_dir, 'config.yaml')
+        storage_dir = os.path.join(temp_dir, 'storage')
+        os.makedirs(storage_dir, exist_ok=True)
+
+        # Pre-seed storage with grades
+        st = FileStorage(storage_dir=storage_dir)
+        st.save_grades_details('111222', [
+            {'id': 'g1', 'subject': 'Biologia', 'grade': '5', 'weight': '2', 'date': '2026-09-15', 'category': 'Sprawdzian'}
+        ])
+
+        cfg_data = {
+            'storage_dir': storage_dir,
+            'librus_users': [{
+                'librus_login': '111222',
+                'librus_login_name': 'Michał',
+                'librus_password': 'test',
+                'notification_receivers': ['test@example.com']
+            }],
+            'mail': {
+                'login': 'sender@example.com',
+                'password': 'pass',
+                'use_gmail': True
+            }
+        }
+
+        with open(cfg_path, 'w', encoding='utf-8') as f:
+            yaml.dump(cfg_data, f)
+
+        # Run with --dry-run (offline by default)
+        test_args = ['progress_report.py', '-c', cfg_path, '--dry-run']
+        with patch.object(sys, 'argv', test_args):
+            with patch('storage.FileStorage', return_value=st):
+                # Should execute cleanly without errors or sending emails
+                run_progress_reports()
+
+
+    def test_progress_analyzer_new_features(self):
+        from progress_analyzer import ProgressAnalyzer
+        from datetime import datetime, timedelta
+
+        now = datetime(2026, 9, 20)
+        old_date = (now - timedelta(days=40)).strftime('%Y-%m-%d')
+
+        grades = [
+            # Matematyka: średnia 3.67 (blisko progu 3.75 dla oceny 4 - szansa)
+            {'id': '10', 'subject': 'Matematyka', 'grade': '4', 'weight': '2', 'date': '2026-09-12'},
+            {'id': '11', 'subject': 'Matematyka', 'grade': '3', 'weight': '1', 'date': '2026-09-14'},
+            # Historia: średnia 1.80 (blisko progu 1.75 - ryzyko spadku do 1)
+            {'id': '20', 'subject': 'Historia', 'grade': '2', 'weight': '4', 'date': '2026-09-15'},
+            {'id': '21', 'subject': 'Historia', 'grade': '1', 'weight': '1', 'date': '2026-09-16'},
+            # Cichy przedmiot: Informatyka (ocena sprzed 40 dni)
+            {'id': '40', 'subject': 'Informatyka', 'grade': '5', 'weight': '1', 'date': old_date},
+            # Stabilność: Biologia (same 5 -> stabilna) vs Fizyka (1, 5, 1, 5 -> sinusoida)
+            {'id': '50', 'subject': 'Biologia', 'grade': '5', 'weight': '1', 'date': '2026-09-10'},
+            {'id': '51', 'subject': 'Biologia', 'grade': '5', 'weight': '1', 'date': '2026-09-11'},
+            {'id': '52', 'subject': 'Biologia', 'grade': '5', 'weight': '1', 'date': '2026-09-12'},
+            {'id': '60', 'subject': 'Fizyka', 'grade': '1', 'weight': '1', 'date': '2026-09-10'},
+            {'id': '61', 'subject': 'Fizyka', 'grade': '5', 'weight': '1', 'date': '2026-09-11'},
+            {'id': '62', 'subject': 'Fizyka', 'grade': '1', 'weight': '1', 'date': '2026-09-12'},
+            {'id': '63', 'subject': 'Fizyka', 'grade': '5', 'weight': '1', 'date': '2026-09-13'},
+        ]
+
+        analysis = ProgressAnalyzer.analyze(grades, period_start=now - timedelta(days=14), period_end=now)
+
+        # 1. Analiza na krawędzi (Borderline)
+        self.assertTrue(any(o['subject'] == 'Matematyka' for o in analysis['borderline_opportunities']))
+        self.assertTrue(any(r['subject'] == 'Historia' for r in analysis['borderline_risks']))
+
+        # 2. Ciche przedmioty
+        self.assertTrue(any(d['subject'] == 'Informatyka' for d in analysis['dormant_subjects']))
+
+        # 3. Stabilność
+        self.assertTrue(any(s['subject'] == 'Biologia' for s in analysis['stable_subjects']))
+        self.assertTrue(any(v['subject'] == 'Fizyka' for v in analysis['volatile_subjects']))
+
+        # 4. Legenda i przewodnik
+        self.assertIn('legend', analysis)
+        self.assertIn('thresholds', analysis['legend'])
+        self.assertIn('trends', analysis['legend'])
+
+    def test_progress_analyzer_learning_style(self):
+        from progress_analyzer import ProgressAnalyzer
+
+        # Uczeń ma 5 ze sprawdzianów (waga 3) i 2 z kartkówek (waga 1)
+        grades_daily_lower = [
+            {'id': '1', 'subject': 'Fizyka', 'grade': '5', 'weight': '3', 'category': 'Sprawdzian'},
+            {'id': '2', 'subject': 'Matematyka', 'grade': '5', 'weight': '3', 'category': 'Praca klasowa'},
+            {'id': '3', 'subject': 'Fizyka', 'grade': '2', 'weight': '1', 'category': 'Kartkówka'},
+            {'id': '4', 'subject': 'Matematyka', 'grade': '2', 'weight': '1', 'category': 'Zadanie domowe'},
+        ]
+        res1 = ProgressAnalyzer.analyze(grades_daily_lower)
+        self.assertEqual(res1['learning_style']['diagnosis_type'], 'daily_lower')
+        self.assertGreater(res1['learning_style']['diff'], 0.40)
+
+        # Uczeń ma 2 ze sprawdzianów i 5 z kartkówek
+        grades_exams_lower = [
+            {'id': '1', 'subject': 'Fizyka', 'grade': '2', 'weight': '3', 'category': 'Sprawdzian'},
+            {'id': '2', 'subject': 'Matematyka', 'grade': '2', 'weight': '3', 'category': 'Praca klasowa'},
+            {'id': '3', 'subject': 'Fizyka', 'grade': '5', 'weight': '1', 'category': 'Kartkówka'},
+            {'id': '4', 'subject': 'Matematyka', 'grade': '5', 'weight': '1', 'category': 'Zadanie domowe'},
+        ]
+        res2 = ProgressAnalyzer.analyze(grades_exams_lower)
+        self.assertEqual(res2['learning_style']['diagnosis_type'], 'exams_lower')
+        self.assertLess(res2['learning_style']['diff'], -0.40)
+
+    def test_mail_sender_progress_report_html_new_features(self):
+        from MailSender import MailSender
+        from progress_analyzer import ProgressAnalyzer
+        from datetime import datetime, timedelta
+
+        now = datetime(2026, 9, 20)
+        grades = [
+            {'id': '1', 'subject': 'Matematyka', 'grade': '4', 'weight': '2', 'date': '2026-09-15', 'category': 'Sprawdzian'},
+            {'id': '2', 'subject': 'Matematyka', 'grade': '3', 'weight': '1', 'date': '2026-09-16', 'category': 'Kartkówka'},
+            {'id': '3', 'subject': 'Fizyka', 'grade': '5', 'weight': '1', 'date': '2026-08-01'},
+        ]
+        analysis = ProgressAnalyzer.analyze(grades, period_start=now - timedelta(days=7), period_end=now)
+        user_cfg = {'librus_login': 'test_user', 'librus_login_name': 'Kacper'}
+
+        html = MailSender.create_mail_content_for_progress_report(user_cfg, analysis)
+
+        # Weryfikacja obecności kluczowych sekcji w szablonie HTML
+        self.assertIn('Przewodnik rodzica: Jak rozumieć wskaźniki w raporcie?', html)
+        self.assertIn('Sprawdziany vs Bieżąca praca', html)
+        self.assertIn('Kalkulator szans i zagrożeń', html)
+        self.assertIn('Czerwony Pasek', html)
+        self.assertIn('Ciche przedmioty', html)
+
+
 if __name__ == '__main__':
     unittest.main()
+
+
 

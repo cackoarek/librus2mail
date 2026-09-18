@@ -60,8 +60,12 @@ librus2mail/
 ├── config.example.yaml         # Clean configuration template for users and tests
 ├── GmailSender.py              # MailSender subclass using yagmail for Gmail
 ├── librus.py                   # Librus scraping & OAuth client class
+├── librus_collector.py         # Primary collector daemon & real-time monitoring loop
 ├── MailSender.py               # Base class with HTML table formatting for emails
-├── main.py                     # Entrypoint & main polling loop
+├── main.py                     # Backward-compatible wrapper calling librus_collector.py
+├── progress_analyzer.py        # Progress analytics engine (weighted avgs, trends, alerts)
+├── progress_report.py          # Offline progress report generator CLI (reads from storage/)
+├── storage.py                  # State and grade history persistence (FileStorage)
 ├── README.md                   # Human documentation
 ├── requirements.txt            # Python dependencies
 ├── SmtpSender.py               # MailSender subclass using standard smtplib + STARTTLS

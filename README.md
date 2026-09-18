@@ -14,14 +14,19 @@ Skrypt loguje się na konto rodzica w portalu Librus Synergia, cyklicznie monito
    - [Struktura pliku config.yaml](#struktura-pliku-configyaml)
    - [Konfiguracja kont Librus (librus_users)](#konfiguracja-kont-librus-librus_users)
    - [Konfiguracja wysyłki e-mail (mail)](#konfiguracja-wysyłki-e-mail-mail)
-5. [Uruchomienie](#uruchomienie)
+5. [Usługa zbierania danych i monitoringu (librus_collector.py / main.py)](#usługa-zbierania-danych-i-monitoringu-librus_collectorpy--mainpy)
    - [Uruchomienie standardowe](#uruchomienie-standardowe)
    - [Uruchomienie w tle (systemd / nohup)](#uruchomienie-w-tle-systemd--nohup)
-6. [Architektura projektu](#architektura-projektu)
-7. [Testy i diagnostyka](#testy-i-diagnostyka)
-8. [Najczęstsze pytania i rozwiązywanie problemów (FAQ)](#najczęstsze-pytania-i-rozwiązywanie-problemów-faq)
-9. [Bezpieczeństwo](#bezpieczeństwo)
-10. [Podziękowania](#podziękowania)
+   - [Uruchomienie w cronie](#wariant-c-harmonogram-zadań-cron-z-work-in-loop-false)
+6. [Moduł raportu postępów dziecka (progress_report.py)](#moduł-raportu-postępów-dziecka-progress_reportpy)
+   - [Możliwości analizy](#możliwości-analizy)
+   - [Sposób użycia i parametry CLI](#sposób-użycia-i-parametry-cli)
+   - [Harmonogram cron dla raportów](#harmonogram-cron-dla-raportów)
+7. [Architektura projektu](#architektura-projektu)
+8. [Testy i diagnostyka](#testy-i-diagnostyka)
+9. [Najczęstsze pytania i rozwiązywanie problemów (FAQ)](#najczęstsze-pytania-i-rozwiązywanie-problemów-faq)
+10. [Bezpieczeństwo](#bezpieczeństwo)
+11. [Podziękowania](#podziękowania)
 
 ---
 
@@ -36,6 +41,7 @@ Skrypt loguje się na konto rodzica w portalu Librus Synergia, cyklicznie monito
 * **Tryb pierwszego przebiegu (`do_not_send_first_parse`)**: Przy pierwszym uruchomieniu skrypt indeksuje aktualne wiadomości, ogłoszenia i oceny jako bazę i nie wysyła spamu ze wszystkimi historycznymi wpisami – kolejne uruchomienia wysyłają powiadomienia wyłącznie o nowych wpisach.
 * **Formatowanie HTML**: Czytelne tabele z wyróżnieniem nowych wiadomości **pogrubioną czcionką**, danymi nadawcy, tematem, datą nadania oraz tabelami ocen ze szczegółami (przedmiot, ocena, kategoria, waga, data, nauczyciel).
 * **Automatyczne alerty o awariach i błędach**: W razie braku połączenia do Librusa, problemów z sesją/autoryzacją lub błędu parsowania danych (np. po zmianie wyglądu dziennika), skrypt natychmiast wysyła e-mail z diagnozą i zalecanymi działaniami. Wbudowany mechanizm throttling / cooldown zapobiega zalewaniu skrzynki powtarzającymi się wiadomościami.
+* **Dedykowany moduł analizy postępów dziecka (`progress_report.py`)**: Niezależny skrypt analityczny przeliczający średnie ważone przedmiotowe i ogólne, wskaźniki trendu (↗, ↘, ➡), sugerowane oceny roczne, rozkład ocen (histogram) oraz automatyczne wnioski rodzicielskie (sukcesy, zagrożenia, nieprzygotowania). Raport wysyłany jest w postaci nowoczesnego dashboardu HTML.
 
 ---
 
@@ -98,7 +104,7 @@ librus_users:
 
 wait_time_s: 300
 work-in-loop: true  # true: pętla z oczekiwaniem wait_time_s (domyślnie), false: pojedynczy przebieg (np. pod crona)
-storage_type: "RAM" # "RAM" (domyślnie) lub "FILES" (stan zapisywany w katalogu storage/)
+storage_dir: "storage"  # (opcjonalnie) katalog zapisu plików stanu JSON (domyślnie: storage)
 
 mail:
   login: "twoj_email_powiadomien@gmail.com"
@@ -119,7 +125,7 @@ Każdy element listy `librus_users` reprezentuje jedno konto w e-dzienniku:
 | `librus_login` | `string` | Login rodzica w Librus Synergia (zazwyczaj ciąg cyfr). |
 | `librus_password` | `string` | Hasło do konta rodzica w Librus Synergia. |
 | `read_messages` | `bool` | Czy skrypt ma wchodzić w szczegóły wiadomości i pobierać jej treść (`true`/`false`).<br>**UWAGA:** Wejście w wiadomość oznacza ją w portalu Librus jako przeczytaną przez rodzica. Domyślnie zaleca się `false`. |
-| `read_grades` | `bool` | Czy włączyć sprawdzanie i wysyłanie alertów o nowych ocenach dla tego konta (`true`/`false`). Domyślnie `false`. |
+| `read_grades` | `bool` | Czy włączyć sprawdzanie i zbieranie ocen dla tego konta (`true`/`false`). Domyślnie `false`. |
 | `one_summary_message` | `bool` | Jeśli `true`, zamiast wysyłać osobne maile dla wiadomości, ogłoszeń i ocen, wyśle **jeden zbiorczy e-mail** podsumowujący wszystkie nowości z danego cyklu. Domyślnie `false`. |
 | `do_not_send_first_parse` | `bool` | Jeśli `true`, podczas pierwszego cyklu po uruchomieniu wiadomości zostaną tylko zaindeksowane, bez wysyłania e-maili o historii skrzynki. |
 | `send_error_notifications` | `bool` | Opcjonalne włączenie/wyłączenie wysyłania maili o błędach dla danego konta (domyślnie: `true`). |
@@ -128,12 +134,10 @@ Każdy element listy `librus_users` reprezentuje jedno konto w e-dzienniku:
 ### Parametry globalne
 
 * `wait_time_s` (`int`): Czas oczekiwania w sekundach pomiędzy kolejnymi cyklami sprawdzania e-dziennika (zalecane: minimum `120`–`300` sekund, aby nie obciążać serwera i uniknąć blokad anty-botowych). Wykorzystywane, gdy `work-in-loop: true`.
-* `work-in-loop` (`bool`): Tryb pracy w pętli:
+* `work-in-loop` (`bool`): Tryb pracy:
   * `true` (domyślnie) – skrypt działa nieprzerwanie w pętli i po sprawdzeniu kont odczekuje `wait_time_s` sekund.
   * `false` – skrypt wykonuje dokładnie jeden pełny przebieg (sprawdza konta, wysyła e-maile, zapisuje stan do pliku) i natychmiast kończy pracę. Idealne do uruchamiania przez systemowy harmonogram zadań `cron`.
-* `storage_type` (`string`): Sposób zapamiętywania przeczytanych wpisów pomiędzy uruchomieniami:
-  * `"RAM"` (domyślnie) – stan przechowywany wyłącznie w pamięci operacyjnej; po restarcie skryptu historia jest indeksowana od nowa.
-  * `"FILES"` – stan zapisywany w plikach JSON w katalogu `storage/` (np. `storage/8979295.json`). Po restarcie aplikacji skrypt wczytuje poprzedni stan i natychmiast wykrywa wpisy, które pojawiły się w czasie, gdy usługa była wyłączona. Niezbędne przy `work-in-loop: false`.
+* `storage_dir` (`string`): Ścieżka do katalogu, w którym automatycznie zapisywany jest trwały stan aplikacji oraz pełna historia ocen w formacie JSON (np. `storage/8979295.json`). Domyślnie: `"storage"`.
 * `send_error_notifications` (`bool`): Czy wysyłać e-mail z alertem o problemach (brak połączenia internetowego, awaria Librusa, wygaśnięcie sesji / wymóg zalogowania przez www, błąd parsowania HTML). Domyślnie `true`.
 * `error_cooldown_s` (`int`): Minimalny czas w sekundach pomiędzy kolejnymi powiadomieniami o tym samym błędzie (domyślnie: `3600` sekund = 1h). Zapobiega zalewaniu skrzynki podczas trwającej awarii serwera. Po ustąpieniu problemu licznik resetuje się automatycznie.
 
@@ -153,7 +157,13 @@ Każdy element listy `librus_users` reprezentuje jedno konto w e-dzienniku:
 
 ---
 
-## Uruchomienie
+## Usługa zbierania danych i monitoringu (librus_collector.py / main.py)
+
+Skrypt **`librus_collector.py`** (z zachowanym aliasem **`main.py`**) pełni rolę usługi pobierającej i monitorującej e-dziennik:
+- łączy się przez OAuth z portalem Librus Synergia,
+- sprawdza skrzynkę wiadomości, ogłoszenia oraz oceny,
+- wysyła natychmiastowe e-maile o nowych wpisach,
+- automatycznie zapisuje aktualny stan i historię ocen z wagami do katalogu `storage/` (dla generatora raportów).
 
 ### Uruchomienie standardowe
 
@@ -161,6 +171,8 @@ Upewnij się, że wirtualne środowisko jest aktywne:
 
 ```bash
 source venv/bin/activate
+python librus_collector.py
+# lub:
 python main.py
 ```
 
@@ -170,7 +182,7 @@ Skrypt uruchomi się w pętli nieskończonej, logując swoje działania jednocze
 
 #### Wariant A: `nohup`
 ```bash
-nohup venv/bin/python main.py >/dev/null 2>&1 &
+nohup venv/bin/python librus_collector.py >/dev/null 2>&1 &
 ```
 
 #### Wariant B: Usługa `systemd` (zalecane dla serwerów Linux)
@@ -178,14 +190,14 @@ Utwórz plik `/etc/systemd/system/librus2mail.service`:
 
 ```ini
 [Unit]
-Description=Librus2mail Daemon
+Description=Librus2mail Collector Daemon
 After=network.target
 
 [Service]
 Type=simple
 User=twoj_uzytkownik
 WorkingDirectory=/sciezka/do/librus2mail
-ExecStart=/sciezka/do/librus2mail/venv/bin/python main.py
+ExecStart=/sciezka/do/librus2mail/venv/bin/python librus_collector.py
 Restart=always
 RestartSec=60
 
@@ -200,33 +212,126 @@ sudo systemctl enable --now librus2mail
 sudo systemctl status librus2mail
 ```
 
-#### Wariant C: Harmonogram zadań `cron` (z `work-in-loop: false` oraz `storage_type: FILES`)
+#### Wariant C: Harmonogram zadań `cron` (z `work-in-loop: false`)
 
 Jeśli wolisz, aby skrypt nie działał jako ciągły proces w tle, lecz był wywoływany cyklicznie przez systemowego crona:
 1. W pliku `config.yaml` ustaw:
    ```yaml
    work-in-loop: false
-   storage_type: "FILES"
    ```
 2. Dodaj wpis do tabeli zadań użytkownika poleceniem `crontab -e`:
 
    * **Uruchamianie co 15 minut:**
      ```cron
-     */15 * * * * cd /sciezka/do/librus2mail && venv/bin/python main.py >> librus.log 2>&1
+     */15 * * * * cd /sciezka/do/librus2mail && venv/bin/python librus_collector.py >> librus.log 2>&1
      ```
 
    * **Uruchamianie raz dziennie o 16:30 (codziennie):**
      ```cron
-     30 16 * * * cd /sciezka/do/librus2mail && venv/bin/python main.py >> librus.log 2>&1
+     30 16 * * * cd /sciezka/do/librus2mail && venv/bin/python librus_collector.py >> librus.log 2>&1
      ```
 
    * **Uruchamianie o 16:30 tylko w dni robocze/szkolne (od poniedziałku do piątku):**
      ```cron
-     30 16 * * 1-5 cd /sciezka/do/librus2mail && venv/bin/python main.py >> librus.log 2>&1
+     30 16 * * 1-5 cd /sciezka/do/librus2mail && venv/bin/python librus_collector.py >> librus.log 2>&1
      ```
 
 > [!TIP]
-> Przy użyciu crona parametr `storage_type: "FILES"` jest kluczowy – dzięki niemu po każdym zakończeniu skrypt zapisuje stan do katalogu `storage/`, a przy kolejnym uruchomieniu (np. następnego dnia) wyśle powiadomienia tylko o faktycznie nowych wpisach.
+> Po każdym cyklu skrypt automatycznie zapisuje stan i historię ocen do katalogu `storage/`, dzięki czemu kolejne uruchomienie wyśle powiadomienia tylko o faktycznie nowych wpisach.
+
+---
+
+## Moduł raportu postępów dziecka (progress_report.py)
+
+Dedykowany moduł analityczny **`progress_report.py`** działa w **100% offline** na podstawie danych zebranych wcześniej przez `librus_collector.py` i zapisanych w katalogu `storage/`.
+
+Dzięki takiemu podziałowi:
+* ⚡ **Błyskawiczne działanie**: Raport generuje się w ułamku sekundy (brak konieczności łączenia się z siecią, logowania i czekania na opóźnienia anty-botowe).
+* 🛡️ **Bezpieczeństwo konta**: Brak zbędnych sesji i odpytywania Librusa przy każdym wygenerowaniu raportu.
+* 📶 **Dostępność**: Raport można wygenerować nawet wtedy, gdy portal Librusa ma chwilową przerwę techniczną.
+
+### Możliwości analizy:
+* **Średnie ważone**: Wyliczanie precyzyjnej średniej ważonej dla każdego przedmiotu oraz średniej ogólnej ucznia w oparciu o oficjalne wagi ocen z Librusa (uwzględniając modyfikatory `+` jako +0.5, `-` jako -0.25).
+* **Wskaźnik trendu wyników**: Analiza kierunku zmian średniej z danego przedmiotu w porównaniu z poprzednimi okresami:
+  * ↗ *(np. +0.40)* – widoczna poprawa wyników,
+  * ↘ *(np. -0.35)* – spadek średniej,
+  * ➡ *(stabilnie)* – równe, powtarzalne oceny,
+  * ✨ *(nowy wpis)* – pierwsza ocena z danego przedmiotu.
+* **🏅 Symulator Czerwonego Paska (Świadectwo z wyróżnieniem)**:
+  * Weryfikacja warunku średniej końcowej $\ge 4.75$ i braku ocen niedostatecznych.
+  * Wyliczanie brakującego dystansu punktowego oraz wskazywanie kluczowych przedmiotów o najkrótszej drodze do podniesienia oceny.
+* **🎯 Analiza „Na granicy oceny” (Kalkulator szans i zagrożeń)**:
+  * **Szanse na wyższą ocenę**: Wykrywa przedmioty, gdzie uczeń traci $\le 0.25$ pkt do wyższego stopnia i wylicza, jaka ocena ze sprawdzianu (waga 2) lub kartkówki (waga 1) wystarczy, by przeskoczyć próg!
+  * **Zagrożenia spadkiem**: Wskazuje przedmioty z małym marginesem bezpieczeństwa ($\le 0.12$ nad progiem), gdzie pojedyncza ocena niedostateczna grozi obniżeniem prognozy.
+* **🔍 Styl nauki: Sprawdziany vs Bieżąca praca**:
+  * Zestawienie średniej ze sprawdzianów i prac klasowych (wagi 2–3) ze średnią z kartkówek, odpowiedzi i zadań domowych (waga 1).
+  * Diagnoza pedagogiczna: pozwala rodzicowi ocenić, czy uczeń ma trudności z powtórkami dużych partii materiału przed testami, czy z bieżącą dyscypliną i systematycznością.
+* **⚖️ Wpływ wag ocen & Stabilność wyników (Sinusoida)**:
+  * **Efekt wagowy**: Porównanie średniej ważonej z arytmetyczną (czy sprawdziany o dużej wadze ciągną wynik w górę, czy zaniżają średnią).
+  * **Stabilność ocen**: Wykrywanie przedmiotów o stałych, powtarzalnych ocenach oraz przedmiotów o wysokich wahaniach (np. przeplatanka ocen 1 i 5).
+* **⏱️ Analiza „Cichych przedmiotów”**:
+  * Wczesne ostrzeżenie o przedmiotach, z których uczeń nie otrzymał żadnej oceny od ponad 30 dni (ryzyko kumulacji sprawdzianów przed końcem semestru).
+* **Inteligentne alerty i wnioski rodzicielskie**:
+  * 🌟 **Sukcesy**: Przedmioty ze średnią wyróżniającą, bardzo dobre oceny ze sprawdzianów o wysokich wagach, szanse na wyższe stopnie.
+  * ⚠️ **Obszary do poprawy**: Ostrzeżenia o zagrożeniu oceną niedostateczną (< 2.0), niskie średnie (< 3.0), słabe oceny ze sprawdzianów o dużej wadze z sugestią poprawy, sumaryczna liczba nieprzygotowań i braków zadań domowych (`np`, `bz`).
+* **Rozkład ocen (histogram)**: Wizualne zestawienie liczby poszczególnych stopni (1–6) w minionym okresie oraz w całym roku szkolnym.
+* **📖 Przewodnik rodzica (Jak rozumieć wskaźniki)**: Zrozumiała legenda wyjaśniająca progi ocen, trendy, wagi oraz interpretację poszczególnych metryk dołączona bezpośrednio do każdego raportu (w e-mailu i w konsoli).
+* **Nowoczesny dashboard e-mail**: Estetyczny, responsywny szablon HTML z kafelkami KPI, kolorowymi plakietkami ocen (badges), paskiem postępu do czerwonego paska, tabelami i szczegółami nowo wystawionych ocen.
+
+### Sposób użycia i parametry CLI:
+
+```bash
+# 1. Wygenerowanie i wysłanie raportu postępów (okres od ostatniego raportu lub domyślne 7 dni)
+venv/bin/python progress_report.py
+
+# 2. Tryb symulacji (--dry-run) - pełna analiza i wydruk tabeli w terminalu bez wysyłania e-maila
+venv/bin/python progress_report.py --dry-run
+
+# 3. Wymuszenie analizy za określony czas, np. ostatnie 14 lub 30 dni (--days N)
+venv/bin/python progress_report.py --days 14
+
+# 4. Zawężenie do konkretnego konta dziecka (--user)
+venv/bin/python progress_report.py --user 1234567
+# albo po nazwie:
+venv/bin/python progress_report.py --user "Kasia"
+
+# 5. Opcjonalne wymuszenie pobrania świeżych ocen przez sieć (--fetch)
+venv/bin/python progress_report.py --fetch
+
+# 6. Wymuszenie wysyłki raportu nawet gdy w badanym okresie uczeń nie dostał nowych ocen (--force)
+venv/bin/python progress_report.py --force
+```
+
+| Parametr | Krótka flaga | Opis |
+| :--- | :--- | :--- |
+| `--config <plik>` | `-c` | Ścieżka do pliku konfiguracyjnego (domyślnie: `config.yaml`). |
+| `--user <login/nazwa>` | `-u` | Filtruje wykonanie raportu tylko do wskazanego konta dziecka. |
+| `--days <N>` | `-d` | Analizuje ostatnie `N` dni wstecz (zamiast daty poprzedniego raportu). |
+| `--dry-run` | | Generuje analizę i wyświetla raport w terminalu; nie wysyła maila ani nie aktualizuje daty. |
+| `--fetch` | | Opcjonalnie łączy się z Librusem i pobiera oceny przez sieć (domyślnie działa w 100% offline ze `storage/`). |
+| `--force` | `-f` | Wysyła raport nawet jeśli w minionym okresie uczeń nie otrzymał żadnych nowych ocen. |
+
+### Konfiguracja:
+Skrypt `progress_report.py` korzysta z głównego pliku `config.yaml` (wykorzystuje zdefiniowane w nim konta dzieci, listę odbiorców oraz ustawienia skrzynki pocztowej `mail`), dzięki czemu nie wymaga żadnej osobnej konfiguracji. Okres analizy przy pierwszym uruchomieniu to domyślnie 7 dni (lub wartość przekazana parametrem `--days`).
+
+### Harmonogram cron dla raportów:
+
+Dzięki wydzieleniu skryptu do osobnego pliku, możesz w prosty i elastyczny sposób skonfigurować w cronie (`crontab -e`) wysyłkę raportu w dowolnym, dogodnym dla Ciebie momencie:
+
+* **Raz w tygodniu w każdy piątek o 17:00 (podsumowanie całego tygodnia):**
+  ```cron
+  0 17 * * 5 cd /sciezka/do/librus2mail && venv/bin/python progress_report.py >> librus.log 2>&1
+  ```
+
+* **Raz w tygodniu w niedzielę o 19:00 (przygotowanie do nadchodzącego tygodnia):**
+  ```cron
+  0 19 * * 0 cd /sciezka/do/librus2mail && venv/bin/python progress_report.py >> librus.log 2>&1
+  ```
+
+* **W ostatni dzień każdego miesiąca o 18:00 (podsumowanie miesięczne):**
+  ```cron
+  0 18 28-31 * * [ $(date -d tomorrow +\%d) -eq 1 ] && cd /sciezka/do/librus2mail && venv/bin/python progress_report.py >> librus.log 2>&1
+  ```
 
 ---
 
@@ -239,13 +344,16 @@ librus2mail/
 ├── config.example.yaml         # Bezpieczny szablon pliku konfiguracyjnego
 ├── GmailSender.py              # Klasa wysyłająca wiadomości przez yagmail (Gmail)
 ├── SmtpSender.py               # Klasa wysyłająca wiadomości przez standardowe smtplib + STARTTLS
-├── MailSender.py               # Klasa bazowa z generatorami szablonów e-mail HTML
-├── storage.py                  # Obsługa trwałego zapisu stanu (MemoryStorage / FileStorage)
+├── MailSender.py               # Klasa bazowa z generatorami szablonów e-mail HTML (w tym raportu postępów)
+├── storage.py                  # Trwały zapis stanu oraz historii ocen w plikach JSON (FileStorage)
 ├── librus.py                   # Klient autoryzacji OAuth i scraper portalu Librus Synergia
-├── main.py                     # Główny punkt wejścia i pętla odpytująca demona
+├── librus_collector.py         # Usługa zbierająca dane z Librusa i wysyłająca powiadomienia na żywo
+├── progress_analyzer.py        # Silnik analityczny postępów dziecka (średnie ważone, trendy, histogram, alerty)
+├── progress_report.py          # Samodzielny generator raportów postępów działający offline na danych ze storage
+├── main.py                     # Wstecznie kompatybilny alias uruchamiający librus_collector.py
 ├── requirements.txt            # Wymagane biblioteki Pythona
 ├── tests/
-│   └── test_librus.py          # Testy jednostkowe parsera i obsługi sesji
+│   └── test_librus.py          # Testy jednostkowe parsera, sesji, analityki postępów i wysyłki
 ├── AGENTS.md                   # Instrukcje architektury dla agentów AI
 └── README.md                   # Niniejsza dokumentacja
 ```

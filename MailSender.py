@@ -253,6 +253,533 @@ class MailSender:
     def send_mail_with_summary(self, user_config, messages=None, notifications=None, grades=None):
         pass
 
+    @staticmethod
+    def _format_grade_badge(val: str) -> str:
+        s = str(val).strip()
+        first_char = s[0] if s else ''
+        if first_char in ('5', '6'):
+            bg = "#d1fae5"
+            color = "#065f46"
+            border = "#a7f3d0"
+        elif first_char == '4':
+            bg = "#dbeafe"
+            color = "#1e40af"
+            border = "#bfdbfe"
+        elif first_char == '3':
+            bg = "#fef3c7"
+            color = "#92400e"
+            border = "#fde68a"
+        elif first_char in ('1', '2'):
+            bg = "#fee2e2"
+            color = "#991b1b"
+            border = "#fecaca"
+        else:
+            bg = "#f3f4f6"
+            color = "#374151"
+            border = "#e5e7eb"
+        return f'<span style="display: inline-block; background-color: {bg}; color: {color}; border: 1px solid {border}; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">{html.escape(s)}</span>'
+
+    @classmethod
+    def _create_progress_report_title(cls, user_config: dict, analysis: dict) -> str:
+        name = user_config.get('librus_login_name') or user_config.get('librus_login')
+        p_start = analysis.get('period_start_str', '')
+        p_end = analysis.get('period_end_str', '')
+        overall_avg = analysis.get('overall_avg')
+        avg_text = f"śr. {overall_avg:.2f}" if overall_avg is not None else "brak średniej"
+        period_count = analysis.get('period_grades_count', 0)
+        return f"📊 Raport postępów: {name} ({p_start} – {p_end}) [{avg_text}, nowe oceny: {period_count}]"
+
+    @classmethod
+    def create_mail_content_for_progress_report(cls, user_config: dict, analysis: dict) -> str:
+        name = html.escape(str(user_config.get('librus_login_name') or user_config.get('librus_login', '')))
+        login = html.escape(str(user_config.get('librus_login', '')))
+        p_start = analysis.get('period_start_str', '')
+        p_end = analysis.get('period_end_str', '')
+        overall_avg = analysis.get('overall_avg')
+        period_avg = analysis.get('period_avg')
+        period_count = analysis.get('period_grades_count', 0)
+        total_count = analysis.get('total_grades_count', 0)
+        activity_pluses = analysis.get('activity_pluses', 0)
+        activity_minuses = analysis.get('activity_minuses', 0)
+        unprepared_count = analysis.get('unprepared_count', 0)
+
+        overall_avg_str = f"{overall_avg:.2f}" if overall_avg is not None else "—"
+        period_avg_str = f"{period_avg:.2f}" if period_avg is not None else "—"
+
+        honor_badge = ""
+        if overall_avg is not None and overall_avg >= 4.75:
+            honor_badge = '<div style="margin-top: 4px; font-size: 11px; background-color: #fef3c7; color: #92400e; padding: 2px 6px; border-radius: 4px; display: inline-block; font-weight: bold;">🏅 Świadectwo z wyróżnieniem</div>'
+
+        # Sekcja Sukcesy
+        strengths_html = ""
+        if analysis.get('insights_strengths'):
+            items = "".join([f"<li style='margin-bottom: 6px;'>{s}</li>" for s in analysis['insights_strengths']])
+            strengths_html = f"""
+            <div style="background-color: #ecfdf5; border-left: 4px solid #10b981; border-radius: 6px; padding: 14px 18px; margin-bottom: 18px;">
+                <h4 style="margin: 0 0 8px 0; color: #065f46; font-size: 15px;">🌟 Sukcesy i mocne strony</h4>
+                <ul style="margin: 0; padding-left: 20px; color: #047857; font-size: 14px;">
+                    {items}
+                </ul>
+            </div>
+            """
+
+        # Sekcja Ostrzeżenia
+        warnings_html = ""
+        if analysis.get('insights_warnings'):
+            items = "".join([f"<li style='margin-bottom: 6px;'>{w}</li>" for w in analysis['insights_warnings']])
+            warnings_html = f"""
+            <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 6px; padding: 14px 18px; margin-bottom: 18px;">
+                <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 15px;">⚠️ Uwagi i obszary do poprawy</h4>
+                <ul style="margin: 0; padding-left: 20px; color: #b45309; font-size: 14px;">
+                    {items}
+                </ul>
+            </div>
+            """
+
+        # Karta Symulatora Czerwonego Paska
+        honor_roll = analysis.get('honor_roll', {})
+        honor_roll_html = ""
+        if honor_roll.get('qualified'):
+            honor_roll_html = f"""
+            <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #f59e0b; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px;">
+                <div style="display: flex; align-items: center;">
+                    <div style="font-size: 32px; margin-right: 16px;">🏅</div>
+                    <div>
+                        <h4 style="margin: 0; color: #92400e; font-size: 16px; font-weight: bold;">Kwalifikacja do świadectwa z wyróżnieniem (czerwony pasek)!</h4>
+                        <p style="margin: 4px 0 0 0; color: #78350f; font-size: 13px;">{html.escape(honor_roll.get('message', ''))}</p>
+                    </div>
+                </div>
+            </div>
+            """
+        elif honor_roll.get('current_avg') is not None and honor_roll.get('current_avg') > 0:
+            cur_avg = honor_roll.get('current_avg', 0.0)
+            gap = honor_roll.get('gap', 0.0)
+            opps = honor_roll.get('key_opportunities', [])
+            opps_html = ""
+            if opps:
+                items = "".join([f"<li><strong>{html.escape(o['subject'])}</strong>: aktualnie {o['current_avg']:.2f} (brakuje {o['dist']:.2f} do oceny {o['target_grade']})</li>" for o in opps])
+                opps_html = f"""
+                <div style="margin-top: 10px; font-size: 12px; color: #1e3a8a; border-top: 1px dashed #bbf7d0; padding-top: 8px;">
+                    <strong>Najszybsza droga do paska (kluczowe przedmioty o najmniejszej stracie):</strong>
+                    <ul style="margin: 4px 0 0 0; padding-left: 20px;">{items}</ul>
+                </div>
+                """
+            pct = min(100, max(0, int(((cur_avg - 1.0) / (4.75 - 1.0)) * 100)))
+            honor_roll_html = f"""
+            <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                    <div>
+                        <h4 style="margin: 0; color: #166534; font-size: 15px;">🎯 Droga do świadectwa z wyróżnieniem (Czerwony Pasek)</h4>
+                        <p style="margin: 4px 0 0 0; color: #15803d; font-size: 13px;">
+                            Aktualna średnia: <strong>{cur_avg:.2f}</strong> | Cel: <strong>4.75</strong> (brakuje <strong>{gap:.2f}</strong> pkt średniej)
+                        </p>
+                    </div>
+                    <div style="font-size: 14px; font-weight: bold; color: #166534; background-color: #dcfce7; padding: 4px 10px; border-radius: 6px;">{pct}% celu</div>
+                </div>
+                <div style="background-color: #dcfce7; border-radius: 10px; height: 10px; width: 100%; margin-top: 10px; overflow: hidden;">
+                    <div style="background: linear-gradient(90deg, #22c55e, #16a34a); width: {pct}%; height: 100%; border-radius: 10px;"></div>
+                </div>
+                {opps_html}
+            </div>
+            """
+
+        # Karta Na granicy oceny (Szanse i Zagrożenia)
+        borderline_opps = analysis.get('borderline_opportunities', [])
+        borderline_risks = analysis.get('borderline_risks', [])
+        borderline_opp_map = {o['subject']: o for o in borderline_opps}
+        borderline_risk_map = {r['subject']: r for r in borderline_risks}
+
+        borderline_html = ""
+        if borderline_opps or borderline_risks:
+            opps_box = ""
+            if borderline_opps:
+                items = "".join([f"<li style='margin-bottom: 8px;'><strong>{html.escape(o['subject'])}</strong>: {html.escape(o['advice'])}</li>" for o in borderline_opps])
+                opps_box = f"""
+                <div style="flex: 1 1 240px; min-width: 220px; box-sizing: border-box; background-color: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 14px; margin: 6px;">
+                    <h4 style="margin: 0 0 8px 0; color: #15803d; font-size: 14px;">🎯 Szanse na wyższą ocenę (na wyciągnięcie ręki)</h4>
+                    <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: #166534; line-height: 1.45;">
+                        {items}
+                    </ul>
+                </div>
+                """
+            risks_box = ""
+            if borderline_risks:
+                items = "".join([f"<li style='margin-bottom: 8px;'><strong>{html.escape(r['subject'])}</strong>: {html.escape(r['warning'])}</li>" for r in borderline_risks])
+                risks_box = f"""
+                <div style="flex: 1 1 240px; min-width: 220px; box-sizing: border-box; background-color: #fff7ed; border: 1px solid #fdba74; border-radius: 8px; padding: 14px; margin: 6px;">
+                    <h4 style="margin: 0 0 8px 0; color: #c2410c; font-size: 14px;">⚖️ Ryzyko obniżenia oceny (mały margines bezpieczeństwa)</h4>
+                    <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: #9a3412; line-height: 1.45;">
+                        {items}
+                    </ul>
+                </div>
+                """
+            borderline_html = f"""
+            <div style="margin-bottom: 20px;">
+                <h3 style="color: #1f2937; margin: 0 0 10px 0; font-size: 15px; border-bottom: 2px solid #6366f1; padding-bottom: 5px;">
+                    🎯 Analiza progów ocen (Kalkulator szans i zagrożeń)
+                </h3>
+                <div style="display: flex; flex-wrap: wrap; margin: -6px;">
+                    {opps_box}
+                    {risks_box}
+                </div>
+            </div>
+            """
+
+        # Karta Styl nauki i wpływ wag
+        learning_style = analysis.get('learning_style', {})
+        weight_impact = analysis.get('weight_impact', {})
+        stable_subjs = analysis.get('stable_subjects', [])
+        volatile_subjs = analysis.get('volatile_subjects', [])
+
+        ls_html = ""
+        if learning_style.get('exams_avg') is not None or weight_impact.get('arithmetic_avg') is not None:
+            ex_avg = f"{learning_style['exams_avg']:.2f}" if learning_style.get('exams_avg') is not None else "—"
+            ex_cnt = learning_style.get('exams_count', 0)
+            da_avg = f"{learning_style['daily_avg']:.2f}" if learning_style.get('daily_avg') is not None else "—"
+            da_cnt = learning_style.get('daily_count', 0)
+            diag = html.escape(learning_style.get('diagnosis', ''))
+
+            wi_desc = html.escape(weight_impact.get('description', ''))
+            st_text = ""
+            if stable_subjs:
+                st_names = ", ".join([html.escape(s['subject']) for s in stable_subjs[:3]])
+                st_text = f"<div style='margin-top: 6px;'><strong>Stabilne oceny:</strong> {st_names}</div>"
+            vol_text = ""
+            if volatile_subjs:
+                vol_names = ", ".join([f"{html.escape(v['subject'])} ({v['min']}–{v['max']})" for v in volatile_subjs[:2]])
+                vol_text = f"<div style='margin-top: 6px; color: #b45309;'><strong>Duże wahania (sinusoida):</strong> {vol_names}</div>"
+
+            ls_html = f"""
+            <div style="margin-bottom: 20px;">
+                <h3 style="color: #1f2937; margin: 0 0 10px 0; font-size: 15px; border-bottom: 2px solid #8b5cf6; padding-bottom: 5px;">
+                    🔍 Styl nauki i wpływ wag ocen
+                </h3>
+                <div style="display: flex; flex-wrap: wrap; margin: -6px;">
+                    <div style="flex: 1 1 240px; min-width: 220px; box-sizing: border-box; background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; margin: 6px;">
+                        <h4 style="margin: 0 0 8px 0; color: #334155; font-size: 14px;">Sprawdziany vs Bieżąca praca</h4>
+                        <div style="display: flex; justify-content: space-around; text-align: center; margin-bottom: 8px;">
+                            <div>
+                                <div style="font-size: 11px; color: #64748b;">SPRAWDZIANY (waga &ge; 2)</div>
+                                <div style="font-size: 20px; font-weight: bold; color: #1e3a8a;">{ex_avg}</div>
+                                <div style="font-size: 10px; color: #64748b;">{ex_cnt} ocen</div>
+                            </div>
+                            <div style="border-right: 1px solid #e2e8f0;"></div>
+                            <div>
+                                <div style="font-size: 11px; color: #64748b;">PRACA BIEŻĄCA (waga 1)</div>
+                                <div style="font-size: 20px; font-weight: bold; color: #059669;">{da_avg}</div>
+                                <div style="font-size: 10px; color: #64748b;">{da_cnt} ocen</div>
+                            </div>
+                        </div>
+                        <div style="font-size: 12px; color: #475569; line-height: 1.4; border-top: 1px solid #e2e8f0; padding-top: 8px;">
+                            {diag}
+                        </div>
+                    </div>
+                    <div style="flex: 1 1 240px; min-width: 220px; box-sizing: border-box; background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; margin: 6px;">
+                        <h4 style="margin: 0 0 8px 0; color: #334155; font-size: 14px;">Wpływ wag i stabilność wyników</h4>
+                        <div style="font-size: 12px; color: #475569; line-height: 1.4;">
+                            <div><strong>Efekt wagowy:</strong> {wi_desc}</div>
+                            {st_text}
+                            {vol_text}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            """
+
+        # Karta Ciche przedmioty
+        dormant_subjs = analysis.get('dormant_subjects', [])
+        dormant_html = ""
+        if dormant_subjs:
+            d_items = "".join([f"<li><strong>{html.escape(d['subject'])}</strong>: ostatnia ocena {d['last_date_str']} ({d['days_ago']} dni temu)</li>" for d in dormant_subjs if d['days_ago']])
+            if d_items:
+                dormant_html = f"""
+                <div style="background-color: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 6px 0; color: #854d0e; font-size: 14px;">⏱️ Ciche przedmioty (brak ocen od ponad 30 dni)</h4>
+                    <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: #713f12;">
+                        {d_items}
+                    </ul>
+                </div>
+                """
+
+        # Karty ocen wg przedmiotów
+        subjects_cards = ""
+        for s in analysis.get('subjects', []):
+            subj_raw_name = s.get('subject', '')
+            subj_name = html.escape(subj_raw_name)
+            subj_overall = f"{s['overall_avg']:.2f}" if s.get('overall_avg') is not None else "—"
+            subj_period = f"{s['period_avg']:.2f}" if s.get('period_avg') is not None else "—"
+            trend_lbl = html.escape(s.get('trend_label', '—'))
+            predicted = html.escape(s.get('predicted_grade', '—'))
+
+            trend_color = "#4b5563"
+            if s.get('trend') == 'up':
+                trend_color = "#059669"
+            elif s.get('trend') == 'down':
+                trend_color = "#dc2626"
+
+            period_badges = " ".join([cls._format_grade_badge(g.get('grade', '')) for g in s.get('period_grades', [])])
+            if not period_badges:
+                period_badges = "<span style='color: #9ca3af; font-size: 12px;'>brak</span>"
+
+            all_badges = " ".join([cls._format_grade_badge(g.get('grade', '')) for g in s.get('all_grades', [])])
+            if not all_badges:
+                all_badges = "<span style='color: #9ca3af; font-size: 12px;'>brak</span>"
+
+            # Badże szans / ryzyka w nagłówku przedmiotu
+            border_note = ""
+            if subj_raw_name in borderline_opp_map:
+                gap_val = borderline_opp_map[subj_raw_name]['gap']
+                border_note = f'<span style="display: inline-block; font-size: 11px; background-color: #dcfce7; color: #15803d; border: 1px solid #86efac; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-left: 6px;">🎯 +{gap_val:.2f} do wyższej</span>'
+            elif subj_raw_name in borderline_risk_map:
+                m_val = borderline_risk_map[subj_raw_name]['margin']
+                border_note = f'<span style="display: inline-block; font-size: 11px; background-color: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-left: 6px;">⚠️ margines {m_val:.2f}</span>'
+
+            subjects_cards += f"""
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 10px; background-color: #ffffff; box-sizing: border-box; overflow: hidden;">
+                <div style="background-color: #f8fafc; padding: 10px 14px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+                    <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
+                        <span style="font-size: 15px; font-weight: bold; color: #1e293b;">{subj_name}</span>
+                        <span style="display: inline-block; font-size: 11px; background-color: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-left: 4px;">Prognoza: {predicted}</span>
+                        {border_note}
+                    </div>
+                    <div style="font-size: 13px; color: #334155;">
+                        Śr. ogólna: <strong style="font-size: 16px; color: #1e3a8a;">{subj_overall}</strong>
+                        <span style="color: {trend_color}; font-weight: bold; margin-left: 4px;">{trend_lbl}</span>
+                        <span style="color: #64748b; font-size: 12px; margin-left: 6px;">(okres: <strong>{subj_period}</strong>)</span>
+                    </div>
+                </div>
+                <div style="padding: 10px 14px; font-size: 13px;">
+                    <div style="margin-bottom: 6px; display: flex; align-items: flex-start; flex-wrap: wrap; gap: 4px;">
+                        <span style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase; margin-right: 6px; min-width: 115px; margin-top: 2px;">Oceny w okresie:</span>
+                        <div style="flex: 1; min-width: 160px;">{period_badges}</div>
+                    </div>
+                    <div style="display: flex; align-items: flex-start; flex-wrap: wrap; gap: 4px;">
+                        <span style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase; margin-right: 6px; min-width: 115px; margin-top: 2px;">Wszystkie oceny:</span>
+                        <div style="flex: 1; min-width: 160px;">{all_badges}</div>
+                    </div>
+                </div>
+            </div>
+            """
+
+        # Szczegółowa lista ocen z okresu
+        period_details_html = ""
+        if analysis.get('period_grades'):
+            p_cards = ""
+            for g in analysis['period_grades']:
+                s_name = html.escape(g.get('subject', ''))
+                badge = cls._format_grade_badge(g.get('grade', ''))
+                weight = html.escape(str(g.get('weight') or '-'))
+                cat = html.escape(str(g.get('category') or '-'))
+                date_str = html.escape(str(g.get('date') or '-'))
+                teacher = html.escape(str(g.get('teacher') or '-'))
+                comm = html.escape(str(g.get('comment') or '-'))
+
+                meta_parts = []
+                if teacher and teacher != '-':
+                    meta_parts.append(f"<span>👤 <strong>Nauczyciel:</strong> {teacher}</span>")
+                if comm and comm != '-':
+                    meta_parts.append(f"<span>💬 <strong>Komentarz:</strong> {comm}</span>")
+
+                meta_details = ""
+                if meta_parts:
+                    meta_details = f"""
+                    <div style="font-size: 12px; color: #64748b; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #f1f5f9; display: flex; flex-wrap: wrap; gap: 12px;">
+                        {" ".join(meta_parts)}
+                    </div>
+                    """
+
+                p_cards += f"""
+                <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 14px; margin-bottom: 8px; background-color: #ffffff; box-sizing: border-box;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 4px;">
+                        <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px;">
+                            <span style="font-weight: bold; font-size: 14px; color: #1e293b;">{s_name}</span>
+                            {badge}
+                            <span style="font-size: 11px; background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 2px 6px; border-radius: 4px; font-weight: bold;">waga {weight}</span>
+                            <span style="font-size: 12px; color: #475569;">• {cat}</span>
+                        </div>
+                        <div style="font-size: 12px; color: #64748b;">
+                            🗓️ {date_str}
+                        </div>
+                    </div>
+                    {meta_details}
+                </div>
+                """
+
+            period_details_html = f"""
+            <div style="margin-top: 25px;">
+                <h3 style="color: #1f2937; margin: 0 0 10px 0; font-size: 16px; border-bottom: 2px solid #3b82f6; padding-bottom: 6px;">
+                    📝 Oceny zarejestrowane w analizowanym okresie ({len(analysis['period_grades'])})
+                </h3>
+                {p_cards}
+            </div>
+            """
+
+        # Histogram ocen (rozkład)
+        dist_overall = analysis.get('distribution_overall', {})
+        dist_period = analysis.get('distribution_period', {})
+        hist_cells = ""
+        for grade_num in ['6', '5', '4', '3', '2', '1']:
+            cnt_all = dist_overall.get(grade_num, 0)
+            cnt_p = dist_period.get(grade_num, 0)
+            badge = cls._format_grade_badge(grade_num)
+            p_text = f"+{cnt_p} w okresie" if cnt_p > 0 else "0 w okresie"
+            hist_cells += f"""
+            <div style="flex: 1 1 45px; min-width: 45px; box-sizing: border-box; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 6px 2px; text-align: center; margin: 3px;">
+                <div style="margin-bottom: 2px;">{badge}</div>
+                <div style="font-size: 16px; font-weight: bold; color: #1f2937;">{cnt_all}</div>
+                <div style="font-size: 10px; color: #6b7280; white-space: nowrap;">{p_text}</div>
+            </div>
+            """
+
+        # Przewodnik rodzica (Legenda jak rozumieć wskaźniki)
+        legend = analysis.get('legend', {})
+        legend_html = f"""
+        <div style="margin-top: 30px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 14px; box-sizing: border-box;">
+            <h3 style="margin: 0 0 12px 0; color: #1e3a8a; font-size: 15px; display: flex; align-items: center;">
+                <span style="margin-right: 8px;">📖</span> Przewodnik rodzica: Jak rozumieć wskaźniki w raporcie?
+            </h3>
+            <div style="display: flex; flex-wrap: wrap; margin: -6px; font-size: 12px; color: #475569; line-height: 1.45;">
+                <div style="flex: 1 1 240px; min-width: 220px; box-sizing: border-box; margin: 6px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px;">
+                    <strong style="color: #1e293b;">🎯 Skala i progi ocen szkolnych:</strong><br>
+                    {html.escape(legend.get('thresholds', ''))}
+                </div>
+                <div style="flex: 1 1 240px; min-width: 220px; box-sizing: border-box; margin: 6px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px;">
+                    <strong style="color: #1e293b;">📈 Wskaźniki trendu (↗, ↘, ➡, ✨):</strong><br>
+                    {html.escape(legend.get('trends', ''))}
+                </div>
+                <div style="flex: 1 1 240px; min-width: 220px; box-sizing: border-box; margin: 6px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px;">
+                    <strong style="color: #1e293b;">⚖️ Średnia ważona a wagi ocen:</strong><br>
+                    {html.escape(legend.get('weight_impact', ''))}
+                </div>
+                <div style="flex: 1 1 240px; min-width: 220px; box-sizing: border-box; margin: 6px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px;">
+                    <strong style="color: #1e293b;">🎯 Analiza na granicy ocen:</strong><br>
+                    {html.escape(legend.get('borderline', ''))}
+                </div>
+                <div style="flex: 1 1 240px; min-width: 220px; box-sizing: border-box; margin: 6px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px;">
+                    <strong style="color: #1e293b;">🔍 Styl nauki (sprawdziany a kartkówki):</strong><br>
+                    {html.escape(legend.get('learning_style', ''))}
+                </div>
+                <div style="flex: 1 1 240px; min-width: 220px; box-sizing: border-box; margin: 6px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px;">
+                    <strong style="color: #1e293b;">🎢 Stabilność ocen vs Sinusoida:</strong><br>
+                    {html.escape(legend.get('stability', ''))}
+                </div>
+            </div>
+        </div>
+        """
+
+        contents = f"""
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            @media only screen and (max-width: 650px) {{
+                .email-container {{
+                    width: 100% !important;
+                    max-width: 100% !important;
+                    margin: 0 !important;
+                    border-radius: 0 !important;
+                    border-left: none !important;
+                    border-right: none !important;
+                }}
+                .email-content {{
+                    padding: 14px 10px !important;
+                }}
+                .email-header {{
+                    padding: 16px 12px !important;
+                }}
+            }}
+        </style>
+        <div class="email-container" style="max-width: 850px; width: 100%; margin: 0 auto; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1f2937; line-height: 1.5; background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px;">
+            <!-- Nagłówek -->
+            <div class="email-header" style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color: #ffffff; padding: 18px 16px; border-radius: 8px 8px 0 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                    <div>
+                        <h1 style="margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.025em;">📊 Raport postępów ucznia</h1>
+                        <p style="margin: 6px 0 0 0; font-size: 15px; opacity: 0.95;">
+                            <strong>{name}</strong> (konto Librus: <code>{login}</code>)
+                        </p>
+                    </div>
+                    <div style="margin-top: 8px; text-align: right; background-color: rgba(255,255,255,0.15); padding: 5px 10px; border-radius: 6px; font-size: 12px;">
+                        🗓️ Okres: <strong>{p_start}</strong> – <strong>{p_end}</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="email-content" style="padding: 16px 14px; box-sizing: border-box;">
+                <!-- Kafelki KPI -->
+                <div style="display: flex; flex-wrap: wrap; margin: -4px; margin-bottom: 16px;">
+                    <div style="flex: 1 1 130px; min-width: 130px; box-sizing: border-box; margin: 4px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 8px; text-align: center;">
+                        <div style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Średnia ogólna</div>
+                        <div style="font-size: 24px; font-weight: bold; color: #1e3a8a; margin: 3px 0;">{overall_avg_str}</div>
+                        {honor_badge}
+                    </div>
+                    <div style="flex: 1 1 130px; min-width: 130px; box-sizing: border-box; margin: 4px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 8px; text-align: center;">
+                        <div style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Średnia w okresie</div>
+                        <div style="font-size: 24px; font-weight: bold; color: #059669; margin: 3px 0;">{period_avg_str}</div>
+                        <div style="font-size: 10px; color: #64748b;">{p_start} – {p_end}</div>
+                    </div>
+                    <div style="flex: 1 1 130px; min-width: 130px; box-sizing: border-box; margin: 4px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 8px; text-align: center;">
+                        <div style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Oceny w okresie</div>
+                        <div style="font-size: 24px; font-weight: bold; color: #2563eb; margin: 3px 0;">{period_count}</div>
+                        <div style="font-size: 10px; color: #64748b;">z {total_count} zarejestrowanych</div>
+                    </div>
+                    <div style="flex: 1 1 130px; min-width: 130px; box-sizing: border-box; margin: 4px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 8px; text-align: center;">
+                        <div style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Aktywność / Uwagi</div>
+                        <div style="font-size: 17px; font-weight: bold; color: #334155; margin: 5px 0;">
+                            +{activity_pluses} / -{activity_minuses}
+                        </div>
+                        <div style="font-size: 11px; color: #ef4444; font-weight: bold;">np/bz: {unprepared_count}</div>
+                    </div>
+                </div>
+
+                <!-- Rekomendacje i wnioski -->
+                {strengths_html}
+                {warnings_html}
+
+                <!-- Czerwony pasek i analiza progów -->
+                {honor_roll_html}
+                {borderline_html}
+
+                <!-- Styl nauki i wpływ wag -->
+                {ls_html}
+
+                <!-- Ciche przedmioty -->
+                {dormant_html}
+
+                <!-- Karty ocen wg przedmiotów -->
+                <div style="margin-top: 25px;">
+                    <h3 style="color: #1f2937; margin: 0 0 10px 0; font-size: 16px; border-bottom: 2px solid #1e3a8a; padding-bottom: 6px;">
+                        📚 Zestawienie ocen według przedmiotów
+                    </h3>
+                    {subjects_cards}
+                </div>
+
+                <!-- Szczegóły nowych ocen -->
+                {period_details_html}
+
+                <!-- Rozkład ocen -->
+                <div style="margin-top: 25px;">
+                    <h3 style="color: #1f2937; margin: 0 0 12px 0; font-size: 16px; border-bottom: 2px solid #64748b; padding-bottom: 6px;">
+                        📈 Rozkład ocen (cały okres vs ostatni raport)
+                    </h3>
+                    <div style="display: flex; flex-wrap: wrap; margin: -3px;">
+                        {hist_cells}
+                    </div>
+                </div>
+
+                <!-- Przewodnik rodzica (Legenda) -->
+                {legend_html}
+
+                <!-- Stopka -->
+                <div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; text-align: center;">
+                    Raport postępów wygenerowany automatycznie przez <strong>Librus2mail</strong>. Wartości średnich obliczone na podstawie wag przypisanych w Librus Synergia.
+                </div>
+            </div>
+        </div>
+        """
+        return contents
+
+    def send_progress_report(self, user_config: dict, analysis: dict) -> bool:
+        pass
+
     @classmethod
     def _get_error_diagnostics(cls, error: Exception) -> tuple[str, str, str]:
         err_name = type(error).__name__

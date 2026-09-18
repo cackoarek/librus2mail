@@ -58,6 +58,22 @@ class GmailSender(MailSender):
             logger.error(f"Nie udało się wysłać powiadomienia o błędzie przez Gmail: {e}")
             return False
 
+    def send_progress_report(self, user_config: dict, analysis: dict) -> bool:
+        receivers = user_config.get('notification_receivers')
+        if not receivers:
+            logger.warning(f"Brak odbiorców powiadomień (notification_receivers) dla konta {user_config.get('librus_login')}")
+            return False
+
+        mail_content = self.create_mail_content_for_progress_report(user_config, analysis)
+        title = self._create_progress_report_title(user_config, analysis)
+        try:
+            logger.info(f"Wysyłam raport postępów dla {user_config.get('librus_login')} do {receivers}")
+            self.__send_gmail(user_config, title, mail_content, self.sender_email, self.password)
+            return True
+        except Exception as e:
+            logger.error(f"Nie udało się wysłać raportu postępów przez Gmail: {e}")
+            return False
+
     @staticmethod
     def __send_gmail(config, title, contents, mail_user, mail_password):
         logger.info("Wysyłam wiadomość e-mail")

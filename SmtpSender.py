@@ -68,6 +68,21 @@ class SmtpSender(MailSender):
             logger.error(f"Nie udało się wysłać powiadomienia o błędzie przez SMTP: {e}")
             return False
 
+    def send_progress_report(self, user_config: dict, analysis: dict) -> bool:
+        receivers = user_config.get('notification_receivers')
+        if not receivers:
+            logger.warning(f"Brak odbiorców powiadomień (notification_receivers) dla konta {user_config.get('librus_login')}")
+            return False
+
+        mail_content = self.create_mail_content_for_progress_report(user_config, analysis)
+        title = self._create_progress_report_title(user_config, analysis)
+        try:
+            logger.info(f"Wysyłam raport postępów dla {user_config.get('librus_login')} do {receivers}")
+            return self.__send_smtp(user_config, title, mail_content)
+        except Exception as e:
+            logger.error(f"Nie udało się wysłać raportu postępów przez SMTP: {e}")
+            return False
+
     def __send_smtp(self, user_config, title, contents):
         logger.info("Wysyłam wiadomość e-mail")
         receiver_emails = user_config['notification_receivers']

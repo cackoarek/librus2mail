@@ -33,10 +33,8 @@ wait_time_s: 300
 # - false: skrypt wykonuje pojedynczy przebieg i kończy działanie (idealne pod harmonogram cron)
 work-in-loop: true
 
-# Tryb przechowywania stanu (przeczytanych wiadomości, ogłoszeń i ocen):
-# - "RAM": pamięć podręczna procesu; restart aplikacji resetuje stan (domyślnie)
-# - "FILES": zapis stanu do plików JSON w katalogu storage/ (stan zachowywany po restarcie)
-storage_type: "RAM"
+# Katalog przechowywania stanu aplikacji i historii ocen (pliki JSON w storage/<login>.json):
+storage_dir: "storage"
 
 # Powiadomienia o awariach i błędach (brak połączenia z portalem Librus, wygaśnięcie sesji, błąd parsowania HTML):
 # - send_error_notifications: true wysyła alert e-mail do notification_receivers danego konta w razie problemów (domyślnie: true)

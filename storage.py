@@ -38,54 +38,25 @@ class BaseStorage(ABC):
         """Czyści informację o ostatnim błędzie po udanym sprawdzeniu."""
         pass
 
+    @abstractmethod
+    def save_grades_details(self, user_login: str, grades: list[dict]) -> None:
+        """Zapisuje szczegółowe informacje o ocenach (waga, data, kategoria, komentarz)."""
+        pass
 
-class MemoryStorage(BaseStorage):
-    """Przechowywanie stanu wyłącznie w pamięci RAM procesu (resetowane po restarcie)."""
+    @abstractmethod
+    def get_grades_history(self, user_login: str) -> list[dict]:
+        """Zwraca listę wszystkich zarejestrowanych ocen z pełnymi szczegółami."""
+        pass
 
-    def __init__(self):
-        self._cache: dict[str, dict[str, set]] = {}
-        self._last_errors: dict[str, dict] = {}
+    @abstractmethod
+    def get_last_progress_report_date(self, user_login: str) -> str | None:
+        """Zwraca datę ostatnio wygenerowanego raportu postępów (ISO format) lub None."""
+        pass
 
-    def has_existing_data(self, user_login: str) -> bool:
-        login_str = str(user_login)
-        return login_str in self._cache and any(len(s) > 0 for s in self._cache[login_str].values())
-
-    def get_last_error(self, user_login: str) -> dict | None:
-        return self._last_errors.get(str(user_login))
-
-    def save_last_error(self, user_login: str, error_str: str, step: str = "") -> None:
-        now = datetime.now()
-        self._last_errors[str(user_login)] = {
-            'error': str(error_str),
-            'step': step,
-            'timestamp': now.timestamp(),
-            'time_str': now.strftime("%Y-%m-%d %H:%M:%S")
-        }
-
-    def clear_last_error(self, user_login: str) -> None:
-        self._last_errors.pop(str(user_login), None)
-
-    def load_known_items(self, user_login: str) -> dict[str, set]:
-        login_str = str(user_login)
-        if login_str not in self._cache:
-            self._cache[login_str] = {
-                'messages': set(),
-                'notifications': set(),
-                'grades': set()
-            }
-        return {
-            'messages': set(self._cache[login_str]['messages']),
-            'notifications': set(self._cache[login_str]['notifications']),
-            'grades': set(self._cache[login_str]['grades'])
-        }
-
-    def save_known_items(self, user_login: str, known_messages: set, known_notifications: set, known_grades: set) -> None:
-        login_str = str(user_login)
-        self._cache[login_str] = {
-            'messages': set(known_messages),
-            'notifications': set(known_notifications),
-            'grades': set(known_grades)
-        }
+    @abstractmethod
+    def save_last_progress_report_date(self, user_login: str, date_iso: str) -> None:
+        """Zapisuje datę wygenerowanego raportu postępów."""
+        pass
 
 
 class FileStorage(BaseStorage):
@@ -211,9 +182,109 @@ class FileStorage(BaseStorage):
         except Exception as e:
             logger.error(f"Błąd podczas zapisywania pliku stanu {file_path}: {e}")
 
+    def save_grades_details(self, user_login: str, grades: list[dict]) -> None:
+        file_path = self._get_file_path(user_login)
+        temp_path = f"{file_path}.tmp"
+        data = {}
+        if os.path.isfile(file_path):
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+            except Exception:
+                data = {}
 
-def create_storage(storage_type: str = 'RAM', storage_dir: str = 'storage') -> BaseStorage:
-    storage_type_normalized = (storage_type or 'RAM').strip().upper()
-    if storage_type_normalized == 'FILES':
-        return FileStorage(storage_dir=storage_dir)
-    return MemoryStorage()
+        data['librus_login'] = str(user_login)
+        data['last_updated'] = datetime.now().isoformat()
+        raw_history = data.get('grades_history', {})
+        if isinstance(raw_history, list):
+            grades_history = {str(g.get('id', '')): g for g in raw_history if g.get('id')}
+        elif isinstance(raw_history, dict):
+            grades_history = dict(raw_history)
+        else:
+            grades_history = {}
+
+        now_iso = datetime.now().isoformat()
+        for g in grades:
+            gid = str(g.get('id', ''))
+            if not gid:
+                continue
+            if gid not in grades_history:
+                g_copy = dict(g)
+                g_copy['added_at'] = g_copy.get('added_at') or now_iso
+                grades_history[gid] = g_copy
+            else:
+                grades_history[gid].update({k: v for k, v in g.items() if v})
+
+        data['grades_history'] = grades_history
+
+        try:
+            with open(temp_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            os.replace(temp_path, file_path)
+            logger.debug(f"Zapisano historię ocen do pliku {file_path} dla {user_login}")
+        except Exception as e:
+            logger.error(f"Błąd podczas zapisywania historii ocen do {file_path}: {e}")
+
+    def get_grades_history(self, user_login: str) -> list[dict]:
+        file_path = self._get_file_path(user_login)
+        if not os.path.isfile(file_path):
+            return []
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            gh = data.get('grades_history', {})
+            if isinstance(gh, dict):
+                return list(gh.values())
+            elif isinstance(gh, list):
+                return gh
+            return []
+        except Exception as e:
+            logger.error(f"Błąd podczas odczytu grades_history z {file_path}: {e}")
+            return []
+
+    def get_last_progress_report_date(self, user_login: str) -> str | None:
+        file_path = self._get_file_path(user_login)
+        if not os.path.isfile(file_path):
+            return None
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            return data.get('last_progress_report_date')
+        except Exception as e:
+            logger.error(f"Błąd podczas odczytu last_progress_report_date z {file_path}: {e}")
+            return None
+
+    def save_last_progress_report_date(self, user_login: str, date_iso: str) -> None:
+        file_path = self._get_file_path(user_login)
+        temp_path = f"{file_path}.tmp"
+        data = {}
+        if os.path.isfile(file_path):
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+            except Exception:
+                data = {}
+        data['librus_login'] = str(user_login)
+        data['last_progress_report_date'] = date_iso
+        try:
+            with open(temp_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            os.replace(temp_path, file_path)
+            logger.debug(f"Zapisano last_progress_report_date do {file_path}")
+        except Exception as e:
+            logger.error(f"Błąd podczas zapisywania last_progress_report_date do {file_path}: {e}")
+
+
+def create_storage(storage_dir: str = 'storage', *args, **kwargs) -> FileStorage:
+    """
+    Tworzy trwałą pamięć stanu opartą na plikach JSON (FileStorage).
+    Dla wstecznej kompatybilności ignoruje dawny parametr storage_type.
+    """
+    target_dir = kwargs.get('storage_dir')
+    if not target_dir:
+        if isinstance(storage_dir, str) and storage_dir.upper() in ('FILES', 'RAM'):
+            target_dir = args[0] if args else 'storage'
+        else:
+            target_dir = storage_dir or 'storage'
+    return FileStorage(storage_dir=target_dir)
+

@@ -19,8 +19,7 @@ def configure_mail_provider(config: dict) -> MailSender:
 
 
 if __name__ == '__main__':
-    # config = read_config('config.yaml')
-    config = read_config('arek_config.yaml')
+    config = read_config('config.yaml')
 
     storage_type = config.get('storage_type', 'RAM')
     storage = create_storage(storage_type)

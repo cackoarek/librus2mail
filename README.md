@@ -75,6 +75,8 @@ Wszystkie ustawienia aplikacji znajdują się w pliku `config.yaml`. Na start sk
 
 ```bash
 cp config.example.yaml config.yaml
+# albo:
+cp config.yaml.example config.yaml
 ```
 
 Następnie otwórz `config.yaml` w edytorze i uzupełnij swoje dane.

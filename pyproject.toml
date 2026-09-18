@@ -1,0 +1,78 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "librus2mail"
+version = "1.0.0"
+description = "Monitor dziennika Librus Synergia z powiadomieniami e-mail i raportami postępów"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    { name = "Arkadiusz Cacko" }
+]
+keywords = ["librus", "synergia", "school", "email", "notifications", "progress-report"]
+dependencies = [
+    "requests>=2.28.0",
+    "beautifulsoup4>=4.10.0",
+    "fake-useragent>=1.1.0",
+    "pyyaml>=6.0",
+    "yagmail>=0.15",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.3.0",
+]
+
+[project.scripts]
+librus-collector = "librus_collector:run_collector"
+librus-report = "progress_report:run_progress_reports"
+
+[tool.setuptools]
+py-modules = [
+    "base_logger",
+    "config",
+    "librus",
+    "librus_collector",
+    "main",
+    "progress_analyzer",
+    "progress_report",
+    "storage",
+    "MailSender",
+    "GmailSender",
+    "SmtpSender",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "storage",
+    "scratch",
+    "build",
+    "dist",
+    "*.egg-info",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort (organizacja importów)
+    "UP",  # pyupgrade (nowoczesny syntax Pythona)
+]
+ignore = [
+    "E501",  # ignoruj zbyt długie linie (szablony HTML w stringach)
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-v"

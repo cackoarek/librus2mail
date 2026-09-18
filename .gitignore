@@ -22,3 +22,12 @@ __pycache__/
 # Pliki stanu aplikacji (storage)
 storage/
 *.tmp
+
+# Pakiety, kompilacja i cache narzędzi
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/

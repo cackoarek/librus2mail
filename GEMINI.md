@@ -15,8 +15,7 @@
 2. **Scraping Integrity**:
    - Do not remove or shorten the `sleep(5)` rate-limiting delays.
    - Librus Synergia has no official public API; HTML parsing is brittle. Check all `soup.find(...)` results defensively.
-   - Note: `requests.Response` has no `.error` attribute. Use `res.reason` / `res.text` / `res.raise_for_status()`.
-   - `read_messages: true` causes Librus to mark messages as read on the web portal. Default should remain `false`.
+   - `read_messages` and `read_grades` default to `true`. Visiting `/szczegoly` marks messages as read on the web portal.
 
 3. **Code Style**:
    - Standard: Python 3.10+ PEP 8 with type hints.

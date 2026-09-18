@@ -73,7 +73,7 @@ def run_collector(config_path: str = 'config.yaml'):
                 step = "ogłoszenia"
                 sleep(5)
                 librus.fetch_notifications()
-                if user_config.get('read_grades', False):
+                if user_config.get('read_grades', True):
                     step = "oceny"
                     sleep(5)
                     librus.fetch_grades()
@@ -109,7 +109,7 @@ def run_collector(config_path: str = 'config.yaml'):
                 # aktualna lista wszystkich ogłoszeń
                 new_notifications = librus.get_not_known_notifications_and_mark_as_known()
                 # aktualna lista wszystkich ocen (jeśli włączone)
-                new_grades = librus.get_not_known_grades_and_mark_as_known() if user_config.get('read_grades', False) else []
+                new_grades = librus.get_not_known_grades_and_mark_as_known() if user_config.get('read_grades', True) else []
 
                 if not user_config['dry-parse']:
                     one_summary = user_config.get('one_summary_message', False)
@@ -136,7 +136,7 @@ def run_collector(config_path: str = 'config.yaml'):
                         else:
                             logger.info("Brak nowych ogłoszeń")
 
-                        if user_config.get('read_grades', False):
+                        if user_config.get('read_grades', True):
                             if len(new_grades):
                                 logger.info("Pojawiły się nowe oceny")
                                 mail_sender.send_mail_with_grades(user_config, new_grades)

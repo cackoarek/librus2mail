@@ -38,8 +38,8 @@ class Librus:
 
     def __init__(self, config: dict, storage=None):
         self.__storage = storage
-        self.__do_read_messages = config.get('read_messages', False)
-        self.__do_read_grades = config.get('read_grades', False)
+        self.__do_read_messages = config.get('read_messages', True)
+        self.__do_read_grades = config.get('read_grades', True)
         self.__librus_login = config.get('librus_login')
         self.__librus_password = config.get('librus_password')
 

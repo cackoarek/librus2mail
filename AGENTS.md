@@ -127,8 +127,7 @@ librus2mail/
 - **DO NOT run `python main.py` in autonomous background loops**: It connects to real Librus accounts and may send actual emails to configured parent mailboxes.
 
 ### 🌐 2. Scraping Fragility & Anti-Ban
-- **Preserve Delays**: Do not eliminate `sleep(5)` between requests in `main.py` or `librus.py`. Scraping too quickly risks IP bans, CAPTCHAs, or temporary account locks.
-- **Message Read Side-Effect**: In Librus Synergia, visiting `/wiadomosci/szczegoly/...` marks the message as read in the official portal. Advise users to keep `read_messages: false` unless they explicitly want content extraction.
+- **Message Read Side-Effect**: In Librus Synergia, visiting `/wiadomosci/szczegoly/...` marks the message as read in the official portal. Both `read_messages` and `read_grades` default to `true` (users can set `read_messages: false` if they wish to avoid marking messages as read on the web portal).
 - **HTML Layout Volatility**: Librus Synergia frequently tweaks table layouts, CSS classes, or forms. Always defensively check if elements exist before indexing (`soup.find(...)`).
 
 ### 🐛 3. Known Gotchas & Historical Fixes

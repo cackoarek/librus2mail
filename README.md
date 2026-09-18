@@ -139,7 +139,7 @@ librus_users:
   - librus_login_name: "Konto Jasia"
     librus_login: "1234567"
     librus_password: "twoje_haslo_librus"
-    read_messages: false
+    read_messages: true
     read_grades: true
     one_summary_message: false
     do_not_send_first_parse: true
@@ -169,8 +169,8 @@ Każdy element listy `librus_users` reprezentuje jedno konto w e-dzienniku:
 | `librus_login_name` | `string` | Przyjazna nazwa (np. imię dziecka). Ułatwia identyfikację konta w tytułach i treści e-maili. |
 | `librus_login` | `string` | Login rodzica w Librus Synergia (zazwyczaj ciąg cyfr). |
 | `librus_password` | `string` | Hasło do konta rodzica w Librus Synergia. |
-| `read_messages` | `bool` | Czy skrypt ma wchodzić w szczegóły wiadomości i pobierać jej treść (`true`/`false`).<br>**UWAGA:** Wejście w wiadomość oznacza ją w portalu Librus jako przeczytaną przez rodzica. Domyślnie zaleca się `false`. |
-| `read_grades` | `bool` | Czy włączyć sprawdzanie i zbieranie ocen dla tego konta (`true`/`false`). Domyślnie `false`. |
+| `read_messages` | `bool` | Czy skrypt ma wchodzić w szczegóły wiadomości i pobierać jej treść (`true`/`false`). **Domyślnie `true`**.<br>**UWAGA:** Wejście w wiadomość oznacza ją w portalu Librus jako przeczytaną przez rodzica. Jeśli wolisz otrzymywać powiadomienie wyłącznie o tytule i nadawcy (bez oznaczania na portalu), ustaw `false`. |
+| `read_grades` | `bool` | Czy włączyć sprawdzanie i zbieranie ocen dla tego konta (`true`/`false`). **Domyślnie `true`**. |
 | `one_summary_message` | `bool` | Jeśli `true`, zamiast wysyłać osobne maile dla wiadomości, ogłoszeń i ocen, wyśle **jeden zbiorczy e-mail** podsumowujący wszystkie nowości z danego cyklu. Domyślnie `false`. |
 | `do_not_send_first_parse` | `bool` | Jeśli `true`, podczas pierwszego cyklu po uruchomieniu wiadomości zostaną tylko zaindeksowane, bez wysyłania e-maili o historii skrzynki. |
 | `send_error_notifications` | `bool` | Opcjonalne włączenie/wyłączenie wysyłania maili o błędach dla danego konta (domyślnie: `true`). |
@@ -565,7 +565,7 @@ tail -f librus.log
 * Zaloguj się na konto rodzica przez zwykłą przeglądarkę internetową. Librus może wymagać zaakceptowania nowego regulaminu, zmiany hasła lub wyświetlać obowiązkowy komunikat od szkoły. Po zaakceptowaniu w przeglądarce skrypt wznowi normalną pracę.
 
 ### 2. Wiadomości w portalu Librus oznaczają się jako przeczytane
-* Jeśli flaga `read_messages` jest ustawiona na `true`, skrypt otwiera szczegóły każdej nowej wiadomości w celu pobrania treści. System Librus automatycznie oznacza wówczas taką wiadomość jako przeczytaną w e-dzienniku. Aby tego uniknąć, ustaw `read_messages: false`.
+* Flaga `read_messages` jest domyślnie włączona (`true`), co pozwala skryptowi pobrać pełną treść nowej wiadomości i umieścić ją w e-mailu. Zgodnie z działaniem portalu Librus Synergia, otwarcie szczegółów wiadomości powoduje oznaczenie jej jako przeczytanej przez rodzica na stronie WWW. Jeśli wolisz otrzymywać powiadomienia e-mail wyłącznie o tytule i nadawcy nowej wiadomości (bez oznaczania jej jako przeczytanej w e-dzienniku), ustaw w konfiguracji: `read_messages: false`.
 
 ### 3. Błąd uwierzytelnienia Gmaila (`SMTPAuthenticationError`)
 * Jeśli korzystasz z konta Google, upewnij się, że nie wpisujesz zwykłego hasła do konta, lecz wygenerowane w Google **hasło do aplikacji** (16-znakowy ciąg).

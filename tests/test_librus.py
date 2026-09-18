@@ -221,6 +221,14 @@ class TestLibrus(unittest.TestCase):
         librus.fetch_grades()
         self.assertEqual(librus.grades, [])
 
+    def test_librus_defaults_read_messages_and_grades(self):
+        librus = Librus({
+            'librus_login': '123456',
+            'librus_password': 'secret_password',
+        })
+        self.assertTrue(librus._Librus__do_read_messages)
+        self.assertTrue(librus.do_read_grades)
+
     def test_mail_sender_create_mail_content_for_grades(self):
         from librus2mail.mail_sender import MailSender
         user_cfg = {'librus_login': '123', 'librus_login_name': 'Jaś'}

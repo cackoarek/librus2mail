@@ -16,8 +16,7 @@
    - Preserve `sleep(5)` delays between page fetches. Librus Synergia will block IPs or trigger CAPTCHAs if requests are sent in rapid bursts.
 
 4. **Message Read Side Effect**:
-   - Fetching message bodies via `__get_message_body()` navigates to the message URL, which automatically marks the message as read in Librus for the user.
-   - Keep `read_messages: false` by default in configs unless explicitly requested.
+   - Note: both `read_messages` and `read_grades` default to `true`. Users can set `read_messages: false` if they prefer not to mark messages as read on the web portal.
 
 5. **HTML Parsing Resilience**:
    - Librus DOM is subject to change. Always guard BeautifulSoup queries against `None` before chaining methods:

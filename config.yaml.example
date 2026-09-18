@@ -5,7 +5,7 @@ librus_users:
   - librus_login_name: "Jan Kowalski (klasa 5A)"
     librus_login: "8912345"
     librus_password: "SuperHaslo!2026"
-    read_messages: false              # UWAGA: true pobiera treść wiadomości, lecz oznacza ją w portalu Librus jako przeczytaną
+    read_messages: true               # true pobiera treść wiadomości (UWAGA: wejście w wiadomość oznacza ją w portalu Librus jako przeczytaną)
     read_grades: true                 # true włącza monitorowanie i powiadomienia e-mail o nowych ocenach ucznia
     one_summary_message: false        # true wysyła 1 zbiorczy e-mail ze wszystkimi nowymi wpisami zamiast kilku osobnych
     do_not_send_first_parse: true     # Przy pierwszym uruchomieniu zapisuje bazę i nie wysyła starych wiadomości
@@ -17,7 +17,7 @@ librus_users:
   - librus_login_name: "Anna Kowalska (klasa 2B)"
     librus_login: "8976543"
     librus_password: "BezpieczneHaslo!456"
-    read_messages: false
+    read_messages: true
     read_grades: true
     one_summary_message: true         # Dla tego konta wysyłany będzie 1 zbiorczy e-mail
     do_not_send_first_parse: true

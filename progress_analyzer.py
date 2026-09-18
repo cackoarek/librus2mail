@@ -443,6 +443,15 @@ class ProgressAnalyzer:
                     f"Zrównoważony styl pracy – oceny ze sprawdzianów ({exams_avg:.2f}) i bieżącej pracy ({daily_avg:.2f}) "
                     "są na bardzo spójnym poziomie."
                 )
+        elif len(exam_grades) == 0 and len(daily_grades) >= 1:
+            learning_style['diagnosis_type'] = 'insufficient_data'
+            learning_style['diagnosis'] = "Brak jeszcze ocen ze sprawdzianów (waga &ge; 2) – pełne porównanie stylu nauki pojawi się po pierwszych większych pracach."
+        elif len(exam_grades) >= 1 and len(daily_grades) == 0:
+            learning_style['diagnosis_type'] = 'insufficient_data'
+            learning_style['diagnosis'] = "Brak ocen z bieżącej pracy (kartkówki, zadania, waga 1) – pełne porównanie pojawi się po dodaniu ocen cząstkowych."
+        else:
+            learning_style['diagnosis_type'] = 'insufficient_data'
+            learning_style['diagnosis'] = "Zbyt mała liczba ocen do wyznaczenia stylu nauki."
 
         # 8. Analiza dodatkowa 3: Symulator "Czerwonego Paska" (Świadectwo z wyróżnieniem)
         subjects_with_avg = [s for s in analyzed_subjects if s['overall_avg'] is not None]

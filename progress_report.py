@@ -163,14 +163,27 @@ def run_progress_reports():
     users = config.get('librus_users', [])
     if args.user_filter:
         filter_val = str(args.user_filter).strip().lower()
-        users = [
+        matched = [
             u for u in users
             if filter_val in str(u.get('librus_login', '')).lower()
             or filter_val in str(u.get('librus_login_name', '')).lower()
         ]
-        if not users:
-            logger.error(f"Nie znaleziono użytkownika pasującego do filtru: '{args.user_filter}'")
-            sys.exit(1)
+        if not matched:
+            # Sprawdzenie czy istnieje plik stanu w storage (np. konto testowe/archiwalne)
+            if storage.has_existing_data(args.user_filter) or storage.get_grades_history(args.user_filter):
+                default_receivers = users[0].get('notification_receivers', []) if users else []
+                custom_name = storage.get_student_name(args.user_filter) if hasattr(storage, 'get_student_name') else None
+                student_name = custom_name or f"Uczeń testowy ({args.user_filter})"
+                matched = [{
+                    'librus_login': str(args.user_filter),
+                    'librus_login_name': student_name,
+                    'notification_receivers': default_receivers,
+                }]
+                logger.info(f"Użytkownik '{args.user_filter}' nie figuruje w pliku konfiguracyjnym, ale odnaleziono dane w storage. Załadowano profil '{student_name}'.")
+            else:
+                logger.error(f"Nie znaleziono użytkownika pasującego do filtru: '{args.user_filter}'")
+                sys.exit(1)
+        users = matched
 
     for user_config in users:
         login = str(user_config.get('librus_login', ''))

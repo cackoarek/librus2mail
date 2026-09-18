@@ -58,6 +58,11 @@ class BaseStorage(ABC):
         """Zapisuje datę wygenerowanego raportu postępów."""
         pass
 
+    @abstractmethod
+    def get_student_name(self, user_login: str) -> str | None:
+        """Zwraca zapisaną nazwę ucznia (jeśli występuje w storage) lub None."""
+        pass
+
 
 class FileStorage(BaseStorage):
     """Trwałe przechowywanie stanu w plikach JSON w wyznaczonym katalogu (np. storage/<login>.json)."""
@@ -273,6 +278,18 @@ class FileStorage(BaseStorage):
             logger.debug(f"Zapisano last_progress_report_date do {file_path}")
         except Exception as e:
             logger.error(f"Błąd podczas zapisywania last_progress_report_date do {file_path}: {e}")
+
+    def get_student_name(self, user_login: str) -> str | None:
+        file_path = self._get_file_path(user_login)
+        if not os.path.isfile(file_path):
+            return None
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            return data.get('librus_login_name') or data.get('student_name')
+        except Exception as e:
+            logger.error(f"Błąd podczas odczytu nazwy ucznia z {file_path}: {e}")
+            return None
 
 
 def create_storage(storage_dir: str = 'storage', *args, **kwargs) -> FileStorage:

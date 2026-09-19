@@ -1,12 +1,12 @@
 import logging
 import random
 import time
+import urllib.parse
 from time import sleep
 from typing import Any
 
 import requests
 from bs4 import BeautifulSoup
-from fake_useragent import UserAgent
 
 logger = logging.getLogger(__name__)
 
@@ -54,10 +54,15 @@ class Librus:
             self.__known_grades = set()
 
         self.grades = []
-        try:
-            self.__headers = {'User-Agent': UserAgent().random}
-        except Exception:
-            self.__headers = {'User-Agent': USER_AGENT}
+        # Używamy spójnego, nowoczesnego User-Agenta desktopowego.
+        # Losowanie random za każdym razem sprawia, że Librus traktuje każde zapytanie
+        # jako logowanie z nowego urządzenia i wymusza procedurę 2FA.
+        user_agent = config.get('user_agent') or USER_AGENT
+        self.__headers = {
+            'User-Agent': user_agent,
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Language': 'pl-PL,pl;q=0.9,en-US;q=0.8,en;q=0.7',
+        }
 
     @staticmethod
     def __generate_baner_header() -> dict[str, str]:
@@ -71,6 +76,11 @@ class Librus:
         return {'x-baner': f"{pre_turnips}_{turnips}"}
 
     def login(self):
+        if hasattr(self, '_Librus__session') and self.__session:
+            try:
+                self.__session.close()
+            except Exception:
+                pass
         self.__session = requests.Session()
         self.logged = False
 
@@ -144,16 +154,31 @@ class Librus:
         # zapytanie GET od razu przekierowuje do synergia.librus.pl z parametrami code i state.
         if '2FA' in grant_res.url:
             logger.info("Wykryto krok 2FA - wysyłam pominięcie (action: requiredActions, skip: true)")
+            soup_2fa = BeautifulSoup(grant_res.content, 'html.parser')
+            form_2fa = soup_2fa.find('form')
+
+            two_fa_payload: dict[str, str] = {}
+            action_target = grant_res.url
+            if form_2fa:
+                action_attr = form_2fa.get('action')
+                if action_attr:
+                    action_target = urllib.parse.urljoin(grant_res.url, action_attr)
+                for hidden_input in form_2fa.find_all('input', type='hidden'):
+                    h_name = hidden_input.get('name')
+                    h_val = hidden_input.get('value', '')
+                    if h_name:
+                        two_fa_payload[h_name] = h_val
+
+            two_fa_payload['action'] = 'requiredActions'
+            two_fa_payload['skip'] = 'true'
+
             two_fa_headers = {
                 **self.__headers,
                 'Referer': grant_res.url,
-                'X-Requested-With': 'XMLHttpRequest'
+                'X-Requested-With': 'XMLHttpRequest',
+                **self.__generate_baner_header(),
             }
-            two_fa_payload = {
-                'action': 'requiredActions',
-                'skip': 'true'
-            }
-            two_fa_res = self.__session.post(grant_res.url, data=two_fa_payload, headers=two_fa_headers)
+            two_fa_res = self.__session.post(action_target, data=two_fa_payload, headers=two_fa_headers)
             try:
                 two_fa_json = two_fa_res.json()
             except Exception:
@@ -165,6 +190,9 @@ class Librus:
                     final_grant = f"https://api.librus.pl{final_grant}"
                 logger.info("Pobieram docelowy grant autoryzacji")
                 grant_res = self.__session.get(final_grant, headers=grant_headers)
+            elif 'code=' in two_fa_res.url and 'synergia.librus.pl' in two_fa_res.url:
+                logger.info("Pominięcie 2FA przekierowało bezpośrednio do Synergii")
+                grant_res = two_fa_res
             else:
                 err_info = two_fa_json or two_fa_res.text[:200]
                 logger.error(f"Pominięcie 2FA nie powiodło się: {err_info}")

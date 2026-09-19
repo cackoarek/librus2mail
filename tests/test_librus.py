@@ -1562,9 +1562,9 @@ class TestLibrus(unittest.TestCase):
             with patch('librus2mail.librus_collector.sleep') as mock_sleep:
                 collector.collect_all(users)
                 self.assertEqual(mock_collect.call_count, 3)
-                # Domyślny delay to 3 sekundy, wywoływany dla 2. i 3. użytkownika (nie dla 1.)
+                # Domyślny delay to 10 sekund, wywoływany dla 2. i 3. użytkownika (nie dla 1.)
                 self.assertEqual(mock_sleep.call_count, 2)
-                mock_sleep.assert_has_calls([unittest.mock.call(3.0), unittest.mock.call(3.0)])
+                mock_sleep.assert_has_calls([unittest.mock.call(10.0), unittest.mock.call(10.0)])
 
         # Test z niestandardową wartością w konfiguracji
         config_custom = {
@@ -1583,6 +1583,7 @@ class TestLibrus(unittest.TestCase):
             'storage_dir': 'storage',
             'send_error_notifications': True,
             'error_cooldown_s': 1800,
+            'login_retry_delay_s': 0,
         }
         user_cfg = {
             'librus_login': '12345',
@@ -1701,6 +1702,84 @@ class TestLibrus(unittest.TestCase):
         )
         mock_sender.send_mail_with_summary.assert_called_once()
         mock_sender.send_mail_with_messages.assert_not_called()
+
+    def test_login_when_2fa_encountered_parses_form_and_sends_baner_header(self):
+        mock_session = MagicMock()
+
+        # Step 1: portalRodzina
+        resp1 = MagicMock(status_code=200, url='https://api.librus.pl/OAuth/Authorization?client_id=46')
+        # Step 2: POST login returns 2FA goTo
+        resp2 = MagicMock(status_code=200)
+        resp2.json.return_value = {'status': 'ok', 'goTo': '/OAuth/Authorization/2FA?client_id=46'}
+
+        # Step 3: GET 2FA page with HTML form containing hidden CSRF token
+        html_2fa = """
+        <html>
+        <body>
+            <form action="/OAuth/Authorization/2FA/Confirm" method="POST">
+                <input type="hidden" name="csrf_token" value="secret_csrf_123" />
+                <input type="hidden" name="state" value="state_abc" />
+                <button type="submit">Pomiń</button>
+            </form>
+        </body>
+        </html>
+        """
+        resp3_2fa = MagicMock(status_code=200, url='https://api.librus.pl/OAuth/Authorization/2FA?client_id=46')
+        resp3_2fa.content = html_2fa.encode('utf-8')
+
+        # Step 4: POST 2FA returns goTo final grant
+        resp4_2fa_post = MagicMock(status_code=200)
+        resp4_2fa_post.json.return_value = {'status': 'ok', 'goTo': '/OAuth/Authorization/Grant?client_id=46'}
+
+        # Step 5: GET final grant lands on synergia
+        resp5_final = MagicMock(status_code=200, url='https://synergia.librus.pl/loguj/portalRodzina?code=xyz')
+
+        mock_session.get.side_effect = [resp1, resp3_2fa, resp5_final]
+        mock_session.post.side_effect = [resp2, resp4_2fa_post]
+
+        librus = Librus({'librus_login': '123', 'librus_password': 'p!'})
+        with patch('requests.Session', return_value=mock_session):
+            librus.login()
+            self.assertTrue(librus.logged)
+            # Weryfikacja drugiego wywołania POST (pominięcie 2FA)
+            self.assertEqual(mock_session.post.call_count, 2)
+            second_post_call = mock_session.post.call_args_list[1]
+            target_url = second_post_call[0][0]
+            post_data = second_post_call[1]['data']
+            post_headers = second_post_call[1]['headers']
+
+            # Target URL powinien być pobrany z formularza
+            self.assertEqual(target_url, 'https://api.librus.pl/OAuth/Authorization/2FA/Confirm')
+            # Payload powinien zawierać ukryte tokeny z formularza oraz skip=true
+            self.assertEqual(post_data.get('csrf_token'), 'secret_csrf_123')
+            self.assertEqual(post_data.get('state'), 'state_abc')
+            self.assertEqual(post_data.get('skip'), 'true')
+            # Nagłówki powinny zawierać x-baner
+            self.assertIn('x-baner', post_headers)
+
+    def test_collector_login_retry_recovers_on_second_attempt(self):
+        config = {
+            'storage_dir': 'storage',
+            'login_retries': 2,
+            'login_retry_delay_s': 0,
+        }
+        collector = LibrusCollector(config, storage=MagicMock())
+        user_cfg = {
+            'librus_login': '12345',
+            'librus_login_name': 'Janek',
+            'read_messages': False,
+            'read_grades': False,
+        }
+
+        with patch('librus2mail.librus_collector.Librus') as mock_librus_cls:
+            mock_inst = MagicMock()
+            # Próba 1 zawodzi, próba 2 kończy się sukcesem
+            mock_inst.login.side_effect = [Exception("Błąd 2FA"), None]
+            mock_librus_cls.return_value = mock_inst
+
+            res = collector.collect_user(user_cfg)
+            self.assertTrue(res['success'])
+            self.assertEqual(mock_inst.login.call_count, 2)
 
 
 if __name__ == '__main__':

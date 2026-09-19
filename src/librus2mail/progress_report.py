@@ -301,11 +301,11 @@ def run_progress_reports(
             logger.info(f"Załadowano profile uczniów odnalezione w '{effective_storage_dir}': {[u['librus_login_name'] for u in auto_users]}")
             users = auto_users
 
-    raw_delay = config.get('delay_between_users_s', config.get('user_delay_s', 3))
+    raw_delay = config.get('delay_between_users_s', config.get('user_delay_s', 10))
     try:
         delay = float(raw_delay)
     except (ValueError, TypeError):
-        delay = 3.0
+        delay = 10.0
 
     for idx, user_config in enumerate(users):
         login = str(user_config.get('librus_login', ''))
@@ -325,7 +325,23 @@ def run_progress_reports(
                 user_copy['read_grades'] = True
                 librus = Librus(user_copy, storage=storage)
                 logger.info(f"Loguję do Librus Synergia dla {name} (flaga --fetch)...")
-                librus.login()
+
+                max_retries = int(config.get('login_retries', 2))
+                retry_delay = float(config.get('login_retry_delay_s', 5))
+                for attempt in range(1, max_retries + 1):
+                    try:
+                        librus.login()
+                        break
+                    except Exception as log_err:
+                        if attempt < max_retries:
+                            logger.warning(
+                                f"{name} ({login}): Próba logowania {attempt}/{max_retries} nie powiodła się ({log_err}). "
+                                f"Ponawiam za {int(retry_delay)}s..."
+                            )
+                            sleep(retry_delay)
+                        else:
+                            raise
+
                 logger.info("Pobieram najświeższe oceny z dziennika...")
                 librus.fetch_grades()
             except Exception as e:

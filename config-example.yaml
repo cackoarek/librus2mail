@@ -60,9 +60,15 @@ librus_users:
 # ------------------------------------------------------------------------------
 # 2. PARAMETRY PĘTLI I BEZPIECZEŃSTWA SCRAPINGU (ANTY-BOT)
 # ------------------------------------------------------------------------------
-# Czas oczekiwania w sekundach pomiędzy pobieraniem danych dla kolejnych kont dzieci (domyślnie: 3s).
-# Zapobiega zbyt gwałtownym żądaniom z jednego adresu IP przy wielu kontach.
-delay_between_users_s: 3
+# Czas oczekiwania w sekundach pomiędzy pobieraniem danych dla kolejnych kont dzieci (domyślnie: 10s).
+# Odstęp 10-15s chroni przed blokadami anty-botowymi i wymuszaniem 2FA przy wielu kontach z jednego IP.
+delay_between_users_s: 10
+
+# Liczba prób logowania do Librusa w przypadku chwilowego błędu lub 2FA (domyślnie: 2).
+login_retries: 2
+
+# Odstęp w sekundach pomiędzy ponownymi próbami logowania (domyślnie: 5s).
+login_retry_delay_s: 5
 
 # Czas oczekiwania w sekundach pomiędzy kolejnymi sprawdzeniami e-dziennika (domyślnie: 3600 = 1 godzina).
 # Używany wyłącznie w trybie ciągłej pracy (gdy work-in-loop: true).

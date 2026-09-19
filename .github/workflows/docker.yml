@@ -7,7 +7,6 @@ on:
     paths:
       - 'Dockerfile'
       - 'src/**'
-      - 'templates/**'
       - 'pyproject.toml'
       - 'requirements.txt'
       - '.dockerignore'
@@ -22,7 +21,6 @@ on:
     paths:
       - 'Dockerfile'
       - 'src/**'
-      - 'templates/**'
       - 'pyproject.toml'
       - 'requirements.txt'
       - '.dockerignore'

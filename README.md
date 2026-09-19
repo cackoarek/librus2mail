@@ -11,7 +11,7 @@
 [![Packaging: PEP 517/518](https://img.shields.io/badge/packaging-PEP%20517%2F518-00599C.svg?style=flat-square)](pyproject.toml)
 [![Docker Ready](https://img.shields.io/badge/docker-ready-2496ED.svg?style=flat-square&logo=docker&logoColor=white)](Dockerfile)
 [![systemd Supported](https://img.shields.io/badge/systemd-supported-lightgrey.svg?style=flat-square&logo=linux&logoColor=white)](deploy/systemd/)
-[![Templates: Jinja2](https://img.shields.io/badge/templates-Jinja2-B41717.svg?style=flat-square&logo=jinja&logoColor=white)](templates/emails/)
+[![Templates: Jinja2](https://img.shields.io/badge/templates-Jinja2-B41717.svg?style=flat-square&logo=jinja&logoColor=white)](src/librus2mail/templates/emails/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg?style=flat-square)](LICENSE)
 [![GitHub Pages](https://img.shields.io/badge/demo-GitHub%20Pages-0969da.svg?style=flat-square&logo=github&logoColor=white)](https://cackoarek.github.io/librus2mail/)
 
@@ -98,7 +98,7 @@ Poniżej możesz zobaczyć jak wyglądają e-maile generowane przez projekt — 
   * **Gmail**: zoptymalizowana obsługa przez bibliotekę `yagmail` (wymagane hasło aplikacji Google).
   * **SMTP**: standardowy protokół SMTP z szyfrowaniem STARTTLS (działa z dowolnym serwerem pocztowym: hostingodawcy, OVH, Cyberfolks, WP, Onet itp.).
 * **Tryb pierwszego przebiegu (`do_not_send_first_parse`)**: Przy pierwszym uruchomieniu skrypt indeksuje aktualne wiadomości, ogłoszenia i oceny jako bazę i nie wysyła spamu ze wszystkimi historycznymi wpisami – kolejne uruchomienia wysyłają powiadomienia wyłącznie o nowych wpisach.
-* **Nowoczesne szablony Jinja2**: Wszystkie e-maile generowane są z responsywnych szablonów HTML (`templates/emails/`), łatwych w dostosowywaniu stylów i kolorów.
+* **Nowoczesne szablony Jinja2**: Wszystkie e-maile generowane są z responsywnych szablonów HTML (`src/librus2mail/templates/emails/`), łatwych w dostosowywaniu stylów i kolorów.
 * **Automatyczne alerty o awariach i błędach**: W razie braku połączenia do Librusa, problemów z sesją/autoryzacją lub błędu parsowania danych (np. po zmianie wyglądu dziennika), skrypt natychmiast wysyła e-mail z diagnozą i zalecanymi działaniami. Wbudowany mechanizm throttling / cooldown zapobiega zalewaniu skrzynki powtarzającymi się wiadomościami.
 * **Dedykowany moduł analizy postępów dziecka (`progress_report.py`)**: Niezależny skrypt analityczny przeliczający średnie ważone przedmiotowe i ogólne, wskaźniki trendu (↗, ↘, ➡), sugerowane oceny roczne, rozkład ocen (histogram) oraz automatyczne wnioski rodzicielskie (sukcesy, zagrożenia, nieprzygotowania). Raport wysyłany jest w postaci nowoczesnego dashboardu HTML.
 
@@ -588,7 +588,7 @@ Szczegółowy opis instalacji krok po kroku znajduje się w przewodniku [deploy/
 
 ## Szablony wiadomości e-mail (Jinja2)
 
-Wszystkie wiadomości i raporty HTML generowane są za pomocą silnika szablonów **Jinja2**. Szablony znajdują się w katalogu `templates/emails/` (oraz wewnątrz pakietu `src/librus2mail/templates/emails/`):
+Wszystkie wiadomości i raporty HTML generowane są za pomocą silnika szablonów **Jinja2**. Szablony znajdują się wewnątrz pakietu w katalogu `src/librus2mail/templates/emails/`:
 - `messages.html`: Powiadomienia o nowych wiadomościach od nauczycieli.
 - `notifications.html`: Powiadomienia o nowych ogłoszeniach szkolnych.
 - `grades.html`: Powiadomienia o nowo wystawionych ocenach.
@@ -633,7 +633,6 @@ librus2mail/
 │           ├── summary.html
 │           ├── error_alert.html
 │           └── progress_report.html
-├── templates/emails/           # Szablony e-mail w katalogu projektu
 ├── examples/                   # Przykładowe dane i wygenerowane raporty
 │   ├── storage/                # Przykładowa baza ucznia ze zmyślonymi ocenami
 │   └── reports/                # Przykładowe wygenerowane raporty HTML

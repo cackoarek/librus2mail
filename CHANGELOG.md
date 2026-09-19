@@ -9,6 +9,10 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ## [Unreleased]
 
+---
+
+## [1.1.0] – 2026-09-19
+
 ### Dodane
 - Parametr `--actual-date YYYY-MM-DD` w `librus_updates_notifier.py` i `librus_progress_report.py` – umożliwia generowanie reprodukowalnych raportów z przykładowego storage
 - Parametr `--summary` wymuszający wysłanie jednego zbiorczego e-maila zamiast osobnych wiadomości, ogłoszeń i ocen
@@ -43,5 +47,6 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ---
 
-[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/cackoarek/librus2mail/releases/tag/v1.1.0
 [1.0.0]: https://github.com/cackoarek/librus2mail/releases/tag/v1.0.0

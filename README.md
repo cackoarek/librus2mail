@@ -145,12 +145,14 @@ pip install -r requirements.txt
 
 ## Konfiguracja
 
-Wszystkie ustawienia aplikacji znajdują się w pliku `config.yaml`. Na start skopiuj wzorcowy plik konfiguracyjny:
+Wszystkie ustawienia aplikacji znajdują się w pliku `config.yaml`. Na start skopiuj jeden z dwóch przygotowanych szablonów:
 
 ```bash
-cp config.example.yaml config.yaml
-# albo:
-cp config.yaml.example config.yaml
+# Wariant 1: Minimalna konfiguracja (tylko wymagane pola, reszta domyślna):
+cp config-minimal.yaml config.yaml
+
+# Wariant 2: Pełna konfiguracja (wszystkie zaawansowane parametry i wyjaśnienia):
+cp config-example.yaml config.yaml
 ```
 
 Następnie otwórz `config.yaml` w edytorze i uzupełnij swoje dane.
@@ -525,7 +527,8 @@ Repozytorium zawiera gotowy [Dockerfile](file:///home/acacko/PycharmProjects/lib
 
 1. **Przygotuj plik `config.yaml`**:
    ```bash
-   cp config.example.yaml config.yaml
+   cp config-example.yaml config.yaml
+   # (lub wersję minimalistyczną: cp config-minimal.yaml config.yaml)
    # uzupełnij dane logowania i listę odbiorców e-mail
    ```
 
@@ -655,7 +658,8 @@ librus2mail/
 ├── .dockerignore               # Ochrona poufnych konfiguracji przed kopiowaniem do obrazu
 ├── pyproject.toml              # Nowoczesna konfiguracja projektu (PEP 517/518/621)
 ├── requirements.txt            # Tradycyjna lista zależności
-├── config.example.yaml         # Wzorcowy szablon konfiguracji
+├── config-example.yaml         # Pełny wzorcowy szablon ze wszystkimi opcjami i komentarzami
+├── config-minimal.yaml         # Minimalistyczny szablon (tylko wymagane pola)
 ├── librus_collect_and_notify.py# Główny punkt wejścia demona i orkiestratora (CLI)
 ├── librus_collector.py         # Moduł 1: CLI zbierania danych ze szkoły
 ├── librus_progress_report.py   # Moduł 3: CLI generatora raportów postępów
@@ -724,7 +728,7 @@ tail -f librus.log
 
 * Pliki `config.yaml`, `*_config.yaml`, `.env` oraz `*.log` zawierają poufne hasła, dane osobowe i adresy e-mail.
 * **Nigdy nie dodawaj ich do repozytorium gita** (`.gitignore` w projekcie jest skonfigurowany tak, aby je chronić).
-* Wszelkie przykłady i testy opieraj wyłącznie na szablonie `config.example.yaml`.
+* Wszelkie przykłady i testy opieraj wyłącznie na szablonach `config-example.yaml` lub `config-minimal.yaml`.
 
 ---
 

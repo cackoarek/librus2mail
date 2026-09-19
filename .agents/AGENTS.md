@@ -129,7 +129,7 @@ librus2mail/
 ### 🔒 1. Secrets & Credentials Protection
 - **NEVER stage or commit**: `config.yaml`, `arek_config.yaml`, `*_config.yaml`, `.env`, or `*.log`.
 - **NEVER expose plaintext credentials**: Do not log passwords or logins.
-- **Reference only `config.example.yaml`** when writing docs, examples, or tests.
+- **Reference only `config-example.yaml` or `config-minimal.yaml`** when writing docs, examples, or tests.
 - **DO NOT run `python librus_collect_and_notify.py` in autonomous background loops**: It connects to real Librus accounts and may send actual emails to configured parent mailboxes.
 
 ### 🌐 2. Scraping Fragility & Anti-Ban

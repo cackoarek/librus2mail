@@ -1,0 +1,21 @@
+# ==============================================================================
+# Librus2mail - Minimalna konfiguracja (Tylko wymagane pola)
+# ==============================================================================
+# Skopiuj ten plik jako config.yaml i uzupełnij swoimi danymi:
+#   cp config-minimal.yaml config.yaml
+#
+# Wszystkie pozostałe parametry (interwały, opóźnienia, alerty awarii, pamięć
+# bazy JSON) przyjmują bezpieczne wartości domyślne.
+# Pełny wykaz wszystkich dostępnych opcji znajdziesz w pliku config-example.yaml.
+# ==============================================================================
+
+librus_users:
+  - librus_login: "1234567"           # Login do konta rodzica w portalu Librus Synergia
+    librus_password: "twoje_haslo"     # Hasło do konta rodzica w portalu Librus Synergia
+    notification_receivers:
+      - "twoj_email@example.com"      # Adres e-mail, na który mają przychodzić powiadomienia
+
+mail:
+  login: "twoje_konto@gmail.com"      # Adres e-mail konta nadawcy
+  password: "haslo_aplikacji_google"  # 16-znakowe hasło aplikacji Google (App Password)
+  use_gmail: true                     # true: Gmail, false: standardowy SMTP

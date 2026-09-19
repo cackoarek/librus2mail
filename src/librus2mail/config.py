@@ -11,7 +11,8 @@ def read_config(config_file='config.yaml'):
     if not os.path.isfile(config_file):
         error_msg = (
             f"Nie znaleziono pliku konfiguracyjnego '{config_file}'! "
-            f"Utwórz plik konfiguracyjny na podstawie szablonu, wykonując: cp config.example.yaml {config_file}. "
+            f"Utwórz plik konfiguracyjny na podstawie szablonu, wykonując: cp config-example.yaml {config_file} "
+            f"(lub wersję minimalistyczną: cp config-minimal.yaml {config_file}). "
             f"Więcej informacji na temat konfiguracji znajdziesz w dokumentacji w pliku README.md."
         )
         logger.error(error_msg)

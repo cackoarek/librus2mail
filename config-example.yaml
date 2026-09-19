@@ -1,0 +1,120 @@
+# ==============================================================================
+# Librus2mail - Pełny plik konfiguracyjny (Wszystkie dostępne opcje)
+# ==============================================================================
+# Skopiuj ten plik jako config.yaml i uzupełnij swoimi danymi:
+#   cp config-example.yaml config.yaml
+#
+# UWAGA DOTYCZĄCA BEZPIECZEŃSTWA:
+#   Nigdy nie commituj pliku config.yaml z prawdziwymi danymi do repozytorium Git!
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. KONTA UCZNIÓW W PORTALU LIBRUS SYNERGIA (librus_users)
+# ------------------------------------------------------------------------------
+# Możesz zdefiniować jedno lub wiele kont (np. dla rodzeństwa).
+librus_users:
+  - # Przyjazna nazwa wyświetlana w nagłówkach maili i raportów (opcjonalna):
+    librus_login_name: "Jan Kowalski (klasa 5A)"
+
+    # Login do konta rodzica w systemie Librus Synergia (wymagany):
+    librus_login: "8912345"
+
+    # Hasło do konta rodzica w systemie Librus Synergia (wymagany):
+    librus_password: "TwojeSuperTajneHaslo123!"
+
+    # Pobieranie treści wiadomości prywatnych od nauczycieli (domyślnie: true).
+    # UWAGA: Wejście w szczegóły wiadomości oznacza ją w portalu Librus jako przeczytaną!
+    # Jeśli chcesz, by wiadomości w portalu pozostały nieprzeczytane, ustaw false.
+    read_messages: true
+
+    # Monitorowanie nowo wystawionych ocen ucznia (domyślnie: true).
+    read_grades: true
+
+    # Format wysyłki powiadomień e-mail:
+    # - false: wysyła osobne e-maile dla nowych ocen, wiadomości i ogłoszeń (domyślnie).
+    # - true: konsoliduje wszystkie nowości w jeden zbiorczy, estetyczny e-mail.
+    one_summary_message: false
+
+    # Tryb pierwszego uruchomienia (domyślnie: true).
+    # Przy pierwszym starcie zapisuje aktualny stan jako bazę i NIE wysyła powiadomień
+    # o wszystkich dotychczasowych, historycznych ocenach i wiadomościach.
+    do_not_send_first_parse: true
+
+    # Lista adresów e-mail, na które wysyłane będą powiadomienia dla tego ucznia:
+    notification_receivers:
+      - "rodzic.kowalski@example.com"
+      - "mama.kowalska@example.com"
+
+  # Drugie konto ucznia (np. dla młodszego dziecka):
+  - librus_login_name: "Anna Kowalska (klasa 2B)"
+    librus_login: "8976543"
+    librus_password: "InneBezpieczneHaslo456!"
+    read_messages: true
+    read_grades: true
+    one_summary_message: true         # Dla Ani wysyłany będzie 1 zbiorczy e-mail
+    do_not_send_first_parse: true
+    notification_receivers:
+      - "rodzic.kowalski@example.com"
+
+
+# ------------------------------------------------------------------------------
+# 2. PARAMETRY PĘTLI I BEZPIECZEŃSTWA SCRAPINGU (ANTY-BOT)
+# ------------------------------------------------------------------------------
+# Czas oczekiwania w sekundach pomiędzy pobieraniem danych dla kolejnych kont dzieci (domyślnie: 3s).
+# Zapobiega zbyt gwałtownym żądaniom z jednego adresu IP przy wielu kontach.
+delay_between_users_s: 3
+
+# Czas oczekiwania w sekundach pomiędzy kolejnymi sprawdzeniami e-dziennika (domyślnie: 3600 = 1 godzina).
+# Używany wyłącznie w trybie ciągłej pracy (gdy work-in-loop: true).
+wait_time_s: 3600
+
+# Tryb pracy orkiestratora i demona:
+# - true: aplikacja działa w nieskończonej pętli ze snem wait_time_s (idealne jako usługa systemd lub Docker).
+# - false: aplikacja wykonuje pojedynczy przebieg i kończy działanie (idealne pod harmonogram cron).
+work-in-loop: true
+
+
+# ------------------------------------------------------------------------------
+# 3. PAMIĘĆ STANU I BAZA HISTORII OCEN (STORAGE)
+# ------------------------------------------------------------------------------
+# Ścieżka do katalogu, w którym zapisywane są pliki stanu i historii ocen JSON (domyślnie: "storage").
+storage_dir: "storage"
+
+# Tryb przechowywania stanu:
+# - "FILES": zapis stanu do trwałych plików JSON w katalogu storage_dir (zalecane, stan zachowywany po restarcie).
+# - "RAM": pamięć podręczna procesu; restart aplikacji resetuje stan.
+storage_type: "FILES"
+
+
+# ------------------------------------------------------------------------------
+# 4. POWIADOMIENIA O AWARIACH I BŁĘDACH (ERROR ALERTS)
+# ------------------------------------------------------------------------------
+# Wysyłanie alertów e-mail w razie utraty połączenia, wygaśnięcia sesji lub błędu parsowania (domyślnie: true).
+send_error_notifications: true
+
+# Minimalny odstęp czasu w sekundach pomiędzy alertami o tym samym błędzie (domyślnie: 3600 = 1 godzina).
+# Chroni skrzynkę rodzica przed zalaniem e-mailami podczas dłuższej awarii portalu Librus.
+error_cooldown_s: 3600
+
+
+# ------------------------------------------------------------------------------
+# 5. KONFIGURACJA WYSYŁKI WIADOMOŚCI E-MAIL (mail)
+# ------------------------------------------------------------------------------
+mail:
+  # Adres e-mail konta wysyłającego powiadomienia:
+  login: "twoje.powiadomienia@gmail.com"
+
+  # Hasło do skrzynki nadawcy:
+  # W przypadku konta Gmail: wygenerowane 16-znakowe Hasło Aplikacji Google (App Password),
+  # np. "abcd efgh ijkl mnop" (bez spacji).
+  password: "twoje_haslo_aplikacji_lub_poczty"
+
+  # Wybór protokołu wysyłki:
+  # - true: wysyłka przez Gmail za pomocą biblioteki yagmail (zalecane dla Gmaila).
+  # - false: wysyłka przez standardowy serwer SMTP z szyfrowaniem STARTTLS (np. WP, Onet, OVH, własna domena).
+  use_gmail: true
+
+  # Ustawienia dla use_gmail: false (ignorowane, gdy use_gmail: true):
+  non_gmail_settings:
+    smtp_host: "smtp.twoj-serwer-poczty.pl"
+    port: 587

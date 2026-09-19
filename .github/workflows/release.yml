@@ -283,7 +283,7 @@ jobs:
           mkdir -p examples/reports
 
           # Przygotuj bazową konfigurację na podstawie szablonu
-          cp config.example.yaml config.yaml
+          cp config-example.yaml config.yaml
 
           # Data referencyjna: ostatni piątek lub 2026-09-18 jako fallback
           # Używamy daty wbudowanej w examples/storage aby raporty były spójne

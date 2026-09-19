@@ -630,7 +630,8 @@ class TestLibrus(unittest.TestCase):
         from librus2mail.config import read_config
         with self.assertRaises(FileNotFoundError) as ctx:
             read_config('non_existent_config_file_12345.yaml')
-        self.assertIn("config.example.yaml", str(ctx.exception))
+        self.assertIn("config-example.yaml", str(ctx.exception))
+        self.assertIn("config-minimal.yaml", str(ctx.exception))
         self.assertIn("README.md", str(ctx.exception))
 
     def test_read_config_valid_file_loads_successfully(self):

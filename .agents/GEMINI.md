@@ -10,7 +10,7 @@
 1. **Security & Secrets**:
    - Strictly avoid staging or committing `config.yaml`, `arek_config.yaml`, `*_config.yaml`, `.env`, or `*.log`.
    - Never run `python librus_collect_and_notify.py` or `python librus_collector.py` autonomously; it interacts with live school accounts and sends real emails.
-   - For configuration documentation and tests, reference only `config.example.yaml`.
+   - For configuration documentation and tests, reference only `config-example.yaml` or `config-minimal.yaml`.
 
 2. **Scraping Integrity**:
    - Do not remove or shorten the `sleep(5)` rate-limiting delays.

@@ -21,7 +21,7 @@
 - `src/librus2mail/storage.py`: State and grade history persistence (`FileStorage`).
 
 ## Critical Rules
-1. **Secrets**: Never commit `config.yaml`, `arek_config.yaml`, or any `*_config.yaml`. Reference `config.example.yaml`.
+1. **Secrets**: Never commit `config.yaml`, `arek_config.yaml`, or any `*_config.yaml`. Reference `config-example.yaml` or `config-minimal.yaml`.
 2. **Rate Limits**: Do not remove `sleep(5)` calls between requests.
 3. **HTTP Errors**: Do NOT use `res.error` on `requests.Response` (it does not exist). Use `res.status_code`, `res.reason`, or `res.raise_for_status()`.
 4. **Side Effects**: `read_messages=True` marks messages as read in the user's Librus portal.

@@ -4,7 +4,7 @@
 1. **Never commit secrets**:
    - Files such as `config.yaml`, `arek_config.yaml`, `*_config.yaml`, `.env`, and `*.log` contain real credentials (Librus parent credentials, Gmail/SMTP passwords, recipient emails).
    - Never remove them from `.gitignore` or stage them in git commits (`git add`).
-   - Always reference `config.example.yaml` when writing examples or test configurations.
+   - Always reference `config-example.yaml` or `config-minimal.yaml` when writing examples or test configurations.
 
 2. **Never log sensitive data**:
    - Do not print or log plaintext passwords, authorization tokens, or session cookie values.

@@ -81,7 +81,31 @@ class LibrusCollector:
             librus = self.parsers[user_key]
 
             step = "logowanie"
-            librus.login()
+            max_login_retries = int(self.config.get('login_retries', 2))
+            login_retry_delay = float(self.config.get('login_retry_delay_s', 5))
+            login_success = False
+            last_login_err = None
+
+            for attempt in range(1, max_login_retries + 1):
+                try:
+                    librus.login()
+                    login_success = True
+                    break
+                except Exception as log_err:
+                    last_login_err = log_err
+                    if attempt < max_login_retries:
+                        logger.warning(
+                            f"{name} ({login}): Próba logowania {attempt}/{max_login_retries} nie powiodła się ({log_err}). "
+                            f"Ponawiam próbę za {int(login_retry_delay)}s..."
+                        )
+                        sleep(login_retry_delay)
+                    else:
+                        logger.error(
+                            f"{name} ({login}): Wszystkie {max_login_retries} próby logowania zakończyły się niepowodzeniem."
+                        )
+
+            if not login_success and last_login_err:
+                raise last_login_err
 
             step = "wiadomości"
             sleep(5)
@@ -183,11 +207,11 @@ class LibrusCollector:
     def collect_all(self, users: list[dict]) -> dict[str, dict[str, Any]]:
         """Pobiera dane dla wszystkich przekazanych kont uczniów."""
         collected = {}
-        raw_delay = self.config.get('delay_between_users_s', self.config.get('user_delay_s', 3))
+        raw_delay = self.config.get('delay_between_users_s', self.config.get('user_delay_s', 10))
         try:
             delay = float(raw_delay)
         except (ValueError, TypeError):
-            delay = 3.0
+            delay = 10.0
 
         for idx, u in enumerate(users):
             if idx > 0 and delay > 0:

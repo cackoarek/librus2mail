@@ -72,6 +72,17 @@ def parse_args():
         action='store_true',
         help='Wymuś wysłanie raportu nawet jeśli w danym okresie uczeń nie otrzymał nowych ocen'
     )
+    parser.add_argument(
+        '--actual-date',
+        dest='actual_date',
+        default=None,
+        metavar='YYYY-MM-DD',
+        help=(
+            "Zastępcza data 'teraz' (format: YYYY-MM-DD). "
+            "Przydatne przy generowaniu przykładowych raportów z examples/storage – "
+            "okno czasowe (--days) będzie liczyć wstecz od tej daty zamiast od bieżącej."
+        )
+    )
     return parser.parse_args()
 
 
@@ -193,6 +204,7 @@ def run_progress_reports(
     save_html: str | None = None,
     fetch_live: bool = False,
     force: bool = False,
+    actual_date: datetime | None = None,
 ):
     if (
         config_path is None
@@ -203,6 +215,7 @@ def run_progress_reports(
         and save_html is None
         and not fetch_live
         and not force
+        and actual_date is None
     ):
         args = parse_args()
         config_path = args.config_path
@@ -213,6 +226,12 @@ def run_progress_reports(
         save_html = args.output_html
         fetch_live = args.fetch
         force = args.force
+        if args.actual_date:
+            try:
+                actual_date = datetime.strptime(args.actual_date, "%Y-%m-%d")
+            except ValueError:
+                logger.error(f"Nieprawidłowy format --actual-date: '{args.actual_date}'. Wymagany format: YYYY-MM-DD")
+                sys.exit(1)
     else:
         config_path = config_path or 'config.yaml'
 
@@ -326,7 +345,7 @@ def run_progress_reports(
             continue
 
         # 3. Ustalenie zakresu dat
-        now = datetime.now()
+        now = actual_date or datetime.now()
         period_start = None
 
         if days is not None:

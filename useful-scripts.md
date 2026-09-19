@@ -242,8 +242,14 @@ venv/bin/python updates_notifier.py --days 3 -o podglad_powiadomienia.html
 # 4. Wygenerowanie powiadomienia ze wskazanego katalogu testowego:
 venv/bin/python updates_notifier.py -s examples/storage --days 14 -o examples/reports/powiadomienie_collector.html
 
+# 4b. Powtarzalne generowanie – stała data referencyjna (okno --days liczy od tej daty):
+venv/bin/python updates_notifier.py -s examples/storage --days 14 --actual-date 2026-09-09 -o examples/reports/powiadomienie_collector.html
+
 # 5. Wysłanie przykładowego powiadomienia ze storage testowego na skonfigurowany e-mail (1 zbiorczy mail):
 venv/bin/python updates_notifier.py -s examples/storage --days 14 --summary
+
+# 5b. Wysłanie zbiorczego powiadomienia – stała data referencyjna:
+venv/bin/python updates_notifier.py -s examples/storage --days 14 --actual-date 2026-09-09 --summary
 
 # 6. Sprawdzenie powiadomień dla konkretnego dziecka:
 venv/bin/python updates_notifier.py -u 8979296 --days 7 --dry-run
@@ -294,6 +300,9 @@ venv/bin/python progress_report.py -o podglad_raportu.html
 
 # 4. Raport miesięczny (30 dni) ze wskazanego katalogu testowego:
 venv/bin/python progress_report.py -s examples/storage -o examples/reports/raport_przykladowy.html --days 30
+
+# 4b. Powtarzalne generowanie – stała data referencyjna (okno --days zawsze liczy od tej daty):
+venv/bin/python progress_report.py -s examples/storage --days 14 --actual-date 2026-09-09 -o examples/reports/raport_postepow.html --force
 
 # 5. Wymuszenie generowania raportu mimo braku nowych ocen:
 venv/bin/python progress_report.py --force -o raport_pelny.html
@@ -364,11 +373,13 @@ sudo journalctl -u librus2mail -f -n 50
 | **Podgląd powiadomień w terminalu (np. ost. 7 dni)** | `venv/bin/python updates_notifier.py --days 7 --dry-run` |
 | **Zapis powiadomienia e-mail do pliku HTML** | `venv/bin/python updates_notifier.py --days 3 -o podglad.html` |
 | **Symulacja offline z zewnętrznego storage (HTML)** | `venv/bin/python updates_notifier.py -s examples/storage --days 14 -o examples/reports/powiadomienie.html` |
+| **Symulacja offline – stała data referencyjna (reprodukowalny)** | `venv/bin/python updates_notifier.py -s examples/storage --days 14 --actual-date 2026-09-09 -o examples/reports/powiadomienie.html` |
 | **Wysłanie testowego powiadomienia na e-mail (1 zbiorczy mail)** | `venv/bin/python updates_notifier.py -s examples/storage --days 14 --summary` |
 | **Okresowy raport postępów ucznia (e-mail)** | `venv/bin/python progress_report.py` |
 | **Podgląd raportu postępów w terminalu** | `venv/bin/python progress_report.py --dry-run` |
 | **Wygenerowanie raportu HTML do podglądu** | `venv/bin/python progress_report.py -o raport.html` |
 | **Raport postępów z zewnętrznego storage** | `venv/bin/python progress_report.py -s examples/storage -o examples/reports/raport.html --days 14` |
+| **Raport postępów – stała data referencyjna (reprodukowalny)** | `venv/bin/python progress_report.py -s examples/storage --days 14 --actual-date 2026-09-09 -o examples/reports/raport_postepow.html --force` |
 | **Raport miesięczny przez orkiestrator** | `venv/bin/python collect_and_notify.py --report --days 30 -o miesiac.html` |
 | **Uruchomienie testów jednostkowych** | `venv/bin/pytest` |
 | **Weryfikacja jakości kodu linterem** | `venv/bin/ruff check .` |

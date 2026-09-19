@@ -188,6 +188,7 @@ class UpdatesNotifier:
         output_html: str | None = None,
         total_users: int = 1,
         summary: bool | None = None,
+        actual_date: datetime | None = None,
     ) -> dict[str, Any]:
         """
         Przetwarza powiadomienie dla pojedynczego ucznia:
@@ -210,8 +211,8 @@ class UpdatesNotifier:
 
         # 2. Ustalenie, które wpisy są uznawane za "nowe"
         period_desc = ""
+        now = actual_date or datetime.now()
         if days is not None or hours is not None:
-            now = datetime.now()
             delta = timedelta(days=days or 0, hours=hours or 0)
             cutoff = now - delta
             period_desc = f"okres: ostatnie {days or 0} dni, {hours or 0} godz. (od {cutoff.strftime('%Y-%m-%d %H:%M')})"
@@ -247,7 +248,7 @@ class UpdatesNotifier:
                     logger.info(f"{name} ({login}): Pierwsze uruchomienie z do_not_send_first_parse – brak wysyłki historycznych danych.")
                     filtered_messages, filtered_notifications, filtered_grades = [], [], []
                 else:
-                    cutoff = datetime.now() - timedelta(days=1)
+                    cutoff = now - timedelta(days=1)
                     period_desc = "pierwsze powiadomienie (domyślnie ostatnie 24h)"
                     logger.info(f"{name} ({login}): Brak zapisanego znacznika powiadomienia – pobieranie nowości z ostatnich 24h.")
                     filtered_messages = self.filter_by_cutoff(all_messages, cutoff)
@@ -292,7 +293,7 @@ class UpdatesNotifier:
                     "pomijam wysyłkę powiadomień dla danych historycznych."
                 )
                 if hasattr(self.storage, 'save_last_notify_time'):
-                    self.storage.save_last_notify_time(login, datetime.now().isoformat())
+                    self.storage.save_last_notify_time(login, now.isoformat())
             elif not has_new_items:
                 period_info = f" ({period_desc})" if period_desc else ""
                 logger.info(
@@ -324,7 +325,7 @@ class UpdatesNotifier:
                         sender.send_mail_with_grades(user_config, filtered_grades)
 
                 if hasattr(self.storage, 'save_last_notify_time'):
-                    self.storage.save_last_notify_time(login, datetime.now().isoformat())
+                    self.storage.save_last_notify_time(login, now.isoformat())
 
         return {
             'login': login,
@@ -347,6 +348,7 @@ def run_notifier(
     offline: bool = True,
     collected_data: dict[str, dict] | None = None,
     summary: bool | None = None,
+    actual_date: datetime | None = None,
 ) -> list[dict[str, Any]]:
     """
     Główna funkcja uruchamiająca moduł UpdatesNotifier.
@@ -432,6 +434,7 @@ def run_notifier(
             output_html=output_html,
             total_users=len(users),
             summary=summary,
+            actual_date=actual_date,
         )
         results.append(res)
 
@@ -494,6 +497,17 @@ def main():
         help="Wymuś wysłanie 1 zbiorczego e-maila ze wszystkimi nowościami (zamiast osobnych wiadomości, ogłoszeń i ocen)"
     )
     parser.add_argument(
+        '--actual-date',
+        dest='actual_date',
+        default=None,
+        metavar='YYYY-MM-DD',
+        help=(
+            "Zastępcza data 'teraz' (format: YYYY-MM-DD). "
+            "Przydatne przy generowaniu przykładowych raportów z przykładowego storage – "
+            "okno czasowe (--days) będzie liczyć wstecz od tej daty zamiast od bieżącej."
+        )
+    )
+    parser.add_argument(
         'config',
         nargs='?',
         default=None,
@@ -501,6 +515,13 @@ def main():
     )
     args = parser.parse_args()
     config_path = args.config_opt or args.config or 'config.yaml'
+
+    actual_date: datetime | None = None
+    if args.actual_date:
+        try:
+            actual_date = datetime.strptime(args.actual_date, "%Y-%m-%d")
+        except ValueError:
+            parser.error(f"Nieprawidłowy format --actual-date: '{args.actual_date}'. Wymagany format: YYYY-MM-DD")
 
     setup_logging()
     run_notifier(
@@ -513,6 +534,7 @@ def main():
         user_filter=args.user_filter,
         offline=True,
         summary=args.summary,
+        actual_date=actual_date,
     )
 
 

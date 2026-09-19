@@ -282,12 +282,16 @@ jobs:
         run: |
           mkdir -p examples/reports
 
+          # Przygotuj bazową konfigurację na podstawie szablonu
+          cp config.example.yaml config.yaml
+
           # Data referencyjna: ostatni piątek lub 2026-09-18 jako fallback
           # Używamy daty wbudowanej w examples/storage aby raporty były spójne
           ACTUAL_DATE="2026-09-18"
 
           echo "📬 Generuję powiadomienie e-mail..."
           python updates_notifier.py \
+            -c config.yaml \
             -s examples/storage \
             --days 7 \
             --actual-date "${ACTUAL_DATE}" \
@@ -295,6 +299,7 @@ jobs:
 
           echo "📊 Generuję raport postępów..."
           python progress_report.py \
+            -c config.yaml \
             -s examples/storage \
             --days 7 \
             --actual-date "${ACTUAL_DATE}" \

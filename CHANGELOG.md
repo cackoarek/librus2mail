@@ -11,6 +11,20 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ---
 
+## [1.1.1] – 2026-09-19
+
+### Naprawione
+- Naprawa błędu autoryzacji 2FA dla drugiego konta dziecka przy konfiguracji z wieloma uczniami
+- Dynamiczne odczytywanie ukrytych pól formularza (CSRF, tokeny stanu) ze strony weryfikacji dwuetapowej
+- Dołączenie wyliczanego nagłówka `x-baner` wymaganego przez `Authorization.js` w żądaniu pominięcia 2FA
+
+### Zmienione
+- Zastąpienie losowej rotacji User-Agent stałym identyfikatorem przeglądarki desktopowej z możliwością nadpisania parametrem `user_agent` (zapobiega traktowaniu każdego logowania jako nowego urządzenia przez Librus)
+- Zwiększenie domyślnego odstępu między kontami (`delay_between_users_s`) z 3s do 10s
+- Wprowadzenie automatycznego mechanizmu ponawiania prób logowania (`login_retries`: 2, `login_retry_delay_s`: 5s)
+
+---
+
 ## [1.1.0] – 2026-09-19
 
 ### Dodane
@@ -33,6 +47,17 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ---
 
+## [1.0.1] – 2026-09-19
+
+### Dodane
+- Integracja GitHub Pages dla przykładowych raportów HTML z e-dziennika
+- Szablony podglądu powiadomień i raportów postępów pod publicznymi adresami URL GitHub Pages
+
+### Naprawione
+- Poprawka ścieżek oraz artefaktów podczas wdrażania strony demonstracyjnej na gałąź `gh-pages`
+
+---
+
 ## [1.0.0] – 2026-09-16
 
 ### Pierwsze oficjalne wydanie 🎉
@@ -47,6 +72,8 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ---
 
-[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v1.1.0...HEAD
-[1.1.0]: https://github.com/cackoarek/librus2mail/releases/tag/v1.1.0
+[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/cackoarek/librus2mail/compare/v1.1.0...v1.1.1
+[1.1.0]: https://github.com/cackoarek/librus2mail/compare/v1.0.1...v1.1.0
+[1.0.1]: https://github.com/cackoarek/librus2mail/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/cackoarek/librus2mail/releases/tag/v1.0.0

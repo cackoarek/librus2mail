@@ -87,6 +87,7 @@ jobs:
           # Użyj dedykowanego tokenu aby commit mógł triggerować inne workflows
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ github.ref }}
+          fetch-depth: 0  # wymagane do odczytania tagów i historii commitów dla changeloga
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -108,7 +109,14 @@ jobs:
             echo "✅ __init__.py → __version__ = \"${VERSION}\""
           fi
 
-      - name: Commit version bump
+      - name: Update CHANGELOG.md
+        run: |
+          python .github/scripts/update_changelog.py \
+            --version "${{ needs.prepare.outputs.version }}" \
+            --tag "${{ needs.prepare.outputs.tag }}" \
+            --repo "${{ github.repository }}"
+
+      - name: Commit version bump and changelog
         id: commit
         run: |
           VERSION="${{ needs.prepare.outputs.version }}"
@@ -119,14 +127,14 @@ jobs:
 
           # Sprawdź czy są zmiany do zacommitowania
           if git diff --quiet; then
-            echo "ℹ️ Wersja już była aktualna – brak zmian do zacommitowania."
+            echo "ℹ️ Wersja i changelog już były aktualne – brak zmian do zacommitowania."
             echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
           else
-            git add pyproject.toml src/librus2mail/__init__.py
-            git commit -m "chore(release): bump version to ${VERSION} [skip ci]"
+            git add pyproject.toml src/librus2mail/__init__.py CHANGELOG.md
+            git commit -m "chore(release): bump version to ${VERSION} and update CHANGELOG [skip ci]"
             git push origin HEAD:main
             echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
-            echo "✅ Zacommitowano aktualizację wersji ${VERSION} do main"
+            echo "✅ Zacommitowano aktualizację wersji ${VERSION} oraz CHANGELOG.md do main"
           fi
 
   # ------------------------------------------------------------------

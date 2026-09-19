@@ -7,7 +7,7 @@
 [![CI Status](https://img.shields.io/github/actions/workflow/status/cackoarek/librus2mail/ci.yml?branch=main&label=CI&style=flat-square&logo=githubactions&logoColor=white)](https://github.com/cackoarek/librus2mail/actions/workflows/ci.yml)
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-3776AB.svg?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![Code Style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg?style=flat-square&logo=ruff&logoColor=white)](https://github.com/astral-sh/ruff)
-[![Tests: pytest](https://img.shields.io/badge/tests-pytest%20(50%20passed)-success.svg?style=flat-square&logo=pytest&logoColor=white)](tests/)
+[![Tests: pytest](https://img.shields.io/badge/tests-pytest%20(60%20passed)-success.svg?style=flat-square&logo=pytest&logoColor=white)](tests/)
 [![Packaging: PEP 517/518](https://img.shields.io/badge/packaging-PEP%20517%2F518-00599C.svg?style=flat-square)](pyproject.toml)
 [![Docker Ready](https://img.shields.io/badge/docker-ready-2496ED.svg?style=flat-square&logo=docker&logoColor=white)](Dockerfile)
 [![systemd Supported](https://img.shields.io/badge/systemd-supported-lightgrey.svg?style=flat-square&logo=linux&logoColor=white)](deploy/systemd/)

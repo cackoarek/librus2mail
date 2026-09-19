@@ -109,11 +109,11 @@ git push origin v1.1.0
                       │ ✅
                       ▼
 ┌─────────────────────────────────────────────────────────┐
-│  2. BUMP VERSION                                        │
+│  2. BUMP VERSION & CHANGELOG                            │
 │     • aktualizuje version w pyproject.toml              │
 │     • aktualizuje __version__ w __init__.py             │
-│     • commit "chore(release): bump version to X.Y.Z"   │
-│       (z [skip ci] – nie odpala CI ponownie)            │
+│     • aktualizuje CHANGELOG.md (z [Unreleased] lub gita)│
+│     • commit "chore(release): bump version... [skip ci]"│
 └─────────────────────┬───────────────────────────────────┘
                       │
                       ▼
@@ -153,31 +153,24 @@ pytest
 ruff check .
 ```
 
-### 2. Zaktualizuj CHANGELOG.md
+### 2. (Opcjonalnie) Uzupełnij sekcję [Unreleased] w CHANGELOG.md
 
-Otwórz [`CHANGELOG.md`](CHANGELOG.md) i przesuń zawartość sekcji `[Unreleased]` do nowej wersji:
+Proces wydania w GitHub Actions automatycznie uzupełnia plik [`CHANGELOG.md`](CHANGELOG.md):
+- Jeśli wpiszesz własne punkty w sekcji `## [Unreleased]`, skrypt przeniesie je do nowej wersji i zaktualizuje linki na dole.
+- Jeśli sekcja `## [Unreleased]` pozostanie pusta, skrypt wygeneruje wpisy automatycznie na podstawie historii commitów Git (Conventional Commits: `feat:`, `fix:`, `refactor:`, `docs:`).
 
+Jeśli chcesz dodać własne notatki przed wydaniem:
 ```markdown
-## [1.1.0] – 2026-09-20
+## [Unreleased]
 
 ### Dodane
-- Parametr --actual-date w updates_notifier i progress_report
-- ...
-
-## [Unreleased]
-(sekcja pusta – gotowa na kolejne zmiany)
+- Moja nowa funkcja
 ```
 
-Zaktualizuj też linki na dole pliku:
-```markdown
-[Unreleased]: https://github.com/<owner>/librus2mail/compare/v1.1.0...HEAD
-[1.1.0]: https://github.com/<owner>/librus2mail/compare/v1.0.0...v1.1.0
-```
-
-Zacommituj zmianę:
+Zacommituj ewentualne wpisy:
 ```bash
 git add CHANGELOG.md
-git commit -m "docs: aktualizuj CHANGELOG do wersji 1.1.0"
+git commit -m "docs: przygotuj wpisy w changelog dla nowego wydania"
 git push
 ```
 

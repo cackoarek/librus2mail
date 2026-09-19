@@ -147,7 +147,7 @@ librus_users:
       - "mama@example.com"
       - "tata@example.com"
 
-wait_time_s: 300
+wait_time_s: 3600
 work-in-loop: true  # true: pętla z oczekiwaniem wait_time_s (domyślnie), false: pojedynczy przebieg (np. pod crona)
 storage_dir: "storage"  # (opcjonalnie) katalog zapisu plików stanu JSON (domyślnie: storage)
 
@@ -178,7 +178,7 @@ Każdy element listy `librus_users` reprezentuje jedno konto w e-dzienniku:
 
 ### Parametry globalne
 
-* `wait_time_s` (`int`): Czas oczekiwania w sekundach pomiędzy kolejnymi cyklami sprawdzania e-dziennika (zalecane: minimum `120`–`300` sekund, aby nie obciążać serwera i uniknąć blokad anty-botowych). Wykorzystywane, gdy `work-in-loop: true`.
+* `wait_time_s` (`int`): Czas oczekiwania w sekundach pomiędzy kolejnymi cyklami sprawdzania e-dziennika (zalecane: minimum `3600`–`7200` sekund (1-2h), aby nie obciążać serwera i uniknąć blokad anty-botowych). Wykorzystywane, gdy `work-in-loop: true`.
 * `work-in-loop` (`bool`): Tryb pracy:
   * `true` (domyślnie) – skrypt działa nieprzerwanie w pętli i po sprawdzeniu kont odczekuje `wait_time_s` sekund.
   * `false` – skrypt wykonuje dokładnie jeden pełny przebieg (sprawdza konta, wysyła e-maile, zapisuje stan do pliku) i natychmiast kończy pracę. Idealne do uruchamiania przez systemowy harmonogram zadań `cron`.
@@ -571,7 +571,7 @@ tail -f librus.log
 * Jeśli korzystasz z konta Google, upewnij się, że nie wpisujesz zwykłego hasła do konta, lecz wygenerowane w Google **hasło do aplikacji** (16-znakowy ciąg).
 
 ### 4. Czy moje konto w Librusie może zostać zablokowane?
-* Zbyt częste odpytywanie serwerów Librusa może skutkować tymczasową blokadą adresu IP lub wymuszeniem weryfikacji CAPTCHA. Dlatego parametr `wait_time_s` nie powinien być mniejszy niż 120–300 sekund, a wbudowane opóźnienia `sleep(5)` pomiędzy kolejnymi zapytaniami powinny pozostać nienaruszone.
+* Zbyt częste odpytywanie serwerów Librusa może skutkować tymczasową blokadą adresu IP lub wymuszeniem weryfikacji CAPTCHA. Dlatego parametr `wait_time_s` nie powinien być mniejszy niż 3600–7200 sekund (1-2h), a wbudowane opóźnienia `sleep(5)` pomiędzy kolejnymi zapytaniami powinny pozostać nienaruszone.
 
 ---
 

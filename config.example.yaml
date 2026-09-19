@@ -26,7 +26,7 @@ librus_users:
   #     - "rodzic@example.com"
 
 # Czas oczekiwania w sekundach pomiędzy kolejnymi sprawdzeniami Librusa (gdy work-in-loop: true)
-wait_time_s: 300
+wait_time_s: 3600
 
 # Tryb pracy w pętli:
 # - true: skrypt działa nieprzerwanie w pętli, czekając wait_time_s sekund pomiędzy cyklami (domyślnie)

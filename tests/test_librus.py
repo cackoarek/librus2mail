@@ -1,10 +1,14 @@
 import os
 import sys
+import tempfile
 import unittest
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
+import yaml
+
 from librus import Librus, NotLogged
+from librus2mail.librus_collector import LibrusCollector, run_collector
 
 
 class TestLibrus(unittest.TestCase):
@@ -1535,6 +1539,96 @@ class TestLibrus(unittest.TestCase):
                         any("Brak nowych wpisów w dzienniku" in msg for msg in cm_collector.output),
                         f"Expected collection log not found in: {cm_collector.output}"
                     )
+
+    def test_collector_delay_between_users(self):
+        config_default = {
+            'storage_dir': 'storage',
+        }
+        users = [
+            {'librus_login': '111', 'librus_login_name': 'Uczeń 1'},
+            {'librus_login': '222', 'librus_login_name': 'Uczeń 2'},
+            {'librus_login': '333', 'librus_login_name': 'Uczeń 3'},
+        ]
+
+        collector = LibrusCollector(config_default, storage=MagicMock())
+        with patch.object(collector, 'collect_user', return_value={'success': True}) as mock_collect:
+            with patch('librus2mail.librus_collector.sleep') as mock_sleep:
+                collector.collect_all(users)
+                self.assertEqual(mock_collect.call_count, 3)
+                # Domyślny delay to 3 sekundy, wywoływany dla 2. i 3. użytkownika (nie dla 1.)
+                self.assertEqual(mock_sleep.call_count, 2)
+                mock_sleep.assert_has_calls([unittest.mock.call(3.0), unittest.mock.call(3.0)])
+
+        # Test z niestandardową wartością w konfiguracji
+        config_custom = {
+            'storage_dir': 'storage',
+            'delay_between_users_s': 7,
+        }
+        collector_custom = LibrusCollector(config_custom, storage=MagicMock())
+        with patch.object(collector_custom, 'collect_user', return_value={'success': True}):
+            with patch('librus2mail.librus_collector.sleep') as mock_sleep_custom:
+                collector_custom.collect_all(users)
+                self.assertEqual(mock_sleep_custom.call_count, 2)
+                mock_sleep_custom.assert_has_calls([unittest.mock.call(7.0), unittest.mock.call(7.0)])
+
+    def test_collector_error_notification_dispatch(self):
+        config = {
+            'storage_dir': 'storage',
+            'send_error_notifications': True,
+            'error_cooldown_s': 1800,
+        }
+        user_cfg = {
+            'librus_login': '12345',
+            'librus_login_name': 'Janek',
+            'notification_receivers': ['rodzic@example.com'],
+            'send_error_notifications': True,
+        }
+
+        mock_mail_sender = MagicMock()
+        mock_mail_sender.send_error_notification.return_value = True
+
+        mock_storage = MagicMock()
+        collector = LibrusCollector(config, storage=mock_storage, mail_sender=mock_mail_sender)
+
+        # Symulacja błędu podczas logowania
+        with patch('librus2mail.librus_collector.Librus') as mock_librus_cls:
+            mock_inst = MagicMock()
+            mock_inst.login.side_effect = Exception("Nie udało się pominąć kroku 2FA")
+            mock_librus_cls.return_value = mock_inst
+
+            res = collector.collect_user(user_cfg)
+            self.assertFalse(res['success'])
+            self.assertEqual(res['step'], 'logowanie')
+            self.assertIn("2FA", res['error'])
+
+            # Weryfikacja wysłania powiadomienia e-mail o błędzie
+            mock_mail_sender.send_error_notification.assert_called_once()
+            call_kwargs = mock_mail_sender.send_error_notification.call_args.kwargs
+            self.assertEqual(call_kwargs['user_config'], user_cfg)
+            self.assertEqual(call_kwargs['step_name'], 'logowanie')
+            self.assertEqual(call_kwargs['cooldown_s'], 1800)
+            self.assertEqual(call_kwargs['storage'], mock_storage)
+
+    def test_run_collector_skips_notifier_when_collection_fails(self):
+        config = {
+            'librus_users': [{'librus_login': '111', 'librus_login_name': 'Uczeń 1'}],
+            'storage_dir': 'storage',
+            'work-in-loop': False,
+        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cfg_file = os.path.join(tmpdir, 'config.yaml')
+            with open(cfg_file, 'w', encoding='utf-8') as f:
+                yaml.dump(config, f)
+
+            with patch('librus2mail.librus_collector.LibrusCollector.collect_all') as mock_collect_all, \
+                 patch('librus2mail.librus_collector.UpdatesNotifier.process_user_notifications') as mock_notifier:
+                # Kolektor zwraca błąd pobierania
+                mock_collect_all.return_value = {
+                    '111': {'success': False, 'login': '111', 'error': 'Timeout'}
+                }
+                run_collector(config_path=cfg_file)
+                # Powiadomienia o nowościach NIE powinny być wywołane, gdy pobieranie zawiodło
+                mock_notifier.assert_not_called()
 
 
 if __name__ == '__main__':

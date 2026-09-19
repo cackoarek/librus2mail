@@ -4,6 +4,7 @@ import logging
 import re
 import sys
 from datetime import datetime, timedelta
+from time import sleep
 
 from .base_logger import setup_logging
 from .config import read_config
@@ -281,7 +282,13 @@ def run_progress_reports(
             logger.info(f"Załadowano profile uczniów odnalezione w '{effective_storage_dir}': {[u['librus_login_name'] for u in auto_users]}")
             users = auto_users
 
-    for user_config in users:
+    raw_delay = config.get('delay_between_users_s', config.get('user_delay_s', 3))
+    try:
+        delay = float(raw_delay)
+    except (ValueError, TypeError):
+        delay = 3.0
+
+    for idx, user_config in enumerate(users):
         login = str(user_config.get('librus_login', ''))
         name = user_config.get('librus_login_name') or login
         logger.info(f"--- Generowanie raportu postępów dla ucznia: {name} ({login}) ---")
@@ -289,6 +296,11 @@ def run_progress_reports(
         # 1. Opcjonalne pobieranie ocen z Librusa (tylko na żądanie --fetch)
         librus = None
         if fetch_live:
+            if idx > 0 and delay > 0:
+                logger.info(
+                    f"Odczekuję {int(delay) if delay.is_integer() else delay}s przed pobraniem danych dla kolejnego konta..."
+                )
+                sleep(delay)
             try:
                 user_copy = dict(user_config)
                 user_copy['read_grades'] = True

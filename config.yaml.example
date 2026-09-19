@@ -24,6 +24,9 @@ librus_users:
     notification_receivers:
       - "rodzic.kowalski@example.com"
 
+# Czas oczekiwania w sekundach pomiędzy pobieraniem danych dla kolejnych kont dzieci (domyślnie: 3s)
+delay_between_users_s: 3
+
 # Czas oczekiwania w sekundach pomiędzy kolejnymi sprawdzeniami Librusa (gdy work-in-loop: true)
 wait_time_s: 3600
 

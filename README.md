@@ -183,6 +183,7 @@ Każdy element listy `librus_users` reprezentuje jedno konto w e-dzienniku:
 
 ### Parametry globalne
 
+* `delay_between_users_s` (`int` / `float`): Czas oczekiwania w sekundach pomiędzy pobieraniem danych dla kolejnych kont dzieci (domyślnie: `3` sekundy). Zapobiega problemom z logowaniem i mechanizmami anty-botowymi / 2FA na serwerach Librusa przy odpytywaniu wielu kont z tego samego adresu IP.
 * `wait_time_s` (`int`): Czas oczekiwania w sekundach pomiędzy kolejnymi cyklami sprawdzania e-dziennika (zalecane: minimum `3600`–`7200` sekund (1-2h), aby nie obciążać serwera i uniknąć blokad anty-botowych). Wykorzystywane, gdy `work-in-loop: true`.
 * `work-in-loop` (`bool`): Tryb pracy:
   * `true` (domyślnie) – skrypt działa nieprzerwanie w pętli i po sprawdzeniu kont odczekuje `wait_time_s` sekund.

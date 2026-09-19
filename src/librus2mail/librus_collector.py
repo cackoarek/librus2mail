@@ -8,6 +8,7 @@ Odpowiada wyłącznie za autoryzację i pobieranie surowych danych ze szkoły
 import argparse
 import logging
 import sys
+import traceback
 from datetime import datetime
 from time import sleep
 from typing import Any
@@ -15,6 +16,7 @@ from typing import Any
 from .base_logger import setup_logging
 from .config import read_config
 from .librus import Librus
+from .mail_sender import MailSender
 from .storage import BaseStorage, create_storage
 from .updates_notifier import (
     UpdatesNotifier,
@@ -46,10 +48,25 @@ class LibrusCollector:
     oraz zapisywanie pobranych wiadomości, ogłoszeń i ocen do bazy storage.
     """
 
-    def __init__(self, config: dict, storage: BaseStorage | None = None):
+    def __init__(
+        self,
+        config: dict,
+        storage: BaseStorage | None = None,
+        mail_sender: MailSender | None = None,
+    ):
         self.config = config
         self.storage = storage or create_storage(config.get('storage_dir', 'storage'))
+        self.mail_sender = mail_sender
         self.parsers: dict[str, Librus] = {}
+
+    def get_or_create_mail_sender(self) -> MailSender | None:
+        if self.mail_sender is None:
+            try:
+                self.mail_sender = configure_mail_provider(self.config)
+            except Exception as e:
+                logger.warning(f"Nie udało się skonfigurować dostawcy poczty w LibrusCollector: {e}")
+                self.mail_sender = None
+        return self.mail_sender
 
     def collect_user(self, user_config: dict) -> dict[str, Any]:
         """Pobiera dane dla wskazanego konta ucznia i synchronizuje z bazą storage."""
@@ -119,8 +136,35 @@ class LibrusCollector:
             }
         except Exception as e:
             logger.error(f"Błąd podczas pobierania danych dla {login} na etapie '{step}': {e}")
-            if hasattr(self.storage, 'save_last_error'):
-                self.storage.save_last_error(login, str(e), step=step)
+            tb_str = traceback.format_exc()
+
+            send_errors = self.config.get(
+                'send_error_notifications', self.config.get('end_error_notifications', True)
+            ) and user_config.get('send_error_notifications', True)
+
+            error_sent = False
+            if send_errors:
+                try:
+                    sender = self.get_or_create_mail_sender()
+                    if sender:
+                        cooldown = self.config.get('error_cooldown_s', 3600)
+                        error_sent = sender.send_error_notification(
+                            user_config=user_config,
+                            error=e,
+                            step_name=step,
+                            details=tb_str,
+                            storage=self.storage,
+                            cooldown_s=cooldown,
+                        )
+                except Exception as mail_err:
+                    logger.error(f"Błąd podczas wysyłania powiadomienia o błędzie dla {login}: {mail_err}")
+
+            if not error_sent and hasattr(self.storage, 'save_last_error'):
+                last_err = self.storage.get_last_error(login)
+                err_str = f"{type(e).__name__}: {str(e)}"
+                if not last_err or last_err.get('error') != err_str:
+                    self.storage.save_last_error(login, err_str, step=step)
+
             return {
                 'success': False,
                 'login': login,
@@ -139,7 +183,18 @@ class LibrusCollector:
     def collect_all(self, users: list[dict]) -> dict[str, dict[str, Any]]:
         """Pobiera dane dla wszystkich przekazanych kont uczniów."""
         collected = {}
-        for u in users:
+        raw_delay = self.config.get('delay_between_users_s', self.config.get('user_delay_s', 3))
+        try:
+            delay = float(raw_delay)
+        except (ValueError, TypeError):
+            delay = 3.0
+
+        for idx, u in enumerate(users):
+            if idx > 0 and delay > 0:
+                logger.info(
+                    f"Odczekuję {int(delay) if delay.is_integer() else delay}s przed pobraniem danych dla kolejnego konta..."
+                )
+                sleep(delay)
             login = str(u.get('librus_login', ''))
             res = self.collect_user(u)
             collected[login] = res
@@ -250,6 +305,13 @@ def run_collector(
             for user_config in users:
                 login = str(user_config.get('librus_login', ''))
                 c_item = collected_data.get(login, {})
+                if not offline and c_item.get('success') is False:
+                    logger.warning(
+                        f"{user_config.get('librus_login_name', login)} ({login}): "
+                        "Pominięto generowanie powiadomień o nowościach, ponieważ pobieranie danych ze szkoły zakończyło się błędem."
+                    )
+                    continue
+
                 notifier.process_user_notifications(
                     user_config=user_config,
                     all_messages=c_item.get('messages'),

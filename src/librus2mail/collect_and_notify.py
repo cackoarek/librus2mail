@@ -12,6 +12,7 @@ import logging
 from .base_logger import setup_logging
 from .librus_collector import run_collector
 from .progress_report import run_progress_reports
+from .student_report import run_student_reports
 from .updates_notifier import configure_mail_provider, run_notifier
 
 logger = logging.getLogger(__name__)
@@ -23,6 +24,7 @@ __all__ = [
     "run_notifier",
     "run_pipeline",
     "run_progress_reports",
+    "run_student_reports",
 ]
 
 
@@ -38,6 +40,7 @@ def run_pipeline(
     collect_only: bool = False,
     notify_only: bool = False,
     report: bool = False,
+    student_report: bool = False,
     force: bool = False,
     fetch: bool = False,
     work_in_loop: bool | None = None,
@@ -63,6 +66,18 @@ def run_pipeline(
             save_html=output_html,
             fetch_live=fetch,
             force=force,
+        )
+        return
+
+    if student_report:
+        logger.info("Uruchamiam Moduł 4: Raport motywacyjny ucznia (student_report)...")
+        run_student_reports(
+            config_path=config_path,
+            storage_dir=storage_dir,
+            days=days,
+            output_html=output_html,
+            user_filter=user_filter,
+            dry_run=dry_run,
         )
         return
 
@@ -139,6 +154,12 @@ def main():
         '--report',
         action='store_true',
         help="Uruchom Moduł 3 (Progress Report): wygeneruj długoterminowy raport analityczny postępów dziecka"
+    )
+    mode_group.add_argument(
+        '--student-report',
+        dest='student_report',
+        action='store_true',
+        help="Uruchom Moduł 4 (Student Report): wygeneruj motywacyjny raport dedykowany dla ucznia"
     )
 
     # Opcje wspólne i parametry
@@ -242,6 +263,7 @@ def main():
         collect_only=args.collect_only,
         notify_only=args.notify_only,
         report=args.report,
+        student_report=args.student_report,
         force=args.force,
         fetch=args.fetch,
         once=args.once,

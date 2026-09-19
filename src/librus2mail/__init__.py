@@ -19,6 +19,8 @@ from .progress_analyzer import (
 from .progress_report import run_progress_reports
 from .smtp_sender import SmtpSender
 from .storage import BaseStorage, FileStorage, create_storage
+from .student_analyzer import StudentAnalyzer
+from .student_report import run_student_reports
 from .updates_notifier import UpdatesNotifier, run_notifier
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
@@ -49,4 +51,6 @@ __all__ = [
     "BaseStorage",
     "FileStorage",
     "create_storage",
+    "StudentAnalyzer",
+    "run_student_reports",
 ]

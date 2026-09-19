@@ -1,0 +1,249 @@
+<div style="width: 100%; max-width: 680px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; line-height: 1.5; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; box-sizing: border-box; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -2px rgba(0, 0, 0, 0.05);">
+    <!-- Nagłówek Kids -->
+    <div style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%); color: #ffffff; padding: 26px 24px; text-align: center;">
+        <div style="display: inline-block; background: rgba(255, 255, 255, 0.2); padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 8px;">
+            🚀 TWOJA KARTA MOCY • PODSUMOWANIE NAUKI
+        </div>
+        <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: #ffffff;">
+            Cześć, {{ metrics.student_name }}! 👋
+        </h1>
+        <p style="margin: 8px 0 0 0; font-size: 14px; color: #fdf2f8; font-weight: 500;">
+            Zobacz, jak świetnie Ci idzie i jakie misje czekają na Ciebie!
+        </p>
+        <div style="margin-top: 12px; display: inline-block; background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.35); padding: 5px 14px; border-radius: 14px; font-size: 12px; color: #ffffff; font-weight: 600;">
+            🗓️ Okres raportu: <strong>{{ metrics.period_start_str }}</strong> – <strong>{{ metrics.period_end_str }}</strong>{% if metrics.period_days %} (ostatnie {{ metrics.period_days }} dni){% endif %}
+        </div>
+    </div>
+
+    <!-- Pasek Formy i Passy -->
+    <div style="background-color: #fdf4ff; border-bottom: 2px solid #f0abfc; padding: 14px 20px; text-align: center;">
+        <span style="font-size: 18px; margin-right: 6px;">{{ '🔥' if metrics.trend == 'up' else ('🎯' if metrics.trend == 'stable' else '💪') }}</span>
+        <strong style="color: #86198f; font-size: 14px;">Aktualna Forma:</strong>
+        <span style="color: #4a044e; font-size: 14px; margin-left: 4px;">{{ metrics.trend_description }}</span>
+    </div>
+
+    <div style="padding: 24px;">
+        <!-- Odznaki i Osiągnięcia -->
+        {% if metrics.achievements %}
+        <div style="margin-bottom: 24px;">
+            <h2 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 800; color: #3b0764; display: flex; align-items: center;">
+                🏆 Twoje Odznaki i Osiągnięcia
+            </h2>
+            <div style="display: table; width: 100%; border-collapse: separate; border-spacing: 8px 0;">
+                {% for badge in metrics.achievements %}
+                <div style="display: inline-block; vertical-align: top; width: calc(50% - 10px); margin-bottom: 10px; background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 12px; padding: 12px; box-sizing: border-box;">
+                    <div style="font-size: 24px; margin-bottom: 4px;">{{ badge.icon }}</div>
+                    <div style="font-weight: 700; font-size: 13px; color: #581c87;">{{ badge.title }}</div>
+                    <div style="font-size: 11px; color: #6b21a8; margin-top: 2px;">{{ badge.description }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Radar Formy: Porównanie z poprzednim okresem -->
+        {% if metrics.period_comparison and metrics.period_comparison.has_comparison %}
+        {% set pc = metrics.period_comparison %}
+        <div style="margin-bottom: 24px;">
+            <div style="background: {{ '#ecfdf5' if pc.direction == 'up' else ('#fff7ed' if pc.direction == 'down' else '#eff6ff') }}; border: 1px solid {{ '#a7f3d0' if pc.direction == 'up' else ('#fed7aa' if pc.direction == 'down' else '#bfdbfe') }}; border-radius: 12px; padding: 14px 16px;">
+                <div style="display: table; width: 100%;">
+                    <div style="display: table-cell; vertical-align: middle;">
+                        <span style="font-size: 14px; font-weight: 800; color: {{ '#065f46' if pc.direction == 'up' else ('#9a3412' if pc.direction == 'down' else '#1e40af') }};">
+                            {% if pc.direction == 'up' %}
+                            🚀 Radar Formy: Level Up! (+{{ pc.avg_diff }})
+                            {% elif pc.direction == 'down' %}
+                            🛡️ Radar Formy: Chwilowa Zadyszka ({{ pc.avg_diff }})
+                            {% elif pc.direction == 'stable' %}
+                            🎯 Radar Formy: Równy, Stabilny Poziom
+                            {% else %}
+                            🌟 Radar Formy: Punkt Startowy
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% if pc.has_prev_data and pc.current_avg and pc.prev_avg %}
+                    <div style="display: table-cell; vertical-align: middle; text-align: right; white-space: nowrap;">
+                        <span style="font-size: 11px; background: #ffffff; border: 1px solid #cbd5e1; padding: 3px 8px; border-radius: 8px; color: #475569; font-weight: 700;">
+                            Średnia okresu: <strong>{{ pc.current_avg }}</strong> (było: {{ pc.prev_avg }})
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+                <div style="font-size: 12px; color: {{ '#047857' if pc.direction == 'up' else ('#c2410c' if pc.direction == 'down' else '#1d4ed8') }}; margin-top: 6px; line-height: 1.45;">
+                    {{ pc.message_kids }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Czerwony Pasek: Cel i Postępy -->
+        {% if metrics.honor_roll and metrics.overall_avg > 0 %}
+        {% set hr = metrics.honor_roll %}
+        <div style="margin-bottom: 24px;">
+            <div style="background: linear-gradient(135deg, #fff1f2 0%, #fffbeb 100%); border: 1px solid #fecdd3; border-radius: 12px; padding: 16px 18px; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
+                <div style="display: table; width: 100%;">
+                    <div style="display: table-cell; vertical-align: middle;">
+                        <span style="font-size: 15px; font-weight: 800; color: #9f1239;">
+                            🎗️ {{ hr.headline }}
+                        </span>
+                    </div>
+                    <div style="display: table-cell; vertical-align: middle; text-align: right; white-space: nowrap;">
+                        <span style="background: #e11d48; color: #ffffff; padding: 4px 10px; border-radius: 12px; font-weight: 800; font-size: 12px;">
+                            {{ hr.progress_pct }}% celu 🏆
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Pasek postępu -->
+                <div style="background: #ffe4e6; border-radius: 10px; height: 12px; width: 100%; margin-top: 10px; overflow: hidden; border: 1px solid #fecdd3;">
+                    <div style="background: linear-gradient(90deg, #f43f5e 0%, #e11d48 100%); width: {{ hr.progress_pct }}%; height: 100%; border-radius: 10px;"></div>
+                </div>
+
+                <div style="font-size: 12px; color: #881337; margin-top: 8px; line-height: 1.45;">
+                    {{ hr.description }}
+                </div>
+
+                {% if hr.opportunities %}
+                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #fecdd3; font-size: 12px;">
+                    <strong style="color: #9f1239;">🎯 Twoje klucze do paska (najbliższe punkty do zdobycia):</strong>
+                    <ul style="margin: 4px 0 0 0; padding-left: 20px; color: #475569; line-height: 1.45;">
+                        {% for opp in hr.opportunities %}
+                        <li>
+                            <strong style="color: #1e293b;">{{ opp.subject }}</strong>: obecna średnia {{ opp.current_avg }} (brakuje {{ opp.gap_to_target }} pkt do oceny {{ opp.target_grade }})
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Supermoce (Mocne Strony) -->
+        {% if metrics.strengths %}
+        <div style="margin-bottom: 24px;">
+            <h2 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 800; color: #065f46;">
+                🌟 Twoje Supermoce (Przedmioty na medal)
+            </h2>
+            {% for strg in metrics.strengths %}
+            <div style="background: #ecfdf5; border-left: 4px solid #10b981; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px;">
+                <div style="display: table; width: 100%;">
+                    <div style="display: table-cell; vertical-align: middle; font-weight: 700; color: #064e3b; font-size: 14px;">
+                        {{ strg.subject }}
+                    </div>
+                    <div style="display: table-cell; vertical-align: middle; text-align: right;">
+                        <span style="background: #10b981; color: #ffffff; padding: 3px 8px; border-radius: 12px; font-weight: 800; font-size: 12px;">
+                            Średnia: {{ strg.avg }}
+                        </span>
+                    </div>
+                </div>
+                <div style="font-size: 12px; color: #047857; margin-top: 4px;">
+                    ✨ {{ strg.highlight }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Misje (Szybkie punkty) -->
+        {% if metrics.quick_wins %}
+        <div style="margin-bottom: 24px;">
+            <h2 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 800; color: #1e3a8a;">
+                🎯 Misja: Szybki Awans!
+            </h2>
+            {% for qw in metrics.quick_wins %}
+            <div style="background: #eff6ff; border: 1px dashed #3b82f6; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px;">
+                <div style="font-weight: 700; color: #1e40af; font-size: 13px;">
+                    Przedmiot: <u>{{ qw.subject }}</u> (obecna średnia: {{ qw.current_avg }})
+                </div>
+                <div style="font-size: 12px; color: #1d4ed8; margin-top: 4px; line-height: 1.4;">
+                    👉 <strong>Twój cel:</strong> {{ qw.hint }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Na co zwrócić uwagę (Focus areas) -->
+        {% if metrics.focus_areas %}
+        <div style="margin-bottom: 24px;">
+            <h2 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 800; color: #9a3412;">
+                🛡️ Tarcza Ochronna (Warto powtórzyć)
+            </h2>
+            {% for fa in metrics.focus_areas %}
+            <div style="background: #fff7ed; border-left: 4px solid #f97316; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px;">
+                <div style="font-weight: 700; color: #9a3412; font-size: 13px;">
+                    {{ fa.subject }} (średnia: {{ fa.avg }})
+                </div>
+                <div style="font-size: 12px; color: #c2410c; margin-top: 4px;">
+                    💡 {{ fa.hint }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Oceny w okresie -->
+        <div>
+            <h2 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 800; color: #334155;">
+                {% if metrics.period_days %}
+                🎒 Oceny zdobyte w ostatnim okresie ({{ metrics.recent_grades | length }})
+                {% else %}
+                🎒 Twoje wszystkie oceny ({{ metrics.recent_grades | length }})
+                {% endif %}
+            </h2>
+            {% if metrics.recent_grades %}
+            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                <thead>
+                    <tr style="background: #f8fafc; color: #64748b; font-size: 11px; text-transform: uppercase; border-bottom: 1px solid #e2e8f0;">
+                        <th style="padding: 10px 8px; text-align: left;">Przedmiot</th>
+                        <th style="padding: 10px 8px; text-align: center;">Ocena</th>
+                        <th style="padding: 10px 8px; text-align: left;">Kategoria</th>
+                        <th style="padding: 10px 8px; text-align: left;">Komentarz nauczyciela</th>
+                        <th style="padding: 10px 8px; text-align: right;">Data</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for g in metrics.recent_grades %}
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 8px; font-weight: 600; color: #1e293b; vertical-align: middle;">{{ g.subject }}</td>
+                        <td style="padding: 10px 8px; text-align: center; vertical-align: middle;">
+                            <span style="display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 6px; font-weight: 800; font-size: 12px; color: #ffffff; background: {{ '#10b981' if (g.numeric or 0) >= 4.0 else ('#f59e0b' if (g.numeric or 0) >= 3.0 else '#ef4444') }};">
+                                {{ g.grade }}
+                            </span>
+                        </td>
+                        <td style="padding: 10px 8px; color: #475569; vertical-align: middle;">{{ g.category or '-' }}</td>
+                        <td style="padding: 10px 8px; font-size: 12px; vertical-align: middle;">
+                            {% if g.comment %}
+                            <div style="color: #1e40af; background: #eff6ff; border: 1px solid #dbeafe; border-radius: 6px; padding: 3px 8px; display: inline-block; line-height: 1.35;">
+                                💬 <strong>Komentarz:</strong> {{ g.comment }}
+                            </div>
+                            {% else %}
+                            <span style="color: #94a3b8;">—</span>
+                            {% endif %}
+                            {% if g.teacher %}
+                            <div style="font-size: 11px; color: #94a3b8; margin-top: 3px;">👤 {{ g.teacher }}</div>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 10px 8px; text-align: right; color: #94a3b8; vertical-align: middle; white-space: nowrap;">{{ g.date_str or g.date or '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 16px; text-align: center; color: #64748b; font-size: 13px;">
+                🎉 W tym okresie nie wpisano żadnych nowych ocen. Świetna okazja, aby utrwalić wiedzę przed kolejnymi lekcjami!
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Stopka Motywacyjna -->
+    <div style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 16px 20px; text-align: center; font-size: 12px; color: #64748b;">
+        <p style="margin: 0; font-weight: 600; color: #4f46e5;">
+            Pamiętaj: Każdy krok naprzód ma znaczenie. Trzymamy kciuki za kolejny udany tydzień! 🌟
+        </p>
+        <div style="margin-top: 6px; font-size: 11px; color: #94a3b8;">
+            Raport wygenerowany automatycznie przez <strong>Librus2mail</strong>
+        </div>
+    </div>
+</div>

@@ -4,9 +4,9 @@ Niniejszy dokument zawiera kompletne zestawienie architektury, wszystkich skrypt
 
 ---
 
-## 🏛️ Architektura 3 modułów i orkiestratora
+## 🏛️ Architektura 4 modułów i orkiestratora
 
-Aplikacja zbudowana jest z **3 niezależnych, wyspecjalizowanych modułów** spiętych przez orkiestrator `librus_collect_and_notify.py`:
+Aplikacja zbudowana jest z **4 niezależnych, wyspecjalizowanych modułów** spiętych przez orkiestrator `librus_collect_and_notify.py`:
 
 ```mermaid
 flowchart TD
@@ -28,38 +28,49 @@ flowchart TD
         N_MAIL[Bieżący E-mail o ocenach/wiadomościach]
     end
 
-    subgraph Moduł 3: Progress Report
+    subgraph Moduł 3: Progress Report (Dla Rodziców)
         PR[librus_progress_report.py + ProgressAnalyzer]
         PR_HTML[Dashboard HTML / Podgląd CLI]
         PR_MAIL[Okresowy Raport Statystyk E-mail]
+    end
+
+    subgraph Moduł 4: Student Report (Dla Ucznia)
+        SR[librus_student_report.py + StudentAnalyzer]
+        SR_HTML[Raport HTML / Podgląd CLI]
+        SR_MAIL[E-mail Ucznia kids/teens/youth]
     end
 
     L -->|Pobranie OAuth + Scraping| C
     C -->|Zapis historii i stanu| S
     S -->|Odczyt stanu i diffing| N
     S -->|Odczyt historii ocen| PR
+    S -->|Odczyt bazy ocen| SR
     N --> N_HTML
     N --> N_MAIL
     PR --> PR_HTML
     PR --> PR_MAIL
+    SR --> SR_HTML
+    SR --> SR_MAIL
 ```
 
 1. **Moduł 1: Collector (`librus_collector.py`)** – odpowiada wyłącznie za autoryzację w portalu Librus Synergia, bezpieczne pobieranie surowych danych (z opóźnieniami rate-limiting) i synchronizację ich z bazą `storage/`.
 2. **Moduł 2: Updates Notifier (`librus_updates_notifier.py`)** – odpowiada za weryfikację nowości (nowe wiadomości, ogłoszenia, oceny), formatowanie szablonów e-mail/HTML oraz wysyłkę do rodziców. Działa w 100% offline na bazie `storage/`.
-3. **Moduł 3: Progress Report (`librus_progress_report.py`)** – długoterminowy analityczny raport postępów ucznia (średnie ważone, wskaźniki formy PoP, szanse na czerwony pasek, styl uczenia się, ciche przedmioty).
-4. **Orkiestrator (`librus_collect_and_notify.py`)** – fasada CLI łącząca moduły w potok automatyczny (np. demon w tle) lub umożliwiająca wywołanie wybranego modułu w odosobnieniu (`--collect-only`, `--notify-only`, `--report`).
+3. **Moduł 3: Progress Report (`librus_progress_report.py`)** – długoterminowy analityczny raport postępów ucznia dla rodziców (średnie ważone, wskaźniki formy PoP, szanse na czerwony pasek, styl uczenia się, ciche przedmioty).
+4. **Moduł 4: Student Report (`librus_student_report.py`)** – motywacyjny raport postępów przygotowany bezpośrednio dla ucznia (Supermoce, szybkie szanse na awans, odznaki, 3 warianty szablonów: kids/teens/youth). Działa w 100% offline.
+5. **Orkiestrator (`librus_collect_and_notify.py`)** – fasada CLI łącząca moduły w potok automatyczny (np. demon w tle) lub umożliwiająca wywołanie wybranego modułu w odosobnieniu (`--collect-only`, `--notify-only`, `--report`, `--student-report`).
 
 ---
 
 ## 📑 Spis treści
 1. [Sposoby uruchamiania poleceń](#1-sposoby-uruchamiania-poleceń)
-2. [Główny orkiestrator – `librus_collect_and_notify.py` / `librus-collect-and-notify`](#2-zintegrowany-potok-i-orkiestrator--collect_and_notifypy--librus-collect-and-notify)
+2. [Główny orkiestrator – `librus_collect_and_notify.py` / `librus-collect-and-notify`](#2-zintegrowany-potok-i-orkiestrator--librus_collect_and_notifypy--librus-collect-and-notify)
 3. [Moduł 1: Pobieranie danych (Collector) – `librus_collector.py`](#3-moduł-1-pobieranie-danych-collector--librus_collectorpy)
-4. [Moduł 2: Powiadomienia bieżące (Updates Notifier) – `librus_updates_notifier.py`](#4-moduł-2-powiadomienia-bieżące-updates-notifier--updates_notifierpy)
-5. [Moduł 3: Generator raportów postępów – `librus_progress_report.py`](#5-moduł-3-generator-raportów-postępów--progress_reportpy)
-6. [Narzędzia deweloperskie i testowe (QA)](#6-narzędzia-deweloperskie-i-testowe-qa)
-7. [Zarządzanie wdrożeniem (Docker & systemd)](#7-zarządzanie-wdrożeniem-docker--systemd)
-8. [Tabela podsumowująca (Cheat Sheet)](#8-tabela-podsumowująca-cheat-sheet)
+4. [Moduł 2: Powiadomienia bieżące (Updates Notifier) – `librus_updates_notifier.py`](#4-moduł-2-powiadomienia-bieżące-updates-notifier--librus_updates_notifierpy)
+5. [Moduł 3: Generator raportów postępów dla rodziców – `librus_progress_report.py`](#5-moduł-3-generator-raportów-postępów-dla-rodziców--librus_progress_reportpy)
+6. [Moduł 4: Generator raportów motywacyjnych dla ucznia – `librus_student_report.py`](#6-moduł-4-generator-raportów-motywacyjnych-dla-ucznia--librus_student_reportpy)
+7. [Narzędzia deweloperskie i testowe (QA)](#7-narzędzia-deweloperskie-i-testowe-qa)
+8. [Zarządzanie wdrożeniem (Docker & systemd)](#8-zarządzanie-wdrożeniem-docker--systemd)
+9. [Tabela podsumowująca (Cheat Sheet)](#9-tabela-podsumowująca-cheat-sheet)
 
 ---
 
@@ -69,9 +80,10 @@ flowchart TD
 ```bash
 source venv/bin/activate
 python librus_collect_and_notify.py # Zintegrowany potok: Collector + Notifier
-python librus_collector.py   # Moduł 1: Collector (pobieranie surowych danych)
+python librus_collector.py          # Moduł 1: Collector (pobieranie surowych danych)
 python librus_updates_notifier.py   # Moduł 2: Updates Notifier (powiadomienia offline)
-python librus_progress_report.py    # Moduł 3: Progress Report (analityka postępów)
+python librus_progress_report.py    # Moduł 3: Progress Report (analityka postępów dla rodziców)
+python librus_student_report.py     # Moduł 4: Student Report (motywacja i cele dla ucznia)
 ```
 
 ### Metoda B: Przez zarejestrowane polecenia CLI (po instalacji pakietu `pip install -e .`)
@@ -79,7 +91,8 @@ python librus_progress_report.py    # Moduł 3: Progress Report (analityka post�
 librus-collect-and-notify  # zintegrowany potok (alias: librus2mail)
 librus-collector           # moduł zbierania danych
 librus-notifier            # moduł bieżących powiadomień
-librus-report              # moduł okresowych raportów postępów
+librus-report              # moduł okresowych raportów postępów dla rodziców
+librus-student-report      # moduł raportów motywacyjnych dla ucznia
 ```
 
 ---
@@ -90,11 +103,11 @@ librus-report              # moduł okresowych raportów postępów
 Spina całe rozwiązanie w zintegrowany potok wykonawczy (**pobierz dane $\rightarrow$ wyślij powiadomienie**).
 W domyślnym trybie działa jako demon ciągły: w pętli wywołuje najpierw pobranie świeżych danych ze szkoły (Collector), a następnie wysyłkę powiadomień (Notifier) i usypia proces na czas `wait_time_s`.
 
-Dzięki przełącznikom trybów umożliwia również jednorazowe uruchomienie dowolnego z 3 modułów.
+Dzięki przełącznikom trybów umożliwia również jednorazowe uruchomienie dowolnego z 4 modułów.
 
 ### 💻 Składnia polecenia
 ```bash
-python librus_collect_and_notify.py [-h] [--collect-only] [--notify-only] [--report]
+python librus_collect_and_notify.py [-h] [--collect-only] [--notify-only] [--report] [--student-report]
                              [-c CONFIG] [-s STORAGE_DIR] [-u USER] [-d DAYS]
                              [--hours HOURS] [--dry-run] [-o OUTPUT] [--offline]
                              [--fetch] [-f] [--once] [--loop] [--summary] [config]
@@ -110,7 +123,8 @@ librus2mail [opcje]
 | *(brak flagi)* | **Potok pełny** | Standardowy cykl: `Collector (pobranie) -> UpdatesNotifier (powiadomienia) -> sleep`. Szanuje `work-in-loop` z configu. |
 | `--collect-only`, `--sync-only` | **Moduł 1** | Uruchamia wyłącznie pobieranie danych z Librusa i zapis do `storage/` bez wysyłania maili. |
 | `--notify-only` | **Moduł 2** | Uruchamia wyłącznie analizę bazy `storage/` i wysyłkę powiadomień (e-mail / terminal / HTML). Działa w 100% offline. |
-| `--report` | **Moduł 3** | Uruchamia generator raportu analitycznego postępów (`librus_progress_report.py`). |
+| `--report` | **Moduł 3** | Uruchamia generator raportu analitycznego postępów dla rodziców (`librus_progress_report.py`). |
+| `--student-report` | **Moduł 4** | Uruchamia generator motywacyjnego raportu dla ucznia (`librus_student_report.py`). |
 | `--summary` | **Format e-mail** | Wymusza wysłanie 1 zbiorczego e-maila ze wszystkimi nowościami (zamiast osobnych wiadomości, ogłoszeń i ocen). Nadpisuje `one_summary_message`. |
 | `--once`, `--no-loop` | **Sterowanie pętlą** | Wymusza pojedyncze wykonanie i natychmiastowe zakończenie procesu (nadpisuje `work-in-loop: true`). |
 | `--loop` | **Sterowanie pętlą** | Wymusza działanie w nieskończonej pętli z interwałem `wait_time_s` (nadpisuje `work-in-loop: false`). |
@@ -310,7 +324,69 @@ venv/bin/python librus_progress_report.py --force -o raport_pelny.html
 
 ---
 
-## 6. Narzędzia deweloperskie i testowe (QA)
+## 6. Moduł 4: Generator raportów motywacyjnych dla ucznia – `librus_student_report.py`
+
+### 🎯 Cel działania
+Niezależny moduł raportowy przygotowany ze szczególnym uwzględnieniem motywacji samego ucznia:
+* Wskazuje **Supermoce** (przedmioty z najwyższą średnią i seriami dobrych ocen).
+* Oblicza **Szybkie Punkty / Szanse na Awans (Quick Wins)** – przedmioty, w których minimalny wysiłek (np. jedna 5 z kartkówki lub odpowiedzi) przeskakuje próg wyższego stopnia.
+* Formułuje łagodną **Tarczę Ochronną** – przypomnienia o powtórkach przed sprawdzianami bez pedagogicznego zniechęcania.
+* Przyznaje **Odznaki Grywalizacyjne** (np. 🚀 As Przestworzy, 👑 Mistrzowski Poziom, ⚡ W Rytmie Nauki).
+* Dopasowuje język i layout za pomocą 3 wariantów szablonów:
+  * `kids` (klasy 4–6): Karta Mocy, misje, kolorowy układ gamifikacyjny.
+  * `teens` (klasy 7–8): Weekly Briefing, ciemny motyw cyan/dark, mocne filary, kalkulator punktów.
+  * `youth` (szkoła średnia / liceum): Student Performance Dashboard, analiza progów ocen semestralnych.
+
+Moduł działa **w 100% lokalnie i offline** wyłącznie na bazie danych ze `storage/`.
+
+### 💻 Składnia polecenia
+```bash
+python librus_student_report.py [-h] [-c CONFIG] [-s STORAGE_DIR] [-u USER] [-d DAYS] [-t {kids,teens,youth}] [--actual-date ACTUAL_DATE] [--dry-run] [-o OUTPUT]
+# lub:
+librus-student-report [opcje]
+```
+
+### ⚙️ Parametry CLI
+
+| Parametr / Flaga | Krótka flaga | Wartość domyślna | Opis działania |
+| :--- | :---: | :--- | :--- |
+| `--config <plik>` | `-c` | `config.yaml` | Ścieżka do pliku konfiguracyjnego YAML. |
+| `--storage-dir <kat>` | `-s` | z configu (`storage`) | Ścieżka do katalogu pamięci stanu `storage` (nadpisuje config). |
+| `--user <login/nazwa>` | `-u` | `None` | Filtruje generowanie raportu tylko do wskazanego ucznia. |
+| `--days <N>` | `-d` | `None` | Zawęża analizę ocen do ostatnich `N` dni. |
+| `--template <typ>` | `-t` | z configu lub `kids` | Wymusza wariant szablonu: `kids`, `teens` lub `youth`. |
+| `--output <plik/kat>` | `-o` | `None` | Zapisuje raport jako samodzielny plik HTML (pomija wysyłkę e-mail). |
+| `--dry-run` | — | `False` | Podsumowanie w konsoli bez wysyłania maili i bez zapisu plików. |
+| `--actual-date <data>` | — | `None` | Referencyjna data analizy (`YYYY-MM-DD`) dla powtarzalnych testów. |
+
+### 🚀 Praktyczne przykłady użycia
+
+```bash
+# 1. Standardowa wysyłka raportu do ucznia (według sekcji student_report w config.yaml):
+venv/bin/python librus_student_report.py
+
+# 2. Podgląd motywacyjnego raportu w terminalu (--dry-run):
+venv/bin/python librus_student_report.py --dry-run
+
+# 3. Zapisanie raportu jako plik HTML dla szablonu kids (klasy 4-6):
+venv/bin/python librus_student_report.py -t kids -o podglad_kids.html
+
+# 4. Zapisanie raportu jako plik HTML dla szablonu teens (klasy 7-8):
+venv/bin/python librus_student_report.py -t teens -o podglad_teens.html
+
+# 5. Zapisanie raportu jako plik HTML dla szablonu youth (liceum):
+venv/bin/python librus_student_report.py -t youth -o podglad_youth.html
+
+# 6. Zawężenie analizy do ocen z ostatnich 14 dni dla konkretnego ucznia:
+venv/bin/python librus_student_report.py -u 8979295 --days 14 -o raport_ucznia.html
+
+# 7. Symulacja offline ze wskazanego katalogu storage ze stałą datą referencyjną:
+venv/bin/python librus_student_report.py -s examples/storage --actual-date 2026-09-09 --dry-run
+```
+
+---
+
+## 7. Narzędzia deweloperskie i testowe (QA)
 
 W projekcie skonfigurowano zestaw narzędzi do weryfikacji jakości kodu i poprawności działania:
 
@@ -330,7 +406,7 @@ venv/bin/ruff check --fix .
 
 ---
 
-## 7. Zarządzanie wdrożeniem (Docker & systemd)
+## 8. Zarządzanie wdrożeniem (Docker & systemd)
 
 ### 🐳 Środowisko kontenerowe (Docker Compose)
 ```bash
@@ -345,6 +421,9 @@ docker compose exec librus2mail librus-notifier --days 7 --dry-run
 
 # 4. Wywołanie raportu postępów wewnątrz kontenera:
 docker compose exec librus2mail librus-report --dry-run
+
+# 5. Wywołanie raportu ucznia wewnątrz kontenera:
+docker compose exec librus2mail librus-student-report --dry-run
 ```
 
 ### 🐧 Usługa systemowa Linux (`systemd`)
@@ -361,7 +440,7 @@ sudo journalctl -u librus2mail -f -n 50
 
 ---
 
-## 8. Tabela podsumowująca (Cheat Sheet)
+## 9. Tabela podsumowująca (Cheat Sheet)
 
 | Zadanie | Rekomendowane polecenie |
 | :--- | :--- |
@@ -375,11 +454,17 @@ sudo journalctl -u librus2mail -f -n 50
 | **Symulacja offline z zewnętrznego storage (HTML)** | `venv/bin/python librus_updates_notifier.py -s examples/storage --days 14 -o examples/reports/powiadomienie.html` |
 | **Symulacja offline – stała data referencyjna (reprodukowalny)** | `venv/bin/python librus_updates_notifier.py -s examples/storage --days 14 --actual-date 2026-09-09 -o examples/reports/powiadomienie.html` |
 | **Wysłanie testowego powiadomienia na e-mail (1 zbiorczy mail)** | `venv/bin/python librus_updates_notifier.py -s examples/storage --days 14 --summary` |
-| **Okresowy raport postępów ucznia (e-mail)** | `venv/bin/python librus_progress_report.py` |
-| **Podgląd raportu postępów w terminalu** | `venv/bin/python librus_progress_report.py --dry-run` |
-| **Wygenerowanie raportu HTML do podglądu** | `venv/bin/python librus_progress_report.py -o raport.html` |
-| **Raport postępów z zewnętrznego storage** | `venv/bin/python librus_progress_report.py -s examples/storage -o examples/reports/raport.html --days 14` |
+| **Okresowy raport postępów dla rodziców (e-mail)** | `venv/bin/python librus_progress_report.py` |
+| **Podgląd raportu postępów dla rodziców w terminalu** | `venv/bin/python librus_progress_report.py --dry-run` |
+| **Wygenerowanie raportu postępów HTML dla rodziców** | `venv/bin/python librus_progress_report.py -o raport.html` |
+| **Motywacyjny raport ucznia (e-mail wg configu)** | `venv/bin/python librus_student_report.py` |
+| **Podgląd motywacyjnego raportu ucznia w terminalu** | `venv/bin/python librus_student_report.py --dry-run` |
+| **Wygenerowanie raportu ucznia HTML (szablon kids)** | `venv/bin/python librus_student_report.py -t kids -o raport_kids.html` |
+| **Wygenerowanie raportu ucznia HTML (szablon teens)** | `venv/bin/python librus_student_report.py -t teens -o raport_teens.html` |
+| **Wygenerowanie raportu ucznia HTML (szablon youth)** | `venv/bin/python librus_student_report.py -t youth -o raport_youth.html` |
+| **Raport ucznia przez orkiestrator** | `venv/bin/python librus_collect_and_notify.py --student-report --days 7 --dry-run` |
+| **Raport postępów dla rodziców z zewnętrznego storage** | `venv/bin/python librus_progress_report.py -s examples/storage -o examples/reports/raport.html --days 14` |
 | **Raport postępów – stała data referencyjna (reprodukowalny)** | `venv/bin/python librus_progress_report.py -s examples/storage --days 14 --actual-date 2026-09-09 -o examples/reports/raport_postepow.html --force` |
-| **Raport miesięczny przez orkiestrator** | `venv/bin/python librus_collect_and_notify.py --report --days 30 -o miesiac.html` |
+| **Raport miesięczny dla rodziców przez orkiestrator** | `venv/bin/python librus_collect_and_notify.py --report --days 30 -o miesiac.html` |
 | **Uruchomienie testów jednostkowych** | `venv/bin/pytest` |
 | **Weryfikacja jakości kodu linterem** | `venv/bin/ruff check .` |

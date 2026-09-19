@@ -45,8 +45,15 @@ librus_users:
       - "rodzic.kowalski@example.com"
       - "mama.kowalska@example.com"
 
-  # Drugie konto ucznia (np. dla młodszego dziecka):
-  - librus_login_name: "Anna Kowalska (klasa 2B)"
+    # Raport motywacyjny i edukacyjny dedykowany bezpośrednio dla ucznia (opcjonalny):
+    # Obecność tej sekcji aktywuje moduł librus_student_report.py dla tego konta.
+    student_report:
+      enabled: true
+      email: "uczen.kowalski@example.com"  # Adres e-mail dziecka (lub rodzica)
+      template: "kids"                     # Wariant szablonu: "kids" (klasy 4-6), "teens" (klasy 7-8), "youth" (liceum/technikum)
+
+  # Drugie konto ucznia (np. dla starszego dziecka w szkole średniej):
+  - librus_login_name: "Anna Kowalska (Liceum 2A)"
     librus_login: "8976543"
     librus_password: "InneBezpieczneHaslo456!"
     read_messages: true
@@ -55,6 +62,10 @@ librus_users:
     do_not_send_first_parse: true
     notification_receivers:
       - "rodzic.kowalski@example.com"
+    student_report:
+      enabled: true
+      email: "anna.kowalska@example.com"
+      template: "youth"                # Szablon analityczny dla szkoły średniej
 
 
 # ------------------------------------------------------------------------------

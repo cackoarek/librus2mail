@@ -1,6 +1,7 @@
 import html
 import os
 from datetime import datetime
+from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from markupsafe import Markup
@@ -221,6 +222,44 @@ class MailSender:
             borderline_risk_map=borderline_risk_map,
             dormant_items=dormant_items,
         )
+
+    @classmethod
+    def create_mail_content_for_student_report(
+        cls,
+        metrics: Any,
+        template_type: str = "kids",
+    ) -> str:
+        tpl_name = f"student_report_{template_type}.html"
+        try:
+            template = jinja_env.get_template(tpl_name)
+        except Exception:
+            template = jinja_env.get_template("student_report_kids.html")
+
+        return template.render(
+            metrics=metrics,
+            now=datetime.now(),
+        )
+
+    @staticmethod
+    def create_student_report_title(metrics: Any, template_type: str = "kids") -> str:
+        name = getattr(metrics, 'student_name', 'Uczeń')
+        days = getattr(metrics, 'period_days', None)
+        if template_type == "youth":
+            return f"📊 Student Performance Dashboard • {name}"
+        elif template_type == "teens":
+            prefix = "Weekly Briefing" if days == 7 else "Student Briefing"
+            return f"⚡ Twój {prefix} • {name}"
+        else:
+            summary_desc = "Podsumowanie tygodnia" if days == 7 else (f"Podsumowanie okresu ({days} dni)" if days else "Podsumowanie postępów")
+            return f"🚀 Twoja Karta Mocy • {summary_desc} dla {name}"
+
+    def send_student_report(
+        self,
+        receivers: list[str],
+        title: str,
+        mail_content: str,
+    ) -> bool:
+        pass
 
     def send_progress_report(self, user_config: dict, analysis: dict) -> bool:
         pass

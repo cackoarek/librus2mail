@@ -611,6 +611,11 @@ librus2mail/
 │   │   ├── ci.yml              # Pipeline CI (Ruff linter + pytest multi-Python 3.10-3.12)
 │   │   └── docker.yml          # Budowanie, testy dymne i publikacja obrazu GHCR
 │   └── dependabot.yml          # Cotygodniowe aktualizacje zależności i akcji
+├── .agents/                    # Konfiguracja i wytyczne dla asystentów AI (Claude, Gemini, Cursor)
+│   ├── rules/                  # Modułowe reguły (bezpieczeństwo, scraping, styl kodu)
+│   ├── AGENTS.md               # Standard agentyczny
+│   ├── CLAUDE.md               # Konfiguracja Claude Code
+│   └── GEMINI.md               # Konfiguracja Gemini / Antigravity
 ├── src/
 │   └── librus2mail/            # Kanoniczny pakiet Pythona (src/ layout, PEP 8)
 │       ├── __init__.py         # Eksporty kluczowych klas i funkcji pakietu
@@ -658,8 +663,7 @@ librus2mail/
 ├── useful-scripts.md           # Kompletny podręcznik wszystkich skryptów i opcji CLI
 ├── CHANGELOG.md                # Historia wydań i zmian (Keep a Changelog)
 ├── RELEASING.md                # Procedura wydawania wersji i konfiguracji GitHub Pages
-├── README.md                   # Niniejsza dokumentacja
-└── AGENTS.md                   # Instrukcje dla agentów AI i deweloperów
+└── README.md                   # Niniejsza dokumentacja
 ```
 
 ### Przepływ danych (Data Flow):

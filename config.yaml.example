@@ -36,7 +36,6 @@ wait_time_s: 3600
 work-in-loop: true
 
 # Tryb przechowywania stanu (przeczytanych wiadomości, ogłoszeń i ocen):
-# - "RAM": pamięć podręczna procesu; restart aplikacji resetuje stan (domyślnie)
 # - "FILES": zapis stanu do plików JSON w katalogu storage/ (stan zachowywany po restarcie)
 storage_type: "FILES"
 

@@ -51,10 +51,14 @@ python librus_collect_and_notify.py
 ```text
 librus2mail/
 ├── .agents/
-│   └── rules/                  # Antigravity modular agent rules
-│       ├── security.md         # Secret protection & safe testing
-│       ├── scraping-and-librus.md # Scraping quirks, rate limiting, DOM tips
-│       └── code-style-and-arch.md # Python conventions, logging, typing
+│   ├── rules/                  # Antigravity modular agent rules
+│   │   ├── security.md         # Secret protection & safe testing
+│   │   ├── scraping-and-librus.md # Scraping quirks, rate limiting, DOM tips
+│   │   └── code-style-and-arch.md # Python conventions, logging, typing
+│   ├── AGENTS.md               # Universal AI agent instructions (this file)
+│   ├── CLAUDE.md               # Claude Code instructions
+│   ├── GEMINI.md               # Google Antigravity / Gemini CLI instructions
+│   └── .cursorrules            # Cursor IDE configuration
 ├── src/
 │   └── librus2mail/            # Canonical package (src/ layout, PEP 8)
 │       ├── __init__.py         # Package exports
@@ -81,11 +85,7 @@ librus2mail/
 ├── useful-scripts.md           # CLI reference & useful commands
 ├── CHANGELOG.md                # Release history (Keep a Changelog)
 ├── RELEASING.md                # Releasing & GitHub Pages guide
-├── README.md                   # Project documentation
-├── AGENTS.md                   # Universal AI agent instructions (this file)
-├── CLAUDE.md                   # Claude Code instructions
-├── GEMINI.md                   # Google Antigravity / Gemini CLI instructions
-└── .cursorrules                # Cursor IDE configuration
+└── README.md                   # Project documentation
 ```
 
 ---

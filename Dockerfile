@@ -18,7 +18,7 @@ RUN mkdir -p /app/storage && chown -R librus:librus /app
 # Kopiowanie plików projektu i definicji pakietu
 COPY pyproject.toml requirements.txt README.md LICENSE /app/
 COPY src/ /app/src/
-COPY librus_collector.py updates_notifier.py progress_report.py collect_and_notify.py /app/
+COPY librus_collector.py librus_updates_notifier.py librus_progress_report.py librus_collect_and_notify.py /app/
 
 # Instalacja pakietu librus2mail wraz ze skryptami CLI i wsparciem strefy czasowej
 RUN pip install --no-cache-dir --upgrade pip && \

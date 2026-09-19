@@ -11,6 +11,6 @@
    - When handling exceptions in `base_logger`, ensure credential strings are not interpolated into error messages.
 
 3. **No unattended live testing**:
-   - Running `collect_and_notify.py` or `librus_collector.py` directly executes live scraping against Librus Synergia and may dispatch actual emails to real recipient addresses configured in local YAML files.
-   - Never invoke `python collect_and_notify.py` or `python librus_collector.py` in background tasks or during autonomous verification without explicit user instructions.
+   - Running `librus_collect_and_notify.py` or `librus_collector.py` directly executes live scraping against Librus Synergia and may dispatch actual emails to real recipient addresses configured in local YAML files.
+   - Never invoke `python librus_collect_and_notify.py` or `python librus_collector.py` in background tasks or during autonomous verification without explicit user instructions.
    - For unit testing, use mocks or offline HTML fixtures.

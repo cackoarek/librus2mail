@@ -65,15 +65,15 @@ Poniżej możesz zobaczyć jak wyglądają e-maile generowane przez projekt — 
    - [Konfiguracja kont Librus (librus_users)](#konfiguracja-kont-librus-librus_users)
    - [Konfiguracja wysyłki e-mail (mail)](#konfiguracja-wysyłki-e-mail-mail)
 5. [Architektura 3 modułów i główny orkiestrator](#architektura-3-modułów-i-główny-orkiestrator)
-6. [Usługa monitoringu i orkiestrator (collect_and_notify.py / librus_collector.py)](#usługa-monitoringu-i-zbierania-danych-collect_and_notifypy)
+6. [Usługa monitoringu i orkiestrator (librus_collect_and_notify.py / librus_collector.py)](#usługa-monitoringu-i-zbierania-danych-librus_collect_and_notifypy)
    - [Uruchomienie standardowe (pełny cykl demona)](#uruchomienie-standardowe-pełny-cykl-demona)
    - [Elastyczne tryby modułowe (przełączniki orkiestratora)](#elastyczne-tryby-modułowe-przełączniki-orkiestratora)
    - [Tryb symulacji i podglądu powiadomień](#tryb-symulacji-i-podglądu-powiadomień-bez-wysyłania-e-mail)
    - [Uruchomienie w tle (nohup / cron)](#uruchomienie-w-tle-nohup--cron)
-7. [Moduł bieżących powiadomień (updates_notifier.py)](#moduł-bieżących-powiadomień-updates_notifierpy)
+7. [Moduł bieżących powiadomień (librus_updates_notifier.py)](#moduł-bieżących-powiadomień-librus_updates_notifierpy)
    - [Mechanizm znaczników czasu (watermarks) i uruchomień nieregularnych](#mechanizm-znaczników-czasu-watermarks-i-uruchomień-nieregularnych)
    - [Parametry CLI i przykłady użycia](#parametry-cli-i-przykłady-użycia)
-8. [Moduł raportu postępów dziecka (progress_report.py)](#moduł-raportu-postępów-dziecka-progress_reportpy)
+8. [Moduł raportu postępów dziecka (librus_progress_report.py)](#moduł-raportu-postępów-dziecka-librus_progress_reportpy)
    - [Możliwości analizy](#możliwości-analizy)
    - [Sposób użycia i parametry CLI](#sposób-użycia-i-parametry-cli)
 9. [Wdrożenie produkcyjne i konteneryzacja (Docker & systemd)](#wdrożenie-produkcyjne-i-konteneryzacja-docker--systemd)
@@ -100,7 +100,7 @@ Poniżej możesz zobaczyć jak wyglądają e-maile generowane przez projekt — 
 * **Tryb pierwszego przebiegu (`do_not_send_first_parse`)**: Przy pierwszym uruchomieniu skrypt indeksuje aktualne wiadomości, ogłoszenia i oceny jako bazę i nie wysyła spamu ze wszystkimi historycznymi wpisami – kolejne uruchomienia wysyłają powiadomienia wyłącznie o nowych wpisach.
 * **Nowoczesne szablony Jinja2**: Wszystkie e-maile generowane są z responsywnych szablonów HTML (`src/librus2mail/templates/emails/`), łatwych w dostosowywaniu stylów i kolorów.
 * **Automatyczne alerty o awariach i błędach**: W razie braku połączenia do Librusa, problemów z sesją/autoryzacją lub błędu parsowania danych (np. po zmianie wyglądu dziennika), skrypt natychmiast wysyła e-mail z diagnozą i zalecanymi działaniami. Wbudowany mechanizm throttling / cooldown zapobiega zalewaniu skrzynki powtarzającymi się wiadomościami.
-* **Dedykowany moduł analizy postępów dziecka (`progress_report.py`)**: Niezależny skrypt analityczny przeliczający średnie ważone przedmiotowe i ogólne, wskaźniki trendu (↗, ↘, ➡), sugerowane oceny roczne, rozkład ocen (histogram) oraz automatyczne wnioski rodzicielskie (sukcesy, zagrożenia, nieprzygotowania). Raport wysyłany jest w postaci nowoczesnego dashboardu HTML.
+* **Dedykowany moduł analizy postępów dziecka (`librus_progress_report.py`)**: Niezależny skrypt analityczny przeliczający średnie ważone przedmiotowe i ogólne, wskaźniki trendu (↗, ↘, ➡), sugerowane oceny roczne, rozkład ocen (histogram) oraz automatyczne wnioski rodzicielskie (sukcesy, zagrożenia, nieprzygotowania). Raport wysyłany jest w postaci nowoczesnego dashboardu HTML.
 
 ---
 
@@ -233,17 +233,17 @@ System **Librus2mail** składa się z 3 niezależnych, wyspecjalizowanych moduł
 1. **Moduł 1: Collector (`librus_collector.py` / `librus-collector`)**:
    * Odpowiada wyłącznie za autoryzację OAuth w portalu Librus Synergia oraz pobieranie wiadomości, ogłoszeń i ocen z zachowaniem opóźnień anty-botowych.
    * Zapisuje stan i historię w lokalnej bazie JSON (`storage/`).
-2. **Moduł 2: Updates Notifier (`updates_notifier.py` / `librus-notifier`)**:
+2. **Moduł 2: Updates Notifier (`librus_updates_notifier.py` / `librus-notifier`)**:
    * Odpowiada za detekcję nowych wpisów (według stanu lub zadanego okna czasowego `--days`/`--hours`).
    * Generuje szablony HTML i wysyła powiadomienia e-mail (Gmail/SMTP) lub eksportuje do samodzielnego pliku HTML (`-o`). Działa w 100% offline.
-3. **Moduł 3: Progress Report (`progress_report.py` / `librus-report`)**:
+3. **Moduł 3: Progress Report (`librus_progress_report.py` / `librus-report`)**:
    * Niezależny silnik analityczny generujący okresowe podsumowania postępów (średnie ważone, wskaźniki PoP, szanse na czerwony pasek, styl uczenia się).
-4. **Zintegrowany potok i orkiestrator (`collect_and_notify.py` / `librus-collect-and-notify`)**:
+4. **Zintegrowany potok i orkiestrator (`librus_collect_and_notify.py` / `librus-collect-and-notify`)**:
    * Spina pełny cykl demona (`Collector -> Notifier -> sleep`) lub pozwala wywołać wybrany moduł poleceniami: `--collect-only`, `--notify-only`, `--report`.
 
 ---
 
-## Usługa monitoringu i zbierania danych (collect_and_notify.py)
+## Usługa monitoringu i zbierania danych (librus_collect_and_notify.py)
 
 ### Uruchomienie standardowe (pełny cykl demona)
 
@@ -253,7 +253,7 @@ Upewnij się, że wirtualne środowisko jest aktywne:
 source venv/bin/activate
 
 # Wariant 1: Zintegrowany potok (pełny cykl Collector -> Notifier w pętli):
-python collect_and_notify.py
+python librus_collect_and_notify.py
 # lub polecenia konsolowe:
 librus-collect-and-notify
 # lub:
@@ -265,7 +265,7 @@ python librus_collector.py
 librus-collector
 
 # Wariant 3: Samodzielny moduł bieżących powiadomień (100% offline):
-python updates_notifier.py
+python librus_updates_notifier.py
 # lub:
 librus-notifier
 ```
@@ -274,13 +274,13 @@ librus-notifier
 
 ```bash
 # 1. Tylko pobranie świeżych danych ze szkoły do storage (bez wysyłki maili):
-python collect_and_notify.py --collect-only
+python librus_collect_and_notify.py --collect-only
 
 # 2. Tylko wygenerowanie bieżących powiadomień z bazy (100% offline):
-python collect_and_notify.py --notify-only --days 7 --dry-run
+python librus_collect_and_notify.py --notify-only --days 7 --dry-run
 
 # 3. Uruchomienie modułu raportu postępów (Moduł 3):
-python collect_and_notify.py --report -o raport.html
+python librus_collect_and_notify.py --report -o raport.html
 ```
 
 ### Tryb symulacji i podglądu powiadomień (bez wysyłania e-mail)
@@ -353,15 +353,15 @@ Jeśli wolisz, aby skrypt nie działał jako ciągły proces w tle, lecz był wy
 
 ---
 
-## Moduł bieżących powiadomień (updates_notifier.py)
+## Moduł bieżących powiadomień (librus_updates_notifier.py)
 
-Dedykowany moduł powiadomień **`updates_notifier.py`** (`librus-notifier`) odpowiada za offline'ową analizę danych zebranych w `storage/` i wysyłkę wiadomości e-mail do rodziców lub eksport do pliku HTML / podgląd w terminalu.
+Dedykowany moduł powiadomień **`librus_updates_notifier.py`** (`librus-notifier`) odpowiada za offline'ową analizę danych zebranych w `storage/` i wysyłkę wiadomości e-mail do rodziców lub eksport do pliku HTML / podgląd w terminalu.
 
 ### Mechanizm znaczników czasu (watermarks) i uruchomień nieregularnych
 
 W pliku pamięci stanu ucznia (`storage/<login>.json`) utrzymywane są dwa kluczowe znaczniki czasowe:
 * **`last_collect_time`**: data ostatniej pomyślnej synchronizacji z portalem Librus (zapisywana przez `librus_collector.py`).
-* **`last_notify_time`** (alias **`last_update_create`**): data ostatniego faktycznie dostarczonego powiadomienia e-mail do rodzica (zapisywana przez `updates_notifier.py`).
+* **`last_notify_time`** (alias **`last_update_create`**): data ostatniego faktycznie dostarczonego powiadomienia e-mail do rodzica (zapisywana przez `librus_updates_notifier.py`).
 
 Dzięki temu przy nieregularnym wywoływaniu powiadomień (np. z crona raz dziennie, podczas gdy kolektor zbiera dane co 30 minut):
 1. **Tryb automatyczny (bez parametrów `--days` i `--hours`)**: Skrypt pobiera `last_notify_time` ze storage i filtruje wpisy dodane lub opublikowane po tej dacie. Rodzic zawsze otrzymuje dokładnie to, co pojawiło się od poprzedniego e-maila, bez dubli i bez pomijania wpisów.
@@ -374,7 +374,7 @@ Dzięki temu przy nieregularnym wywoływaniu powiadomień (np. z crona raz dzien
 # 1. Nieregularne powiadomienie e-mail (od ostatniego powiadomienia zapisanego w storage):
 librus-notifier
 # lub:
-venv/bin/python updates_notifier.py
+venv/bin/python librus_updates_notifier.py
 
 # 2. Podgląd w konsoli nowości z ostatnich 7 dni (--dry-run):
 librus-notifier --days 7 --dry-run
@@ -398,9 +398,9 @@ librus-notifier -s examples/storage --days 14 -o examples/reports/powiadomienie.
 
 ---
 
-## Moduł raportu postępów dziecka (progress_report.py)
+## Moduł raportu postępów dziecka (librus_progress_report.py)
 
-Dedykowany moduł analityczny **`progress_report.py`** działa w **100% offline** na podstawie danych zebranych wcześniej przez `librus_collector.py` i zapisanych w katalogu `storage/`.
+Dedykowany moduł analityczny **`librus_progress_report.py`** działa w **100% offline** na podstawie danych zebranych wcześniej przez `librus_collector.py` i zapisanych w katalogu `storage/`.
 
 Dzięki takiemu podziałowi:
 * ⚡ **Błyskawiczne działanie**: Raport generuje się w ułamku sekundy (brak konieczności łączenia się z siecią, logowania i czekania na opóźnienia anty-botowe).
@@ -445,17 +445,17 @@ Dzięki takiemu podziałowi:
 # 1. Wygenerowanie i wysłanie raportu postępów (okres od ostatniego raportu lub domyślne 7 dni)
 librus-report
 # lub:
-venv/bin/python progress_report.py
+venv/bin/python librus_progress_report.py
 
 # 2. Tryb symulacji (--dry-run) - pełna analiza i wydruk tabeli w terminalu bez wysyłania e-maila
 librus-report --dry-run
 # lub:
-venv/bin/python progress_report.py --dry-run
+venv/bin/python librus_progress_report.py --dry-run
 
 # 3. Zapisanie raportu jako plik HTML do podglądu w przeglądarce (--save-html / -o)
 librus-report --save-html raport.html
 # lub dla konkretnego dziecka:
-venv/bin/python progress_report.py -u 1234567 -o podglad.html
+venv/bin/python librus_progress_report.py -u 1234567 -o podglad.html
 
 # 4. Wymuszenie analizy za określony czas, np. ostatnie 14 lub 30 dni (--days N)
 librus-report --days 14
@@ -463,13 +463,13 @@ librus-report --days 14
 # 5. Zawężenie do konkretnego konta dziecka (--user)
 librus-report --user 1234567
 # albo po nazwie:
-librus-report --user "Kasia"
+librus-report --user "Jan Kowalski"
 
-# 6. Opcjonalne wymuszenie pobrania świeżych ocen przez sieć (--fetch)
-librus-report --fetch
-
-# 7. Wymuszenie wysyłki raportu nawet gdy w badanym okresie uczeń nie dostał nowych ocen (--force)
+# 6. Wymuszenie wysyłki raportu nawet przy braku nowych ocen (--force / -f)
 librus-report --force
+
+# 7. Jednorazowe odpytanie Librusa przed generowaniem raportu (--fetch)
+librus-report --fetch
 ```
 
 | Parametr | Krótka flaga | Opis |
@@ -487,7 +487,7 @@ librus-report --force
 > Pełny podręcznik wszystkich możliwych wywołań, zaawansowanych kombinacji flag oraz przykładów dla każdego ze skryptów znajdziesz w dedykowanym dokumencie: **[useful-scripts.md](useful-scripts.md)**.
 
 ### Konfiguracja:
-Skrypt `progress_report.py` korzysta z głównego pliku `config.yaml` (wykorzystuje zdefiniowane w nim konta dzieci, listę odbiorców oraz ustawienia skrzynki pocztowej `mail`), dzięki czemu nie wymaga żadnej osobnej konfiguracji. Okres analizy przy pierwszym uruchomieniu to domyślnie 7 dni (lub wartość przekazana parametrem `--days`).
+Skrypt `librus_progress_report.py` korzysta z głównego pliku `config.yaml` (wykorzystuje zdefiniowane w nim konta dzieci, listę odbiorców oraz ustawienia skrzynki pocztowej `mail`), dzięki czemu nie wymaga żadnej osobnej konfiguracji. Okres analizy przy pierwszym uruchomieniu to domyślnie 7 dni (lub wartość przekazana parametrem `--days`).
 
 ### Harmonogram cron dla raportów:
 
@@ -495,17 +495,17 @@ Dzięki wydzieleniu skryptu do osobnego pliku, możesz w prosty i elastyczny spo
 
 * **Raz w tygodniu w każdy piątek o 17:00 (podsumowanie całego tygodnia):**
   ```cron
-  0 17 * * 5 cd /sciezka/do/librus2mail && venv/bin/python progress_report.py >> librus.log 2>&1
+  0 17 * * 5 cd /sciezka/do/librus2mail && venv/bin/python librus_progress_report.py >> librus.log 2>&1
   ```
 
 * **Raz w tygodniu w niedzielę o 19:00 (przygotowanie do nadchodzącego tygodnia):**
   ```cron
-  0 19 * * 0 cd /sciezka/do/librus2mail && venv/bin/python progress_report.py >> librus.log 2>&1
+  0 19 * * 0 cd /sciezka/do/librus2mail && venv/bin/python librus_progress_report.py >> librus.log 2>&1
   ```
 
 * **W ostatni dzień każdego miesiąca o 18:00 (podsumowanie miesięczne za ostatnie 30 dni):**
   ```cron
-  0 18 28-31 * * [ $(date -d tomorrow +\%d) -eq 1 ] && cd /sciezka/do/librus2mail && venv/bin/python progress_report.py --days 30 >> librus.log 2>&1
+  0 18 28-31 * * [ $(date -d tomorrow +\%d) -eq 1 ] && cd /sciezka/do/librus2mail && venv/bin/python librus_progress_report.py --days 30 >> librus.log 2>&1
   ```
 
 ---
@@ -651,10 +651,10 @@ librus2mail/
 ├── pyproject.toml              # Nowoczesna konfiguracja projektu (PEP 517/518/621)
 ├── requirements.txt            # Tradycyjna lista zależności
 ├── config.example.yaml         # Wzorcowy szablon konfiguracji
-├── collect_and_notify.py       # Główny punkt wejścia demona i orkiestratora (CLI)
+├── librus_collect_and_notify.py# Główny punkt wejścia demona i orkiestratora (CLI)
 ├── librus_collector.py         # Moduł 1: CLI zbierania danych ze szkoły
-├── updates_notifier.py         # Moduł 2: CLI bieżących powiadomień
-├── progress_report.py          # Moduł 3: CLI generatora raportów postępów
+├── librus_progress_report.py   # Moduł 3: CLI generatora raportów postępów
+├── librus_updates_notifier.py  # Moduł 2: CLI bieżących powiadomień
 ├── useful-scripts.md           # Kompletny podręcznik wszystkich skryptów i opcji CLI
 ├── CHANGELOG.md                # Historia wydań i zmian (Keep a Changelog)
 ├── RELEASING.md                # Procedura wydawania wersji i konfiguracji GitHub Pages
@@ -664,9 +664,9 @@ librus2mail/
 
 ### Przepływ danych (Data Flow):
 1. **Collector (`librus_collector.py`)**: Loguje się OAuth do portalu Librus Synergia, pobiera wiadomości, ogłoszenia i oceny, deduplikuje je i zapisuje w trwałych plikach `storage/<login>.json` wraz ze znacznikiem `last_collect_time`.
-2. **Updates Notifier (`updates_notifier.py`)**: Weryfikuje nowe pozycje w bazie `storage/` od znacznika `last_notify_time` (lub zadanego okna czasowego `--days` / `--hours`) i wysyła powiadomienia e-mail (bądź generuje podgląd HTML / konsolowy).
-3. **Progress Report (`progress_report.py`)**: Działa w 100% offline, analizuje historię ocen ze `storage/` za pomocą [`ProgressAnalyzer`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/progress_analyzer.py) i tworzy bogaty dashboard postępów ucznia.
-4. **Orkiestrator (`collect_and_notify.py`)**: W domyślnym trybie demona spina Moduł 1 i Moduł 2 w ciągłą pętlę z przerwami `wait_time_s` (gdy `work-in-loop: true`), lub wykonuje pojedynczy przebieg (`work-in-loop: false` / `--once`). Umożliwia też uruchomienie dowolnego modułu w odosobnieniu.
+2. **Updates Notifier (`librus_updates_notifier.py`)**: Weryfikuje nowe pozycje w bazie `storage/` od znacznika `last_notify_time` (lub zadanego okna czasowego `--days` / `--hours`) i wysyła powiadomienia e-mail (bądź generuje podgląd HTML / konsolowy).
+3. **Progress Report (`librus_progress_report.py`)**: Działa w 100% offline, analizuje historię ocen ze `storage/` za pomocą [`ProgressAnalyzer`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/progress_analyzer.py) i tworzy bogaty dashboard postępów ucznia.
+4. **Orkiestrator (`librus_collect_and_notify.py`)**: W domyślnym trybie demona spina Moduł 1 i Moduł 2 w ciągłą pętlę z przerwami `wait_time_s` (gdy `work-in-loop: true`), lub wykonuje pojedynczy przebieg (`work-in-loop: false` / `--once`). Umożliwia też uruchomienie dowolnego modułu w odosobnieniu.
 
 ---
 

@@ -68,15 +68,15 @@ class TestPackageLayout(unittest.TestCase):
         self.assertIs(librus2mail.SmtpSender, SmtpSender)
 
     def test_root_cli_entrypoints_import(self):
-        import collect_and_notify
+        import librus_collect_and_notify
         import librus_collector
-        import progress_report
-        import updates_notifier
+        import librus_progress_report
+        import librus_updates_notifier
 
-        self.assertTrue(hasattr(collect_and_notify, "run_pipeline"))
+        self.assertTrue(hasattr(librus_collect_and_notify, "run_pipeline"))
         self.assertTrue(hasattr(librus_collector, "run_collector"))
-        self.assertTrue(hasattr(updates_notifier, "run_notifier"))
-        self.assertTrue(hasattr(progress_report, "run_progress_reports"))
+        self.assertTrue(hasattr(librus_updates_notifier, "run_notifier"))
+        self.assertTrue(hasattr(librus_progress_report, "run_progress_reports"))
 
     def test_jinja_templates_accessible_via_package(self):
         from librus2mail.mail_sender import jinja_env

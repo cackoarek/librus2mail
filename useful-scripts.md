@@ -6,7 +6,7 @@ Niniejszy dokument zawiera kompletne zestawienie architektury, wszystkich skrypt
 
 ## 🏛️ Architektura 3 modułów i orkiestratora
 
-Aplikacja zbudowana jest z **3 niezależnych, wyspecjalizowanych modułów** spiętych przez orkiestrator `collect_and_notify.py`:
+Aplikacja zbudowana jest z **3 niezależnych, wyspecjalizowanych modułów** spiętych przez orkiestrator `librus_collect_and_notify.py`:
 
 ```mermaid
 flowchart TD
@@ -23,13 +23,13 @@ flowchart TD
     end
 
     subgraph Moduł 2: Updates Notifier
-        N[updates_notifier.py / UpdatesNotifier]
+        N[librus_updates_notifier.py / UpdatesNotifier]
         N_HTML[Plik HTML / Podgląd CLI]
         N_MAIL[Bieżący E-mail o ocenach/wiadomościach]
     end
 
     subgraph Moduł 3: Progress Report
-        PR[progress_report.py + ProgressAnalyzer]
+        PR[librus_progress_report.py + ProgressAnalyzer]
         PR_HTML[Dashboard HTML / Podgląd CLI]
         PR_MAIL[Okresowy Raport Statystyk E-mail]
     end
@@ -45,18 +45,18 @@ flowchart TD
 ```
 
 1. **Moduł 1: Collector (`librus_collector.py`)** – odpowiada wyłącznie za autoryzację w portalu Librus Synergia, bezpieczne pobieranie surowych danych (z opóźnieniami rate-limiting) i synchronizację ich z bazą `storage/`.
-2. **Moduł 2: Updates Notifier (`updates_notifier.py`)** – odpowiada za weryfikację nowości (nowe wiadomości, ogłoszenia, oceny), formatowanie szablonów e-mail/HTML oraz wysyłkę do rodziców. Działa w 100% offline na bazie `storage/`.
-3. **Moduł 3: Progress Report (`progress_report.py`)** – długoterminowy analityczny raport postępów ucznia (średnie ważone, wskaźniki formy PoP, szanse na czerwony pasek, styl uczenia się, ciche przedmioty).
-4. **Orkiestrator (`collect_and_notify.py`)** – fasada CLI łącząca moduły w potok automatyczny (np. demon w tle) lub umożliwiająca wywołanie wybranego modułu w odosobnieniu (`--collect-only`, `--notify-only`, `--report`).
+2. **Moduł 2: Updates Notifier (`librus_updates_notifier.py`)** – odpowiada za weryfikację nowości (nowe wiadomości, ogłoszenia, oceny), formatowanie szablonów e-mail/HTML oraz wysyłkę do rodziców. Działa w 100% offline na bazie `storage/`.
+3. **Moduł 3: Progress Report (`librus_progress_report.py`)** – długoterminowy analityczny raport postępów ucznia (średnie ważone, wskaźniki formy PoP, szanse na czerwony pasek, styl uczenia się, ciche przedmioty).
+4. **Orkiestrator (`librus_collect_and_notify.py`)** – fasada CLI łącząca moduły w potok automatyczny (np. demon w tle) lub umożliwiająca wywołanie wybranego modułu w odosobnieniu (`--collect-only`, `--notify-only`, `--report`).
 
 ---
 
 ## 📑 Spis treści
 1. [Sposoby uruchamiania poleceń](#1-sposoby-uruchamiania-poleceń)
-2. [Główny orkiestrator – `collect_and_notify.py` / `librus-collect-and-notify`](#2-zintegrowany-potok-i-orkiestrator--collect_and_notifypy--librus-collect-and-notify)
+2. [Główny orkiestrator – `librus_collect_and_notify.py` / `librus-collect-and-notify`](#2-zintegrowany-potok-i-orkiestrator--collect_and_notifypy--librus-collect-and-notify)
 3. [Moduł 1: Pobieranie danych (Collector) – `librus_collector.py`](#3-moduł-1-pobieranie-danych-collector--librus_collectorpy)
-4. [Moduł 2: Powiadomienia bieżące (Updates Notifier) – `updates_notifier.py`](#4-moduł-2-powiadomienia-bieżące-updates-notifier--updates_notifierpy)
-5. [Moduł 3: Generator raportów postępów – `progress_report.py`](#5-moduł-3-generator-raportów-postępów--progress_reportpy)
+4. [Moduł 2: Powiadomienia bieżące (Updates Notifier) – `librus_updates_notifier.py`](#4-moduł-2-powiadomienia-bieżące-updates-notifier--updates_notifierpy)
+5. [Moduł 3: Generator raportów postępów – `librus_progress_report.py`](#5-moduł-3-generator-raportów-postępów--progress_reportpy)
 6. [Narzędzia deweloperskie i testowe (QA)](#6-narzędzia-deweloperskie-i-testowe-qa)
 7. [Zarządzanie wdrożeniem (Docker & systemd)](#7-zarządzanie-wdrożeniem-docker--systemd)
 8. [Tabela podsumowująca (Cheat Sheet)](#8-tabela-podsumowująca-cheat-sheet)
@@ -68,10 +68,10 @@ flowchart TD
 ### Metoda A: Bezpośrednio przez interpreter Pythona (zalecana w venv)
 ```bash
 source venv/bin/activate
-python collect_and_notify.py # Zintegrowany potok: Collector + Notifier
+python librus_collect_and_notify.py # Zintegrowany potok: Collector + Notifier
 python librus_collector.py   # Moduł 1: Collector (pobieranie surowych danych)
-python updates_notifier.py   # Moduł 2: Updates Notifier (powiadomienia offline)
-python progress_report.py    # Moduł 3: Progress Report (analityka postępów)
+python librus_updates_notifier.py   # Moduł 2: Updates Notifier (powiadomienia offline)
+python librus_progress_report.py    # Moduł 3: Progress Report (analityka postępów)
 ```
 
 ### Metoda B: Przez zarejestrowane polecenia CLI (po instalacji pakietu `pip install -e .`)
@@ -84,7 +84,7 @@ librus-report              # moduł okresowych raportów postępów
 
 ---
 
-## 2. Zintegrowany potok i orkiestrator – `collect_and_notify.py` / `librus-collect-and-notify`
+## 2. Zintegrowany potok i orkiestrator – `librus_collect_and_notify.py` / `librus-collect-and-notify`
 
 ### 🎯 Cel działania
 Spina całe rozwiązanie w zintegrowany potok wykonawczy (**pobierz dane $\rightarrow$ wyślij powiadomienie**).
@@ -94,7 +94,7 @@ Dzięki przełącznikom trybów umożliwia również jednorazowe uruchomienie do
 
 ### 💻 Składnia polecenia
 ```bash
-python collect_and_notify.py [-h] [--collect-only] [--notify-only] [--report]
+python librus_collect_and_notify.py [-h] [--collect-only] [--notify-only] [--report]
                              [-c CONFIG] [-s STORAGE_DIR] [-u USER] [-d DAYS]
                              [--hours HOURS] [--dry-run] [-o OUTPUT] [--offline]
                              [--fetch] [-f] [--once] [--loop] [--summary] [config]
@@ -110,7 +110,7 @@ librus2mail [opcje]
 | *(brak flagi)* | **Potok pełny** | Standardowy cykl: `Collector (pobranie) -> UpdatesNotifier (powiadomienia) -> sleep`. Szanuje `work-in-loop` z configu. |
 | `--collect-only`, `--sync-only` | **Moduł 1** | Uruchamia wyłącznie pobieranie danych z Librusa i zapis do `storage/` bez wysyłania maili. |
 | `--notify-only` | **Moduł 2** | Uruchamia wyłącznie analizę bazy `storage/` i wysyłkę powiadomień (e-mail / terminal / HTML). Działa w 100% offline. |
-| `--report` | **Moduł 3** | Uruchamia generator raportu analitycznego postępów (`progress_report.py`). |
+| `--report` | **Moduł 3** | Uruchamia generator raportu analitycznego postępów (`librus_progress_report.py`). |
 | `--summary` | **Format e-mail** | Wymusza wysłanie 1 zbiorczego e-maila ze wszystkimi nowościami (zamiast osobnych wiadomości, ogłoszeń i ocen). Nadpisuje `one_summary_message`. |
 | `--once`, `--no-loop` | **Sterowanie pętlą** | Wymusza pojedyncze wykonanie i natychmiastowe zakończenie procesu (nadpisuje `work-in-loop: true`). |
 | `--loop` | **Sterowanie pętlą** | Wymusza działanie w nieskończonej pętli z interwałem `wait_time_s` (nadpisuje `work-in-loop: false`). |
@@ -119,25 +119,25 @@ librus2mail [opcje]
 
 ```bash
 # 1. Standardowe uruchomienie potoku w pętli demona:
-venv/bin/python collect_and_notify.py
+venv/bin/python librus_collect_and_notify.py
 
 # 2. Pojedynczy przebieg pod crona (pobranie + powiadomienie, bez pętli):
-venv/bin/python collect_and_notify.py --once
+venv/bin/python librus_collect_and_notify.py --once
 
 # 3. Tylko pobranie świeżych danych ze szkoły do storage (np. w osobnym cronie):
-venv/bin/python collect_and_notify.py --collect-only --once
+venv/bin/python librus_collect_and_notify.py --collect-only --once
 
 # 4. Tylko wygenerowanie podglądu powiadomień z ostatnich 3 dni do pliku HTML (offline):
-venv/bin/python collect_and_notify.py --notify-only --days 3 -o podglad.html
+venv/bin/python librus_collect_and_notify.py --notify-only --days 3 -o podglad.html
 
 # 5. Szybki podgląd w terminalu powiadomień ze wskazanego katalogu testowego:
-venv/bin/python collect_and_notify.py --notify-only -s examples/storage --days 14 --dry-run
+venv/bin/python librus_collect_and_notify.py --notify-only -s examples/storage --days 14 --dry-run
 
 # 6. Wysłanie przykładowego powiadomienia testowego na e-mail jako 1 zbiorczy mail:
-venv/bin/python collect_and_notify.py --notify-only -s examples/storage --days 14 --summary
+venv/bin/python librus_collect_and_notify.py --notify-only -s examples/storage --days 14 --summary
 
 # 7. Wygenerowanie pełnego raportu postępów (Moduł 3) do pliku HTML:
-venv/bin/python collect_and_notify.py --report --days 30 -o raport_miesieczny.html
+venv/bin/python librus_collect_and_notify.py --report --days 30 -o raport_miesieczny.html
 ```
 
 ---
@@ -185,7 +185,7 @@ venv/bin/python librus_collector.py -u 8979296 --sync-only --once
 
 ---
 
-## 4. Moduł 2: Powiadomienia bieżące (Updates Notifier) – `updates_notifier.py`
+## 4. Moduł 2: Powiadomienia bieżące (Updates Notifier) – `librus_updates_notifier.py`
 
 ### 🎯 Cel działania
 Działa w **100% offline** na danych zebranych w `storage/`.
@@ -195,7 +195,7 @@ Działa w **100% offline** na danych zebranych w `storage/`.
 
 ### 💻 Składnia polecenia
 ```bash
-python updates_notifier.py [-h] [-c CONFIG] [-s STORAGE_DIR] [-u USER] [-d DAYS] [--hours HOURS] [--dry-run] [-o OUTPUT] [--summary] [config]
+python librus_updates_notifier.py [-h] [-c CONFIG] [-s STORAGE_DIR] [-u USER] [-d DAYS] [--hours HOURS] [--dry-run] [-o OUTPUT] [--summary] [config]
 # lub:
 librus-notifier [opcje]
 ```
@@ -216,7 +216,7 @@ librus-notifier [opcje]
 
 W pliku stanu ucznia (`storage/<login>.json`) utrzymywane są dwa kluczowe znaczniki czasowe:
 - `last_collect_time`: znacznik czasu ostatniej pomyślnej synchronizacji z portalem Librus (zapisywany przez `librus_collector.py`).
-- `last_notify_time` (alias `last_update_create`): znacznik czasu ostatniego faktycznie dostarczonego powiadomienia do rodzica (zapisywany przez `updates_notifier.py`).
+- `last_notify_time` (alias `last_update_create`): znacznik czasu ostatniego faktycznie dostarczonego powiadomienia do rodzica (zapisywany przez `librus_updates_notifier.py`).
 
 **Jak skrypt określa okres nowości przy uruchomieniach nieregularnych:**
 1. **Tryb jawny (`--days N` / `--hours N`)**: Użytkownik decyduje wprost o oknie czasowym (np. `now - timedelta(days=N)`). Nadpisuje to wszelkie znaczniki.
@@ -231,33 +231,33 @@ W pliku stanu ucznia (`storage/<login>.json`) utrzymywane są dwa kluczowe znacz
 
 ```bash
 # 1. Nieregularne powiadomienie (od ostatniego powiadomienia w bazie storage):
-venv/bin/python updates_notifier.py
+venv/bin/python librus_updates_notifier.py
 
 # 2. Podgląd w konsoli wpisów z ostatnich 7 dni:
-venv/bin/python updates_notifier.py --days 7 --dry-run
+venv/bin/python librus_updates_notifier.py --days 7 --dry-run
 
 # 3. Zapisanie powiadomienia e-mail jako plik HTML do weryfikacji wyglądu (nie przesuwa znacznika):
-venv/bin/python updates_notifier.py --days 3 -o podglad_powiadomienia.html
+venv/bin/python librus_updates_notifier.py --days 3 -o podglad_powiadomienia.html
 
 # 4. Wygenerowanie powiadomienia ze wskazanego katalogu testowego:
-venv/bin/python updates_notifier.py -s examples/storage --days 14 -o examples/reports/powiadomienie_collector.html
+venv/bin/python librus_updates_notifier.py -s examples/storage --days 14 -o examples/reports/powiadomienie_collector.html
 
 # 4b. Powtarzalne generowanie – stała data referencyjna (okno --days liczy od tej daty):
-venv/bin/python updates_notifier.py -s examples/storage --days 14 --actual-date 2026-09-09 -o examples/reports/powiadomienie_collector.html
+venv/bin/python librus_updates_notifier.py -s examples/storage --days 14 --actual-date 2026-09-09 -o examples/reports/powiadomienie_collector.html
 
 # 5. Wysłanie przykładowego powiadomienia ze storage testowego na skonfigurowany e-mail (1 zbiorczy mail):
-venv/bin/python updates_notifier.py -s examples/storage --days 14 --summary
+venv/bin/python librus_updates_notifier.py -s examples/storage --days 14 --summary
 
 # 5b. Wysłanie zbiorczego powiadomienia – stała data referencyjna:
-venv/bin/python updates_notifier.py -s examples/storage --days 14 --actual-date 2026-09-09 --summary
+venv/bin/python librus_updates_notifier.py -s examples/storage --days 14 --actual-date 2026-09-09 --summary
 
 # 6. Sprawdzenie powiadomień dla konkretnego dziecka:
-venv/bin/python updates_notifier.py -u 8979296 --days 7 --dry-run
+venv/bin/python librus_updates_notifier.py -u 8979296 --days 7 --dry-run
 ```
 
 ---
 
-## 5. Moduł 3: Generator raportów postępów – `progress_report.py`
+## 5. Moduł 3: Generator raportów postępów – `librus_progress_report.py`
 
 ### 🎯 Cel działania
 Długoterminowy silnik analityczny bazujący na historii ocen w `storage/`:
@@ -270,7 +270,7 @@ Długoterminowy silnik analityczny bazujący na historii ocen w `storage/`:
 
 ### 💻 Składnia polecenia
 ```bash
-python progress_report.py [-h] [-c CONFIG] [-s STORAGE_DIR] [-u USER] [-d DAYS] [--dry-run] [-o OUTPUT] [--fetch] [-f]
+python librus_progress_report.py [-h] [-c CONFIG] [-s STORAGE_DIR] [-u USER] [-d DAYS] [--dry-run] [-o OUTPUT] [--fetch] [-f]
 # lub:
 librus-report [opcje]
 ```
@@ -290,22 +290,22 @@ librus-report [opcje]
 
 ```bash
 # 1. Standardowa wysyłka okresowego raportu e-mailem:
-venv/bin/python progress_report.py
+venv/bin/python librus_progress_report.py
 
 # 2. Podgląd raportu w terminalu:
-venv/bin/python progress_report.py --dry-run
+venv/bin/python librus_progress_report.py --dry-run
 
 # 3. Zapis raportu HTML do pliku:
-venv/bin/python progress_report.py -o podglad_raportu.html
+venv/bin/python librus_progress_report.py -o podglad_raportu.html
 
 # 4. Raport miesięczny (30 dni) ze wskazanego katalogu testowego:
-venv/bin/python progress_report.py -s examples/storage -o examples/reports/raport_przykladowy.html --days 30
+venv/bin/python librus_progress_report.py -s examples/storage -o examples/reports/raport_przykladowy.html --days 30
 
 # 4b. Powtarzalne generowanie – stała data referencyjna (okno --days zawsze liczy od tej daty):
-venv/bin/python progress_report.py -s examples/storage --days 14 --actual-date 2026-09-09 -o examples/reports/raport_postepow.html --force
+venv/bin/python librus_progress_report.py -s examples/storage --days 14 --actual-date 2026-09-09 -o examples/reports/raport_postepow.html --force
 
 # 5. Wymuszenie generowania raportu mimo braku nowych ocen:
-venv/bin/python progress_report.py --force -o raport_pelny.html
+venv/bin/python librus_progress_report.py --force -o raport_pelny.html
 ```
 
 ---
@@ -365,21 +365,21 @@ sudo journalctl -u librus2mail -f -n 50
 
 | Zadanie | Rekomendowane polecenie |
 | :--- | :--- |
-| **Stały monitoring (pełny potok demona w pętli)** | `venv/bin/python collect_and_notify.py` |
-| **Pojedynczy przebieg monitoringu (bez pętli, pod crona)** | `venv/bin/python collect_and_notify.py --once` |
-| **Tylko synchronizacja danych z Librusa do storage (1x)** | `venv/bin/python collect_and_notify.py --collect-only --once` |
-| **Tylko wysyłka/podgląd powiadomień z bazy** | `venv/bin/python collect_and_notify.py --notify-only` |
-| **Nieregularne powiadomienie (od ost. wysyłki)** | `venv/bin/python updates_notifier.py` |
-| **Podgląd powiadomień w terminalu (np. ost. 7 dni)** | `venv/bin/python updates_notifier.py --days 7 --dry-run` |
-| **Zapis powiadomienia e-mail do pliku HTML** | `venv/bin/python updates_notifier.py --days 3 -o podglad.html` |
-| **Symulacja offline z zewnętrznego storage (HTML)** | `venv/bin/python updates_notifier.py -s examples/storage --days 14 -o examples/reports/powiadomienie.html` |
-| **Symulacja offline – stała data referencyjna (reprodukowalny)** | `venv/bin/python updates_notifier.py -s examples/storage --days 14 --actual-date 2026-09-09 -o examples/reports/powiadomienie.html` |
-| **Wysłanie testowego powiadomienia na e-mail (1 zbiorczy mail)** | `venv/bin/python updates_notifier.py -s examples/storage --days 14 --summary` |
-| **Okresowy raport postępów ucznia (e-mail)** | `venv/bin/python progress_report.py` |
-| **Podgląd raportu postępów w terminalu** | `venv/bin/python progress_report.py --dry-run` |
-| **Wygenerowanie raportu HTML do podglądu** | `venv/bin/python progress_report.py -o raport.html` |
-| **Raport postępów z zewnętrznego storage** | `venv/bin/python progress_report.py -s examples/storage -o examples/reports/raport.html --days 14` |
-| **Raport postępów – stała data referencyjna (reprodukowalny)** | `venv/bin/python progress_report.py -s examples/storage --days 14 --actual-date 2026-09-09 -o examples/reports/raport_postepow.html --force` |
-| **Raport miesięczny przez orkiestrator** | `venv/bin/python collect_and_notify.py --report --days 30 -o miesiac.html` |
+| **Stały monitoring (pełny potok demona w pętli)** | `venv/bin/python librus_collect_and_notify.py` |
+| **Pojedynczy przebieg monitoringu (bez pętli, pod crona)** | `venv/bin/python librus_collect_and_notify.py --once` |
+| **Tylko synchronizacja danych z Librusa do storage (1x)** | `venv/bin/python librus_collect_and_notify.py --collect-only --once` |
+| **Tylko wysyłka/podgląd powiadomień z bazy** | `venv/bin/python librus_collect_and_notify.py --notify-only` |
+| **Nieregularne powiadomienie (od ost. wysyłki)** | `venv/bin/python librus_updates_notifier.py` |
+| **Podgląd powiadomień w terminalu (np. ost. 7 dni)** | `venv/bin/python librus_updates_notifier.py --days 7 --dry-run` |
+| **Zapis powiadomienia e-mail do pliku HTML** | `venv/bin/python librus_updates_notifier.py --days 3 -o podglad.html` |
+| **Symulacja offline z zewnętrznego storage (HTML)** | `venv/bin/python librus_updates_notifier.py -s examples/storage --days 14 -o examples/reports/powiadomienie.html` |
+| **Symulacja offline – stała data referencyjna (reprodukowalny)** | `venv/bin/python librus_updates_notifier.py -s examples/storage --days 14 --actual-date 2026-09-09 -o examples/reports/powiadomienie.html` |
+| **Wysłanie testowego powiadomienia na e-mail (1 zbiorczy mail)** | `venv/bin/python librus_updates_notifier.py -s examples/storage --days 14 --summary` |
+| **Okresowy raport postępów ucznia (e-mail)** | `venv/bin/python librus_progress_report.py` |
+| **Podgląd raportu postępów w terminalu** | `venv/bin/python librus_progress_report.py --dry-run` |
+| **Wygenerowanie raportu HTML do podglądu** | `venv/bin/python librus_progress_report.py -o raport.html` |
+| **Raport postępów z zewnętrznego storage** | `venv/bin/python librus_progress_report.py -s examples/storage -o examples/reports/raport.html --days 14` |
+| **Raport postępów – stała data referencyjna (reprodukowalny)** | `venv/bin/python librus_progress_report.py -s examples/storage --days 14 --actual-date 2026-09-09 -o examples/reports/raport_postepow.html --force` |
+| **Raport miesięczny przez orkiestrator** | `venv/bin/python librus_collect_and_notify.py --report --days 30 -o miesiac.html` |
 | **Uruchomienie testów jednostkowych** | `venv/bin/pytest` |
 | **Weryfikacja jakości kodu linterem** | `venv/bin/ruff check .` |

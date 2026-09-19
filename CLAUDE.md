@@ -4,16 +4,16 @@
 - **Environment**: `source venv/bin/activate`
 - **Dependencies**: `pip install -e .` (or `pip install -r requirements.txt`)
 - **Dev tools**: `pip install -e ".[dev]"`
-- **Run**: `librus-collect-and-notify` or `python collect_and_notify.py` (Caution: live scraper; do not run without user consent)
-- **Report**: `librus-report --dry-run` or `python progress_report.py --dry-run`
+- **Run**: `librus-collect-and-notify` or `python librus_collect_and_notify.py` (Caution: live scraper; do not run without user consent)
+- **Report**: `librus-report --dry-run` or `python librus_progress_report.py --dry-run`
 - **Tests**: `pytest`
 - **Linter**: `ruff check`
 
 ## Architecture
 - `src/librus2mail/`: Canonical package with `src/` layout.
-- `collect_and_notify.py` / `librus_collector.py` / `updates_notifier.py`: CLI entrypoints.
-- `progress_report.py`: Offline progress report generator CLI.
-- `src/librus2mail/mail_sender.py`: Base email class generating HTML emails with Jinja2 templates (`templates/emails/`).
+- `librus_collect_and_notify.py` / `librus_collector.py` / `librus_updates_notifier.py`: CLI entrypoints.
+- `librus_progress_report.py`: Offline progress report generator CLI.
+- `src/librus2mail/mail_sender.py`: Base email class generating HTML emails with Jinja2 templates (`src/librus2mail/templates/emails/`).
 - `src/librus2mail/gmail_sender.py`: Subclass sending mail through `yagmail`.
 - `src/librus2mail/smtp_sender.py`: Subclass sending mail through `smtplib` with STARTTLS.
 - `src/librus2mail/librus.py`: Web scraper for Librus Synergia. Handles OAuth login simulation, session cookies, HTML parsing with BeautifulSoup.

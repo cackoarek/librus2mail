@@ -868,8 +868,8 @@ class TestLibrus(unittest.TestCase):
 
         import yaml
 
+        from librus2mail.progress_report import run_progress_reports
         from librus2mail.storage import FileStorage
-        from progress_report import run_progress_reports
 
         temp_dir = tempfile.mkdtemp()
         cfg_path = os.path.join(temp_dir, 'config.yaml')
@@ -901,7 +901,7 @@ class TestLibrus(unittest.TestCase):
             yaml.dump(cfg_data, f)
 
         # Run with --dry-run (offline by default)
-        test_args = ['progress_report.py', '-c', cfg_path, '--dry-run']
+        test_args = ['librus_progress_report.py', '-c', cfg_path, '--dry-run']
         with patch.object(sys, 'argv', test_args):
             with patch('librus2mail.storage.FileStorage', return_value=st):
                 # Should execute cleanly without errors or sending emails
@@ -1132,7 +1132,7 @@ class TestLibrus(unittest.TestCase):
             with open(cfg_path, 'w', encoding='utf-8') as f:
                 yaml.dump(cfg_data, f)
 
-            test_args = ['progress_report.py', '-c', cfg_path, '--save-html', html_out]
+            test_args = ['librus_progress_report.py', '-c', cfg_path, '--save-html', html_out]
             with patch.object(sys, 'argv', test_args):
                 with patch('librus2mail.storage.FileStorage', return_value=st):
                     run_progress_reports()
@@ -1187,7 +1187,7 @@ class TestLibrus(unittest.TestCase):
                 yaml.dump(cfg_data, f)
 
             # Test using -s flag pointing to custom_storage
-            test_args = ['progress_report.py', '-c', cfg_path, '-s', custom_storage, '-o', html_out, '--force']
+            test_args = ['librus_progress_report.py', '-c', cfg_path, '-s', custom_storage, '-o', html_out, '--force']
             with patch.object(sys, 'argv', test_args):
                 run_progress_reports()
 

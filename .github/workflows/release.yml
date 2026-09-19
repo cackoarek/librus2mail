@@ -290,7 +290,7 @@ jobs:
           ACTUAL_DATE="2026-09-18"
 
           echo "📬 Generuję powiadomienie e-mail..."
-          python updates_notifier.py \
+          python librus_updates_notifier.py \
             -c config.yaml \
             -s examples/storage \
             --days 7 \
@@ -298,7 +298,7 @@ jobs:
             -o examples/reports/powiadomienie_collector.html
 
           echo "📊 Generuję raport postępów..."
-          python progress_report.py \
+          python librus_progress_report.py \
             -c config.yaml \
             -s examples/storage \
             --days 7 \

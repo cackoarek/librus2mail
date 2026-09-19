@@ -3,13 +3,13 @@
 ## Quick Context
 - **Project**: Librus2mail (Librus Synergia web scraper & email notifier).
 - **Stack**: Python 3.10+, `requests`, `bs4`, `fake_useragent`, `yagmail`, `pyYAML`.
-- **Entrypoint**: `collect_and_notify.py` (infinite loop checking messages and announcements).
+- **Entrypoint**: `librus_collect_and_notify.py` (infinite loop checking messages and announcements).
 
 ## Agent Directives
 
 1. **Security & Secrets**:
    - Strictly avoid staging or committing `config.yaml`, `arek_config.yaml`, `*_config.yaml`, `.env`, or `*.log`.
-   - Never run `python collect_and_notify.py` or `python librus_collector.py` autonomously; it interacts with live school accounts and sends real emails.
+   - Never run `python librus_collect_and_notify.py` or `python librus_collector.py` autonomously; it interacts with live school accounts and sends real emails.
    - For configuration documentation and tests, reference only `config.example.yaml`.
 
 2. **Scraping Integrity**:

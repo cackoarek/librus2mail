@@ -219,6 +219,26 @@ jobs:
 
           echo "notes_file=/tmp/release_notes.md" >> $GITHUB_OUTPUT
 
+      - name: Add Pages links to Release Notes
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          REPO="${{ github.repository }}"
+          OWNER=$(echo "$REPO" | cut -d'/' -f1)
+          REPO_NAME=$(echo "$REPO" | cut -d'/' -f2)
+          PAGES_BASE="https://${OWNER}.github.io/${REPO_NAME}"
+
+          cat >> /tmp/release_notes.md << EOF
+
+          ---
+          ### 📄 Przykładowe raporty (GitHub Pages)
+
+          | Raport | Link |
+          |:---|:---|
+          | 📬 Powiadomienie e-mail | [${PAGES_BASE}/v${VERSION}/powiadomienie_collector.html](${PAGES_BASE}/v${VERSION}/powiadomienie_collector.html) |
+          | 📊 Raport postępów ucznia | [${PAGES_BASE}/v${VERSION}/raport_8979296.html](${PAGES_BASE}/v${VERSION}/raport_8979296.html) |
+          | 🔗 Najnowsza wersja (latest) | [${PAGES_BASE}/latest/](${PAGES_BASE}/latest/) |
+          EOF
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -228,3 +248,267 @@ jobs:
           prerelease: ${{ needs.prepare.outputs.is_prerelease }}
           make_latest: ${{ needs.prepare.outputs.is_prerelease == 'false' }}
           generate_release_notes: false
+
+  # ------------------------------------------------------------------
+  # 5. Publikacja przykładowych raportów HTML na GitHub Pages
+  # ------------------------------------------------------------------
+  deploy-pages:
+    name: Deploy Example Reports to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: [prepare, github-release]
+    # Pre-release'y też publikujemy (pod własnym katalogiem), ale nie nadpisują latest
+    if: always() && needs.github-release.result == 'success'
+
+    steps:
+      - name: Checkout main (source code + examples/storage)
+        uses: actions/checkout@v4
+        with:
+          path: source
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+
+      - name: Install package
+        working-directory: source
+        run: |
+          python -m pip install --upgrade pip
+          pip install .
+
+      - name: Generate example HTML reports
+        working-directory: source
+        run: |
+          mkdir -p examples/reports
+
+          # Data referencyjna: ostatni piątek lub 2026-09-18 jako fallback
+          # Używamy daty wbudowanej w examples/storage aby raporty były spójne
+          ACTUAL_DATE="2026-09-18"
+
+          echo "📬 Generuję powiadomienie e-mail..."
+          python updates_notifier.py \
+            -s examples/storage \
+            --days 7 \
+            --actual-date "${ACTUAL_DATE}" \
+            -o examples/reports/powiadomienie_collector.html
+
+          echo "📊 Generuję raport postępów..."
+          python progress_report.py \
+            -s examples/storage \
+            --days 7 \
+            --actual-date "${ACTUAL_DATE}" \
+            -o examples/reports/raport_8979296.html \
+            --force
+
+          echo "✅ Raporty wygenerowane:"
+          ls -la examples/reports/
+
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: pages
+          # Jeśli gałąź gh-pages nie istnieje – zostanie stworzona
+          fetch-depth: 0
+        continue-on-error: true
+
+      - name: Initialize gh-pages if it doesn't exist
+        run: |
+          if [ ! -d "pages" ] || [ -z "$(ls -A pages 2>/dev/null)" ]; then
+            echo "ℹ️ Inicjalizuję nową gałąź gh-pages..."
+            mkdir -p pages
+            cd pages
+            git init
+            git checkout --orphan gh-pages
+          fi
+
+      - name: Copy reports to versioned directory
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          TAG="${{ needs.prepare.outputs.tag }}"
+          IS_PRERELEASE="${{ needs.prepare.outputs.is_prerelease }}"
+
+          REPO="${{ github.repository }}"
+          OWNER=$(echo "$REPO" | cut -d'/' -f1)
+          REPO_NAME=$(echo "$REPO" | cut -d'/' -f2)
+          PAGES_BASE="https://${OWNER}.github.io/${REPO_NAME}"
+
+          # Katalog wersji (np. pages/v1.2.0/)
+          mkdir -p "pages/${TAG}"
+          cp source/examples/reports/powiadomienie_collector.html "pages/${TAG}/"
+          cp source/examples/reports/raport_8979296.html "pages/${TAG}/"
+
+          # Wygeneruj index.html dla tej wersji
+          cat > "pages/${TAG}/index.html" << HTML
+          <!DOCTYPE html>
+          <html lang="pl">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Librus2mail ${TAG} – Przykładowe raporty</title>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                     max-width: 680px; margin: 60px auto; padding: 0 20px; color: #24292f; }
+              h1 { font-size: 1.6rem; }
+              .badge { display: inline-block; padding: 3px 10px; border-radius: 12px;
+                       font-size: 0.8rem; font-weight: 600; background: #ddf4ff; color: #0969da; }
+              .card { border: 1px solid #d0d7de; border-radius: 8px; padding: 20px;
+                      margin: 16px 0; text-decoration: none; display: block; color: inherit; }
+              .card:hover { border-color: #0969da; background: #f6f8fa; }
+              .card h3 { margin: 0 0 6px; font-size: 1rem; }
+              .card p { margin: 0; font-size: 0.875rem; color: #57606a; }
+              footer { margin-top: 40px; font-size: 0.8rem; color: #8c959f; }
+              a { color: #0969da; }
+            </style>
+          </head>
+          <body>
+            <h1>📬 Librus2mail <span class="badge">${TAG}</span></h1>
+            <p>Przykładowe raporty wygenerowane automatycznie przy wydaniu wersji <strong>${VERSION}</strong>.</p>
+
+            <a class="card" href="powiadomienie_collector.html">
+              <h3>📬 Powiadomienie e-mail</h3>
+              <p>Zbiorczy e-mail z nowymi wiadomościami, ogłoszeniami i ocenami ucznia.</p>
+            </a>
+
+            <a class="card" href="raport_8979296.html">
+              <h3>📊 Raport postępów ucznia</h3>
+              <p>Analityczny raport ze średnimi ważonymi, trendami i symulatorem czerwonego paska.</p>
+            </a>
+
+            <footer>
+              <a href="${PAGES_BASE}/">← Wszystkie wersje</a> &nbsp;|&nbsp;
+              <a href="${PAGES_BASE}/latest/">Najnowsza wersja (latest)</a> &nbsp;|&nbsp;
+              <a href="https://github.com/${REPO}">GitHub</a>
+            </footer>
+          </body>
+          </html>
+          HTML
+
+          # Nadpisz latest/ tylko jeśli to nie jest pre-release
+          if [ "${IS_PRERELEASE}" = "false" ]; then
+            echo "📌 Aktualizuję latest/ → ${TAG}"
+            rm -rf pages/latest
+            mkdir -p pages/latest
+            cp source/examples/reports/powiadomienie_collector.html pages/latest/
+            cp source/examples/reports/raport_8979296.html pages/latest/
+
+            # index.html dla latest (przekierowanie do bieżącej wersji + bezpośrednie linki)
+            sed "s|${TAG}|latest|g; s|Librus2mail latest|Librus2mail latest (${TAG})|" \
+              "pages/${TAG}/index.html" > pages/latest/index.html
+          else
+            echo "ℹ️ Pre-release ${TAG} – pomijam aktualizację latest/"
+          fi
+
+      - name: Regenerate root index.html (lista wszystkich wersji)
+        run: |
+          REPO="${{ github.repository }}"
+          OWNER=$(echo "$REPO" | cut -d'/' -f1)
+          REPO_NAME=$(echo "$REPO" | cut -d'/' -f2)
+          PAGES_BASE="https://${OWNER}.github.io/${REPO_NAME}"
+
+          # Zbierz wszystkie katalogi wersji (posortowane malejąco)
+          VERSIONS=$(ls -d pages/v*/ 2>/dev/null | sed 's|pages/||; s|/||' | sort -rV)
+
+          ROWS=""
+          for V in $VERSIONS; do
+            ROWS="${ROWS}<tr><td><a href=\"${V}/\"><strong>${V}</strong></a></td><td><a href=\"${V}/powiadomienie_collector.html\">📬 Powiadomienie</a></td><td><a href=\"${V}/raport_8979296.html\">📊 Raport postępów</a></td></tr>\n"
+          done
+
+          cat > pages/index.html << HTML
+          <!DOCTYPE html>
+          <html lang="pl">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Librus2mail – Przykładowe raporty</title>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                     max-width: 760px; margin: 60px auto; padding: 0 20px; color: #24292f; }
+              h1 { font-size: 1.8rem; }
+              p.lead { font-size: 1rem; color: #57606a; }
+              .latest-box { border: 2px solid #0969da; border-radius: 8px; padding: 20px;
+                            margin: 24px 0; background: #ddf4ff; }
+              .latest-box h2 { margin: 0 0 8px; font-size: 1.1rem; color: #0969da; }
+              .latest-box a { display: inline-block; margin-right: 12px; font-weight: 600;
+                              color: #0969da; text-decoration: none; }
+              .latest-box a:hover { text-decoration: underline; }
+              table { width: 100%; border-collapse: collapse; margin-top: 24px; }
+              th { text-align: left; padding: 8px 12px; background: #f6f8fa;
+                   border-bottom: 2px solid #d0d7de; font-size: 0.875rem; }
+              td { padding: 10px 12px; border-bottom: 1px solid #d0d7de; font-size: 0.875rem; }
+              td a { color: #0969da; text-decoration: none; }
+              td a:hover { text-decoration: underline; }
+              footer { margin-top: 40px; font-size: 0.8rem; color: #8c959f; }
+            </style>
+          </head>
+          <body>
+            <h1>📬 Librus2mail – Przykładowe raporty</h1>
+            <p class="lead">Automatycznie generowane przykłady wyników działania projektu przy każdym wydaniu.</p>
+
+            <div class="latest-box">
+              <h2>🔗 Najnowsza wersja (latest)</h2>
+              <a href="latest/powiadomienie_collector.html">📬 Powiadomienie e-mail</a>
+              <a href="latest/raport_8979296.html">📊 Raport postępów</a>
+              <a href="latest/">📁 Strona wersji</a>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Wersja</th>
+                  <th>Powiadomienie e-mail</th>
+                  <th>Raport postępów</th>
+                </tr>
+              </thead>
+              <tbody>
+                $(echo -e "$ROWS")
+              </tbody>
+            </table>
+
+            <footer>
+              <a href="https://github.com/${REPO}">GitHub: ${REPO}</a>
+            </footer>
+          </body>
+          </html>
+          HTML
+
+          echo "✅ Root index.html wygenerowany z $(echo "$VERSIONS" | wc -w) wersjami."
+
+      - name: Commit and push to gh-pages
+        working-directory: pages
+        run: |
+          TAG="${{ needs.prepare.outputs.tag }}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Ustaw remote jeśli inicjalizowaliśmy od zera
+          if ! git remote | grep -q origin; then
+            git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          fi
+
+          git add -A
+
+          if git diff --staged --quiet; then
+            echo "ℹ️ Brak zmian do opublikowania na gh-pages."
+          else
+            git commit -m "docs(pages): deploy example reports for ${TAG} [skip ci]"
+            git push origin HEAD:gh-pages --force
+            echo "✅ Opublikowano raporty na gh-pages dla ${TAG}"
+          fi
+
+          # Podsumowanie w GitHub Actions Summary
+          REPO="${{ github.repository }}"
+          OWNER=$(echo "$REPO" | cut -d'/' -f1)
+          REPO_NAME=$(echo "$REPO" | cut -d'/' -f2)
+          PAGES_BASE="https://${OWNER}.github.io/${REPO_NAME}"
+
+          echo "### 📄 GitHub Pages – Przykładowe raporty" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Raport | Link |" >> $GITHUB_STEP_SUMMARY
+          echo "|:---|:---|" >> $GITHUB_STEP_SUMMARY
+          echo "| 📬 Powiadomienie e-mail | [${PAGES_BASE}/${TAG}/powiadomienie_collector.html](${PAGES_BASE}/${TAG}/powiadomienie_collector.html) |" >> $GITHUB_STEP_SUMMARY
+          echo "| 📊 Raport postępów | [${PAGES_BASE}/${TAG}/raport_8979296.html](${PAGES_BASE}/${TAG}/raport_8979296.html) |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔗 Najnowsza wersja | [${PAGES_BASE}/latest/](${PAGES_BASE}/latest/) |" >> $GITHUB_STEP_SUMMARY
+          echo "| 📁 Wszystkie wersje | [${PAGES_BASE}/](${PAGES_BASE}/) |" >> $GITHUB_STEP_SUMMARY

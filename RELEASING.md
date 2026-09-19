@@ -20,6 +20,45 @@ MAJOR.MINOR.PATCH  →  np. 1.2.3
 
 ---
 
+## Pierwsze uruchomienie: konfiguracja GitHub Pages
+
+> [!IMPORTANT]
+> Ten krok wykonujesz **tylko raz** — przed pierwszym wydaniem. Po tej konfiguracji wszystko
+> działa automatycznie przy każdym `git push origin vX.Y.Z`.
+
+### Krok 1 – Włącz GitHub Pages w ustawieniach repozytorium
+
+1. Wejdź na stronę repozytorium na GitHub
+2. Kliknij zakładkę **Settings** (⚙️)
+3. W lewym menu wybierz **Pages**
+4. W sekcji **"Build and deployment"**:
+   - **Source**: wybierz `Deploy from a branch`
+   - **Branch**: wybierz `gh-pages` → folder `/ (root)`
+5. Kliknij **Save**
+
+> Gałąź `gh-pages` zostanie stworzona automatycznie przy pierwszym wydaniu.
+> Jeśli jej jeszcze nie ma, GitHub pokaże błąd — to normalne, zniknie po pierwszym release.
+
+### Krok 2 – Sprawdź uprawnienia workflow
+
+W **Settings → Actions → General** upewnij się że:
+- **Workflow permissions** → `Read and write permissions` jest zaznaczone
+
+Bez tego `github-actions[bot]` nie będzie mógł pushować do `gh-pages`.
+
+### Krok 3 – Wydaj pierwszą wersję
+
+```bash
+git tag v1.1.0 -m "Pierwsza wersja z GitHub Pages"
+git push origin v1.1.0
+```
+
+Po ok. 2–3 minutach raporty będą dostępne pod:
+- `https://cackoarek.github.io/librus2mail/latest/`
+- `https://cackoarek.github.io/librus2mail/v1.1.0/`
+
+---
+
 ## Standard commit messages: Conventional Commits
 
 Każdy commit powinien zaczynać się od **type(scope): description**:

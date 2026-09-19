@@ -13,11 +13,24 @@
 [![systemd Supported](https://img.shields.io/badge/systemd-supported-lightgrey.svg?style=flat-square&logo=linux&logoColor=white)](deploy/systemd/)
 [![Templates: Jinja2](https://img.shields.io/badge/templates-Jinja2-B41717.svg?style=flat-square&logo=jinja&logoColor=white)](templates/emails/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg?style=flat-square)](LICENSE)
+[![GitHub Pages](https://img.shields.io/badge/demo-GitHub%20Pages-0969da.svg?style=flat-square&logo=github&logoColor=white)](https://cackoarek.github.io/librus2mail/)
 
 <p align="center">
   Automatyczne powiadomienia e-mail o nowych ocenach, wiadomościach i ogłoszeniach<br>
   oraz zaawansowany silnik analizy trendów, wag ocen i symulator świadectwa z wyróżnieniem.
 </p>
+
+### 📄 Przykładowe raporty (na żywo)
+
+Poniżej możesz zobaczyć jak wyglądają e-maile generowane przez projekt — bez instalacji czegokolwiek:
+
+| Raport | Opis | Link |
+|:---|:---|:---|
+| 📬 **Powiadomienie e-mail** | Zbiorczy e-mail z ocenami, wiadomościami i ogłoszeniami | [→ Otwórz](https://cackoarek.github.io/librus2mail/latest/powiadomienie_collector.html) |
+| 📊 **Raport postępów ucznia** | Analiza trendów, średnie ważone, symulator czerwonego paska | [→ Otwórz](https://cackoarek.github.io/librus2mail/latest/raport_8979296.html) |
+| 📁 **Wszystkie wersje** | Archiwum raportów dla każdej wydanej wersji | [→ Przeglądaj](https://cackoarek.github.io/librus2mail/) |
+
+> Raporty są automatycznie generowane i publikowane przy każdym wydaniu nowej wersji.
 
 [🚀 Szybki start](#instalacja) • [⚙️ Konfiguracja](#konfiguracja) • [🐳 Docker](#konteneryzacja-docker-i-docker-compose) • [📊 Raport postępów](#moduł-raportu-postępów-dziecka-progress_reportpy) • [❓ FAQ](#najczęstsze-pytania-i-rozwiązywanie-problemów-faq)
 

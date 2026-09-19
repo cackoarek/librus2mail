@@ -23,6 +23,10 @@
 </div>
 
 ---
+	
+[🚀 Szybki start](#instalacja) • [⚙️ Konfiguracja](#konfiguracja) • [🐳 Docker](#konteneryzacja-docker-i-docker-compose) • [📊 Raport postępów](#moduł-raportu-postępów-dziecka-progress_reportpy) • [❓ FAQ](#najczęstsze-pytania-i-rozwiązywanie-problemów-faq)
+
+---
 
 ### O projekcie
 
@@ -36,10 +40,10 @@
 * 🛡️ **Prywatność i bezpieczeństwo**: Żadne dane uwierzytelniające ani oceny dzieci nie trafiają do zewnętrznych chmur – całość działa lokalnie na Twojej własnej maszynie.
 
 ---
+
+### 📄 Przykładowe raporty (na żywo)
 	
 <div align="center">
-### 📄 Przykładowe raporty (na żywo)
-
 Poniżej możesz zobaczyć jak wyglądają e-maile generowane przez projekt — bez instalacji czegokolwiek:
 
 | Raport | Opis | Link |
@@ -50,10 +54,7 @@ Poniżej możesz zobaczyć jak wyglądają e-maile generowane przez projekt — 
 
 > Raporty są automatycznie generowane i publikowane przy każdym wydaniu nowej wersji.
 
-[🚀 Szybki start](#instalacja) • [⚙️ Konfiguracja](#konfiguracja) • [🐳 Docker](#konteneryzacja-docker-i-docker-compose) • [📊 Raport postępów](#moduł-raportu-postępów-dziecka-progress_reportpy) • [❓ FAQ](#najczęstsze-pytania-i-rozwiązywanie-problemów-faq)
-
 </div>
-	
 ---
 
 ## Spis treści

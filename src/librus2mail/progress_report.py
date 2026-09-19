@@ -9,10 +9,16 @@ from .base_logger import setup_logging
 from .config import read_config
 from .librus import Librus
 from .librus_collector import configure_mail_provider
+from .mail_sender import (
+    MailSender,
+    render_standalone_html,
+    resolve_output_path,
+)
 from .progress_analyzer import ProgressAnalyzer
 from .storage import create_storage
 
 logger = logging.getLogger(__name__)
+
 
 
 def parse_args():
@@ -24,6 +30,12 @@ def parse_args():
         dest='config_path',
         default='config.yaml',
         help='Ścieżka do pliku konfiguracyjnego YAML (domyślnie: config.yaml)'
+    )
+    parser.add_argument(
+        '-s', '--storage-dir',
+        dest='storage_dir',
+        default=None,
+        help='Ścieżka do katalogu pamięci stanu i bazy ocen (nadpisuje ustawienie z config.yaml)'
     )
     parser.add_argument(
         '-u', '--user',
@@ -42,6 +54,12 @@ def parse_args():
         '--dry-run',
         action='store_true',
         help='Tryb symulacji: generuje analizę i wyświetla podsumowanie w konsoli bez wysyłania e-maila'
+    )
+    parser.add_argument(
+        '-o', '--output', '--save-html',
+        dest='output_html',
+        default=None,
+        help='Zapisz wygenerowany raport jako plik HTML pod wskazaną ścieżką (pomija wysyłkę e-mail i nie aktualizuje daty ostatniego raportu)'
     )
     parser.add_argument(
         '--fetch',
@@ -165,48 +183,103 @@ def print_cli_summary(user_name: str, login: str, analysis: dict):
     print("=" * 75 + "\n")
 
 
-def run_progress_reports():
-    args = parse_args()
+def run_progress_reports(
+    config_path: str | None = None,
+    storage_dir: str | None = None,
+    user_filter: str | None = None,
+    days: int | None = None,
+    dry_run: bool = False,
+    save_html: str | None = None,
+    fetch_live: bool = False,
+    force: bool = False,
+):
+    if (
+        config_path is None
+        and storage_dir is None
+        and user_filter is None
+        and days is None
+        and not dry_run
+        and save_html is None
+        and not fetch_live
+        and not force
+    ):
+        args = parse_args()
+        config_path = args.config_path
+        storage_dir = args.storage_dir
+        user_filter = args.user_filter
+        days = args.days
+        dry_run = args.dry_run
+        save_html = args.output_html
+        fetch_live = args.fetch
+        force = args.force
+    else:
+        config_path = config_path or 'config.yaml'
 
     try:
-        config = read_config(args.config_path)
+        config = read_config(config_path)
     except FileNotFoundError:
         sys.exit(1)
 
     # Sprawdzenie czy moduł raportów jest włączony w configu
     report_cfg = config.get('progress_report', {})
-    if not report_cfg.get('enabled', True) and not args.force:
+    if not report_cfg.get('enabled', True) and not force:
         logger.info("Moduł progress_report jest wyłączony w konfiguracji ('enabled: false'). Użyj flagi --force, aby go wymusić.")
         return
 
-    storage = create_storage(storage_dir=config.get('storage_dir', 'storage'))
+    effective_storage_dir = storage_dir or config.get('storage_dir', 'storage')
+    storage = create_storage(storage_dir=effective_storage_dir)
 
-    mail_sender = configure_mail_provider(config)
+    mail_sender = None
+    if not dry_run and not save_html:
+        try:
+            mail_sender = configure_mail_provider(config)
+        except Exception as e:
+            logger.error(f"Błąd konfiguracji dostawcy poczty (sekcja 'mail' w configu): {e}")
+            sys.exit(1)
 
     users = config.get('librus_users', [])
-    if args.user_filter:
-        filter_val = str(args.user_filter).strip().lower()
+    if user_filter:
+        filter_val = str(user_filter).strip().lower()
         matched = [
             u for u in users
             if filter_val in str(u.get('librus_login', '')).lower()
             or filter_val in str(u.get('librus_login_name', '')).lower()
         ]
         if not matched:
-            # Sprawdzenie czy istnieje plik stanu w storage (np. konto testowe/archiwalne)
-            if storage.has_existing_data(args.user_filter) or storage.get_grades_history(args.user_filter):
+            # Sprawdzenie czy istnieje plik stanu w storage (np. konto testowe/archiwalne/przykładowe)
+            if storage.has_existing_data(user_filter) or storage.get_grades_history(user_filter):
                 default_receivers = users[0].get('notification_receivers', []) if users else []
-                custom_name = storage.get_student_name(args.user_filter) if hasattr(storage, 'get_student_name') else None
-                student_name = custom_name or f"Uczeń testowy ({args.user_filter})"
+                custom_name = storage.get_student_name(user_filter) if hasattr(storage, 'get_student_name') else None
+                student_name = custom_name or f"Uczeń ({user_filter})"
                 matched = [{
-                    'librus_login': str(args.user_filter),
+                    'librus_login': str(user_filter),
                     'librus_login_name': student_name,
                     'notification_receivers': default_receivers,
                 }]
-                logger.info(f"Użytkownik '{args.user_filter}' nie figuruje w pliku konfiguracyjnym, ale odnaleziono dane w storage. Załadowano profil '{student_name}'.")
+                logger.info(f"Użytkownik '{user_filter}' nie figuruje w pliku konfiguracyjnym, ale odnaleziono dane w storage. Załadowano profil '{student_name}'.")
             else:
-                logger.error(f"Nie znaleziono użytkownika pasującego do filtru: '{args.user_filter}'")
+                logger.error(f"Nie znaleziono użytkownika pasującego do filtru: '{user_filter}' w katalogu '{effective_storage_dir}'")
                 sys.exit(1)
         users = matched
+    else:
+        # Jeśli nie podano filtru użytkownika, sprawdzamy czy użytkownicy z config.yaml posiadają dane w storage.
+        # W przypadku wskazania zewnętrznego storage_dir bez wspólnych kont, automatycznie pobieramy znalezione profile.
+        stored_logins = storage.list_stored_logins() if hasattr(storage, 'list_stored_logins') else []
+        config_logins = {str(u.get('librus_login')) for u in users}
+        has_overlap = any(login in config_logins for login in stored_logins)
+
+        if not has_overlap and stored_logins:
+            default_receivers = users[0].get('notification_receivers', []) if users else []
+            auto_users = []
+            for s_login in stored_logins:
+                s_name = storage.get_student_name(s_login) or f"Uczeń ({s_login})"
+                auto_users.append({
+                    'librus_login': str(s_login),
+                    'librus_login_name': s_name,
+                    'notification_receivers': default_receivers,
+                })
+            logger.info(f"Załadowano profile uczniów odnalezione w '{effective_storage_dir}': {[u['librus_login_name'] for u in auto_users]}")
+            users = auto_users
 
     for user_config in users:
         login = str(user_config.get('librus_login', ''))
@@ -215,7 +288,7 @@ def run_progress_reports():
 
         # 1. Opcjonalne pobieranie ocen z Librusa (tylko na żądanie --fetch)
         librus = None
-        if args.fetch:
+        if fetch_live:
             try:
                 user_copy = dict(user_config)
                 user_copy['read_grades'] = True
@@ -244,9 +317,9 @@ def run_progress_reports():
         now = datetime.now()
         period_start = None
 
-        if args.days is not None:
-            period_start = now - timedelta(days=args.days)
-            logger.info(f"Zakres raportu: ostatnie {args.days} dni (od {period_start.strftime('%Y-%m-%d %H:%M')})")
+        if days is not None:
+            period_start = now - timedelta(days=days)
+            logger.info(f"Zakres raportu: ostatnie {days} dni (od {period_start.strftime('%Y-%m-%d %H:%M')})")
         else:
             last_report_iso = storage.get_last_progress_report_date(login)
             if last_report_iso:
@@ -269,18 +342,32 @@ def run_progress_reports():
         )
 
         # 5. Weryfikacja czy są nowe oceny do zaraportowania
-        if analysis['period_grades_count'] == 0 and not args.force and not args.dry_run:
+        if analysis['period_grades_count'] == 0 and not force and not dry_run and not save_html:
             logger.info(
                 f"Uczeń {name} ({login}): Brak nowych ocen w analizowanym okresie ({analysis['period_start_str']} – {analysis['period_end_str']}). "
                 f"Raport nie został wysłany. (Użyj flagi --force, aby wymusić wysyłkę raportu bez nowych ocen)."
             )
             continue
 
-        # 6. Tryb Dry-Run lub wysyłka
-        if args.dry_run:
+        # 6. Zapis do pliku HTML (jeśli podano --save-html / -o)
+        if save_html:
+            out_file = resolve_output_path(save_html, login, len(users))
+            body_html = MailSender.create_mail_content_for_progress_report(user_config, analysis)
+            title = MailSender._create_progress_report_title(user_config, analysis)
+            full_html = render_standalone_html(title, body_html)
+            try:
+                with open(out_file, 'w', encoding='utf-8') as f:
+                    f.write(full_html)
+                logger.info(f"Zapisano raport HTML dla ucznia {name} ({login}) -> {out_file}")
+                print(f"✅ Zapisano raport HTML: {out_file}")
+            except Exception as e:
+                logger.error(f"Nie udało się zapisać pliku HTML '{out_file}': {e}")
+
+        # 7. Tryb Dry-Run lub wysyłka pocztowa
+        if dry_run:
             logger.info("Tryb DRY-RUN: prezentacja wyników analizy w terminalu (bez wysyłki maila):")
             print_cli_summary(name, login, analysis)
-        else:
+        elif not save_html:
             logger.info(f"Wysyłam raport postępów dla ucznia {name} ({login})...")
             sent = mail_sender.send_progress_report(user_config, analysis)
             if sent:

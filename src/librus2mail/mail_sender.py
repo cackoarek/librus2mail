@@ -18,6 +18,63 @@ jinja_env = Environment(
 )
 
 
+def resolve_output_path(
+    output_path: str,
+    user_login: str,
+    total_users: int = 1,
+    default_prefix: str = "raport"
+) -> str:
+    """
+    Wyznacza docelową ścieżkę pliku HTML na podstawie parametru wyjściowego, loginu ucznia i liczby uczniów:
+    - Jeśli output_path to katalog (lub kończy się na / lub \\): tworzy katalog i plik '{default_prefix}_<login>.html'.
+    - Jeśli output_path zawiera szablon {login} lub {user}: formatuje go loginem ucznia.
+    - Jeśli jest wielu uczniów i podano pojedynczy plik: dodaje '_<login>' przed rozszerzeniem.
+    - W przeciwnym razie zwraca bezpośrednio output_path.
+    Automatycznie tworzy katalogi nadrzędne, jeśli nie istnieją.
+    """
+    if os.path.isdir(output_path) or output_path.endswith('/') or output_path.endswith('\\'):
+        os.makedirs(output_path, exist_ok=True)
+        return os.path.join(output_path, f"{default_prefix}_{user_login}.html")
+
+    if "{login}" in output_path or "{user}" in output_path:
+        formatted = output_path.format(login=user_login, user=user_login)
+        parent = os.path.dirname(formatted)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        return formatted
+
+    if total_users > 1:
+        base, ext = os.path.splitext(output_path)
+        ext = ext if ext else ".html"
+        filename = f"{base}_{user_login}{ext}"
+        parent = os.path.dirname(filename)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        return filename
+
+    parent = os.path.dirname(output_path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    return output_path
+
+
+def render_standalone_html(title: str, body_html: str) -> str:
+    """Tworzy pełny, samodzielny dokument HTML5 gotowy do otwarcia bezpośrednio w przeglądarce."""
+    return (
+        "<!DOCTYPE html>\n"
+        "<html lang=\"pl\">\n"
+        "<head>\n"
+        "    <meta charset=\"UTF-8\">\n"
+        "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
+        f"    <title>{title}</title>\n"
+        "</head>\n"
+        "<body style=\"margin: 0; padding: 24px 12px; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;\">\n"
+        f"{body_html}\n"
+        "</body>\n"
+        "</html>\n"
+    )
+
+
 class MailSender:
     def __init__(self, mail_config):
         self.sender_email = mail_config['login']

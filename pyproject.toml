@@ -31,7 +31,10 @@ dev = [
 
 [project.scripts]
 librus-collector = "librus2mail.librus_collector:main"
+librus-notifier = "librus2mail.updates_notifier:main"
 librus-report = "librus2mail.progress_report:main"
+librus-collect-and-notify = "librus2mail.collect_and_notify:main"
+librus2mail = "librus2mail.collect_and_notify:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

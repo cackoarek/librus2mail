@@ -41,7 +41,7 @@ python -m pip install -r requirements.txt
 ### Execution
 ```bash
 source venv/bin/activate
-python main.py
+python collect_and_notify.py
 ```
 
 ---
@@ -59,6 +59,7 @@ librus2mail/
 │   └── librus2mail/            # Canonical package (src/ layout, PEP 8)
 │       ├── __init__.py         # Package exports
 │       ├── base_logger.py      # Central logger config ('librus' logger)
+│       ├── collect_and_notify.py # Main orchestrator CLI & pipeline runner
 │       ├── config.py           # YAML configuration loader (read_config)
 │       ├── gmail_sender.py     # MailSender subclass using yagmail for Gmail
 │       ├── librus.py           # Librus scraping & OAuth client class
@@ -68,14 +69,16 @@ librus2mail/
 │       ├── progress_report.py  # Offline progress report generator CLI
 │       ├── smtp_sender.py      # MailSender subclass using standard smtplib + STARTTLS
 │       ├── storage.py          # State and grade history persistence (FileStorage)
+│       ├── updates_notifier.py # Offline updates notifier module
 │       └── templates/emails/   # Jinja2 email templates
 ├── templates/emails/           # HTML templates (synced with package templates)
 ├── tests/                      # Pytest test suite
 ├── pyproject.toml              # Modern PEP 517/518/621 project configuration
 ├── requirements.txt            # Python dependencies (legacy compatibility)
-├── main.py                     # Backward-compatible CLI wrapper calling librus_collector.py
-├── librus_collector.py         # Root CLI entrypoint & wrapper for librus2mail.librus_collector
-├── progress_report.py          # Root CLI entrypoint & wrapper for librus2mail.progress_report
+├── collect_and_notify.py       # Root CLI entrypoint orchestrator
+├── librus_collector.py         # Root CLI entrypoint for librus2mail.librus_collector
+├── updates_notifier.py         # Root CLI entrypoint for librus2mail.updates_notifier
+├── progress_report.py          # Root CLI entrypoint for librus2mail.progress_report
 ├── AGENTS.md                   # Universal AI agent instructions (this file)
 ├── CLAUDE.md                   # Claude Code instructions
 ├── GEMINI.md                   # Google Antigravity / Gemini CLI instructions
@@ -86,13 +89,13 @@ librus2mail/
 
 ## 4. Architecture & Data Flow
 
-1. **Startup (`main.py`)**:
+1. **Startup (`collect_and_notify.py`)**:
    - Reads configuration (`config.yaml` or designated YAML).
    - Instantiates appropriate mail sender via `configure_mail_provider(config)`: `GmailSender` or `SmtpSender`.
    - Initializes a mapping of `Librus` parser instances per user account (`librus_parsers`).
    - Sets up initial state flags (`dry-parse` set from `do_not_send_first_parse`).
 
-2. **Polling Loop (`main.py`)**:
+2. **Polling Loop (`collect_and_notify.py` / `librus_collector.py`)**:
    - For each user in `config['librus_users']`:
      1. Authenticates against Librus via `librus.login()`.
      2. Waits 5 seconds (`sleep(5)`).
@@ -124,7 +127,7 @@ librus2mail/
 - **NEVER stage or commit**: `config.yaml`, `arek_config.yaml`, `*_config.yaml`, `.env`, or `*.log`.
 - **NEVER expose plaintext credentials**: Do not log passwords or logins.
 - **Reference only `config.example.yaml`** when writing docs, examples, or tests.
-- **DO NOT run `python main.py` in autonomous background loops**: It connects to real Librus accounts and may send actual emails to configured parent mailboxes.
+- **DO NOT run `python collect_and_notify.py` in autonomous background loops**: It connects to real Librus accounts and may send actual emails to configured parent mailboxes.
 
 ### 🌐 2. Scraping Fragility & Anti-Ban
 - **Message Read Side-Effect**: In Librus Synergia, visiting `/wiadomosci/szczegoly/...` marks the message as read in the official portal. Both `read_messages` and `read_grades` default to `true` (users can set `read_messages: false` if they wish to avoid marking messages as read on the web portal).

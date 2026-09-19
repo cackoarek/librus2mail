@@ -4,14 +4,14 @@
 - **Environment**: `source venv/bin/activate`
 - **Dependencies**: `pip install -e .` (or `pip install -r requirements.txt`)
 - **Dev tools**: `pip install -e ".[dev]"`
-- **Run**: `librus-collector` or `python main.py` (Caution: live scraper; do not run without user consent)
+- **Run**: `librus-collect-and-notify` or `python collect_and_notify.py` (Caution: live scraper; do not run without user consent)
 - **Report**: `librus-report --dry-run` or `python progress_report.py --dry-run`
 - **Tests**: `pytest`
 - **Linter**: `ruff check`
 
 ## Architecture
 - `src/librus2mail/`: Canonical package with `src/` layout.
-- `main.py` / `librus_collector.py`: Collector entrypoint daemon with main loop (`while True`).
+- `collect_and_notify.py` / `librus_collector.py` / `updates_notifier.py`: CLI entrypoints.
 - `progress_report.py`: Offline progress report generator CLI.
 - `src/librus2mail/mail_sender.py`: Base email class generating HTML emails with Jinja2 templates (`templates/emails/`).
 - `src/librus2mail/gmail_sender.py`: Subclass sending mail through `yagmail`.

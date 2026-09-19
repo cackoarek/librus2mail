@@ -10,6 +10,8 @@ if _src not in sys.path:
 from librus2mail.progress_report import (  # noqa: F401, E402
     main,
     parse_args,
+    render_standalone_html,
+    resolve_output_path,
     run_progress_reports,
 )
 

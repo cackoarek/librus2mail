@@ -13,10 +13,12 @@ class TestPackageLayout(unittest.TestCase):
             FileStorage,
             GmailSender,
             Librus,
+            LibrusCollector,
             MailSender,
             NotLogged,
             ProgressAnalyzer,
             SmtpSender,
+            UpdatesNotifier,
             configure_mail_provider,
             create_storage,
             get_predicted_grade,
@@ -26,11 +28,15 @@ class TestPackageLayout(unittest.TestCase):
             parse_weight,
             read_config,
             run_collector,
+            run_notifier,
+            run_pipeline,
             run_progress_reports,
         )
 
         self.assertTrue(hasattr(librus2mail, "__version__"))
         self.assertIsNotNone(Librus)
+        self.assertIsNotNone(LibrusCollector)
+        self.assertIsNotNone(UpdatesNotifier)
         self.assertIsNotNone(MailSender)
         self.assertIsNotNone(GmailSender)
         self.assertIsNotNone(SmtpSender)
@@ -41,6 +47,8 @@ class TestPackageLayout(unittest.TestCase):
         self.assertIsNotNone(read_config)
         self.assertIsNotNone(logger)
         self.assertIsNotNone(run_collector)
+        self.assertIsNotNone(run_notifier)
+        self.assertIsNotNone(run_pipeline)
         self.assertIsNotNone(run_progress_reports)
         self.assertIsNotNone(configure_mail_provider)
         self.assertIsNotNone(NotLogged)
@@ -61,17 +69,21 @@ class TestPackageLayout(unittest.TestCase):
 
     def test_root_shims_modules_import(self):
         import base_logger
+        import collect_and_notify
         import config
         import librus
         import librus_collector
         import progress_analyzer
         import progress_report
         import storage
+        import updates_notifier
 
         self.assertTrue(hasattr(base_logger, "logger"))
+        self.assertTrue(hasattr(collect_and_notify, "run_pipeline"))
         self.assertTrue(hasattr(config, "read_config"))
         self.assertTrue(hasattr(librus, "Librus"))
         self.assertTrue(hasattr(librus_collector, "run_collector"))
+        self.assertTrue(hasattr(updates_notifier, "run_notifier"))
         self.assertTrue(hasattr(progress_analyzer, "ProgressAnalyzer"))
         self.assertTrue(hasattr(progress_report, "run_progress_reports"))
         self.assertTrue(hasattr(storage, "FileStorage"))

@@ -1,4 +1,7 @@
+import os
+import sys
 import unittest
+from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 from librus import Librus, NotLogged
@@ -384,6 +387,35 @@ class TestLibrus(unittest.TestCase):
         # Wyłączona pętla (work_in_loop: false z podkreśleniem)
         cfg_disabled_underscore = {'work_in_loop': False}
         self.assertFalse(cfg_disabled_underscore.get('work-in-loop', cfg_disabled_underscore.get('work_in_loop', True)))
+
+        # Weryfikacja wykonania w run_collector z work-in-loop: false
+        import tempfile
+
+        import yaml
+
+        from librus2mail.librus_collector import run_collector
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_file = os.path.join(tmp_dir, "config.yaml")
+            with open(cfg_file, "w", encoding="utf-8") as f:
+                yaml.dump({
+                    'work-in-loop': False,
+                    'storage_dir': tmp_dir,
+                    'librus_users': [],
+                    'mail': {'use_gmail': False, 'login': 'a', 'password': 'b'},
+                }, f)
+            # Powinno wykonać 1 przebieg i zakończyć działanie bez zawieszenia w pętli
+            run_collector(config_path=cfg_file, storage_dir=tmp_dir, offline=True)
+
+            # Test z flagą once=True nadpisującą work-in-loop: true
+            with open(cfg_file, "w", encoding="utf-8") as f:
+                yaml.dump({
+                    'work-in-loop': True,
+                    'storage_dir': tmp_dir,
+                    'librus_users': [],
+                    'mail': {'use_gmail': False, 'login': 'a', 'password': 'b'},
+                }, f)
+            run_collector(config_path=cfg_file, storage_dir=tmp_dir, offline=True, once=True)
 
     def test_storage_error_tracking(self):
         import tempfile
@@ -1026,9 +1058,488 @@ class TestLibrus(unittest.TestCase):
         self.assertIn('SPADEK', pc['badge_text'])
         self.assertTrue(any(s['subject'] == 'Matematyka' for s in pc['declining_subjects']))
 
+    def test_progress_report_resolve_output_path_and_render_standalone(self):
+        import tempfile
+
+        from librus2mail.progress_report import render_standalone_html, resolve_output_path
+
+        # 1. Test render_standalone_html
+        rendered = render_standalone_html("Tytuł Raportu", "<div>Zawartość raportu</div>")
+        self.assertIn("<!DOCTYPE html>", rendered)
+        self.assertIn("<meta charset=\"UTF-8\">", rendered)
+        self.assertIn("<title>Tytuł Raportu</title>", rendered)
+        self.assertIn("<div>Zawartość raportu</div>", rendered)
+
+        # 2. Test resolve_output_path
+        # Single user, explicit path
+        p1 = resolve_output_path("raport.html", "111222", total_users=1)
+        self.assertEqual(p1, "raport.html")
+
+        # Multiple users, static path -> adds suffix
+        p2 = resolve_output_path("raport.html", "111222", total_users=2)
+        self.assertEqual(p2, "raport_111222.html")
+
+        # Custom format template with {login}
+        p3 = resolve_output_path("podglad_{login}.html", "111222", total_users=1)
+        self.assertEqual(p3, "podglad_111222.html")
+
+        # Directory path
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_dir = os.path.join(tmpdir, "raporty")
+            p4 = resolve_output_path(out_dir + "/", "111222", total_users=1)
+            self.assertEqual(p4, os.path.join(out_dir, "raport_111222.html"))
+            self.assertTrue(os.path.isdir(out_dir))
+
+    def test_progress_report_save_html_execution(self):
+        import tempfile
+
+        import yaml
+
+        from librus2mail.progress_report import run_progress_reports
+        from librus2mail.storage import FileStorage
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cfg_path = os.path.join(temp_dir, 'config.yaml')
+            storage_dir = os.path.join(temp_dir, 'storage')
+            html_out = os.path.join(temp_dir, 'raport_podglad.html')
+            os.makedirs(storage_dir, exist_ok=True)
+
+            st = FileStorage(storage_dir=storage_dir)
+            st.save_grades_details('888999', [
+                {'id': 'g1', 'subject': 'Fizyka', 'grade': '5', 'weight': '2', 'date': '2026-09-15', 'category': 'Sprawdzian'}
+            ])
+
+            cfg_data = {
+                'storage_dir': storage_dir,
+                'librus_users': [{
+                    'librus_login': '888999',
+                    'librus_login_name': 'Krzysztof',
+                    'notification_receivers': ['test@example.com']
+                }],
+                # Note: No 'mail' section needed when using --save-html!
+            }
+
+            with open(cfg_path, 'w', encoding='utf-8') as f:
+                yaml.dump(cfg_data, f)
+
+            test_args = ['progress_report.py', '-c', cfg_path, '--save-html', html_out]
+            with patch.object(sys, 'argv', test_args):
+                with patch('librus2mail.storage.FileStorage', return_value=st):
+                    run_progress_reports()
+
+            self.assertTrue(os.path.isfile(html_out))
+            with open(html_out, encoding='utf-8') as f:
+                content = f.read()
+
+            self.assertIn("<!DOCTYPE html>", content)
+            self.assertIn("Raport postępów ucznia", content)
+            self.assertIn("Krzysztof", content)
+            self.assertIn("Fizyka", content)
+            self.assertIn("888999", content)
+
+            # Verification that last_progress_report_date was NOT advanced in storage
+            self.assertIsNone(st.get_last_progress_report_date('888999'))
+
+    def test_storage_list_stored_logins_and_cli_storage_dir(self):
+        import tempfile
+
+        import yaml
+
+        from librus2mail.progress_report import run_progress_reports
+        from librus2mail.storage import FileStorage
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            custom_storage = os.path.join(temp_dir, 'custom_storage')
+            os.makedirs(custom_storage, exist_ok=True)
+            html_out = os.path.join(temp_dir, 'out.html')
+
+            st = FileStorage(storage_dir=custom_storage)
+            st.save_grades_details('999111', [
+                {'id': 'g9', 'subject': 'Historia', 'grade': '6', 'weight': '1', 'date': '2026-09-10', 'category': 'Aktywność'}
+            ])
+            # Set student name
+            file_path = os.path.join(custom_storage, '999111.json')
+            import json
+            with open(file_path, encoding='utf-8') as f:
+                d = json.load(f)
+            d['librus_login_name'] = "Testowy Uczeń"
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(d, f)
+
+            self.assertIn('999111', st.list_stored_logins())
+
+            cfg_path = os.path.join(temp_dir, 'config.yaml')
+            cfg_data = {
+                'storage_dir': 'storage',  # purposefully different from custom_storage
+                'librus_users': [],
+            }
+            with open(cfg_path, 'w', encoding='utf-8') as f:
+                yaml.dump(cfg_data, f)
+
+            # Test using -s flag pointing to custom_storage
+            test_args = ['progress_report.py', '-c', cfg_path, '-s', custom_storage, '-o', html_out, '--force']
+            with patch.object(sys, 'argv', test_args):
+                run_progress_reports()
+
+            self.assertTrue(os.path.isfile(html_out))
+            with open(html_out, encoding='utf-8') as f:
+                content = f.read()
+            self.assertIn("Testowy Uczeń", content)
+            self.assertIn("Historia", content)
+
+    def test_collector_parse_item_datetime(self):
+        from librus2mail.librus_collector import parse_item_datetime
+
+        # ISO format
+        dt1 = parse_item_datetime("2026-09-15T14:30:00")
+        self.assertIsNotNone(dt1)
+        self.assertEqual(dt1.day, 15)
+
+        # Standard datetime string
+        dt2 = parse_item_datetime("2026-09-10 12:00:00")
+        self.assertIsNotNone(dt2)
+        self.assertEqual(dt2.hour, 12)
+
+        # Polish day-of-week grade format
+        dt3 = parse_item_datetime("2026-09-08 (wt.)")
+        self.assertIsNotNone(dt3)
+        self.assertEqual(dt3.day, 8)
+
+        # Item dictionary
+        dt4 = parse_item_datetime({'datetime': '2026-09-16 15:39:20'})
+        self.assertIsNotNone(dt4)
+        self.assertEqual(dt4.minute, 39)
+
+        # Invalid/empty
+        self.assertIsNone(parse_item_datetime(""))
+        self.assertIsNone(parse_item_datetime(None))
+
+    def test_collector_simulation_period_and_save_html(self):
+        import json
+        import tempfile
+
+        import yaml
+
+        from librus2mail.librus_collector import run_collector
+        from librus2mail.storage import FileStorage
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage_dir = os.path.join(temp_dir, 'storage')
+            os.makedirs(storage_dir, exist_ok=True)
+            cfg_path = os.path.join(temp_dir, 'config.yaml')
+            html_out = os.path.join(temp_dir, 'powiadomienie.html')
+
+            now = datetime.now()
+            d_recent = (now - timedelta(days=2)).strftime('%Y-%m-%d %H:%M:%S')
+            d_old = (now - timedelta(days=20)).strftime('%Y-%m-%d %H:%M:%S')
+
+            st = FileStorage(storage_dir=storage_dir)
+            st.save_grades_details('777111', [
+                {'id': 'g_rec', 'subject': 'Biologia', 'grade': '5', 'weight': '2', 'date': d_recent, 'category': 'Sprawdzian'},
+                {'id': 'g_old', 'subject': 'Matematyka', 'grade': '3', 'weight': '1', 'date': d_old, 'category': 'Kartkówka'}
+            ])
+            # Add messages & notifications to student json
+            st_path = os.path.join(storage_dir, '777111.json')
+            with open(st_path, encoding='utf-8') as f:
+                d = json.load(f)
+            d['librus_login_name'] = "Alicja Nowak"
+            d['known_messages'] = [
+                f"Zajęcia taneczne{d_recent}Instruktor (Instruktor) [Nauczyciel]",
+                f"Archiwalna wiadomość{d_old}Sekretariat (Sekretariat) [Pracownik]"
+            ]
+            d['known_notifications'] = [
+                f"Wycieczka do teatruNauczyciel{(now - timedelta(days=2)).strftime('%Y-%m-%d')}",
+                f"Dawne ogłoszenieNauczyciel{(now - timedelta(days=20)).strftime('%Y-%m-%d')}"
+            ]
+            with open(st_path, 'w', encoding='utf-8') as f:
+                json.dump(d, f)
+
+            cfg_data = {
+                'storage_dir': storage_dir,
+                'librus_users': [],
+            }
+            with open(cfg_path, 'w', encoding='utf-8') as f:
+                yaml.dump(cfg_data, f)
+
+            # Run simulation with 5 days period (should capture only recent items, excluding old items)
+            run_collector(
+                config_path=cfg_path,
+                storage_dir=storage_dir,
+                days=5,
+                output_html=html_out,
+                dry_run=True,
+                offline=True,
+            )
+
+            self.assertTrue(os.path.isfile(html_out))
+            with open(html_out, encoding='utf-8') as f:
+                content = f.read()
+
+            self.assertIn("Alicja Nowak", content)
+            self.assertIn("Biologia", content)
+            self.assertIn("Zajęcia taneczne", content)
+            self.assertIn("Wycieczka do teatru", content)
+            # Old items must NOT be included in the period notification
+            self.assertNotIn("Archiwalna wiadomość", content)
+            self.assertNotIn("Dawne ogłoszenie", content)
+
+    def test_updates_notifier_standalone_offline_run(self):
+        import json
+        import tempfile
+
+        import yaml
+
+        from librus2mail.updates_notifier import run_notifier
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage_dir = os.path.join(temp_dir, 'storage')
+            os.makedirs(storage_dir, exist_ok=True)
+            cfg_path = os.path.join(temp_dir, 'config.yaml')
+            html_out = os.path.join(temp_dir, 'notif_standalone.html')
+
+            now = datetime.now()
+            d_recent = (now - timedelta(days=1)).strftime('%Y-%m-%d %H:%M:%S')
+
+            st_path = os.path.join(storage_dir, '555666.json')
+            with open(st_path, 'w', encoding='utf-8') as f:
+                json.dump({
+                    'librus_login': '555666',
+                    'librus_login_name': 'Tomasz Zieliński',
+                    'known_messages': [f"Ważny komunikat{d_recent}Wychowawca (Wychowawca) [Nauczyciel]"],
+                    'known_notifications': [f"Zebranie z rodzicamiDyrekcja{(now - timedelta(days=1)).strftime('%Y-%m-%d')}"],
+                    'grades_history': {
+                        'g55': {
+                            'id': 'g55',
+                            'subject': 'Geografia',
+                            'grade': '5',
+                            'weight': '2',
+                            'date': d_recent,
+                            'category': 'Kartkówka',
+                        }
+                    }
+                }, f)
+
+            cfg_data = {
+                'storage_dir': storage_dir,
+                'librus_users': [],
+            }
+            with open(cfg_path, 'w', encoding='utf-8') as f:
+                yaml.dump(cfg_data, f)
+
+            results = run_notifier(
+                config_path=cfg_path,
+                storage_dir=storage_dir,
+                days=3,
+                dry_run=True,
+                output_html=html_out,
+                offline=True,
+            )
+
+            self.assertEqual(len(results), 1)
+            self.assertEqual(results[0]['login'], '555666')
+            self.assertEqual(len(results[0]['messages']), 1)
+            self.assertEqual(len(results[0]['notifications']), 1)
+            self.assertEqual(len(results[0]['grades']), 1)
+
+            self.assertTrue(os.path.isfile(html_out))
+            with open(html_out, encoding='utf-8') as f:
+                content = f.read()
+            self.assertIn("Tomasz Zieliński", content)
+            self.assertIn("Ważny komunikat", content)
+            self.assertIn("Geografia", content)
+
+    def test_pipeline_orchestrator_modes(self):
+        import tempfile
+
+        import yaml
+
+        from librus2mail.collect_and_notify import run_pipeline
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage_dir = os.path.join(temp_dir, 'storage')
+            os.makedirs(storage_dir, exist_ok=True)
+            cfg_path = os.path.join(temp_dir, 'config.yaml')
+
+            cfg_data = {
+                'storage_dir': storage_dir,
+                'librus_users': [],
+                'mail': {'use_gmail': False, 'login': 'test@example.com', 'password': 'pwd'},
+            }
+            with open(cfg_path, 'w', encoding='utf-8') as f:
+                yaml.dump(cfg_data, f)
+
+            # Test 1: collect_only with offline=True (should finish without error)
+            run_pipeline(
+                config_path=cfg_path,
+                storage_dir=storage_dir,
+                collect_only=True,
+                offline=True,
+            )
+
+            # Test 2: notify_only with dry_run (should finish without error)
+            run_pipeline(
+                config_path=cfg_path,
+                storage_dir=storage_dir,
+                notify_only=True,
+                dry_run=True,
+            )
+
+            # Test 3: report with dry_run and force (should finish without error)
+            run_pipeline(
+                config_path=cfg_path,
+                storage_dir=storage_dir,
+                report=True,
+                dry_run=True,
+                force=True,
+            )
+
+    def test_storage_watermarks_persistence(self):
+        import json
+        import tempfile
+
+        from librus2mail.storage import FileStorage
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage = FileStorage(temp_dir)
+            login = "123456u"
+
+            # Check initial state
+            self.assertIsNone(storage.get_last_collect_time(login))
+            self.assertIsNone(storage.get_last_notify_time(login))
+
+            # Save and verify last_collect_time
+            collect_iso = "2026-09-18T10:00:00"
+            storage.save_last_collect_time(login, collect_iso)
+            self.assertEqual(storage.get_last_collect_time(login), collect_iso)
+
+            # Save and verify last_notify_time / last_update_create
+            notify_iso = "2026-09-18T12:30:00"
+            storage.save_last_notify_time(login, notify_iso)
+            self.assertEqual(storage.get_last_notify_time(login), notify_iso)
+
+            # Check backward/alias compatibility: last_update_create in raw JSON
+            file_path = os.path.join(temp_dir, f"{login}.json")
+            with open(file_path, encoding='utf-8') as f:
+                data = json.load(f)
+            self.assertEqual(data.get('last_collect_time'), collect_iso)
+            self.assertEqual(data.get('last_notify_time'), notify_iso)
+            self.assertEqual(data.get('last_update_create'), notify_iso)
+
+    def test_updates_notifier_watermark_flow(self):
+        import tempfile
+        from unittest.mock import MagicMock
+
+        from librus2mail.storage import FileStorage
+        from librus2mail.updates_notifier import UpdatesNotifier
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage = FileStorage(temp_dir)
+            login = "test_student"
+            user_cfg = {
+                'librus_login': login,
+                'librus_login_name': "Jan Kowalski",
+                'email': "parent@example.com",
+                'read_grades': True,
+            }
+            config = {
+                'storage_dir': temp_dir,
+                'librus_users': [user_cfg],
+                'mail': {'use_gmail': False, 'login': 'test@example.com', 'password': 'pwd'},
+            }
+
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            # Populate storage with initial history
+            storage.save_messages_details(login, [
+                {'id': 'msg1', 'title': 'Wiadomość 1', 'sender': 'Nauczyciel', 'datetime': now_str}
+            ])
+            storage.save_grades_details(login, [
+                {'id': 'grade1', 'subject': 'Matematyka', 'grade': '5', 'weight': '2', 'date': '2026-09-18'}
+            ])
+
+            mock_mail_sender = MagicMock()
+            notifier = UpdatesNotifier(config, storage=storage, mail_sender=mock_mail_sender)
+
+            # 1. Preview mode (dry_run=True): should not advance last_notify_time
+            notifier.process_user_notifications(user_cfg, dry_run=True)
+            self.assertIsNone(storage.get_last_notify_time(login))
+            mock_mail_sender.send_mail_with_messages.assert_not_called()
+
+            # 2. Production delivery: sends mail and saves last_notify_time
+            notifier.process_user_notifications(user_cfg, dry_run=False)
+            first_notify_time = storage.get_last_notify_time(login)
+            self.assertIsNotNone(first_notify_time)
+            self.assertEqual(mock_mail_sender.send_mail_with_messages.call_count, 1)
+
+            # 3. Subsequent run without new items: should find 0 new items because cutoff is after the old items
+            mock_mail_sender.reset_mock()
+            res_next = notifier.process_user_notifications(user_cfg, dry_run=False)
+            self.assertEqual(len(res_next['messages']), 0)
+            self.assertEqual(len(res_next['grades']), 0)
+            mock_mail_sender.send_mail_with_messages.assert_not_called()
+
+    def test_no_new_items_logs_skip_notification(self):
+        import tempfile
+        from unittest.mock import MagicMock, patch
+
+        from librus2mail.librus_collector import LibrusCollector
+        from librus2mail.storage import FileStorage
+        from librus2mail.updates_notifier import UpdatesNotifier
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage = FileStorage(temp_dir)
+            login = "test_student_logs"
+            user_cfg = {
+                'librus_login': login,
+                'librus_login_name': "Anna Nowak",
+                'email': "parent@example.com",
+                'read_grades': True,
+            }
+            config = {
+                'storage_dir': temp_dir,
+                'librus_users': [user_cfg],
+                'mail': {'use_gmail': False, 'login': 'test@example.com', 'password': 'pwd'},
+            }
+
+            # Test UpdatesNotifier logging when no new items are found
+            mock_mail_sender = MagicMock()
+            notifier = UpdatesNotifier(config, storage=storage, mail_sender=mock_mail_sender)
+
+            with self.assertLogs('librus2mail.updates_notifier', level='INFO') as cm:
+                res = notifier.process_user_notifications(
+                    user_cfg,
+                    new_messages=[],
+                    new_notifications=[],
+                    new_grades=[],
+                    dry_run=False,
+                )
+                self.assertEqual(len(res['messages']), 0)
+                self.assertTrue(
+                    any("Brak nowych informacji" in msg and "nie zostało wysłane" in msg for msg in cm.output),
+                    f"Expected skip log not found in: {cm.output}"
+                )
+
+            # Test LibrusCollector logging when no new items are found
+            collector = LibrusCollector(config, storage=storage)
+            mock_librus = MagicMock()
+            mock_librus.get_not_known_messages_and_mark_as_known.return_value = []
+            mock_librus.get_not_known_notifications_and_mark_as_known.return_value = []
+            mock_librus.get_not_known_grades_and_mark_as_known.return_value = []
+            collector.parsers[login] = mock_librus
+
+            with patch('librus2mail.librus_collector.sleep'):
+                with self.assertLogs('librus2mail.librus_collector', level='INFO') as cm_collector:
+                    collect_res = collector.collect_user(user_cfg)
+                    self.assertTrue(collect_res['success'])
+                    self.assertTrue(
+                        any("Brak nowych wpisów w dzienniku" in msg for msg in cm_collector.output),
+                        f"Expected collection log not found in: {cm_collector.output}"
+                    )
+
 
 if __name__ == '__main__':
     unittest.main()
+
 
 
 

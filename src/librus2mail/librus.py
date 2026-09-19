@@ -300,6 +300,16 @@ class Librus:
                     str(self.__librus_login),
                     self.grades
                 )
+            if hasattr(self, 'messages') and self.messages and hasattr(self.__storage, 'save_messages_details'):
+                self.__storage.save_messages_details(
+                    str(self.__librus_login),
+                    self.messages
+                )
+            if hasattr(self, 'notifications') and self.notifications and hasattr(self.__storage, 'save_notifications_details'):
+                self.__storage.save_notifications_details(
+                    str(self.__librus_login),
+                    self.notifications
+                )
 
     def get_not_known_messages_and_mark_as_known(self) -> list[dict[str, bool | str | Any]]:
         resp = [message for message in self.messages if message['id'] not in self.__known_messages]

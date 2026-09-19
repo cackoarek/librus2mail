@@ -7,7 +7,7 @@
 Security Guardrails:
 - NEVER output, commit, or stage sensitive credentials found in `config.yaml`, `arek_config.yaml`, or other local configs.
 - Always use `config.example.yaml` as the template.
-- Never execute `python main.py` in background commands without explicit user confirmation, as it triggers real web requests to Librus and sends live emails.
+- Never execute `python collect_and_notify.py` or `python librus_collector.py` in background commands without explicit user confirmation, as it triggers real web requests to Librus and sends live emails.
 
 Code Guidelines:
 - Use `logger = logging.getLogger(__name__)` for logging; do not use `print()`.

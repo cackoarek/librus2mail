@@ -1,73 +1,216 @@
-<p>Zbiorcze powiadomienie z Librusa dla konta {{ user_config.librus_login }} <strong>({{ user_config.librus_login_name or user_config.librus_login }})</strong>.</p>
-<p>&nbsp;</p>
+<div style="width: 100%; max-width: 680px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; line-height: 1.5; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; box-sizing: border-box; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);">
+    <!-- Nagłówek -->
+    <div style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #2563eb 100%); color: #ffffff; padding: 22px 24px;">
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <td align="left" valign="middle">
+                    <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #93c5fd; margin-bottom: 4px;">
+                        📬 LIBRUS SYNERGIA • POWIADOMIENIE BIEŻĄCE
+                    </div>
+                    <h1 style="margin: 0; font-size: 20px; font-weight: 700; color: #ffffff; line-height: 1.3;">
+                        {{ user_config.librus_login_name or user_config.librus_login }}
+                    </h1>
+                    <div style="margin-top: 6px; font-size: 13px; color: #e2e8f0;">
+                        Konto ucznia: <code style="background: rgba(255,255,255,0.18); color: #ffffff; padding: 2px 6px; border-radius: 4px; font-size: 12px; font-family: monospace;">{{ user_config.librus_login }}</code>
+                    </div>
+                </td>
+                <td align="right" valign="middle" style="text-align: right;">
+                    <div style="background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 8px; padding: 6px 12px; display: inline-block; text-align: center;">
+                        <div style="font-size: 10px; text-transform: uppercase; color: #bfdbfe; font-weight: 600;">Status</div>
+                        <div style="font-size: 12px; font-weight: 700; color: #ffffff;">Nowe wpisy</div>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
 
-{% if messages %}
-<h3 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 5px; margin-top: 20px;">Nowe wiadomości ({{ messages | length }})</h3>
-<table border="1" cellspacing="0" cellpadding="10" style="border-collapse: collapse; width: 100%; font-family: Arial, sans-serif; font-size: 14px;">
-<thead><tr style="background-color: #f2f2f2; text-align: left;"><th>Tytuł</th><th>Nadawca</th><th>Data</th></tr></thead>
-<tbody>
-{% for message in messages %}
-    <tr>
-        <td><strong>{{ message.title }}</strong></td>
-        <td><strong>{{ message.sender }}</strong></td>
-        <td><strong>{{ message.datetime }}</strong></td>
-    </tr>
-    {% if message.body %}
-    <tr><td colspan="3" style="background-color: #fcfcfc;">{{ message.body | replace('\n', '<br>') | safe }}</td></tr>
-    {% endif %}
-{% endfor %}
-</tbody>
-</table>
-<p>&nbsp;</p>
-{% endif %}
+    <div style="padding: 20px 24px; box-sizing: border-box;">
+        <!-- Kafelki podsumowujące -->
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; margin-bottom: 24px; border-collapse: separate; border-spacing: 8px;">
+            <tr>
+                {% if messages %}
+                <td width="33%" valign="top" style="background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 12px 10px; text-align: center;">
+                    <div style="font-size: 11px; font-weight: 700; color: #0284c7; text-transform: uppercase;">Wiadomości</div>
+                    <div style="font-size: 24px; font-weight: 800; color: #0369a1; margin: 3px 0;">{{ messages | length }}</div>
+                    <div style="font-size: 11px; color: #0284c7;">nowe w skrzynce</div>
+                </td>
+                {% endif %}
+                {% if notifications %}
+                <td width="33%" valign="top" style="background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 10px; text-align: center;">
+                    <div style="font-size: 11px; font-weight: 700; color: #d97706; text-transform: uppercase;">Ogłoszenia</div>
+                    <div style="font-size: 24px; font-weight: 800; color: #b45309; margin: 3px 0;">{{ notifications | length }}</div>
+                    <div style="font-size: 11px; color: #d97706;">nowe ze szkoły</div>
+                </td>
+                {% endif %}
+                {% if grades %}
+                <td width="33%" valign="top" style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 10px; text-align: center;">
+                    <div style="font-size: 11px; font-weight: 700; color: #16a34a; text-transform: uppercase;">Oceny</div>
+                    <div style="font-size: 24px; font-weight: 800; color: #15803d; margin: 3px 0;">{{ grades | length }}</div>
+                    <div style="font-size: 11px; color: #16a34a;">nowe w dzienniku</div>
+                </td>
+                {% endif %}
+            </tr>
+        </table>
 
-{% if notifications %}
-<h3 style="color: #2c3e50; border-bottom: 2px solid #e67e22; padding-bottom: 5px; margin-top: 20px;">Nowe ogłoszenia ({{ notifications | length }})</h3>
-<table border="1" cellspacing="0" cellpadding="10" style="border-collapse: collapse; width: 100%; font-family: Arial, sans-serif; font-size: 14px;">
-<thead><tr style="background-color: #f2f2f2; text-align: left;"><th>Tytuł</th><th>Nadawca</th><th>Data</th></tr></thead>
-<tbody>
-{% for notification in notifications %}
-    <tr>
-        <td><strong>{{ notification.title }}</strong></td>
-        <td><strong>{{ notification.sender }}</strong></td>
-        <td><strong>{{ notification.datetime }}</strong></td>
-    </tr>
-    {% if notification.body %}
-    <tr><td colspan="3" style="background-color: #fcfcfc;">{{ notification.body | replace('\n', '<br>') | safe }}</td></tr>
-    {% endif %}
-{% endfor %}
-</tbody>
-</table>
-<p>&nbsp;</p>
-{% endif %}
+        <!-- Nowe oceny -->
+        {% if grades %}
+        <div style="margin-bottom: 28px;">
+            <div style="border-bottom: 2px solid #10b981; padding-bottom: 8px; margin-bottom: 12px;">
+                <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #0f172a;">📝 Nowe oceny ({{ grades | length }})</h3>
+            </div>
+            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+                <thead>
+                    <tr style="background-color: #f8fafc; color: #475569; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e2e8f0;">
+                    <th style="padding: 10px 10px;">Przedmiot</th>
+                    <th style="padding: 10px 6px; text-align: center;">Ocena</th>
+                    <th style="padding: 10px 8px;">Kategoria</th>
+                    <th style="padding: 10px 6px; text-align: center;">Waga</th>
+                    <th style="padding: 10px 8px;">Data</th>
+                    <th style="padding: 10px 10px;">Nauczyciel</th>
+                    <th style="padding: 10px 10px;">Komentarz</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for grade in grades %}
+                <tr style="border-bottom: 1px solid #f1f5f9; background-color: {{ '#ffffff' if loop.index0 % 2 == 0 else '#fafafa' }};">
+                    <td style="padding: 10px 10px; font-weight: 600; color: #1e293b;">
+                        {{ grade.subject }}
+                    </td>
+                    <td style="padding: 10px 6px; text-align: center;">
+                        {{ grade.grade | grade_badge }}
+                    </td>
+                    <td style="padding: 10px 8px; color: #475569;">
+                        {{ grade.category or '-' }}
+                    </td>
+                    <td style="padding: 10px 6px; text-align: center;">
+                        {% if grade.weight and grade.weight != '-' %}
+                        <span style="background-color: #f1f5f9; color: #334155; font-weight: 700; font-size: 12px; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0;">
+                            ×{{ grade.weight }}
+                        </span>
+                        {% else %}
+                        <span style="color: #94a3b8;">-</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 10px 8px; color: #64748b; white-space: nowrap; font-size: 12px;">
+                        {{ grade.date or '-' }}
+                    </td>
+                    <td style="padding: 10px 10px; color: #475569; font-size: 12px;">
+                        {{ grade.teacher or '-' }}
+                    </td>
+                    <td style="padding: 10px 10px; font-size: 12px;">
+                        {% if grade.comment and grade.comment != '-' %}
+                        <span style="color: #0f172a; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 2px 7px; display: inline-block; font-size: 11px; line-height: 1.4;">
+                            💬 {{ grade.comment }}
+                        </span>
+                        {% else %}
+                        <span style="color: #94a3b8;">-</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+        {% endif %}
 
-{% if grades %}
-<h3 style="color: #2c3e50; border-bottom: 2px solid #27ae60; padding-bottom: 5px; margin-top: 20px;">Nowe oceny ({{ grades | length }})</h3>
-<table border="1" cellspacing="0" cellpadding="8" style="border-collapse: collapse; width: 100%; font-family: Arial, sans-serif; font-size: 14px;">
-<thead>
-    <tr style="background-color: #f2f2f2; text-align: left;">
-        <th>Przedmiot</th>
-        <th style="text-align: center;">Ocena</th>
-        <th>Kategoria</th>
-        <th style="text-align: center;">Waga</th>
-        <th>Data</th>
-        <th>Nauczyciel</th>
-        <th>Komentarz</th>
-    </tr>
-</thead>
-<tbody>
-{% for grade in grades %}
-    <tr>
-        <td><strong>{{ grade.subject }}</strong></td>
-        <td style="text-align: center; font-size: 16px;"><strong>{{ grade.grade }}</strong></td>
-        <td>{{ grade.category or '-' }}</td>
-        <td style="text-align: center;">{{ grade.weight or '-' }}</td>
-        <td>{{ grade.date or '-' }}</td>
-        <td>{{ grade.teacher or '-' }}</td>
-        <td>{{ grade.comment or '-' }}</td>
-    </tr>
-{% endfor %}
-</tbody>
-</table>
-<p>&nbsp;</p>
-{% endif %}
+        <!-- Nowe wiadomości -->
+        {% if messages %}
+        <div style="margin-bottom: 28px;">
+            <div style="border-bottom: 2px solid #3b82f6; padding-bottom: 8px; margin-bottom: 12px;">
+                <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #0f172a;">✉️ Nowe wiadomości ({{ messages | length }})</h3>
+            </div>
+            {% for message in messages %}
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 12px; background-color: #ffffff; overflow: hidden;">
+                <div style="background-color: #f8fafc; padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                        <tr>
+                            <td align="left">
+                                <div style="font-size: 14px; font-weight: 700; color: #1e293b;">
+                                    {{ message.title }}
+                                </div>
+                                <div style="font-size: 12px; color: #64748b; margin-top: 2px;">
+                                    👤 Od: <strong style="color: #334155;">{{ message.sender }}</strong>
+                                </div>
+                            </td>
+                            <td align="right" valign="top" style="text-align: right; white-space: nowrap;">
+                                <span style="background-color: #eff6ff; color: #1e40af; border: 1px solid #dbeafe; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">
+                                    🗓️ {{ message.datetime }}
+                                </span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                {% if message.body and message.body.strip() %}
+                <div style="padding: 12px 14px; background-color: #ffffff;">
+                    <div style="background-color: #f8fafc; border-left: 3px solid #3b82f6; padding: 10px 14px; border-radius: 0 6px 6px 0; font-size: 13px; color: #334155; line-height: 1.6;">
+                        {{ message.body | replace('\n', '<br>') | safe }}
+                    </div>
+                </div>
+                {% else %}
+                <div style="padding: 10px 14px; background-color: #ffffff;">
+                    <div style="font-size: 12px; color: #94a3b8; font-style: italic;">
+                        ℹ️ Treść wiadomości nie została pobrana (opcja <code>read_messages: false</code> w konfiguracji lub wiadomość archiwalna). Zaloguj się do portalu Librus, aby przeczytać całość.
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Nowe ogłoszenia -->
+        {% if notifications %}
+        <div style="margin-bottom: 28px;">
+            <div style="border-bottom: 2px solid #f59e0b; padding-bottom: 8px; margin-bottom: 12px;">
+                <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #0f172a;">📢 Nowe ogłoszenia ({{ notifications | length }})</h3>
+            </div>
+            {% for notification in notifications %}
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 12px; background-color: #ffffff; overflow: hidden;">
+                <div style="background-color: #fffbeb; padding: 10px 14px; border-bottom: 1px solid #fef3c7;">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                        <tr>
+                            <td align="left">
+                                <div style="font-size: 14px; font-weight: 700; color: #1e293b;">
+                                    {{ notification.title }}
+                                </div>
+                                <div style="font-size: 12px; color: #92400e; margin-top: 2px;">
+                                    📢 Nadawca: <strong>{{ notification.sender }}</strong>
+                                </div>
+                            </td>
+                            <td align="right" valign="top" style="text-align: right; white-space: nowrap;">
+                                <span style="background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">
+                                    🗓️ {{ notification.datetime }}
+                                </span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                {% if notification.body and notification.body.strip() %}
+                <div style="padding: 12px 14px; background-color: #ffffff;">
+                    <div style="background-color: #fefce8; border-left: 3px solid #f59e0b; padding: 10px 14px; border-radius: 0 6px 6px 0; font-size: 13px; color: #78350f; line-height: 1.6;">
+                        {{ notification.body | replace('\n', '<br>') | safe }}
+                    </div>
+                </div>
+                {% else %}
+                <div style="padding: 10px 14px; background-color: #ffffff;">
+                    <div style="font-size: 12px; color: #94a3b8; font-style: italic;">
+                        ℹ️ Brak dodatkowej treści ogłoszenia.
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Stopka -->
+        <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0; text-align: center;">
+            <a href="https://synergia.librus.pl" style="display: inline-block; background-color: #2563eb; color: #ffffff; text-decoration: none; padding: 9px 18px; border-radius: 6px; font-size: 13px; font-weight: 600; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);">
+                Zaloguj się do Librus Synergia &rarr;
+            </a>
+            <div style="font-size: 11px; color: #94a3b8; margin-top: 12px;">
+                Powiadomienie wygenerowane automatycznie przez usługę <strong>Librus2mail</strong>.
+            </div>
+        </div>
+    </div>
+</div>

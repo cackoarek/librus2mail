@@ -128,7 +128,9 @@ def print_cli_summary(
             weight = g.get('weight', '-')
             date = g.get('date', '-')
             cat = g.get('category', '-')
-            print(f"  • {subj}: {val} (waga: {weight}, data: {date}, kat: {cat})")
+            comm = g.get('comment')
+            comm_str = f" | kom: \"{comm}\"" if comm and comm != '-' else ""
+            print(f"  • {subj}: {val} (waga: {weight}, data: {date}, kat: {cat}{comm_str})")
         print()
 
     print(f"{sep}\n")
@@ -185,6 +187,7 @@ class UpdatesNotifier:
         dry_run: bool = False,
         output_html: str | None = None,
         total_users: int = 1,
+        summary: bool | None = None,
     ) -> dict[str, Any]:
         """
         Przetwarza powiadomienie dla pojedynczego ucznia:
@@ -298,7 +301,10 @@ class UpdatesNotifier:
                 )
             else:
                 sender = self.get_or_create_mail_sender()
-                one_summary = user_config.get('one_summary_message', False)
+                one_summary = summary if summary is not None else user_config.get(
+                    'one_summary_message',
+                    self.config.get('one_summary_message', False)
+                )
                 if one_summary:
                     logger.info(
                         f"Nowe wpisy dla {name} (wiadomości: {len(filtered_messages)}, "
@@ -340,6 +346,7 @@ def run_notifier(
     user_filter: str | None = None,
     offline: bool = True,
     collected_data: dict[str, dict] | None = None,
+    summary: bool | None = None,
 ) -> list[dict[str, Any]]:
     """
     Główna funkcja uruchamiająca moduł UpdatesNotifier.
@@ -362,13 +369,20 @@ def run_notifier(
         ]
         if not matched:
             if storage.has_existing_data(user_filter) or storage.get_grades_history(user_filter):
-                default_receivers = users[0].get('notification_receivers', []) if users else []
+                first_user = users[0] if users else {}
+                default_receivers = first_user.get('notification_receivers', [])
+                default_one_summary = first_user.get('one_summary_message', config.get('one_summary_message', False))
+                default_read_grades = first_user.get('read_grades', config.get('read_grades', True))
+                default_read_messages = first_user.get('read_messages', config.get('read_messages', True))
                 custom_name = storage.get_student_name(user_filter) if hasattr(storage, 'get_student_name') else None
                 student_name = custom_name or f"Uczeń ({user_filter})"
                 matched = [{
                     'librus_login': str(user_filter),
                     'librus_login_name': student_name,
                     'notification_receivers': default_receivers,
+                    'one_summary_message': default_one_summary,
+                    'read_grades': default_read_grades,
+                    'read_messages': default_read_messages,
                 }]
                 logger.info(f"Załadowano profil ze storage dla '{user_filter}': '{student_name}'.")
             else:
@@ -381,7 +395,11 @@ def run_notifier(
         config_logins = {str(u.get('librus_login')) for u in users}
         has_overlap = any(login in config_logins for login in stored_logins)
         if not has_overlap and stored_logins:
-            default_receivers = users[0].get('notification_receivers', []) if users else []
+            first_user = users[0] if users else {}
+            default_receivers = first_user.get('notification_receivers', [])
+            default_one_summary = first_user.get('one_summary_message', config.get('one_summary_message', False))
+            default_read_grades = first_user.get('read_grades', config.get('read_grades', True))
+            default_read_messages = first_user.get('read_messages', config.get('read_messages', True))
             auto_users = []
             for s_login in stored_logins:
                 s_name = storage.get_student_name(s_login) or f"Uczeń ({s_login})"
@@ -389,6 +407,9 @@ def run_notifier(
                     'librus_login': str(s_login),
                     'librus_login_name': s_name,
                     'notification_receivers': default_receivers,
+                    'one_summary_message': default_one_summary,
+                    'read_grades': default_read_grades,
+                    'read_messages': default_read_messages,
                 })
             logger.info(f"Załadowano profile uczniów odnalezione w '{effective_storage_dir}': {[u['librus_login_name'] for u in auto_users]}")
             users = auto_users
@@ -410,6 +431,7 @@ def run_notifier(
             dry_run=dry_run,
             output_html=output_html,
             total_users=len(users),
+            summary=summary,
         )
         results.append(res)
 
@@ -465,6 +487,13 @@ def main():
         help="Zapisz powiadomienie jako samodzielny plik HTML pod wskazaną ścieżką (pomija wysyłkę e-mail)"
     )
     parser.add_argument(
+        '--summary',
+        dest='summary',
+        action='store_true',
+        default=None,
+        help="Wymuś wysłanie 1 zbiorczego e-maila ze wszystkimi nowościami (zamiast osobnych wiadomości, ogłoszeń i ocen)"
+    )
+    parser.add_argument(
         'config',
         nargs='?',
         default=None,
@@ -483,6 +512,7 @@ def main():
         output_html=args.output_html,
         user_filter=args.user_filter,
         offline=True,
+        summary=args.summary,
     )
 
 

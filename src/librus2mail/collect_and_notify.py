@@ -43,6 +43,7 @@ def run_pipeline(
     work_in_loop: bool | None = None,
     once: bool = False,
     loop: bool = False,
+    summary: bool | None = None,
 ):
     """
     Główna funkcja wykonawcza potoku collect-and-notify:
@@ -76,6 +77,7 @@ def run_pipeline(
             output_html=output_html,
             user_filter=user_filter,
             offline=offline,
+            summary=summary,
         )
         return
 
@@ -90,6 +92,7 @@ def run_pipeline(
             work_in_loop=work_in_loop,
             once=once,
             loop=loop,
+            summary=summary,
         )
         return
 
@@ -108,6 +111,7 @@ def run_pipeline(
         work_in_loop=work_in_loop,
         once=once,
         loop=loop,
+        summary=summary,
     )
 
 
@@ -209,6 +213,13 @@ def main():
         help="Wymuś działanie w nieskończonej pętli z interwałem wait_time_s (nadpisuje work-in-loop z konfiguracji)"
     )
     parser.add_argument(
+        '--summary',
+        dest='summary',
+        action='store_true',
+        default=None,
+        help="Wymuś wysłanie 1 zbiorczego e-maila ze wszystkimi nowościami zamiast osobnych wiadomości, ogłoszeń i ocen"
+    )
+    parser.add_argument(
         'config',
         nargs='?',
         default=None,
@@ -235,6 +246,7 @@ def main():
         fetch=args.fetch,
         once=args.once,
         loop=args.loop,
+        summary=args.summary,
     )
 
 

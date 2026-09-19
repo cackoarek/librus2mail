@@ -9,6 +9,7 @@ import yaml
 
 from librus import Librus, NotLogged
 from librus2mail.librus_collector import LibrusCollector, run_collector
+from librus2mail.updates_notifier import UpdatesNotifier
 
 
 class TestLibrus(unittest.TestCase):
@@ -1629,6 +1630,71 @@ class TestLibrus(unittest.TestCase):
                 run_collector(config_path=cfg_file)
                 # Powiadomienia o nowościach NIE powinny być wywołane, gdy pobieranie zawiodło
                 mock_notifier.assert_not_called()
+
+    def test_updates_notifier_summary_override_and_one_summary_message(self):
+        """Testuje czy opcja one_summary_message i flaga --summary wysyłają 1 mail podsumowujący."""
+        user_cfg = {
+            'librus_login': '12345',
+            'librus_login_name': 'Kasia',
+            'notification_receivers': ['parent@example.com'],
+            'one_summary_message': False,
+        }
+        mock_messages = [{'title': 'M', 'sender': 'S', 'datetime': '2026-09-18 10:00:00', 'body': 'Treść'}]
+        mock_notifications = [{'title': 'O', 'sender': 'S', 'date': '2026-09-18', 'body': 'Treść'}]
+        mock_grades = [{'id': '1', 'subject': 'Matematyka', 'grade': '5', 'date': '2026-09-18'}]
+
+        mock_storage = MagicMock()
+        mock_storage.get_student_name.return_value = 'Kasia'
+        mock_storage.get_last_notify_time.return_value = None
+
+        mock_sender = MagicMock()
+
+        notifier = UpdatesNotifier({'mail': {'use_gmail': False}}, storage=mock_storage)
+        notifier.get_or_create_mail_sender = MagicMock(return_value=mock_sender)
+
+        # 1. Domyślnie one_summary_message=False -> 3 osobne maile
+        notifier.process_user_notifications(
+            user_config=dict(user_cfg),
+            new_messages=mock_messages,
+            new_notifications=mock_notifications,
+            new_grades=mock_grades,
+            dry_run=False,
+        )
+        mock_sender.send_mail_with_summary.assert_not_called()
+        mock_sender.send_mail_with_messages.assert_called_once()
+        mock_sender.send_mail_with_notifications.assert_called_once()
+        mock_sender.send_mail_with_grades.assert_called_once()
+
+        mock_sender.reset_mock()
+
+        # 2. Flaga summary=True (np. z CLI --summary) nadpisuje one_summary_message=False -> 1 zbiorczy mail
+        notifier.process_user_notifications(
+            user_config=dict(user_cfg),
+            new_messages=mock_messages,
+            new_notifications=mock_notifications,
+            new_grades=mock_grades,
+            dry_run=False,
+            summary=True,
+        )
+        mock_sender.send_mail_with_summary.assert_called_once()
+        mock_sender.send_mail_with_messages.assert_not_called()
+        mock_sender.send_mail_with_notifications.assert_not_called()
+        mock_sender.send_mail_with_grades.assert_not_called()
+
+        mock_sender.reset_mock()
+
+        # 3. user_config z one_summary_message=True -> 1 zbiorczy mail
+        cfg_with_summary = dict(user_cfg)
+        cfg_with_summary['one_summary_message'] = True
+        notifier.process_user_notifications(
+            user_config=cfg_with_summary,
+            new_messages=mock_messages,
+            new_notifications=mock_notifications,
+            new_grades=mock_grades,
+            dry_run=False,
+        )
+        mock_sender.send_mail_with_summary.assert_called_once()
+        mock_sender.send_mail_with_messages.assert_not_called()
 
 
 if __name__ == '__main__':

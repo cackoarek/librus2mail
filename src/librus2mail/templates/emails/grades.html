@@ -1,28 +1,94 @@
-<p>W Librusie dla konta {{ user_config.librus_login }} <strong>({{ user_config.librus_login_name or user_config.librus_login }})</strong> pojawiły się <strong>nowe oceny</strong>.</p>
-<p>&nbsp;</p>
-<table border="1" cellspacing="0" cellpadding="8" style="border-collapse: collapse; width: 100%; font-family: Arial, sans-serif;">
-<thead>
-    <tr style="background-color: #f2f2f2; text-align: left;">
-        <th>Przedmiot</th>
-        <th style="text-align: center;">Ocena</th>
-        <th>Kategoria</th>
-        <th style="text-align: center;">Waga</th>
-        <th>Data</th>
-        <th>Nauczyciel</th>
-        <th>Komentarz</th>
-    </tr>
-</thead>
-<tbody>
-{% for grade in grades %}
-    <tr>
-        <td><strong>{{ grade.subject }}</strong></td>
-        <td style="text-align: center; font-size: 16px;"><strong>{{ grade.grade }}</strong></td>
-        <td>{{ grade.category or '-' }}</td>
-        <td style="text-align: center;">{{ grade.weight or '-' }}</td>
-        <td>{{ grade.date or '-' }}</td>
-        <td>{{ grade.teacher or '-' }}</td>
-        <td>{{ grade.comment or '-' }}</td>
-    </tr>
-{% endfor %}
-</tbody>
-</table>
+<div style="width: 100%; max-width: 680px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; line-height: 1.5; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; box-sizing: border-box; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);">
+    <!-- Nagłówek -->
+    <div style="background: linear-gradient(135deg, #064e3b 0%, #059669 50%, #10b981 100%); color: #ffffff; padding: 22px 24px;">
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <td align="left" valign="middle">
+                    <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #a7f3d0; margin-bottom: 4px;">
+                        📝 LIBRUS SYNERGIA • NOWE OCENY
+                    </div>
+                    <h1 style="margin: 0; font-size: 20px; font-weight: 700; color: #ffffff; line-height: 1.3;">
+                        {{ user_config.librus_login_name or user_config.librus_login }}
+                    </h1>
+                    <div style="margin-top: 6px; font-size: 13px; color: #d1fae5;">
+                        Konto ucznia: <code style="background: rgba(255,255,255,0.18); color: #ffffff; padding: 2px 6px; border-radius: 4px; font-size: 12px; font-family: monospace;">{{ user_config.librus_login }}</code>
+                    </div>
+                </td>
+                <td align="right" valign="middle" style="text-align: right;">
+                    <div style="background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 8px; padding: 6px 12px; display: inline-block; text-align: center;">
+                        <div style="font-size: 10px; text-transform: uppercase; color: #a7f3d0; font-weight: 600;">Liczba</div>
+                        <div style="font-size: 14px; font-weight: 700; color: #ffffff;">{{ grades | length }}</div>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div style="padding: 20px 24px; box-sizing: border-box;">
+        <div style="border-bottom: 2px solid #10b981; padding-bottom: 8px; margin-bottom: 12px;">
+            <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #0f172a;">Nowe oceny ({{ grades | length }})</h3>
+        </div>
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+            <thead>
+                <tr style="background-color: #f8fafc; color: #475569; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e2e8f0;">
+                    <th style="padding: 10px 10px;">Przedmiot</th>
+                    <th style="padding: 10px 6px; text-align: center;">Ocena</th>
+                    <th style="padding: 10px 8px;">Kategoria</th>
+                    <th style="padding: 10px 6px; text-align: center;">Waga</th>
+                    <th style="padding: 10px 8px;">Data</th>
+                    <th style="padding: 10px 10px;">Nauczyciel</th>
+                    <th style="padding: 10px 10px;">Komentarz</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for grade in grades %}
+                <tr style="border-bottom: 1px solid #f1f5f9; background-color: {{ '#ffffff' if loop.index0 % 2 == 0 else '#fafafa' }};">
+                    <td style="padding: 10px 10px; font-weight: 600; color: #1e293b;">
+                        {{ grade.subject }}
+                    </td>
+                    <td style="padding: 10px 6px; text-align: center;">
+                        {{ grade.grade | grade_badge }}
+                    </td>
+                    <td style="padding: 10px 8px; color: #475569;">
+                        {{ grade.category or '-' }}
+                    </td>
+                    <td style="padding: 10px 6px; text-align: center;">
+                        {% if grade.weight and grade.weight != '-' %}
+                        <span style="background-color: #f1f5f9; color: #334155; font-weight: 700; font-size: 12px; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0;">
+                            ×{{ grade.weight }}
+                        </span>
+                        {% else %}
+                        <span style="color: #94a3b8;">-</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 10px 8px; color: #64748b; white-space: nowrap; font-size: 12px;">
+                        {{ grade.date or '-' }}
+                    </td>
+                    <td style="padding: 10px 10px; color: #475569; font-size: 12px;">
+                        {{ grade.teacher or '-' }}
+                    </td>
+                    <td style="padding: 10px 10px; font-size: 12px;">
+                        {% if grade.comment and grade.comment != '-' %}
+                        <span style="color: #0f172a; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 2px 7px; display: inline-block; font-size: 11px; line-height: 1.4;">
+                            💬 {{ grade.comment }}
+                        </span>
+                        {% else %}
+                        <span style="color: #94a3b8;">-</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Stopka -->
+        <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0; text-align: center;">
+            <a href="https://synergia.librus.pl" style="display: inline-block; background-color: #059669; color: #ffffff; text-decoration: none; padding: 9px 18px; border-radius: 6px; font-size: 13px; font-weight: 600; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);">
+                Zaloguj się do Librus Synergia &rarr;
+            </a>
+            <div style="font-size: 11px; color: #94a3b8; margin-top: 12px;">
+                Powiadomienie wygenerowane automatycznie przez usługę <strong>Librus2mail</strong>.
+            </div>
+        </div>
+    </div>
+</div>

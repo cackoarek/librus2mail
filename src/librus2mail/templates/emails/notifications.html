@@ -1,26 +1,79 @@
-<p>W Librusie dla konta {{ user_config.librus_login }} <strong>({{ user_config.librus_login_name or user_config.librus_login }})</strong> pojawiły się <strong>nowe ogłoszenia</strong>.</p>
-<p>&nbsp;</p>
-<p>Lista wszystkich ogłoszeń (nowe <strong>boldem</strong>):</p>
-<table border="1" cellspacing="0" cellpadding="10">
-<thead><tr><th>Tytuł</th><th>Nadawca</th><th>Data</th></tr></thead>
-<tbody>
-{% for notification in notifications %}
-  {% if notification.is_unread %}
-    <tr>
-      <td><strong>{{ notification.title }}</strong></td>
-      <td><strong>{{ notification.sender }}</strong></td>
-      <td><strong>{{ notification.datetime }}</strong></td>
-    {% if notification.body %}
-    </tr><tr><td colspan="3">{{ notification.body | replace('\n', '<br>') | safe }}</td>
-    {% endif %}
-    </tr>
-  {% else %}
-    <tr>
-      <td>{{ notification.title }}</td>
-      <td>{{ notification.sender }}</td>
-      <td>{{ notification.datetime }}</td>
-    </tr>
-  {% endif %}
-{% endfor %}
-</tbody>
-</table>
+<div style="width: 100%; max-width: 680px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; line-height: 1.5; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; box-sizing: border-box; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);">
+    <!-- Nagłówek -->
+    <div style="background: linear-gradient(135deg, #78350f 0%, #d97706 50%, #f59e0b 100%); color: #ffffff; padding: 22px 24px;">
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <td align="left" valign="middle">
+                    <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #fef3c7; margin-bottom: 4px;">
+                        📢 LIBRUS SYNERGIA • NOWE OGŁOSZENIA
+                    </div>
+                    <h1 style="margin: 0; font-size: 20px; font-weight: 700; color: #ffffff; line-height: 1.3;">
+                        {{ user_config.librus_login_name or user_config.librus_login }}
+                    </h1>
+                    <div style="margin-top: 6px; font-size: 13px; color: #fef3c7;">
+                        Konto ucznia: <code style="background: rgba(255,255,255,0.18); color: #ffffff; padding: 2px 6px; border-radius: 4px; font-size: 12px; font-family: monospace;">{{ user_config.librus_login }}</code>
+                    </div>
+                </td>
+                <td align="right" valign="middle" style="text-align: right;">
+                    <div style="background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 8px; padding: 6px 12px; display: inline-block; text-align: center;">
+                        <div style="font-size: 10px; text-transform: uppercase; color: #fef3c7; font-weight: 600;">Liczba</div>
+                        <div style="font-size: 14px; font-weight: 700; color: #ffffff;">{{ notifications | length }}</div>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div style="padding: 20px 24px; box-sizing: border-box;">
+        <div style="border-bottom: 2px solid #f59e0b; padding-bottom: 8px; margin-bottom: 16px;">
+            <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #0f172a;">Nowe ogłoszenia ({{ notifications | length }})</h3>
+        </div>
+
+        {% for notification in notifications %}
+        <div style="border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 14px; background-color: #ffffff; overflow: hidden;">
+            <div style="background-color: #fffbeb; padding: 12px 14px; border-bottom: 1px solid #fef3c7;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                    <tr>
+                        <td align="left">
+                            <div style="font-size: 14.5px; font-weight: 700; color: #1e293b;">
+                                {{ notification.title }}
+                            </div>
+                            <div style="font-size: 12px; color: #92400e; margin-top: 3px;">
+                                📢 Nadawca: <strong>{{ notification.sender }}</strong>
+                            </div>
+                        </td>
+                        <td align="right" valign="top" style="text-align: right; white-space: nowrap;">
+                            <span style="background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">
+                                🗓️ {{ notification.datetime }}
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            {% if notification.body and notification.body.strip() %}
+            <div style="padding: 14px; background-color: #ffffff;">
+                <div style="background-color: #fefce8; border-left: 3px solid #f59e0b; padding: 12px 14px; border-radius: 0 6px 6px 0; font-size: 13px; color: #78350f; line-height: 1.6;">
+                    {{ notification.body | replace('\n', '<br>') | safe }}
+                </div>
+            </div>
+            {% else %}
+            <div style="padding: 12px 14px; background-color: #ffffff;">
+                <div style="font-size: 12px; color: #94a3b8; font-style: italic;">
+                    ℹ️ Brak dodatkowej treści ogłoszenia.
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <!-- Stopka -->
+        <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0; text-align: center;">
+            <a href="https://synergia.librus.pl" style="display: inline-block; background-color: #d97706; color: #ffffff; text-decoration: none; padding: 9px 18px; border-radius: 6px; font-size: 13px; font-weight: 600; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);">
+                Zaloguj się do Librus Synergia &rarr;
+            </a>
+            <div style="font-size: 11px; color: #94a3b8; margin-top: 12px;">
+                Powiadomienie wygenerowane automatycznie przez usługę <strong>Librus2mail</strong>.
+            </div>
+        </div>
+    </div>
+</div>

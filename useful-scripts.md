@@ -97,7 +97,7 @@ Dzięki przełącznikom trybów umożliwia również jednorazowe uruchomienie do
 python collect_and_notify.py [-h] [--collect-only] [--notify-only] [--report]
                              [-c CONFIG] [-s STORAGE_DIR] [-u USER] [-d DAYS]
                              [--hours HOURS] [--dry-run] [-o OUTPUT] [--offline]
-                             [--fetch] [-f] [--once] [--loop] [config]
+                             [--fetch] [-f] [--once] [--loop] [--summary] [config]
 # lub zarejestrowane polecenia CLI:
 librus-collect-and-notify [opcje]
 librus2mail [opcje]
@@ -111,6 +111,7 @@ librus2mail [opcje]
 | `--collect-only`, `--sync-only` | **Moduł 1** | Uruchamia wyłącznie pobieranie danych z Librusa i zapis do `storage/` bez wysyłania maili. |
 | `--notify-only` | **Moduł 2** | Uruchamia wyłącznie analizę bazy `storage/` i wysyłkę powiadomień (e-mail / terminal / HTML). Działa w 100% offline. |
 | `--report` | **Moduł 3** | Uruchamia generator raportu analitycznego postępów (`progress_report.py`). |
+| `--summary` | **Format e-mail** | Wymusza wysłanie 1 zbiorczego e-maila ze wszystkimi nowościami (zamiast osobnych wiadomości, ogłoszeń i ocen). Nadpisuje `one_summary_message`. |
 | `--once`, `--no-loop` | **Sterowanie pętlą** | Wymusza pojedyncze wykonanie i natychmiastowe zakończenie procesu (nadpisuje `work-in-loop: true`). |
 | `--loop` | **Sterowanie pętlą** | Wymusza działanie w nieskończonej pętli z interwałem `wait_time_s` (nadpisuje `work-in-loop: false`). |
 
@@ -132,7 +133,10 @@ venv/bin/python collect_and_notify.py --notify-only --days 3 -o podglad.html
 # 5. Szybki podgląd w terminalu powiadomień ze wskazanego katalogu testowego:
 venv/bin/python collect_and_notify.py --notify-only -s examples/storage --days 14 --dry-run
 
-# 6. Wygenerowanie pełnego raportu postępów (Moduł 3) do pliku HTML:
+# 6. Wysłanie przykładowego powiadomienia testowego na e-mail jako 1 zbiorczy mail:
+venv/bin/python collect_and_notify.py --notify-only -s examples/storage --days 14 --summary
+
+# 7. Wygenerowanie pełnego raportu postępów (Moduł 3) do pliku HTML:
 venv/bin/python collect_and_notify.py --report --days 30 -o raport_miesieczny.html
 ```
 
@@ -191,7 +195,7 @@ Działa w **100% offline** na danych zebranych w `storage/`.
 
 ### 💻 Składnia polecenia
 ```bash
-python updates_notifier.py [-h] [-c CONFIG] [-s STORAGE_DIR] [-u USER] [-d DAYS] [--hours HOURS] [--dry-run] [-o OUTPUT] [config]
+python updates_notifier.py [-h] [-c CONFIG] [-s STORAGE_DIR] [-u USER] [-d DAYS] [--hours HOURS] [--dry-run] [-o OUTPUT] [--summary] [config]
 # lub:
 librus-notifier [opcje]
 ```
@@ -203,6 +207,7 @@ librus-notifier [opcje]
 | `--days <N>` | `-d` | `None` | Uznaje wpisy z ostatnich `N` dni za "nowe" (filtr czasowy). |
 | `--hours <N>` | — | `None` | Uznaje wpisy z ostatnich `N` godzin za "nowe" (np. `--hours 12`). |
 | `--dry-run` | — | `False` | Wyświetla podsumowanie wpisów w terminalu bez wysyłki maila. |
+| `--summary` | — | `False` (z configu) | Wymusza wysłanie 1 zbiorczego e-maila ze wszystkimi nowościami zamiast osobnych wiadomości, ogłoszeń i ocen (szablon `summary.html`). Nadpisuje `one_summary_message`. |
 | `--save-html <plik>`<br>`--output <plik>` | `-o` | `None` | Zapisuje powiadomienie jako samodzielny plik HTML do weryfikacji w przeglądarce. |
 | `--user <login/nazwa>` | `-u` | `None` | Filtruje powiadomienie do wybranego konta dziecka. |
 | `--storage-dir <kat>` | `-s` | z configu | Ścieżka do katalogu pamięci stanu (np. `examples/storage`). |
@@ -237,7 +242,10 @@ venv/bin/python updates_notifier.py --days 3 -o podglad_powiadomienia.html
 # 4. Wygenerowanie powiadomienia ze wskazanego katalogu testowego:
 venv/bin/python updates_notifier.py -s examples/storage --days 14 -o examples/reports/powiadomienie_collector.html
 
-# 5. Sprawdzenie powiadomień dla konkretnego dziecka:
+# 5. Wysłanie przykładowego powiadomienia ze storage testowego na skonfigurowany e-mail (1 zbiorczy mail):
+venv/bin/python updates_notifier.py -s examples/storage --days 14 --summary
+
+# 6. Sprawdzenie powiadomień dla konkretnego dziecka:
 venv/bin/python updates_notifier.py -u 8979296 --days 7 --dry-run
 ```
 
@@ -355,7 +363,8 @@ sudo journalctl -u librus2mail -f -n 50
 | **Nieregularne powiadomienie (od ost. wysyłki)** | `venv/bin/python updates_notifier.py` |
 | **Podgląd powiadomień w terminalu (np. ost. 7 dni)** | `venv/bin/python updates_notifier.py --days 7 --dry-run` |
 | **Zapis powiadomienia e-mail do pliku HTML** | `venv/bin/python updates_notifier.py --days 3 -o podglad.html` |
-| **Symulacja offline z zewnętrznego storage** | `venv/bin/python updates_notifier.py -s examples/storage --days 14 -o examples/reports/powiadomienie.html` |
+| **Symulacja offline z zewnętrznego storage (HTML)** | `venv/bin/python updates_notifier.py -s examples/storage --days 14 -o examples/reports/powiadomienie.html` |
+| **Wysłanie testowego powiadomienia na e-mail (1 zbiorczy mail)** | `venv/bin/python updates_notifier.py -s examples/storage --days 14 --summary` |
 | **Okresowy raport postępów ucznia (e-mail)** | `venv/bin/python progress_report.py` |
 | **Podgląd raportu postępów w terminalu** | `venv/bin/python progress_report.py --dry-run` |
 | **Wygenerowanie raportu HTML do podglądu** | `venv/bin/python progress_report.py -o raport.html` |

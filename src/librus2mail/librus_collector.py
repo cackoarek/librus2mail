@@ -214,12 +214,13 @@ def run_collector(
     work_in_loop: bool | None = None,
     once: bool = False,
     loop: bool = False,
+    summary: bool | None = None,
 ):
     """
     Główna usługa pobierająca (collector):
     - W trybie sieciowym pobiera dane z Librusa i zapisuje je do bazy storage/.
     - Jeśli sync_only=False (domyślnie), przekazuje zebrane dane do UpdatesNotifier
-      w celu wysyłki powiadomień e-mail, podglądu lub zapisu do pliku HTML.
+    w celu wysyłki powiadomień e-mail, podglądu lub zapisu do pliku HTML.
     """
     config = read_config(config_path)
 
@@ -251,13 +252,20 @@ def run_collector(
         ]
         if not matched:
             if storage.has_existing_data(user_filter) or storage.get_grades_history(user_filter):
-                default_receivers = users[0].get('notification_receivers', []) if users else []
+                first_user = users[0] if users else {}
+                default_receivers = first_user.get('notification_receivers', [])
+                default_one_summary = first_user.get('one_summary_message', config.get('one_summary_message', False))
+                default_read_grades = first_user.get('read_grades', config.get('read_grades', True))
+                default_read_messages = first_user.get('read_messages', config.get('read_messages', True))
                 custom_name = storage.get_student_name(user_filter) if hasattr(storage, 'get_student_name') else None
                 student_name = custom_name or f"Uczeń ({user_filter})"
                 matched = [{
                     'librus_login': str(user_filter),
                     'librus_login_name': student_name,
                     'notification_receivers': default_receivers,
+                    'one_summary_message': default_one_summary,
+                    'read_grades': default_read_grades,
+                    'read_messages': default_read_messages,
                 }]
                 logger.info(f"Załadowano profil ze storage: '{student_name}'.")
             else:
@@ -269,7 +277,11 @@ def run_collector(
         config_logins = {str(u.get('librus_login')) for u in users}
         has_overlap = any(login in config_logins for login in stored_logins)
         if not has_overlap and stored_logins:
-            default_receivers = users[0].get('notification_receivers', []) if users else []
+            first_user = users[0] if users else {}
+            default_receivers = first_user.get('notification_receivers', [])
+            default_one_summary = first_user.get('one_summary_message', config.get('one_summary_message', False))
+            default_read_grades = first_user.get('read_grades', config.get('read_grades', True))
+            default_read_messages = first_user.get('read_messages', config.get('read_messages', True))
             auto_users = []
             for s_login in stored_logins:
                 s_name = storage.get_student_name(s_login) or f"Uczeń ({s_login})"
@@ -277,6 +289,9 @@ def run_collector(
                     'librus_login': str(s_login),
                     'librus_login_name': s_name,
                     'notification_receivers': default_receivers,
+                    'one_summary_message': default_one_summary,
+                    'read_grades': default_read_grades,
+                    'read_messages': default_read_messages,
                 })
             logger.info(f"Załadowano profile uczniów odnalezione w '{effective_storage_dir}': {[u['librus_login_name'] for u in auto_users]}")
             users = auto_users
@@ -325,6 +340,7 @@ def run_collector(
                     dry_run=dry_run,
                     output_html=output_html,
                     total_users=len(users),
+                    summary=summary,
                 )
                 if user_config.get('dry-parse'):
                     user_config['dry-parse'] = False
@@ -416,6 +432,13 @@ def main():
         help="Wymuś działanie w nieskończonej pętli z interwałem wait_time_s (nadpisuje work-in-loop z konfiguracji)"
     )
     parser.add_argument(
+        '--summary',
+        dest='summary',
+        action='store_true',
+        default=None,
+        help="Wymuś wysłanie 1 zbiorczego e-maila ze wszystkimi nowościami zamiast osobnych wiadomości, ogłoszeń i ocen"
+    )
+    parser.add_argument(
         'config',
         nargs='?',
         default=None,
@@ -436,6 +459,7 @@ def main():
         sync_only=args.sync_only,
         once=args.once,
         loop=args.loop,
+        summary=args.summary,
     )
 
 

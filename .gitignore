@@ -21,7 +21,8 @@ __pycache__/
 .vscode/
 
 # Pliki stanu aplikacji (storage)
-storage/
+/storage/
+!examples/storage/
 *.tmp
 
 # Pakiety, kompilacja i cache narzędzi

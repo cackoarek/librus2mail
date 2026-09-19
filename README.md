@@ -1,4 +1,4 @@
-﻿<div align="center">
+<div align="center">
 
 # 📬 Librus2mail
 
@@ -20,11 +20,9 @@
   oraz zaawansowany silnik analizy trendów, wag ocen i symulator świadectwa z wyróżnieniem.
 </p>
 
-</div>
-
----
-	
 [🚀 Szybki start](#instalacja) • [⚙️ Konfiguracja](#konfiguracja) • [🐳 Docker](#konteneryzacja-docker-i-docker-compose) • [📊 Raport postępów](#moduł-raportu-postępów-dziecka-progress_reportpy) • [❓ FAQ](#najczęstsze-pytania-i-rozwiązywanie-problemów-faq)
+
+</div>
 
 ---
 
@@ -55,6 +53,7 @@ Poniżej możesz zobaczyć jak wyglądają e-maile generowane przez projekt — 
 > Raporty są automatycznie generowane i publikowane przy każdym wydaniu nowej wersji.
 
 </div>
+
 ---
 
 ## Spis treści
@@ -658,6 +657,8 @@ librus2mail/
 ├── updates_notifier.py         # Moduł 2: CLI bieżących powiadomień
 ├── progress_report.py          # Moduł 3: CLI generatora raportów postępów
 ├── useful-scripts.md           # Kompletny podręcznik wszystkich skryptów i opcji CLI
+├── CHANGELOG.md                # Historia wydań i zmian (Keep a Changelog)
+├── RELEASING.md                # Procedura wydawania wersji i konfiguracji GitHub Pages
 ├── README.md                   # Niniejsza dokumentacja
 └── AGENTS.md                   # Instrukcje dla agentów AI i deweloperów
 ```

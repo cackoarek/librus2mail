@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import yaml
 
-from librus import Librus, NotLogged
+from librus2mail.librus import Librus, NotLogged
 from librus2mail.librus_collector import LibrusCollector, run_collector
 from librus2mail.updates_notifier import UpdatesNotifier
 
@@ -326,7 +326,7 @@ class TestLibrus(unittest.TestCase):
             mock_smtp.return_value.sendmail.assert_called_once()
 
     def test_create_storage_defaults(self):
-        from storage import FileStorage, create_storage
+        from librus2mail.storage import FileStorage, create_storage
         st = create_storage()
         self.assertIsInstance(st, FileStorage)
         self.assertEqual(st.storage_dir, "storage")
@@ -334,7 +334,7 @@ class TestLibrus(unittest.TestCase):
     def test_file_storage_persistence(self):
         import tempfile
 
-        from storage import FileStorage, create_storage
+        from librus2mail.storage import FileStorage, create_storage
 
         with tempfile.TemporaryDirectory() as tmpdir:
             storage = FileStorage(storage_dir=tmpdir)
@@ -357,7 +357,7 @@ class TestLibrus(unittest.TestCase):
     def test_librus_with_storage_integration(self):
         import tempfile
 
-        from storage import FileStorage
+        from librus2mail.storage import FileStorage
 
         with tempfile.TemporaryDirectory() as tmpdir:
             storage = FileStorage(storage_dir=tmpdir)
@@ -425,7 +425,7 @@ class TestLibrus(unittest.TestCase):
     def test_storage_error_tracking(self):
         import tempfile
 
-        from storage import FileStorage
+        from librus2mail.storage import FileStorage
 
         with tempfile.TemporaryDirectory() as tmpdir:
             fs = FileStorage(storage_dir=tmpdir)
@@ -503,7 +503,7 @@ class TestLibrus(unittest.TestCase):
         import time
 
         from librus2mail.mail_sender import MailSender
-        from storage import FileStorage
+        from librus2mail.storage import FileStorage
 
         with tempfile.TemporaryDirectory() as tmpdir:
             storage = FileStorage(storage_dir=tmpdir)
@@ -540,7 +540,7 @@ class TestLibrus(unittest.TestCase):
 
         from librus2mail.gmail_sender import GmailSender
         from librus2mail.smtp_sender import SmtpSender
-        from storage import FileStorage
+        from librus2mail.storage import FileStorage
 
         mail_cfg = {
             'login': 'test@example.com',
@@ -627,7 +627,7 @@ class TestLibrus(unittest.TestCase):
                 librus.login()
 
     def test_read_config_missing_file_raises_filenotfounderror(self):
-        from config import read_config
+        from librus2mail.config import read_config
         with self.assertRaises(FileNotFoundError) as ctx:
             read_config('non_existent_config_file_12345.yaml')
         self.assertIn("config.example.yaml", str(ctx.exception))
@@ -636,7 +636,7 @@ class TestLibrus(unittest.TestCase):
     def test_read_config_valid_file_loads_successfully(self):
         import tempfile
 
-        from config import read_config
+        from librus2mail.config import read_config
         with tempfile.NamedTemporaryFile('w', suffix='.yaml', delete=False) as f:
             f.write("test_key: test_value\n")
             f_name = f.name
@@ -650,7 +650,12 @@ class TestLibrus(unittest.TestCase):
 
 
     def test_progress_analyzer_helpers(self):
-        from progress_analyzer import get_predicted_grade, parse_grade_date, parse_numeric_grade, parse_weight
+        from librus2mail.progress_analyzer import (
+            get_predicted_grade,
+            parse_grade_date,
+            parse_numeric_grade,
+            parse_weight,
+        )
 
         # Grades parsing
         self.assertEqual(parse_numeric_grade('5'), 5.0)
@@ -694,7 +699,7 @@ class TestLibrus(unittest.TestCase):
     def test_progress_analyzer_full_analysis(self):
         from datetime import datetime
 
-        from progress_analyzer import ProgressAnalyzer
+        from librus2mail.progress_analyzer import ProgressAnalyzer
 
         grades = [
             # Matematyka: historyczna 4 (waga 1), nowa 5 (waga 2) -> trend up
@@ -735,7 +740,7 @@ class TestLibrus(unittest.TestCase):
         import shutil
         import tempfile
 
-        from storage import FileStorage
+        from librus2mail.storage import FileStorage
 
         temp_dir = tempfile.mkdtemp()
         try:
@@ -863,8 +868,8 @@ class TestLibrus(unittest.TestCase):
 
         import yaml
 
+        from librus2mail.storage import FileStorage
         from progress_report import run_progress_reports
-        from storage import FileStorage
 
         temp_dir = tempfile.mkdtemp()
         cfg_path = os.path.join(temp_dir, 'config.yaml')
@@ -898,7 +903,7 @@ class TestLibrus(unittest.TestCase):
         # Run with --dry-run (offline by default)
         test_args = ['progress_report.py', '-c', cfg_path, '--dry-run']
         with patch.object(sys, 'argv', test_args):
-            with patch('storage.FileStorage', return_value=st):
+            with patch('librus2mail.storage.FileStorage', return_value=st):
                 # Should execute cleanly without errors or sending emails
                 run_progress_reports()
 
@@ -906,7 +911,7 @@ class TestLibrus(unittest.TestCase):
     def test_progress_analyzer_new_features(self):
         from datetime import datetime, timedelta
 
-        from progress_analyzer import ProgressAnalyzer
+        from librus2mail.progress_analyzer import ProgressAnalyzer
 
         now = datetime(2026, 9, 20)
         old_date = (now - timedelta(days=40)).strftime('%Y-%m-%d')
@@ -949,7 +954,7 @@ class TestLibrus(unittest.TestCase):
         self.assertIn('trends', analysis['legend'])
 
     def test_progress_analyzer_learning_style(self):
-        from progress_analyzer import ProgressAnalyzer
+        from librus2mail.progress_analyzer import ProgressAnalyzer
 
         # Uczeń ma 5 ze sprawdzianów (waga 3) i 2 z kartkówek (waga 1)
         grades_daily_lower = [
@@ -977,7 +982,7 @@ class TestLibrus(unittest.TestCase):
         from datetime import datetime, timedelta
 
         from librus2mail.mail_sender import MailSender
-        from progress_analyzer import ProgressAnalyzer
+        from librus2mail.progress_analyzer import ProgressAnalyzer
 
         now = datetime(2026, 9, 20)
         grades = [

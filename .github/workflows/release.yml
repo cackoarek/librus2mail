@@ -480,6 +480,10 @@ jobs:
 
           echo "✅ Root index.html wygenerowany z $(echo "$VERSIONS" | wc -w) wersjami."
 
+          # Wyłącz silnik Jekyll, aby GitHub Pages serwował czyste pliki HTML 1:1
+          touch pages/.nojekyll
+          echo "✅ Utworzono plik .nojekyll"
+
       - name: Commit and push to gh-pages
         working-directory: pages
         run: |

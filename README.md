@@ -1,4 +1,4 @@
-<div align="center">
+﻿<div align="center">
 
 # 📬 Librus2mail
 
@@ -20,20 +20,6 @@
   oraz zaawansowany silnik analizy trendów, wag ocen i symulator świadectwa z wyróżnieniem.
 </p>
 
-### 📄 Przykładowe raporty (na żywo)
-
-Poniżej możesz zobaczyć jak wyglądają e-maile generowane przez projekt — bez instalacji czegokolwiek:
-
-| Raport | Opis | Link |
-|:---|:---|:---|
-| 📬 **Powiadomienie e-mail** | Zbiorczy e-mail z ocenami, wiadomościami i ogłoszeniami | [→ Otwórz](https://cackoarek.github.io/librus2mail/latest/powiadomienie_collector.html) |
-| 📊 **Raport postępów ucznia** | Analiza trendów, średnie ważone, symulator czerwonego paska | [→ Otwórz](https://cackoarek.github.io/librus2mail/latest/raport_8979296.html) |
-| 📁 **Wszystkie wersje** | Archiwum raportów dla każdej wydanej wersji | [→ Przeglądaj](https://cackoarek.github.io/librus2mail/) |
-
-> Raporty są automatycznie generowane i publikowane przy każdym wydaniu nowej wersji.
-
-[🚀 Szybki start](#instalacja) • [⚙️ Konfiguracja](#konfiguracja) • [🐳 Docker](#konteneryzacja-docker-i-docker-compose) • [📊 Raport postępów](#moduł-raportu-postępów-dziecka-progress_reportpy) • [❓ FAQ](#najczęstsze-pytania-i-rozwiązywanie-problemów-faq)
-
 </div>
 
 ---
@@ -49,6 +35,25 @@ Poniżej możesz zobaczyć jak wyglądają e-maile generowane przez projekt — 
 * 🐳 **Proste wdrożenie DevOps**: Gotowy obraz Docker, konfiguracja Docker Compose oraz produkcyjne jednostki `systemd` (usługa + timer) dla serwerów Linux, Raspberry Pi lub domowych serwerów NAS.
 * 🛡️ **Prywatność i bezpieczeństwo**: Żadne dane uwierzytelniające ani oceny dzieci nie trafiają do zewnętrznych chmur – całość działa lokalnie na Twojej własnej maszynie.
 
+---
+	
+<div align="center">
+### 📄 Przykładowe raporty (na żywo)
+
+Poniżej możesz zobaczyć jak wyglądają e-maile generowane przez projekt — bez instalacji czegokolwiek:
+
+| Raport | Opis | Link |
+|:---|:---|:---|
+| 📬 **Powiadomienie e-mail** | Zbiorczy e-mail z ocenami, wiadomościami i ogłoszeniami | [→ Otwórz](https://cackoarek.github.io/librus2mail/latest/powiadomienie_collector.html) |
+| 📊 **Raport postępów ucznia** | Analiza trendów, średnie ważone, symulator czerwonego paska | [→ Otwórz](https://cackoarek.github.io/librus2mail/latest/raport_8979296.html) |
+| 📁 **Wszystkie wersje** | Archiwum raportów dla każdej wydanej wersji | [→ Przeglądaj](https://cackoarek.github.io/librus2mail/) |
+
+> Raporty są automatycznie generowane i publikowane przy każdym wydaniu nowej wersji.
+
+[🚀 Szybki start](#instalacja) • [⚙️ Konfiguracja](#konfiguracja) • [🐳 Docker](#konteneryzacja-docker-i-docker-compose) • [📊 Raport postępów](#moduł-raportu-postępów-dziecka-progress_reportpy) • [❓ FAQ](#najczęstsze-pytania-i-rozwiązywanie-problemów-faq)
+
+</div>
+	
 ---
 
 ## Spis treści

@@ -11,6 +11,12 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ---
 
+## [1.2.0] – 2026-09-20
+
+### Dodane
+- add new module - student report
+
+---
 ## [1.1.1] – 2026-09-19
 
 ### Naprawione
@@ -72,7 +78,8 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ---
 
-[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/cackoarek/librus2mail/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/cackoarek/librus2mail/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/cackoarek/librus2mail/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/cackoarek/librus2mail/compare/v1.0.0...v1.0.1

@@ -85,6 +85,23 @@ class SmtpSender(MailSender):
             logger.error(f"Nie udało się wysłać raportu postępów przez SMTP: {e}")
             return False
 
+    def send_student_report(
+        self,
+        receivers: list[str],
+        title: str,
+        mail_content: str,
+    ) -> bool:
+        if not receivers:
+            logger.warning("Brak odbiorców (receivers) dla raportu ucznia")
+            return False
+        cfg = {'notification_receivers': receivers}
+        try:
+            logger.info(f"Wysyłam raport dla ucznia do {receivers}: {title}")
+            return self.__send_smtp(cfg, title, mail_content)
+        except Exception as e:
+            logger.error(f"Nie udało się wysłać raportu dla ucznia przez SMTP: {e}")
+            return False
+
     def __send_smtp(self, user_config, title, contents):
         logger.info("Wysyłam wiadomość e-mail")
         receiver_emails = user_config['notification_receivers']

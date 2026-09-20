@@ -77,6 +77,24 @@ class GmailSender(MailSender):
             logger.error(f"Nie udało się wysłać raportu postępów przez Gmail: {e}")
             return False
 
+    def send_student_report(
+        self,
+        receivers: list[str],
+        title: str,
+        mail_content: str,
+    ) -> bool:
+        if not receivers:
+            logger.warning("Brak odbiorców (receivers) dla raportu ucznia")
+            return False
+        cfg = {'notification_receivers': receivers}
+        try:
+            logger.info(f"Wysyłam raport dla ucznia do {receivers}: {title}")
+            self.__send_gmail(cfg, title, mail_content, self.sender_email, self.password)
+            return True
+        except Exception as e:
+            logger.error(f"Nie udało się wysłać raportu dla ucznia przez Gmail: {e}")
+            return False
+
     @staticmethod
     def __send_gmail(config, title, contents, mail_user, mail_password):
         logger.info("Wysyłam wiadomość e-mail")

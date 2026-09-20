@@ -1,0 +1,241 @@
+<div style="width: 100%; max-width: 680px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; line-height: 1.5; background-color: #ffffff; border: 1px solid #cbd5e1; border-radius: 12px; box-sizing: border-box; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);">
+    <!-- Nagłówek Teens -->
+    <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #0369a1 100%); color: #ffffff; padding: 24px 24px;">
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="border-collapse: collapse;">
+            <tr>
+                <td>
+                    <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: #38bdf8; text-transform: uppercase;">
+                        ⚡ {% if metrics.period_days == 7 %}WEEKLY BRIEFING{% else %}STUDENT BRIEFING{% endif %} • LIBRUS STATS
+                    </div>
+                    <h1 style="margin: 4px 0 0 0; font-size: 22px; font-weight: 800; color: #ffffff;">
+                        Hej, {{ metrics.student_name }}!
+                    </h1>
+                    <div style="margin-top: 4px; font-size: 13px; color: #94a3b8;">
+                        Podsumowanie Twoich wyników i bilans formy na najbliższy czas.
+                    </div>
+                    <div style="margin-top: 8px; font-size: 12px; color: #38bdf8; font-weight: 600;">
+                        🗓️ Okres: <strong>{{ metrics.period_start_str }}</strong> – <strong>{{ metrics.period_end_str }}</strong>{% if metrics.period_days %} (ostatnie {{ metrics.period_days }} dni){% endif %}
+                    </div>
+                </td>
+                <td align="right" valign="middle" style="text-align: right;">
+                    <div style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 8px 12px; display: inline-block; text-align: center;">
+                        <div style="font-size: 10px; color: #38bdf8; text-transform: uppercase; font-weight: 700;">Średnia ogólna</div>
+                        <div style="font-size: 18px; font-weight: 800; color: #ffffff;">{{ metrics.overall_avg }}</div>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Pasek Trendu -->
+    <div style="background-color: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 12px 20px; font-size: 13px;">
+        <strong style="color: #0f172a;">Bilans Formy:</strong>
+        <span style="color: #334155; margin-left: 6px;">{{ metrics.trend_description }}</span>
+    </div>
+
+    <div style="padding: 24px;">
+        <!-- Weekly Momentum: Porównanie Tydzień do Tygodnia -->
+        {% if metrics.period_comparison and metrics.period_comparison.has_comparison %}
+        {% set pc = metrics.period_comparison %}
+        <div style="margin-bottom: 22px;">
+            <div style="background: {{ '#f0fdf4' if pc.direction == 'up' else ('#fffbeb' if pc.direction == 'down' else '#f8fafc') }}; border: 1px solid {{ '#bbf7d0' if pc.direction == 'up' else ('#fde68a' if pc.direction == 'down' else '#e2e8f0') }}; border-radius: 8px; padding: 12px 16px;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                    <tr>
+                        <td valign="middle">
+                            <span style="font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: {{ '#15803d' if pc.direction == 'up' else ('#b45309' if pc.direction == 'down' else '#475569') }};">
+                                ⚡ {% if metrics.period_days == 7 %}WEEKLY MOMENTUM{% else %}MOMENTUM CYKLU{% endif %} (Poprzednie {{ metrics.period_days }} dni vs obecne)
+                            </span>
+                        </td>
+                        {% if pc.has_prev_data and pc.current_avg and pc.prev_avg %}
+                        <td align="right" valign="middle" style="text-align: right; white-space: nowrap;">
+                            <span style="font-size: 13px; font-weight: 800; color: {{ '#16a34a' if pc.direction == 'up' else ('#dc2626' if pc.direction == 'down' else '#475569') }};">
+                                {{ '+' if (pc.avg_diff or 0) > 0 else '' }}{{ pc.avg_diff }} pkt
+                            </span>
+                            <span style="font-size: 11px; color: #64748b; margin-left: 4px;">({{ pc.current_avg }} vs {{ pc.prev_avg }})</span>
+                        </td>
+                        {% endif %}
+                    </tr>
+                </table>
+                <div style="font-size: 12px; color: #334155; margin-top: 6px; line-height: 1.45;">
+                    {{ pc.message_teens }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Cel: Świadectwo z Wyróżnieniem -->
+        {% if metrics.honor_roll and metrics.overall_avg > 0 %}
+        {% set hr = metrics.honor_roll %}
+        <div style="margin-bottom: 22px;">
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-left: 4px solid #e11d48; border-radius: 8px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                    <tr>
+                        <td valign="middle">
+                            <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #9f1239;">
+                                🎯 CEL: ŚWIADECTWO Z WYRÓŻNIENIEM (Średnia 4.75)
+                            </span>
+                            <div style="font-size: 13px; font-weight: 700; color: #1e293b; margin-top: 2px;">
+                                {{ hr.headline }}
+                            </div>
+                        </td>
+                        <td align="right" valign="middle" style="text-align: right; white-space: nowrap;">
+                            <span style="font-size: 12px; font-weight: 800; color: #e11d48; background: #ffe4e6; padding: 3px 8px; border-radius: 6px;">
+                                {{ hr.progress_pct }}% celu 🎗️
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+
+                <div style="background: #f1f5f9; border-radius: 8px; height: 8px; width: 100%; margin: 10px 0; overflow: hidden; border: 1px solid #e2e8f0;">
+                    <div style="background: #e11d48; width: {{ hr.progress_pct }}%; height: 100%; border-radius: 8px;"></div>
+                </div>
+
+                <div style="font-size: 12px; color: #475569; line-height: 1.4;">
+                    {{ hr.description }}
+                </div>
+
+                {% if hr.opportunities %}
+                <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #e2e8f0; font-size: 12px;">
+                    <span style="color: #64748b; font-size: 11px; text-transform: uppercase; font-weight: 700;">Przedmioty o najmniejszej stracie punktowej:</span>
+                    <div style="margin-top: 4px;">
+                        {% for opp in hr.opportunities %}
+                        <div style="margin-bottom: 2px; color: #334155;">
+                            • <strong>{{ opp.subject }}</strong>: śr. {{ opp.current_avg }} → cel: <strong>{{ opp.target_grade }}.0</strong> (brakuje {{ opp.gap_to_target }} pkt)
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Mocne Filary -->
+        {% if metrics.strengths %}
+        <div style="margin-bottom: 22px;">
+            <div style="font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #0284c7; margin-bottom: 10px;">
+                🚀 Twoje Mocne Filary
+            </div>
+            <div style="display: table; width: 100%;">
+                {% for strg in metrics.strengths %}
+                <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px;">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                        <tr>
+                            <td style="font-weight: 700; color: #0369a1; font-size: 14px;">
+                                {{ strg.subject }}
+                            </td>
+                            <td align="right" style="font-weight: 800; color: #0284c7; font-size: 14px;">
+                                {{ strg.avg }}
+                            </td>
+                        </tr>
+                    </table>
+                    <div style="font-size: 12px; color: #075985; margin-top: 4px;">
+                        {{ strg.highlight }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Szybkie Punkty (Quick Wins) -->
+        {% if metrics.quick_wins %}
+        <div style="margin-bottom: 22px;">
+            <div style="font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #16a34a; margin-bottom: 10px;">
+                💡 Szybkie Punkty do Zgarnięcia (Mały wysiłek, duży efekt)
+            </div>
+            {% for qw in metrics.quick_wins %}
+            <div style="background: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 6px; padding: 12px 14px; margin-bottom: 8px;">
+                <div style="font-weight: 700; color: #15803d; font-size: 13px;">
+                    {{ qw.subject }} • Aktualna średnia: <strong>{{ qw.current_avg }}</strong>
+                </div>
+                <div style="font-size: 12px; color: #166534; margin-top: 3px;">
+                    🎯 Cel na wyższy stopień ({{ qw.target_grade }}): {{ qw.hint }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Strefa Uwagi -->
+        {% if metrics.focus_areas %}
+        <div style="margin-bottom: 22px;">
+            <div style="font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #d97706; margin-bottom: 10px;">
+                ⚠️ Gdzie Warto Skupić Uwagę
+            </div>
+            {% for fa in metrics.focus_areas %}
+            <div style="background: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 6px; padding: 12px 14px; margin-bottom: 8px;">
+                <div style="font-weight: 700; color: #b45309; font-size: 13px;">
+                    {{ fa.subject }} (średnia: {{ fa.avg }})
+                </div>
+                <div style="font-size: 12px; color: #92400e; margin-top: 3px;">
+                    📌 Strategia: {{ fa.hint }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Oceny w okresie -->
+        <div>
+            <div style="font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #475569; margin-bottom: 10px;">
+                {% if metrics.period_days %}
+                📊 Oceny zdobyte w ostatnim okresie ({{ metrics.recent_grades | length }})
+                {% else %}
+                📊 Wszystkie oceny w dzienniku ({{ metrics.recent_grades | length }})
+                {% endif %}
+            </div>
+            {% if metrics.recent_grades %}
+            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                <thead>
+                    <tr style="background: #f1f5f9; color: #475569; font-size: 11px; text-transform: uppercase; border-bottom: 1px solid #e2e8f0;">
+                        <th style="padding: 10px 10px; text-align: left;">Przedmiot</th>
+                        <th style="padding: 10px 8px; text-align: center;">Stopień</th>
+                        <th style="padding: 10px 10px; text-align: left;">Kategoria</th>
+                        <th style="padding: 10px 10px; text-align: left;">Komentarz nauczyciela</th>
+                        <th style="padding: 10px 8px; text-align: center;">Waga</th>
+                        <th style="padding: 10px 10px; text-align: right;">Data</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for g in metrics.recent_grades %}
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 10px; font-weight: 600; color: #0f172a; vertical-align: middle;">{{ g.subject }}</td>
+                        <td style="padding: 10px 8px; text-align: center; vertical-align: middle;">
+                            <span style="display: inline-block; min-width: 20px; padding: 2px 6px; border-radius: 4px; font-weight: 800; font-size: 12px; color: #ffffff; background: {{ '#16a34a' if (g.numeric or 0) >= 4.0 else ('#d97706' if (g.numeric or 0) >= 3.0 else '#dc2626') }};">
+                                {{ g.grade }}
+                            </span>
+                        </td>
+                        <td style="padding: 10px 10px; color: #334155; vertical-align: middle;">{{ g.category or '-' }}</td>
+                        <td style="padding: 10px 10px; font-size: 12px; vertical-align: middle;">
+                            {% if g.comment %}
+                            <div style="color: #0369a1; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 4px; padding: 3px 8px; display: inline-block; line-height: 1.35;">
+                                💬 <strong>Komentarz:</strong> {{ g.comment }}
+                            </div>
+                            {% else %}
+                            <span style="color: #94a3b8;">—</span>
+                            {% endif %}
+                            {% if g.teacher %}
+                            <div style="font-size: 11px; color: #94a3b8; margin-top: 3px;">👤 {{ g.teacher }}</div>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 10px 8px; color: #64748b; font-size: 11px; text-align: center; vertical-align: middle;">{{ g.weight_label }}</td>
+                        <td style="padding: 10px 10px; text-align: right; color: #94a3b8; vertical-align: middle; white-space: nowrap;">{{ g.date_str or g.date or '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 6px; padding: 14px 16px; text-align: center; color: #64748b; font-size: 12px;">
+                ℹ️ W wybranym okresie nie odnotowano nowych ocen w dzienniku.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Stopka Teens -->
+    <div style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 14px 20px; text-align: center; font-size: 12px; color: #64748b;">
+        <div>Dobre przygotowanie to połowa sukcesu. Trzymamy kciuki za kolejny tydzień! 👊</div>
+        <div style="margin-top: 4px; font-size: 11px; color: #94a3b8;">Librus2mail • Automatyczny raport postępów</div>
+    </div>
+</div>

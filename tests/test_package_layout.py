@@ -18,6 +18,7 @@ class TestPackageLayout(unittest.TestCase):
             NotLogged,
             ProgressAnalyzer,
             SmtpSender,
+            StudentAnalyzer,
             UpdatesNotifier,
             configure_mail_provider,
             create_storage,
@@ -31,6 +32,7 @@ class TestPackageLayout(unittest.TestCase):
             run_notifier,
             run_pipeline,
             run_progress_reports,
+            run_student_reports,
         )
 
         self.assertTrue(hasattr(librus2mail, "__version__"))
@@ -41,6 +43,7 @@ class TestPackageLayout(unittest.TestCase):
         self.assertIsNotNone(GmailSender)
         self.assertIsNotNone(SmtpSender)
         self.assertIsNotNone(ProgressAnalyzer)
+        self.assertIsNotNone(StudentAnalyzer)
         self.assertIsNotNone(FileStorage)
         self.assertIsNotNone(BaseStorage)
         self.assertIsNotNone(create_storage)
@@ -50,6 +53,7 @@ class TestPackageLayout(unittest.TestCase):
         self.assertIsNotNone(run_notifier)
         self.assertIsNotNone(run_pipeline)
         self.assertIsNotNone(run_progress_reports)
+        self.assertIsNotNone(run_student_reports)
         self.assertIsNotNone(configure_mail_provider)
         self.assertIsNotNone(NotLogged)
         self.assertIsNotNone(parse_numeric_grade)
@@ -71,12 +75,14 @@ class TestPackageLayout(unittest.TestCase):
         import librus_collect_and_notify
         import librus_collector
         import librus_progress_report
+        import librus_student_report
         import librus_updates_notifier
 
         self.assertTrue(hasattr(librus_collect_and_notify, "run_pipeline"))
         self.assertTrue(hasattr(librus_collector, "run_collector"))
         self.assertTrue(hasattr(librus_updates_notifier, "run_notifier"))
         self.assertTrue(hasattr(librus_progress_report, "run_progress_reports"))
+        self.assertTrue(hasattr(librus_student_report, "run_student_reports"))
 
     def test_jinja_templates_accessible_via_package(self):
         from librus2mail.mail_sender import jinja_env
@@ -88,6 +94,9 @@ class TestPackageLayout(unittest.TestCase):
             "summary.html",
             "error_alert.html",
             "progress_report.html",
+            "student_report_kids.html",
+            "student_report_teens.html",
+            "student_report_youth.html",
         ]
         for tmpl in templates:
             t = jinja_env.get_template(tmpl)

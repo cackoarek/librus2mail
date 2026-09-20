@@ -73,6 +73,8 @@ librus2mail/
 │       ├── progress_report.py  # Offline progress report generator CLI
 │       ├── smtp_sender.py      # MailSender subclass using standard smtplib + STARTTLS
 │       ├── storage.py          # State and grade history persistence (FileStorage)
+│       ├── student_analyzer.py # Student motivation analytics engine (strengths, badges)
+│       ├── student_report.py   # Offline student report generator CLI
 │       ├── updates_notifier.py # Offline updates notifier module
 │       └── templates/emails/   # Jinja2 email templates
 ├── tests/                      # Pytest test suite
@@ -81,6 +83,7 @@ librus2mail/
 ├── librus_collect_and_notify.py# Root CLI entrypoint orchestrator
 ├── librus_collector.py         # Root CLI entrypoint for librus2mail.librus_collector
 ├── librus_progress_report.py   # Root CLI entrypoint for librus2mail.progress_report
+├── librus_student_report.py    # Root CLI entrypoint for librus2mail.student_report
 ├── librus_updates_notifier.py  # Root CLI entrypoint for librus2mail.updates_notifier
 ├── useful-scripts.md           # CLI reference & useful commands
 ├── CHANGELOG.md                # Release history (Keep a Changelog)

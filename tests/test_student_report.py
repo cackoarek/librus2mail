@@ -467,6 +467,74 @@ class TestStudentReportTemplates(unittest.TestCase):
         self.assertIn("Target: Wyróżnienie Semestralne", html)
         self.assertIn("Realizacja: 100%", html)
 
+    def test_render_templates_with_timetable(self):
+        mock_timetable = {
+            "has_any": True,
+            "immediate_label": "Jutro (poniedziałek, 21.09)",
+            "immediate_tests": [
+                {
+                    "category": "Sprawdzian",
+                    "subject": "Historia",
+                    "lesson_no": "2",
+                    "description": "Starożytność",
+                    "teacher": "A. Nowak",
+                }
+            ],
+            "immediate_absences": [],
+            "upcoming_days": [
+                {
+                    "date": "2026-09-23",
+                    "date_str": "23.09.2026",
+                    "weekday": "Środa",
+                    "tests": [
+                        {
+                            "category": "Kartkówka",
+                            "subject": "Język angielski",
+                            "lesson_no": "5",
+                            "description": "Słówka",
+                            "teacher": "M. Kiljańczyk",
+                        }
+                    ],
+                }
+            ],
+        }
+
+        # 1. Kids
+        html_kids = MailSender.create_mail_content_for_student_report(
+            metrics=self.metrics,
+            template_type="kids",
+            timetable=mock_timetable,
+        )
+        self.assertIn("Nadchodzące Wyzwania", html_kids)
+        self.assertIn("Historia", html_kids)
+        self.assertIn("Starożytność", html_kids)
+        self.assertIn("Język angielski", html_kids)
+        self.assertIn("Słówka", html_kids)
+
+        # 2. Teens
+        html_teens = MailSender.create_mail_content_for_student_report(
+            metrics=self.metrics,
+            template_type="teens",
+            timetable=mock_timetable,
+        )
+        self.assertIn("Nadchodzące Sprawdziany i Kartkówki", html_teens)
+        self.assertIn("Historia", html_teens)
+        self.assertIn("Starożytność", html_teens)
+        self.assertIn("Język angielski", html_teens)
+        self.assertIn("Słówka", html_teens)
+
+        # 3. Youth
+        html_youth = MailSender.create_mail_content_for_student_report(
+            metrics=self.metrics,
+            template_type="youth",
+            timetable=mock_timetable,
+        )
+        self.assertIn("Harmonogram Sprawdzianów i Kartkówek", html_youth)
+        self.assertIn("Historia", html_youth)
+        self.assertIn("Starożytność", html_youth)
+        self.assertIn("Język angielski", html_youth)
+        self.assertIn("Słówka", html_youth)
+
     def test_unknown_template_fallback_to_kids(self):
         html = MailSender.create_mail_content_for_student_report(
             metrics=self.metrics,
@@ -518,6 +586,18 @@ class TestStudentReportRunner(unittest.TestCase):
                     "weight": "1",
                 },
             },
+            "timetable_history": [
+                {
+                    "id": "t1",
+                    "date": "2026-09-21",
+                    "type": "test",
+                    "category": "Sprawdzian",
+                    "subject": "Fizyka",
+                    "lesson_no": "2",
+                    "description": "Dynamika Newtona",
+                    "teacher": "P. Nowak",
+                }
+            ],
         }
         with open(os.path.join(self.storage_dir, "123456.json"), "w", encoding="utf-8") as f:
             json.dump(user_state, f)
@@ -577,6 +657,7 @@ librus_users:
             content = f.read()
         self.assertIn("Kamil Nowak", content)
         self.assertIn("STUDENT PERFORMANCE DASHBOARD", content)
+        self.assertIn("Dynamika Newtona", content)
 
     def test_run_student_reports_template_override(self):
         results = run_student_reports(

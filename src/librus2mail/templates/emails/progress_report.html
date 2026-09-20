@@ -329,6 +329,128 @@
         </div>
         {% endif %}
 
+        <!-- Nadchodzące sprawdziany i terminarz (Perspektywa tygodnia) -->
+        {% if timetable and timetable.has_any %}
+        <div style="margin-top: 22px; margin-bottom: 22px;">
+            <div style="border-bottom: 2px solid #6366f1; padding-bottom: 8px; margin-bottom: 14px;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                    <tr>
+                        <td align="left" valign="middle">
+                            <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #1e293b;">
+                                📅 Perspektywa: Nadchodzący tydzień w szkole (sprawdziany i kartkówki)
+                            </h3>
+                        </td>
+                        <td align="right" valign="middle">
+                            <span style="background-color: #ede9fe; color: #6d28d9; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; text-transform: uppercase;">
+                                Terminarz
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Boks 1: Najbliższy dzień nauki -->
+            <div style="background: {{ '#fff1f2' if timetable.immediate_tests else ('#f8fafc' if timetable.immediate_absences else '#f0fdf4') }}; border: 1px solid {{ '#fecdd3' if timetable.immediate_tests else ('#e2e8f0' if timetable.immediate_absences else '#bbf7d0') }}; border-left: 4px solid {{ '#e11d48' if timetable.immediate_tests else ('#3b82f6' if timetable.immediate_absences else '#10b981') }}; border-radius: 8px; padding: 14px 16px; margin-bottom: 12px;">
+                <div style="display: table; width: 100%;">
+                    <div style="display: table-cell; vertical-align: middle;">
+                        <span style="font-size: 13px; font-weight: 800; color: {{ '#9f1239' if timetable.immediate_tests else ('#1e3a8a' if timetable.immediate_absences else '#065f46') }}; text-transform: uppercase; letter-spacing: 0.04em;">
+                            {{ '⚠️' if timetable.immediate_tests else '🔔' }} {{ timetable.immediate_label }}
+                        </span>
+                    </div>
+                    {% if timetable.immediate_tests %}
+                    <div style="display: table-cell; vertical-align: middle; text-align: right;">
+                        <span style="background: #e11d48; color: #ffffff; padding: 2px 8px; border-radius: 10px; font-weight: 800; font-size: 11px;">
+                            {{ timetable.immediate_tests | length }} zapowiedzian{{ 'y' if (timetable.immediate_tests | length) == 1 else 'e' }}
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if timetable.immediate_tests %}
+                <div style="margin-top: 8px;">
+                    {% for test in timetable.immediate_tests %}
+                    <div style="background: #ffffff; border: 1px solid #fecdd3; border-radius: 6px; padding: 8px 12px; margin-top: 6px;">
+                        <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                            <tr>
+                                <td valign="top" style="font-weight: 700; color: #1e293b; font-size: 13px;">
+                                    <span style="background-color: {{ '#fee2e2' if test.category == 'Sprawdzian' else '#ffedd5' }}; color: {{ '#b91c1c' if test.category == 'Sprawdzian' else '#c2410c' }}; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-right: 6px;">
+                                        {{ test.category }}
+                                    </span>
+                                    {{ test.subject }}
+                                    {% if test.lesson_no %}
+                                    <span style="color: #64748b; font-size: 11px; font-weight: normal; margin-left: 4px;">(Lekcja {{ test.lesson_no }})</span>
+                                    {% endif %}
+                                </td>
+                                <td align="right" valign="top" style="font-size: 11px; color: #64748b; white-space: nowrap;">
+                                    {{ test.teacher }}
+                                </td>
+                            </tr>
+                        </table>
+                        {% if test.description %}
+                        <div style="font-size: 12px; color: #475569; margin-top: 4px; font-style: italic; line-height: 1.4;">
+                            Zakres: {{ test.description }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% elif not timetable.immediate_absences %}
+                <div style="font-size: 12px; color: #047857; margin-top: 4px;">
+                    Czyste konto – brak zapowiedzianych sprawdzianów ani kartkówek na ten dzień! 🎉
+                </div>
+                {% endif %}
+
+                {% if timetable.immediate_absences %}
+                <div style="margin-top: {{ '10px' if timetable.immediate_tests else '6px' }};">
+                    {% for abs in timetable.immediate_absences %}
+                    <div style="font-size: 12px; color: #1e40af; margin-top: 4px;">
+                        ℹ️ <strong>Nieobecność nauczyciela:</strong> {{ abs.teacher }} {% if abs.time and abs.time != 'Cały dzień' %}(godziny: {{ abs.time }}){% else %}(cały dzień){% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Boks 2: W kolejnych dniach tygodnia -->
+            {% if timetable.upcoming_days %}
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
+                <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 8px;">
+                    🗓️ W kolejnych dniach (ten tydzień)
+                </div>
+                {% for day in timetable.upcoming_days %}
+                <div style="margin-bottom: 10px; padding-bottom: 8px; border-bottom: {{ '1px dashed #f1f5f9' if not loop.last else 'none' }};">
+                    <div style="font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px;">
+                        📌 {{ day.weekday }}, {{ day.date_str }}
+                    </div>
+                    {% for test in day.tests %}
+                    <div style="margin-left: 12px; margin-bottom: 4px; font-size: 12px; color: #1e293b;">
+                        <span style="background-color: {{ '#fee2e2' if test.category == 'Sprawdzian' else '#ffedd5' }}; color: {{ '#b91c1c' if test.category == 'Sprawdzian' else '#c2410c' }}; padding: 1px 5px; border-radius: 3px; font-size: 10px; font-weight: 700; margin-right: 4px;">
+                            {{ test.category }}
+                        </span>
+                        <strong>{{ test.subject }}</strong>
+                        {% if test.lesson_no %}
+                        <span style="color: #64748b; font-size: 11px;">(Lekcja {{ test.lesson_no }})</span>
+                        {% endif %}
+                        {% if test.description %}
+                        — <span style="color: #475569; font-style: italic;">{{ test.description }}</span>
+                        {% endif %}
+                        {% if test.teacher %}
+                        <span style="color: #94a3b8; font-size: 11px;">[{{ test.teacher }}]</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    {% for abs in day.absences %}
+                    <div style="margin-left: 12px; margin-bottom: 3px; font-size: 11px; color: #64748b;">
+                        ℹ️ Nieobecność: {{ abs.teacher }} ({{ abs.time }})
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
         <!-- Karty ocen wg przedmiotów -->
         <div style="margin-top: 20px;">
             <h3 style="color: #1f2937; margin: 0 0 10px 0; font-size: 16px; border-bottom: 2px solid #1e3a8a; padding-bottom: 6px;">

@@ -36,7 +36,18 @@ def prepare_timetable_summary(
     if not raw_entries:
         return {'has_any': False}
 
-    ref_date = reference_date or datetime.now().date()
+    if isinstance(reference_date, str):
+        try:
+            ref_date = datetime.strptime(reference_date[:10], "%Y-%m-%d").date()
+        except ValueError:
+            ref_date = datetime.now().date()
+    elif isinstance(reference_date, datetime):
+        ref_date = reference_date.date()
+    elif isinstance(reference_date, date):
+        ref_date = reference_date
+    else:
+        ref_date = datetime.now().date()
+
     weekdays_pl = [
         "poniedziałek", "wtorek", "środa", "czwartek",
         "piątek", "sobota", "niedziela"

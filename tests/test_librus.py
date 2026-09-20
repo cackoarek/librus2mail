@@ -1004,6 +1004,21 @@ class TestLibrus(unittest.TestCase):
         self.assertIn('Ciche przedmioty', html)
         self.assertIn('Dynamika i forma ucznia', html)
 
+        # Weryfikacja renderowania sekcji terminarza w raporcie postępów
+        mock_timetable = {
+            'has_any': True,
+            'immediate_label': 'Jutro (poniedziałek, 21.09)',
+            'immediate_tests': [
+                {'category': 'Sprawdzian', 'subject': 'Historia', 'lesson_no': '2', 'description': 'Starożytność', 'teacher': 'A. Nowak'}
+            ],
+            'immediate_absences': [],
+            'upcoming_days': [],
+        }
+        html_with_timetable = MailSender.create_mail_content_for_progress_report(user_cfg, analysis, timetable=mock_timetable)
+        self.assertIn('Perspektywa: Nadchodzący tydzień w szkole', html_with_timetable)
+        self.assertIn('Historia', html_with_timetable)
+        self.assertIn('Starożytność', html_with_timetable)
+
     def test_progress_analyzer_period_comparison_metrics(self):
         from datetime import datetime, timedelta
 

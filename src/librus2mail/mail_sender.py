@@ -213,7 +213,12 @@ class MailSender:
         return f"📊 Raport postępów: {name} ({p_start} – {p_end}) [{avg_text}, nowe oceny: {period_count}]"
 
     @classmethod
-    def create_mail_content_for_progress_report(cls, user_config: dict, analysis: dict) -> str:
+    def create_mail_content_for_progress_report(
+        cls,
+        user_config: dict,
+        analysis: dict,
+        timetable: dict | None = None,
+    ) -> str:
         name = str(user_config.get('librus_login_name') or user_config.get('librus_login', ''))
         login = str(user_config.get('librus_login', ''))
         borderline_opp_map = {o['subject']: o for o in analysis.get('borderline_opportunities', [])}
@@ -240,6 +245,7 @@ class MailSender:
             borderline_opp_map=borderline_opp_map,
             borderline_risk_map=borderline_risk_map,
             dormant_items=dormant_items,
+            timetable=timetable,
         )
 
     @classmethod
@@ -247,6 +253,7 @@ class MailSender:
         cls,
         metrics: Any,
         template_type: str = "kids",
+        timetable: dict | None = None,
     ) -> str:
         tpl_name = f"student_report_{template_type}.html"
         try:
@@ -257,6 +264,7 @@ class MailSender:
         return template.render(
             metrics=metrics,
             now=datetime.now(),
+            timetable=timetable,
         )
 
     @staticmethod
@@ -280,7 +288,12 @@ class MailSender:
     ) -> bool:
         pass
 
-    def send_progress_report(self, user_config: dict, analysis: dict) -> bool:
+    def send_progress_report(
+        self,
+        user_config: dict,
+        analysis: dict,
+        timetable: dict | None = None,
+    ) -> bool:
         pass
 
     @classmethod

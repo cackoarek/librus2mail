@@ -10,7 +10,8 @@ Działa w 100% offline na bazie danych ze storage/.
 import argparse
 import logging
 import re
-from datetime import datetime, timedelta
+from collections import defaultdict
+from datetime import date, datetime, timedelta
 from typing import Any
 
 from .base_logger import setup_logging
@@ -21,6 +22,153 @@ from .smtp_sender import SmtpSender
 from .storage import BaseStorage, create_storage
 
 logger = logging.getLogger(__name__)
+
+
+def prepare_timetable_summary(
+    raw_entries: list[dict],
+    reference_date: date | None = None
+) -> dict[str, Any]:
+    """
+    Przygotowuje zestawienie nadchodzących sprawdzianów i nieobecności dla powiadomienia:
+    - immediate: najbliższy dzień nauki (jutro lub poniedziałek, jeśli dziś jest piątek/weekend)
+    - upcoming_days: kolejne dni w horyzoncie tygodnia (do 7 dni w przód)
+    """
+    if not raw_entries:
+        return {'has_any': False}
+
+    ref_date = reference_date or datetime.now().date()
+    weekdays_pl = [
+        "poniedziałek", "wtorek", "środa", "czwartek",
+        "piątek", "sobota", "niedziela"
+    ]
+
+    ref_weekday = ref_date.weekday()
+    if ref_weekday == 4:
+        immediate_date = ref_date + timedelta(days=3)
+        immediate_label = f"Najbliższy dzień nauki (poniedziałek, {immediate_date.strftime('%d.%m')})"
+    elif ref_weekday == 5:
+        immediate_date = ref_date + timedelta(days=2)
+        immediate_label = f"Najbliższy dzień nauki (poniedziałek, {immediate_date.strftime('%d.%m')})"
+    elif ref_weekday == 6:
+        immediate_date = ref_date + timedelta(days=1)
+        immediate_label = f"Jutro (poniedziałek, {immediate_date.strftime('%d.%m')})"
+    else:
+        immediate_date = ref_date + timedelta(days=1)
+        immediate_weekday_name = weekdays_pl[immediate_date.weekday()]
+        immediate_label = f"Jutro ({immediate_weekday_name}, {immediate_date.strftime('%d.%m')})"
+
+    horizon_date = ref_date + timedelta(days=7)
+
+    immediate_date_str = immediate_date.isoformat()
+    ref_date_str = ref_date.isoformat()
+    horizon_date_str = horizon_date.isoformat()
+
+    immediate_tests = []
+    immediate_absences = []
+    immediate_events = []
+
+    upcoming_by_date = defaultdict(lambda: {'date': '', 'date_str': '', 'weekday': '', 'tests': [], 'absences': [], 'events': []})
+
+    for entry in raw_entries:
+        e_date = entry.get('date')
+        if not e_date:
+            continue
+
+        # Pomijamy wpisy z przeszłości
+        if e_date <= ref_date_str:
+            continue
+
+        # Wpisy na immediate_date (lub ewentualny weekend)
+        if e_date <= immediate_date_str:
+            if entry.get('type') == 'absence':
+                immediate_absences.append(entry)
+            elif entry.get('type') == 'test':
+                immediate_tests.append(entry)
+            else:
+                immediate_events.append(entry)
+        elif e_date <= horizon_date_str:
+            try:
+                d_obj = datetime.strptime(e_date, "%Y-%m-%d").date()
+                day_group = upcoming_by_date[e_date]
+                day_group['date'] = e_date
+                day_group['date_str'] = d_obj.strftime("%d.%m.%Y")
+                day_group['weekday'] = weekdays_pl[d_obj.weekday()].capitalize()
+
+                if entry.get('type') == 'absence':
+                    day_group['absences'].append(entry)
+                elif entry.get('type') == 'test':
+                    day_group['tests'].append(entry)
+                else:
+                    day_group['events'].append(entry)
+            except Exception:
+                continue
+
+    upcoming_days = [upcoming_by_date[k] for k in sorted(upcoming_by_date.keys())]
+
+    has_any = bool(immediate_tests or immediate_absences or immediate_events or upcoming_days)
+
+    return {
+        'has_any': has_any,
+        'immediate_label': immediate_label,
+        'immediate_date_str': immediate_date.strftime("%d.%m.%Y"),
+        'immediate_date': immediate_date_str,
+        'immediate_day_name': weekdays_pl[immediate_date.weekday()],
+        'is_tomorrow': ref_weekday not in (4, 5),
+        'immediate_tests': immediate_tests,
+        'immediate_absences': immediate_absences,
+        'immediate_events': immediate_events,
+        'upcoming_days': upcoming_days,
+    }
+
+
+def should_trigger_timetable_reminder(
+    timetable_summary: dict[str, Any] | None,
+    now: datetime,
+    config: dict | None = None,
+) -> tuple[bool, list[dict]]:
+    """
+    Sprawdza, czy należy wysłać powiadomienie z przypomnieniem o sprawdzianach (Wariant A):
+    - Poniedziałek-Czwartek: jeśli jutro jest sprawdzian i nie był jeszcze dziś notyfikowany.
+    - Piątek: jeśli w poniedziałek (najbliższy dzień nauki) jest sprawdzian i nie był dziś notyfikowany.
+    - Sobota: cisza (brak autonomicznych przypomnień o sprawdzianach).
+    - Niedziela: po godzinie niedzielnego alertu (domyślnie 16:00), jeśli w poniedziałek jest sprawdzian
+      i nie był jeszcze notyfikowany w niedzielę.
+
+    Zwraca (powinno_wyslac: bool, nienotyfikowane_sprawdziany: list[dict]).
+    """
+    if not timetable_summary:
+        return False, []
+
+    immediate_tests = timetable_summary.get('immediate_tests', [])
+    if not immediate_tests:
+        return False, []
+
+    weekday = now.weekday()
+    # Sobota (5): cisza
+    if weekday == 5:
+        return False, []
+
+    # Niedziela (6): przypomnienie dopiero od wyznaczonej godziny (domyślnie 16:00)
+    if weekday == 6:
+        sunday_hour = 16
+        if config:
+            try:
+                sunday_hour = int(config.get('sunday_reminder_hour', 16))
+            except (ValueError, TypeError):
+                sunday_hour = 16
+        if now.hour < sunday_hour:
+            return False, []
+
+    # Poniedziałek-Piątek (0-4) oraz Niedziela (od sunday_hour):
+    today_iso = now.date().isoformat()
+    unnotified_tests = []
+    for test in immediate_tests:
+        last_notified = test.get('last_notified_at')
+        if not last_notified or not str(last_notified).startswith(today_iso):
+            unnotified_tests.append(test)
+
+    should_send = len(unnotified_tests) > 0
+    return should_send, unnotified_tests
 
 
 def configure_mail_provider(config: dict) -> MailSender:
@@ -89,7 +237,8 @@ def print_cli_summary(
     messages: list[dict],
     notifications: list[dict],
     grades: list[dict],
-    period_desc: str = ""
+    period_desc: str = "",
+    timetable: dict | None = None,
 ) -> None:
     """Wyświetla estetyczne podsumowanie wykrytych nowości w terminalu (ASCII/tekst)."""
     header = f"📬 POWIADOMIENIE (LIBRUS NOTIFIER): {student_name} ({login})"
@@ -98,10 +247,42 @@ def print_cli_summary(
     sep = "=" * min(len(header), 80)
     print(f"\n{sep}\n{header}\n{sep}\n")
 
-    if not messages and not notifications and not grades:
+    has_timetable = bool(timetable and timetable.get('has_any'))
+    if not messages and not notifications and not grades and not has_timetable:
         print("Brak nowych wpisów w wybranym okresie.")
         print(f"\n{sep}\n")
         return
+
+    if timetable and timetable.get('has_any'):
+        print("📅 TERMINARZ I NAJBLIŻSZE SPRAWDZIANY:")
+        imm_tests = timetable.get('immediate_tests', [])
+        imm_abs = timetable.get('immediate_absences', [])
+        imm_label = timetable.get('immediate_label', 'Najbliższy dzień')
+        print(f"  🔔 {imm_label}:")
+        if imm_tests:
+            for t in imm_tests:
+                desc = f" - {t['description']}" if t.get('description') else ""
+                les = f" (Lekcja {t['lesson_no']})" if t.get('lesson_no') else ""
+                print(f"    • [{t.get('category', 'Sprawdzian')}] {t.get('subject')}{les}{desc} [{t.get('teacher', '')}]")
+        elif not imm_abs:
+            print("    • Czyste konto – brak zapowiedzianych sprawdzianów ani kartkówek! 🎉")
+
+        if imm_abs:
+            for a in imm_abs:
+                print(f"    • [Nieobecność] {a.get('teacher')} ({a.get('time')})")
+
+        upcoming_days = timetable.get('upcoming_days', [])
+        if upcoming_days:
+            print("  🗓️ W kolejnych dniach (ten tydzień):")
+            for d in upcoming_days:
+                print(f"    📌 {d['weekday']}, {d['date_str']}:")
+                for t in d.get('tests', []):
+                    desc = f" - {t['description']}" if t.get('description') else ""
+                    les = f" (Lekcja {t['lesson_no']})" if t.get('lesson_no') else ""
+                    print(f"      • [{t.get('category', 'Sprawdzian')}] {t.get('subject')}{les}{desc} [{t.get('teacher', '')}]")
+                for a in d.get('absences', []):
+                    print(f"      • [Nieobecność] {a.get('teacher')} ({a.get('time')})")
+        print()
 
     if messages:
         print(f"✉️  Nowe wiadomości ({len(messages)}):")
@@ -257,11 +438,15 @@ class UpdatesNotifier:
 
         saved_file = None
 
+        # 2.5 Przygotowanie zestawienia terminarza (sprawdziany, nieobecności)
+        all_timetable = self.storage.get_timetable_history(login) if hasattr(self.storage, 'get_timetable_history') else []
+        timetable_summary = prepare_timetable_summary(all_timetable, reference_date=now.date()) if user_config.get('read_timetable', True) else None
+
         # 3. Zapis do pliku HTML (jeśli podano -o / --save-html)
         if output_html:
             out_file = resolve_output_path(output_html, login, total_users, default_prefix="powiadomienie")
-            title = MailSender._create_summary_title(user_config, filtered_messages, filtered_notifications, filtered_grades)
-            body = MailSender.create_mail_content_for_summary(user_config, filtered_messages, filtered_notifications, filtered_grades)
+            title = MailSender._create_summary_title(user_config, filtered_messages, filtered_notifications, filtered_grades, timetable=timetable_summary)
+            body = MailSender.create_mail_content_for_summary(user_config, filtered_messages, filtered_notifications, filtered_grades, timetable=timetable_summary)
             full_html = render_standalone_html(title, body)
             try:
                 with open(out_file, 'w', encoding='utf-8') as f:
@@ -275,18 +460,30 @@ class UpdatesNotifier:
         # 4. Tryb Dry-Run (podgląd w terminalu)
         if dry_run:
             has_new_items = bool(filtered_messages or filtered_notifications or filtered_grades)
-            if not has_new_items:
-                logger.info(f"{name} ({login}): Tryb symulacji (dry-run) – brak nowych ocen, wiadomości ani ogłoszeń.")
+            should_send_timetable, unnotified_tests = should_trigger_timetable_reminder(
+                timetable_summary, now=now, config=self.config
+            )
+            if not has_new_items and not should_send_timetable:
+                logger.info(f"{name} ({login}): Tryb symulacji (dry-run) – brak nowych ocen, wiadomości ani sprawdzianów na najbliższy dzień nauki.")
+            elif should_send_timetable and not has_new_items:
+                logger.info(
+                    f"{name} ({login}): Tryb symulacji (dry-run) – brak nowych ocen, ale wykryto sprawdzian(y) "
+                    f"na najbliższy dzień nauki ({len(unnotified_tests)}). Wysłano by przypomnienie e-mail."
+                )
             else:
                 logger.info(
                     f"{name} ({login}): Tryb symulacji (dry-run) – wykryto nowe pozycje (wiadomości: {len(filtered_messages)}, "
                     f"ogłoszenia: {len(filtered_notifications)}, oceny: {len(filtered_grades)}). Brak wysyłki e-mail."
                 )
-            print_cli_summary(name, login, filtered_messages, filtered_notifications, filtered_grades, period_desc)
+            print_cli_summary(name, login, filtered_messages, filtered_notifications, filtered_grades, period_desc, timetable=timetable_summary)
 
         # 5. Rzeczywista wysyłka pocztowa
         if not dry_run and not output_html:
             has_new_items = bool(filtered_messages or filtered_notifications or filtered_grades)
+            should_send_timetable, unnotified_tests = should_trigger_timetable_reminder(
+                timetable_summary, now=now, config=self.config
+            )
+
             if user_config.get('dry-parse', False):
                 logger.info(
                     f"{name} ({login}): Tryb dry-parse (pierwsze parsowanie/baseline) – "
@@ -294,10 +491,14 @@ class UpdatesNotifier:
                 )
                 if hasattr(self.storage, 'save_last_notify_time'):
                     self.storage.save_last_notify_time(login, now.isoformat())
-            elif not has_new_items:
+                if timetable_summary and timetable_summary.get('immediate_tests') and hasattr(self.storage, 'mark_timetable_entries_notified'):
+                    t_ids = [t['id'] for t in timetable_summary['immediate_tests'] if t.get('id')]
+                    if t_ids:
+                        self.storage.mark_timetable_entries_notified(login, t_ids, notified_at_iso=now.isoformat())
+            elif not has_new_items and not should_send_timetable:
                 period_info = f" ({period_desc})" if period_desc else ""
                 logger.info(
-                    f"{name} ({login}): Brak nowych informacji{period_info} (brak nowych ocen, wiadomości ani ogłoszeń) – "
+                    f"{name} ({login}): Brak nowych informacji{period_info} (brak nowych ocen, wiadomości ani sprawdzianów na najbliższy dzień nauki) – "
                     "powiadomienie e-mail nie zostało wysłane."
                 )
             else:
@@ -306,13 +507,19 @@ class UpdatesNotifier:
                     'one_summary_message',
                     self.config.get('one_summary_message', False)
                 )
-                if one_summary:
-                    logger.info(
-                        f"Nowe wpisy dla {name} (wiadomości: {len(filtered_messages)}, "
-                        f"ogłoszenia: {len(filtered_notifications)}, oceny: {len(filtered_grades)}). "
-                        "Wysyłam zbiorcze podsumowanie e-mail."
-                    )
-                    sender.send_mail_with_summary(user_config, filtered_messages, filtered_notifications, filtered_grades)
+                if one_summary or (should_send_timetable and not has_new_items):
+                    if should_send_timetable and not has_new_items:
+                        logger.info(
+                            f"{name} ({login}): Brak nowych ocen/wiadomości, ale wykryto {len(unnotified_tests)} "
+                            "sprawdzian(y) na najbliższy dzień nauki. Wysyłam przypomnienie e-mail."
+                        )
+                    else:
+                        logger.info(
+                            f"Nowe wpisy dla {name} (wiadomości: {len(filtered_messages)}, "
+                            f"ogłoszenia: {len(filtered_notifications)}, oceny: {len(filtered_grades)}). "
+                            "Wysyłam zbiorcze podsumowanie e-mail."
+                        )
+                    sender.send_mail_with_summary(user_config, filtered_messages, filtered_notifications, filtered_grades, timetable=timetable_summary)
                 else:
                     if filtered_messages:
                         logger.info(f"Wysyłam e-mail z {len(filtered_messages)} nowymi wiadomościami dla {name}")
@@ -327,12 +534,18 @@ class UpdatesNotifier:
                 if hasattr(self.storage, 'save_last_notify_time'):
                     self.storage.save_last_notify_time(login, now.isoformat())
 
+                if timetable_summary and timetable_summary.get('immediate_tests') and hasattr(self.storage, 'mark_timetable_entries_notified'):
+                    t_ids = [t['id'] for t in timetable_summary['immediate_tests'] if t.get('id')]
+                    if t_ids:
+                        self.storage.mark_timetable_entries_notified(login, t_ids, notified_at_iso=now.isoformat())
+
         return {
             'login': login,
             'name': name,
             'messages': filtered_messages,
             'notifications': filtered_notifications,
             'grades': filtered_grades,
+            'timetable': timetable_summary,
             'output_file': saved_file,
         }
 
@@ -376,6 +589,7 @@ def run_notifier(
                 default_one_summary = first_user.get('one_summary_message', config.get('one_summary_message', False))
                 default_read_grades = first_user.get('read_grades', config.get('read_grades', True))
                 default_read_messages = first_user.get('read_messages', config.get('read_messages', True))
+                default_read_timetable = first_user.get('read_timetable', config.get('read_timetable', True))
                 custom_name = storage.get_student_name(user_filter) if hasattr(storage, 'get_student_name') else None
                 student_name = custom_name or f"Uczeń ({user_filter})"
                 matched = [{
@@ -385,6 +599,7 @@ def run_notifier(
                     'one_summary_message': default_one_summary,
                     'read_grades': default_read_grades,
                     'read_messages': default_read_messages,
+                    'read_timetable': default_read_timetable,
                 }]
                 logger.info(f"Załadowano profil ze storage dla '{user_filter}': '{student_name}'.")
             else:
@@ -402,6 +617,7 @@ def run_notifier(
             default_one_summary = first_user.get('one_summary_message', config.get('one_summary_message', False))
             default_read_grades = first_user.get('read_grades', config.get('read_grades', True))
             default_read_messages = first_user.get('read_messages', config.get('read_messages', True))
+            default_read_timetable = first_user.get('read_timetable', config.get('read_timetable', True))
             auto_users = []
             for s_login in stored_logins:
                 s_name = storage.get_student_name(s_login) or f"Uczeń ({s_login})"
@@ -412,6 +628,7 @@ def run_notifier(
                     'one_summary_message': default_one_summary,
                     'read_grades': default_read_grades,
                     'read_messages': default_read_messages,
+                    'read_timetable': default_read_timetable,
                 })
             logger.info(f"Załadowano profile uczniów odnalezione w '{effective_storage_dir}': {[u['librus_login_name'] for u in auto_users]}")
             users = auto_users

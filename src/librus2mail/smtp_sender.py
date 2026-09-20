@@ -36,12 +36,12 @@ class SmtpSender(MailSender):
         title = f"{user_config['librus_login_name']} ma nowe oceny w Librusie ({grades_summary})"
         self.__send_smtp(user_config, title, mail_content)
 
-    def send_mail_with_summary(self, user_config, messages=None, notifications=None, grades=None):
+    def send_mail_with_summary(self, user_config, messages=None, notifications=None, grades=None, timetable=None):
         messages = messages or []
         notifications = notifications or []
         grades = grades or []
-        mail_content = self.create_mail_content_for_summary(user_config, messages, notifications, grades)
-        title = self._create_summary_title(user_config, messages, notifications, grades)
+        mail_content = self.create_mail_content_for_summary(user_config, messages, notifications, grades, timetable=timetable)
+        title = self._create_summary_title(user_config, messages, notifications, grades, timetable=timetable)
         self.__send_smtp(user_config, title, mail_content)
 
     def send_error_notification(self, user_config, error, step_name="", details=None, storage=None, cooldown_s=3600):

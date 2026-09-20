@@ -130,6 +130,11 @@ class BaseStorage(ABC):
         """Zapisuje znacznik czasu (ISO) ostatniej synchronizacji terminarza."""
         pass
 
+    @abstractmethod
+    def mark_timetable_entries_notified(self, user_login: str, entry_ids: list[str], notified_at_iso: str | None = None) -> None:
+        """Oznacza wpisy terminarza jako uwzględnione w wysłanym powiadomieniu (last_notified_at)."""
+        pass
+
 
 class FileStorage(BaseStorage):
     """Trwałe przechowywanie stanu w plikach JSON w wyznaczonym katalogu (np. storage/<login>.json)."""
@@ -655,6 +660,33 @@ class FileStorage(BaseStorage):
             os.replace(temp_path, file_path)
         except Exception as e:
             logger.error(f"Błąd podczas zapisu timetable_last_sync do {file_path}: {e}")
+
+    def mark_timetable_entries_notified(self, user_login: str, entry_ids: list[str], notified_at_iso: str | None = None) -> None:
+        file_path = self._get_file_path(user_login)
+        if not os.path.isfile(file_path):
+            return
+        temp_path = f"{file_path}.tmp"
+        try:
+            with open(file_path, encoding='utf-8') as f:
+                data = json.load(f)
+        except Exception:
+            return
+
+        id_set = set(entry_ids)
+        stamp = notified_at_iso or datetime.now().isoformat()
+        updated = False
+        for entry in data.get('timetable_history', []):
+            if entry.get('id') in id_set:
+                entry['last_notified_at'] = stamp
+                updated = True
+
+        if updated:
+            try:
+                with open(temp_path, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+                os.replace(temp_path, file_path)
+            except Exception as e:
+                logger.error(f"Błąd podczas zapisywania last_notified_at w {file_path}: {e}")
 
 
 def create_storage(storage_dir: str = 'storage', *args, **kwargs) -> FileStorage:

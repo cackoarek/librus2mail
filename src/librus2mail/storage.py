@@ -110,6 +110,26 @@ class BaseStorage(ABC):
         """Zapisuje znacznik czasu (ISO) ostatniego wysłanego/wygenerowanego powiadomienia."""
         pass
 
+    @abstractmethod
+    def save_timetable_entries(self, user_login: str, entries: list[dict]) -> None:
+        """Zapisuje wpisy z terminarza (sprawdziany, kartkówki, nieobecności)."""
+        pass
+
+    @abstractmethod
+    def get_timetable_history(self, user_login: str) -> list[dict]:
+        """Zwraca listę wszystkich zarejestrowanych wpisów z terminarza."""
+        pass
+
+    @abstractmethod
+    def get_last_timetable_sync(self, user_login: str) -> str | None:
+        """Zwraca znacznik czasu (ISO) ostatniej synchronizacji terminarza lub None."""
+        pass
+
+    @abstractmethod
+    def save_last_timetable_sync(self, user_login: str, date_iso: str) -> None:
+        """Zapisuje znacznik czasu (ISO) ostatniej synchronizacji terminarza."""
+        pass
+
 
 class FileStorage(BaseStorage):
     """Trwałe przechowywanie stanu w plikach JSON w wyznaczonym katalogu (np. storage/<login>.json)."""
@@ -552,6 +572,89 @@ class FileStorage(BaseStorage):
         except Exception as e:
             logger.error(f"Błąd podczas odczytu ogłoszeń ze storage ({file_path}): {e}")
             return []
+
+    def save_timetable_entries(self, user_login: str, entries: list[dict]) -> None:
+        """Zapisuje listę wpisów z terminarza (sprawdziany, kartkówki, nieobecności) w storage."""
+        if not entries:
+            return
+        file_path = self._get_file_path(user_login)
+        temp_path = f"{file_path}.tmp"
+        data = {}
+        if os.path.isfile(file_path):
+            try:
+                with open(file_path, encoding='utf-8') as f:
+                    data = json.load(f)
+            except Exception:
+                data = {}
+
+        existing = {e.get('id'): e for e in data.get('timetable_history', []) if e.get('id')}
+        now_iso = datetime.now().isoformat()
+        for e in entries:
+            eid = e.get('id')
+            if eid:
+                if eid in existing:
+                    existing[eid].update({k: v for k, v in e.items() if v is not None})
+                    existing[eid]['updated_at'] = now_iso
+                else:
+                    e_copy = dict(e)
+                    e_copy['added_at'] = e_copy.get('added_at') or now_iso
+                    e_copy['updated_at'] = now_iso
+                    existing[eid] = e_copy
+
+        data['timetable_history'] = list(existing.values())
+        data['timetable_last_sync'] = now_iso
+        try:
+            with open(temp_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            os.replace(temp_path, file_path)
+        except Exception as e:
+            logger.error(f"Błąd podczas zapisywania terminarza do {file_path}: {e}")
+
+    def get_timetable_history(self, user_login: str) -> list[dict]:
+        file_path = self._get_file_path(user_login)
+        if not os.path.isfile(file_path):
+            return []
+        try:
+            with open(file_path, encoding='utf-8') as f:
+                data = json.load(f)
+            th = data.get('timetable_history', [])
+            if isinstance(th, dict):
+                return list(th.values())
+            elif isinstance(th, list):
+                return th
+            return []
+        except Exception as e:
+            logger.error(f"Błąd podczas odczytu timetable_history z {file_path}: {e}")
+            return []
+
+    def get_last_timetable_sync(self, user_login: str) -> str | None:
+        file_path = self._get_file_path(user_login)
+        if not os.path.isfile(file_path):
+            return None
+        try:
+            with open(file_path, encoding='utf-8') as f:
+                data = json.load(f)
+            return data.get('timetable_last_sync')
+        except Exception:
+            return None
+
+    def save_last_timetable_sync(self, user_login: str, date_iso: str) -> None:
+        file_path = self._get_file_path(user_login)
+        temp_path = f"{file_path}.tmp"
+        data = {}
+        if os.path.isfile(file_path):
+            try:
+                with open(file_path, encoding='utf-8') as f:
+                    data = json.load(f)
+            except Exception:
+                data = {}
+        data['timetable_last_sync'] = date_iso
+        try:
+            with open(temp_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            os.replace(temp_path, file_path)
+        except Exception as e:
+            logger.error(f"Błąd podczas zapisu timetable_last_sync do {file_path}: {e}")
 
 
 def create_storage(storage_dir: str = 'storage', *args, **kwargs) -> FileStorage:

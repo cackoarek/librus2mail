@@ -30,6 +30,9 @@ librus_users:
     # Monitorowanie nowo wystawionych ocen ucznia (domyślnie: true).
     read_grades: true
 
+    # Pobieranie wpisów z terminarza szkolnego (sprawdziany, kartkówki, nieobecności nauczycieli) (domyślnie: true).
+    read_timetable: true
+
     # Format wysyłki powiadomień e-mail:
     # - false: wysyła osobne e-maile dla nowych ocen, wiadomości i ogłoszeń (domyślnie).
     # - true: konsoliduje wszystkie nowości w jeden zbiorczy, estetyczny e-mail.

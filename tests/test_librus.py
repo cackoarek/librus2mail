@@ -1781,6 +1781,180 @@ class TestLibrus(unittest.TestCase):
             self.assertTrue(res['success'])
             self.assertEqual(mock_inst.login.call_count, 2)
 
+    def test_collector_fetches_timetable(self):
+        config = {'storage_dir': 'storage'}
+        mock_storage = MagicMock()
+        collector = LibrusCollector(config, storage=mock_storage)
+        user_cfg = {
+            'librus_login': '12345',
+            'librus_login_name': 'Janek',
+            'read_messages': False,
+            'read_grades': False,
+            'read_timetable': True,
+        }
+        with patch('librus2mail.librus_collector.Librus') as mock_librus_cls, \
+             patch('librus2mail.librus_collector.sleep'):
+            mock_inst = MagicMock()
+            mock_inst.timetable = [{'id': '1', 'date': '2026-09-23'}]
+            mock_librus_cls.return_value = mock_inst
+            res = collector.collect_user(user_cfg)
+            self.assertTrue(res['success'])
+            mock_inst.fetch_timetable.assert_called_once()
+            self.assertEqual(res['timetable'], [{'id': '1', 'date': '2026-09-23'}])
+
+    def test_fetch_timetable_disabled_when_read_timetable_false(self):
+        cfg = {
+            'librus_login': '123456',
+            'librus_password': 'secret_password',
+            'read_timetable': False,
+        }
+        lib = Librus(cfg)
+        lib.logged = True
+        entries = lib.fetch_timetable()
+        self.assertEqual(entries, [])
+        self.assertEqual(lib.timetable, [])
+
+    def test_fetch_timetable_with_valid_calendar(self):
+        sample_calendar_html = """
+        <html>
+        <body>
+            <form id="scheduleForm" action="/terminarz">
+                <select name="miesiac">
+                    <option value="9" selected="selected">Wrzesień</option>
+                </select>
+                <select name="rok">
+                    <option value="2026" selected="selected">2026</option>
+                </select>
+            </form>
+            <table class="kalendarz decorated center">
+                <tr>
+                    <td>
+                        <div class="kalendarz-dzien">
+                            <div class="kalendarz-numer-dnia">21</div>
+                            <table>
+                                <tr>
+                                    <td onclick="location.href='/terminarz/szczegoly_wolne/2325943'">
+                                        Nieobecność:<br/>Nauczyciel: Doszko Janina
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td onclick="location.href='/terminarz/szczegoly_wolne/2326757'">
+                                        Nieobecność:<br/>Nauczyciel: Skurka Renata<br/>Godziny: 08:30 do 09:15
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="kalendarz-dzien">
+                            <div class="kalendarz-numer-dnia">23</div>
+                            <table>
+                                <tr>
+                                    <td onclick="location.href='/terminarz/szczegoly/9329532'" title="Nauczyciel: Artur Węgiel<br />Opis: Kapitel 3<br />Data dodania: 2026-09-09 13:11:23">
+                                        Nr lekcji: 1<br/><span class="przedmiot">Język niemiecki</span>, Sprawdzian<br/>6b SP
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td onclick="location.href='/terminarz/szczegoly/9359885'" title="Nauczyciel: Magdalena Kiljańczyk<br />Opis: słownictwo part<br />Data dodania: 2026-09-18 14:51:07">
+                                        Nr lekcji: 5<br/><span class="przedmiot">Język angielski</span>, Kartkówka<br/>6b SP
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+        self.librus.logged = True
+        with patch.object(self.librus, 'parse_page') as mock_parse:
+            from bs4 import BeautifulSoup
+            mock_parse.return_value = BeautifulSoup(sample_calendar_html, 'html.parser')
+            entries = self.librus.fetch_timetable()
+
+            self.assertEqual(len(entries), 4)
+
+            # 21.09 nieobecności
+            abs1 = [e for e in entries if e['id'] == '2325943_2026-09-21'][0]
+            self.assertEqual(abs1['date'], '2026-09-21')
+            self.assertEqual(abs1['type'], 'absence')
+            self.assertEqual(abs1['teacher'], 'Doszko Janina')
+            self.assertEqual(abs1['time'], 'Cały dzień')
+
+            abs2 = [e for e in entries if e['id'] == '2326757_2026-09-21'][0]
+            self.assertEqual(abs2['date'], '2026-09-21')
+            self.assertEqual(abs2['teacher'], 'Skurka Renata')
+            self.assertEqual(abs2['time'], '08:30 do 09:15')
+
+            # 23.09 sprawdzian i kartkówka
+            test1 = [e for e in entries if e['id'] == '9329532'][0]
+            self.assertEqual(test1['date'], '2026-09-23')
+            self.assertEqual(test1['type'], 'test')
+            self.assertEqual(test1['category'], 'Sprawdzian')
+            self.assertEqual(test1['subject'], 'Język niemiecki')
+            self.assertEqual(test1['lesson_no'], '1')
+            self.assertEqual(test1['teacher'], 'Artur Węgiel')
+            self.assertEqual(test1['description'], 'Kapitel 3')
+
+            quiz1 = [e for e in entries if e['id'] == '9359885'][0]
+            self.assertEqual(quiz1['date'], '2026-09-23')
+            self.assertEqual(quiz1['type'], 'test')
+            self.assertEqual(quiz1['category'], 'Kartkówka')
+            self.assertEqual(quiz1['subject'], 'Język angielski')
+            self.assertEqual(quiz1['lesson_no'], '5')
+            self.assertEqual(quiz1['teacher'], 'Magdalena Kiljańczyk')
+
+    def test_storage_save_and_get_timetable_entries(self):
+        from librus2mail.storage import FileStorage
+        with tempfile.TemporaryDirectory() as tmpdir:
+            storage = FileStorage(storage_dir=tmpdir)
+            sample_entries = [
+                {
+                    'id': '9329532',
+                    'date': '2026-09-23',
+                    'type': 'test',
+                    'category': 'Sprawdzian',
+                    'subject': 'Język niemiecki',
+                    'lesson_no': '1',
+                    'teacher': 'Artur Węgiel',
+                    'description': 'Kapitel 3',
+                },
+                {
+                    'id': '2325943_2026-09-21',
+                    'date': '2026-09-21',
+                    'type': 'absence',
+                    'category': 'Nieobecność nauczyciela',
+                    'teacher': 'Janina Doszko',
+                    'time': 'Cały dzień',
+                }
+            ]
+            storage.save_timetable_entries('123456', sample_entries)
+
+            history = storage.get_timetable_history('123456')
+            self.assertEqual(len(history), 2)
+            hist_ids = {e['id'] for e in history}
+            self.assertIn('9329532', hist_ids)
+            self.assertIn('2325943_2026-09-21', hist_ids)
+
+            # Upsert update
+            updated_entries = [
+                {
+                    'id': '9329532',
+                    'date': '2026-09-23',
+                    'type': 'test',
+                    'category': 'Sprawdzian',
+                    'subject': 'Język niemiecki',
+                    'description': 'Kapitel 3 - zaktualizowany zakres',
+                }
+            ]
+            storage.save_timetable_entries('123456', updated_entries)
+            history2 = storage.get_timetable_history('123456')
+            self.assertEqual(len(history2), 2)
+            german_test = [e for e in history2 if e['id'] == '9329532'][0]
+            self.assertEqual(german_test['description'], 'Kapitel 3 - zaktualizowany zakres')
+            self.assertIsNotNone(storage.get_last_timetable_sync('123456'))
+
 
 if __name__ == '__main__':
     unittest.main()

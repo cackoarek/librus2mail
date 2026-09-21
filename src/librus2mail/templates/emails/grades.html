@@ -41,6 +41,50 @@
         {% for grade in grades %}
         {% set clean_g = grade.grade | string | replace('+','') | replace('-','') | replace('=','') %}
         {% set border_color = '#10b981' if clean_g in ['5','6'] else ('#3b82f6' if clean_g == '4' else ('#f59e0b' if clean_g == '3' else ('#ef4444' if clean_g in ['1','2'] else '#64748b'))) %}
+
+        {% set cat = (grade.category or '') | lower %}
+        {% if 'sprawdzian' in cat or 'klasow' in cat or 'klasów' in cat or 'egzamin' in cat %}
+            {% set cat_bg = '#fee2e2' %}
+            {% set cat_color = '#991b1b' %}
+            {% set cat_border = '#fca5a5' %}
+            {% set cat_icon = '📕' %}
+        {% elif 'kartków' in cat or 'kartkow' in cat %}
+            {% set cat_bg = '#ffedd5' %}
+            {% set cat_color = '#c2410c' %}
+            {% set cat_border = '#fed7aa' %}
+            {% set cat_icon = '📙' %}
+        {% elif 'odpowiedź' in cat or 'odpowiedz' in cat or 'projekt' in cat %}
+            {% set cat_bg = '#eff6ff' %}
+            {% set cat_color = '#1d4ed8' %}
+            {% set cat_border = '#bfdbfe' %}
+            {% set cat_icon = '📘' %}
+        {% elif 'aktywność' in cat or 'aktywnosc' in cat or 'domow' in cat or 'lekcj' in cat %}
+            {% set cat_bg = '#f0fdf4' %}
+            {% set cat_color = '#15803d' %}
+            {% set cat_border = '#bbf7d0' %}
+            {% set cat_icon = '📗' %}
+        {% else %}
+            {% set cat_bg = '#f1f5f9' %}
+            {% set cat_color = '#475569' %}
+            {% set cat_border = '#cbd5e1' %}
+            {% set cat_icon = '🏷️' %}
+        {% endif %}
+
+        {% set w_raw = (grade.weight or '') | string | replace('×','') | replace('x','') | trim %}
+        {% set w_val = w_raw | float(default=1.0) %}
+        {% if w_val >= 3.0 %}
+            {% set w_bg = '#fee2e2' %}
+            {% set w_color = '#991b1b' %}
+            {% set w_border = '#fca5a5' %}
+        {% elif w_val >= 2.0 %}
+            {% set w_bg = '#ffedd5' %}
+            {% set w_color = '#c2410c' %}
+            {% set w_border = '#fed7aa' %}
+        {% else %}
+            {% set w_bg = '#f1f5f9' %}
+            {% set w_color = '#475569' %}
+            {% set w_border = '#e2e8f0' %}
+        {% endif %}
         <div style="background: #ffffff; border: 1px solid #e2e8f0; border-left: 4px solid {{ border_color }}; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);">
             <!-- Wiersz 1: Przedmiot, Ocena, Waga, Data -->
             <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; border-collapse: collapse;">
@@ -51,8 +95,8 @@
                             {{ grade.grade | grade_badge }}
                         </span>
                         {% if grade.weight and grade.weight != '-' %}
-                        <span style="background-color: #f1f5f9; color: #334155; font-weight: 700; font-size: 11px; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0; margin-left: 6px; vertical-align: middle; display: inline-block;">
-                            waga ×{{ grade.weight }}
+                        <span style="background-color: {{ w_bg }}; color: {{ w_color }}; font-weight: 800; font-size: 11px; padding: 2px 6px; border-radius: 4px; border: 1px solid {{ w_border }}; margin-left: 6px; vertical-align: middle; display: inline-block;">
+                            waga ×{{ w_raw }}
                         </span>
                         {% endif %}
                     </td>
@@ -66,8 +110,8 @@
             <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; border-collapse: collapse; margin-top: 6px;">
                 <tr>
                     <td align="left" valign="middle" style="font-size: 12px; color: #475569;">
-                        <span style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 2px 7px; color: #475569; font-weight: 600; font-size: 11px; display: inline-block;">
-                            🏷️ {{ grade.category or 'Brak kategorii' }}
+                        <span style="background-color: {{ cat_bg }}; color: {{ cat_color }}; border: 1px solid {{ cat_border }}; border-radius: 4px; padding: 2px 8px; font-weight: 700; font-size: 11px; display: inline-block; letter-spacing: 0.02em;">
+                            {{ cat_icon }} {{ grade.category or 'Brak kategorii' }}
                         </span>
                         {% if grade.teacher and grade.teacher != '-' %}
                         <span style="color: #64748b; margin-left: 8px; display: inline-block;">

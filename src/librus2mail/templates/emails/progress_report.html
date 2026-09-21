@@ -369,12 +369,19 @@
                 {% if timetable.immediate_tests %}
                 <div style="margin-top: 8px;">
                     {% for test in timetable.immediate_tests %}
-                    <div style="background: #ffffff; border: 1px solid #fecdd3; border-radius: 6px; padding: 8px 12px; margin-top: 6px;">
+                    {% set is_big_test = ('sprawdzian' in test.category | lower or 'klasow' in test.category | lower or 'klasów' in test.category | lower or 'egzamin' in test.category | lower) %}
+                    {% set t_border = '#fca5a5' if is_big_test else '#fed7aa' %}
+                    {% set t_strip = '#dc2626' if is_big_test else '#f97316' %}
+                    {% set t_badge_bg = '#fee2e2' if is_big_test else '#ffedd5' %}
+                    {% set t_badge_color = '#991b1b' if is_big_test else '#c2410c' %}
+                    {% set t_badge_border = '#fca5a5' if is_big_test else '#fed7aa' %}
+                    {% set t_icon = '📕' if is_big_test else '📙' %}
+                    <div style="background: #ffffff; border: 1px solid {{ t_border }}; border-left: 4px solid {{ t_strip }}; border-radius: 6px; padding: 9px 12px; margin-top: 6px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);">
                         <table border="0" cellpadding="0" cellspacing="0" width="100%">
                             <tr>
                                 <td valign="top" style="font-weight: 700; color: #1e293b; font-size: 13px;">
-                                    <span style="background-color: {{ '#fee2e2' if test.category == 'Sprawdzian' else '#ffedd5' }}; color: {{ '#b91c1c' if test.category == 'Sprawdzian' else '#c2410c' }}; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-right: 6px;">
-                                        {{ test.category }}
+                                    <span style="background-color: {{ t_badge_bg }}; color: {{ t_badge_color }}; border: 1px solid {{ t_badge_border }}; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 800; margin-right: 6px; display: inline-block;">
+                                        {{ t_icon }} {{ test.category }}
                                     </span>
                                     {{ test.subject }}
                                     {% if test.lesson_no %}
@@ -387,7 +394,7 @@
                             </tr>
                         </table>
                         {% if test.description %}
-                        <div style="font-size: 12px; color: #475569; margin-top: 4px; font-style: italic; line-height: 1.4;">
+                        <div style="font-size: 12px; color: #475569; margin-top: 5px; font-style: italic; line-height: 1.4;">
                             Zakres: {{ test.description }}
                         </div>
                         {% endif %}
@@ -423,9 +430,14 @@
                         📌 {{ day.weekday }}, {{ day.date_str }}
                     </div>
                     {% for test in day.tests %}
-                    <div style="margin-left: 12px; margin-bottom: 4px; font-size: 12px; color: #1e293b;">
-                        <span style="background-color: {{ '#fee2e2' if test.category == 'Sprawdzian' else '#ffedd5' }}; color: {{ '#b91c1c' if test.category == 'Sprawdzian' else '#c2410c' }}; padding: 1px 5px; border-radius: 3px; font-size: 10px; font-weight: 700; margin-right: 4px;">
-                            {{ test.category }}
+                    {% set is_big_test = ('sprawdzian' in test.category | lower or 'klasow' in test.category | lower or 'klasów' in test.category | lower or 'egzamin' in test.category | lower) %}
+                    {% set t_badge_bg = '#fee2e2' if is_big_test else '#ffedd5' %}
+                    {% set t_badge_color = '#991b1b' if is_big_test else '#c2410c' %}
+                    {% set t_badge_border = '#fca5a5' if is_big_test else '#fed7aa' %}
+                    {% set t_icon = '📕' if is_big_test else '📙' %}
+                    <div style="margin-left: 12px; margin-bottom: 5px; font-size: 12px; color: #1e293b;">
+                        <span style="background-color: {{ t_badge_bg }}; color: {{ t_badge_color }}; border: 1px solid {{ t_badge_border }}; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 800; margin-right: 4px; display: inline-block;">
+                            {{ t_icon }} {{ test.category }}
                         </span>
                         <strong>{{ test.subject }}</strong>
                         {% if test.lesson_no %}

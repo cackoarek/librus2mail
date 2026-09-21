@@ -11,6 +11,19 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ---
 
+## [1.3.0] – 2026-09-21
+
+### Dodane
+- card-base layout for grades in notification
+- add timetable events to parent and student raports
+- add timetable events to notify email
+- add timetable data parse to storage
+
+### Naprawione
+- remove waga after sprawdzian
+- fix layout of daily notification
+
+---
 ## [1.2.0] – 2026-09-20
 
 ### Dodane
@@ -78,7 +91,8 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ---
 
-[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/cackoarek/librus2mail/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/cackoarek/librus2mail/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/cackoarek/librus2mail/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/cackoarek/librus2mail/compare/v1.0.1...v1.1.0

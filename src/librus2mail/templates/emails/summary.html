@@ -178,61 +178,74 @@
         {% if grades %}
         <div style="margin-bottom: 28px;">
             <div style="border-bottom: 2px solid #10b981; padding-bottom: 8px; margin-bottom: 12px;">
-                <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #0f172a;">📝 Nowe oceny ({{ grades | length }})</h3>
+                <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                    <tr>
+                        <td align="left" valign="middle">
+                            <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #0f172a;">📝 Nowe oceny ({{ grades | length }})</h3>
+                        </td>
+                        <td align="right" valign="middle" style="font-size: 11px; color: #64748b;">
+                            <span style="background-color: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: 600; white-space: nowrap;">
+                                ↔️ przesuń tabelę
+                            </span>
+                        </td>
+                    </tr>
+                </table>
             </div>
-            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
-                <thead>
-                    <tr style="background-color: #f8fafc; color: #475569; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e2e8f0;">
-                    <th style="padding: 10px 10px;">Przedmiot</th>
-                    <th style="padding: 10px 6px; text-align: center;">Ocena</th>
-                    <th style="padding: 10px 8px;">Kategoria</th>
-                    <th style="padding: 10px 6px; text-align: center;">Waga</th>
-                    <th style="padding: 10px 8px;">Data</th>
-                    <th style="padding: 10px 10px;">Nauczyciel</th>
-                    <th style="padding: 10px 10px;">Komentarz</th>
-                </tr>
-            </thead>
-            <tbody>
-            {% for grade in grades %}
-                <tr style="border-bottom: 1px solid #f1f5f9; background-color: {{ '#ffffff' if loop.index0 % 2 == 0 else '#fafafa' }};">
-                    <td style="padding: 10px 10px; font-weight: 600; color: #1e293b;">
-                        {{ grade.subject }}
-                    </td>
-                    <td style="padding: 10px 6px; text-align: center;">
-                        {{ grade.grade | grade_badge }}
-                    </td>
-                    <td style="padding: 10px 8px; color: #475569;">
-                        {{ grade.category or '-' }}
-                    </td>
-                    <td style="padding: 10px 6px; text-align: center;">
-                        {% if grade.weight and grade.weight != '-' %}
-                        <span style="background-color: #f1f5f9; color: #334155; font-weight: 700; font-size: 12px; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0;">
-                            ×{{ grade.weight }}
-                        </span>
-                        {% else %}
-                        <span style="color: #94a3b8;">-</span>
-                        {% endif %}
-                    </td>
-                    <td style="padding: 10px 8px; color: #64748b; white-space: nowrap; font-size: 12px;">
-                        {{ grade.date or '-' }}
-                    </td>
-                    <td style="padding: 10px 10px; color: #475569; font-size: 12px;">
-                        {{ grade.teacher or '-' }}
-                    </td>
-                    <td style="padding: 10px 10px; font-size: 12px;">
-                        {% if grade.comment and grade.comment != '-' %}
-                        <span style="color: #0f172a; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 2px 7px; display: inline-block; font-size: 11px; line-height: 1.4;">
-                            💬 {{ grade.comment }}
-                        </span>
-                        {% else %}
-                        <span style="color: #94a3b8;">-</span>
-                        {% endif %}
-                    </td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    </div>
+            <div style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; min-width: 620px; border-collapse: collapse; font-size: 13px; text-align: left;">
+                    <thead>
+                        <tr style="background-color: #f8fafc; color: #475569; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e2e8f0;">
+                            <th style="padding: 10px 10px; white-space: nowrap;">Przedmiot</th>
+                            <th style="padding: 10px 6px; text-align: center; white-space: nowrap;">Ocena</th>
+                            <th style="padding: 10px 8px; white-space: nowrap;">Kategoria</th>
+                            <th style="padding: 10px 6px; text-align: center; white-space: nowrap;">Waga</th>
+                            <th style="padding: 10px 8px; white-space: nowrap;">Data</th>
+                            <th style="padding: 10px 10px; white-space: nowrap;">Nauczyciel</th>
+                            <th style="padding: 10px 10px; min-width: 140px;">Komentarz</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for grade in grades %}
+                        <tr style="border-bottom: 1px solid #f1f5f9; background-color: {{ '#ffffff' if loop.index0 % 2 == 0 else '#fafafa' }};">
+                            <td style="padding: 10px 10px; font-weight: 600; color: #1e293b; white-space: nowrap;">
+                                {{ grade.subject }}
+                            </td>
+                            <td style="padding: 10px 6px; text-align: center; white-space: nowrap;">
+                                {{ grade.grade | grade_badge }}
+                            </td>
+                            <td style="padding: 10px 8px; color: #475569; white-space: nowrap;">
+                                {{ grade.category or '-' }}
+                            </td>
+                            <td style="padding: 10px 6px; text-align: center; white-space: nowrap;">
+                                {% if grade.weight and grade.weight != '-' %}
+                                <span style="background-color: #f1f5f9; color: #334155; font-weight: 700; font-size: 12px; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0;">
+                                    ×{{ grade.weight }}
+                                </span>
+                                {% else %}
+                                <span style="color: #94a3b8;">-</span>
+                                {% endif %}
+                            </td>
+                            <td style="padding: 10px 8px; color: #64748b; white-space: nowrap; font-size: 12px;">
+                                {{ grade.date or '-' }}
+                            </td>
+                            <td style="padding: 10px 10px; color: #475569; font-size: 12px; white-space: nowrap;">
+                                {{ grade.teacher or '-' }}
+                            </td>
+                            <td style="padding: 10px 10px; font-size: 12px;">
+                                {% if grade.comment and grade.comment != '-' %}
+                                <span style="color: #0f172a; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 2px 7px; display: inline-block; font-size: 11px; line-height: 1.4;">
+                                    💬 {{ grade.comment }}
+                                </span>
+                                {% else %}
+                                <span style="color: #94a3b8;">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
         {% endif %}
 
         <!-- Nowe wiadomości -->

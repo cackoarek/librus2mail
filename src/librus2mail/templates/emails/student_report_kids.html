@@ -246,27 +246,28 @@
                 {% endif %}
             </h2>
             {% if metrics.recent_grades %}
-            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; border-collapse: collapse; font-size: 12px;">
+            <div style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid #e2e8f0; border-radius: 8px;">
+            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; min-width: 580px; border-collapse: collapse; font-size: 12px;">
                 <thead>
                     <tr style="background: #f8fafc; color: #64748b; font-size: 11px; text-transform: uppercase; border-bottom: 1px solid #e2e8f0;">
-                        <th style="padding: 10px 8px; text-align: left;">Przedmiot</th>
-                        <th style="padding: 10px 8px; text-align: center;">Ocena</th>
-                        <th style="padding: 10px 8px; text-align: left;">Kategoria</th>
-                        <th style="padding: 10px 8px; text-align: left;">Komentarz nauczyciela</th>
-                        <th style="padding: 10px 8px; text-align: right;">Data</th>
+                        <th style="padding: 10px 8px; text-align: left; white-space: nowrap;">Przedmiot</th>
+                        <th style="padding: 10px 8px; text-align: center; white-space: nowrap;">Ocena</th>
+                        <th style="padding: 10px 8px; text-align: left; white-space: nowrap;">Kategoria</th>
+                        <th style="padding: 10px 8px; text-align: left; min-width: 150px;">Komentarz nauczyciela</th>
+                        <th style="padding: 10px 8px; text-align: right; white-space: nowrap;">Data</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for g in metrics.recent_grades %}
                     <tr style="border-bottom: 1px solid #f1f5f9;">
-                        <td style="padding: 10px 8px; font-weight: 600; color: #1e293b; vertical-align: middle;">{{ g.subject }}</td>
-                        <td style="padding: 10px 8px; text-align: center; vertical-align: middle;">
+                        <td style="padding: 10px 8px; font-weight: 600; color: #1e293b; vertical-align: middle; white-space: nowrap;">{{ g.subject }}</td>
+                        <td style="padding: 10px 8px; text-align: center; vertical-align: middle; white-space: nowrap;">
                             <span style="display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 6px; font-weight: 800; font-size: 12px; color: #ffffff; background: {{ '#10b981' if (g.numeric or 0) >= 4.0 else ('#f59e0b' if (g.numeric or 0) >= 3.0 else '#ef4444') }};">
                                 {{ g.grade }}
                             </span>
                         </td>
-                        <td style="padding: 10px 8px; color: #475569; vertical-align: middle;">{{ g.category or '-' }}</td>
-                        <td style="padding: 10px 8px; font-size: 12px; vertical-align: middle;">
+                        <td style="padding: 10px 8px; color: #475569; vertical-align: middle; white-space: nowrap;">{{ g.category or '-' }}</td>
+                        <td style="padding: 10px 8px; font-size: 12px; vertical-align: middle; min-width: 150px;">
                             {% if g.comment %}
                             <div style="color: #1e40af; background: #eff6ff; border: 1px solid #dbeafe; border-radius: 6px; padding: 3px 8px; display: inline-block; line-height: 1.35;">
                                 💬 <strong>Komentarz:</strong> {{ g.comment }}
@@ -283,6 +284,7 @@
                     {% endfor %}
                 </tbody>
             </table>
+            </div>
             {% else %}
             <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 16px; text-align: center; color: #64748b; font-size: 13px;">
                 🎉 W tym okresie nie wpisano żadnych nowych ocen. Świetna okazja, aby utrwalić wiedzę przed kolejnymi lekcjami!

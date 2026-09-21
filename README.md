@@ -2,7 +2,7 @@
 
 # 📬 Librus2mail
 
-**Nowoczesny, bezobsługowy asystent e-mail i analityk postępów dla e-dziennika Librus Synergia**
+**Nowoczesny, bezobsługowy asystent rodzica i analityk postępów nauki dizecka dla e-dziennika Librus Synergia**
 
 [![CI Status](https://img.shields.io/github/actions/workflow/status/cackoarek/librus2mail/ci.yml?branch=main&label=CI&style=flat-square&logo=githubactions&logoColor=white)](https://github.com/cackoarek/librus2mail/actions/workflows/ci.yml)
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-3776AB.svg?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
@@ -16,7 +16,7 @@
 [![GitHub Pages](https://img.shields.io/badge/demo-GitHub%20Pages-0969da.svg?style=flat-square&logo=github&logoColor=white)](https://cackoarek.github.io/librus2mail/)
 
 <p align="center">
-  Automatyczne powiadomienia e-mail o nowych ocenach, wiadomościach i ogłoszeniach<br>
+  Automatyczne powiadomienia e-mail o nowych ocenach, wiadomościach, ogłoszeniach, najbliższych terminach sprawdzianów<br>
   oraz zaawansowany silnik analizy trendów, wag ocen i symulator świadectwa z wyróżnieniem.
 </p>
 

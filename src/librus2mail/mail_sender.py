@@ -125,7 +125,13 @@ class MailSender:
         return template.render(user_config=user_config, grades=grades)
 
     @staticmethod
-    def _create_summary_title(user_config: dict, messages: list, notifications: list, grades: list) -> str:
+    def _create_summary_title(
+        user_config: dict,
+        messages: list = None,
+        notifications: list = None,
+        grades: list = None,
+        timetable: dict = None,
+    ) -> str:
         parts = []
         if messages:
             count = len(messages)
@@ -151,6 +157,17 @@ class MailSender:
                 grades_summary += f" (+{len(grades) - 2})"
             parts.append(f"nowe oceny ({grades_summary})")
 
+        if timetable and timetable.get('immediate_tests'):
+            t_count = len(timetable['immediate_tests'])
+            t_suffix = 'y' if 1 < t_count < 5 else ('ów' if t_count >= 5 else '')
+            if timetable.get('is_tomorrow') is False:
+                day_name = timetable.get('immediate_day_name') or 'poniedziałek'
+                parts.append(f"⚠️ {t_count} sprawdzian{t_suffix} w {day_name}")
+            else:
+                parts.append(f"⚠️ {t_count} sprawdzian{t_suffix} jutro")
+        elif timetable and timetable.get('immediate_absences'):
+            parts.append("nieobecność nauczyciela")
+
         name = user_config.get('librus_login_name') or user_config.get('librus_login')
         if not parts:
             return f"{name} - Librus: podsumowanie"
@@ -161,14 +178,16 @@ class MailSender:
         user_config: dict,
         messages: list = None,
         notifications: list = None,
-        grades: list = None
+        grades: list = None,
+        timetable: dict = None,
     ) -> str:
         template = jinja_env.get_template('summary.html')
         return template.render(
             user_config=user_config,
             messages=messages or [],
             notifications=notifications or [],
-            grades=grades or []
+            grades=grades or [],
+            timetable=timetable,
         )
 
     def send_mail_with_messages(self, user_config, messages):
@@ -180,7 +199,7 @@ class MailSender:
     def send_mail_with_grades(self, user_config, grades):
         pass
 
-    def send_mail_with_summary(self, user_config, messages=None, notifications=None, grades=None):
+    def send_mail_with_summary(self, user_config, messages=None, notifications=None, grades=None, timetable=None):
         pass
 
     @classmethod
@@ -194,7 +213,12 @@ class MailSender:
         return f"📊 Raport postępów: {name} ({p_start} – {p_end}) [{avg_text}, nowe oceny: {period_count}]"
 
     @classmethod
-    def create_mail_content_for_progress_report(cls, user_config: dict, analysis: dict) -> str:
+    def create_mail_content_for_progress_report(
+        cls,
+        user_config: dict,
+        analysis: dict,
+        timetable: dict | None = None,
+    ) -> str:
         name = str(user_config.get('librus_login_name') or user_config.get('librus_login', ''))
         login = str(user_config.get('librus_login', ''))
         borderline_opp_map = {o['subject']: o for o in analysis.get('borderline_opportunities', [])}
@@ -221,6 +245,7 @@ class MailSender:
             borderline_opp_map=borderline_opp_map,
             borderline_risk_map=borderline_risk_map,
             dormant_items=dormant_items,
+            timetable=timetable,
         )
 
     @classmethod
@@ -228,6 +253,7 @@ class MailSender:
         cls,
         metrics: Any,
         template_type: str = "kids",
+        timetable: dict | None = None,
     ) -> str:
         tpl_name = f"student_report_{template_type}.html"
         try:
@@ -238,6 +264,7 @@ class MailSender:
         return template.render(
             metrics=metrics,
             now=datetime.now(),
+            timetable=timetable,
         )
 
     @staticmethod
@@ -261,7 +288,12 @@ class MailSender:
     ) -> bool:
         pass
 
-    def send_progress_report(self, user_config: dict, analysis: dict) -> bool:
+    def send_progress_report(
+        self,
+        user_config: dict,
+        analysis: dict,
+        timetable: dict | None = None,
+    ) -> bool:
         pass
 
     @classmethod

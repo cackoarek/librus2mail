@@ -1,7 +1,9 @@
 import logging
 import random
+import re
 import time
 import urllib.parse
+from datetime import datetime
 from time import sleep
 from typing import Any
 
@@ -17,6 +19,7 @@ MESSAGES_URL = 'https://synergia.librus.pl/wiadomosci'
 MESSAGE_BODY_URL = 'https://synergia.librus.pl'
 NOTIFICATIONS_URL = 'https://synergia.librus.pl/ogloszenia'
 GRADES_URL = 'https://synergia.librus.pl/przegladaj_oceny/uczen'
+TIMETABLE_URL = 'https://synergia.librus.pl/terminarz'
 
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
 
@@ -40,6 +43,7 @@ class Librus:
         self.__storage = storage
         self.__do_read_messages = config.get('read_messages', True)
         self.__do_read_grades = config.get('read_grades', True)
+        self.__do_read_timetable = config.get('read_timetable', True)
         self.__librus_login = config.get('librus_login')
         self.__librus_password = config.get('librus_password')
 
@@ -54,6 +58,7 @@ class Librus:
             self.__known_grades = set()
 
         self.grades = []
+        self.timetable = []
         # Używamy spójnego, nowoczesnego User-Agenta desktopowego.
         # Losowanie random za każdym razem sprawia, że Librus traktuje każde zapytanie
         # jako logowanie z nowego urządzenia i wymusza procedurę 2FA.
@@ -338,6 +343,11 @@ class Librus:
                     str(self.__librus_login),
                     self.notifications
                 )
+            if hasattr(self, 'timetable') and self.timetable and hasattr(self.__storage, 'save_timetable_entries'):
+                self.__storage.save_timetable_entries(
+                    str(self.__librus_login),
+                    self.timetable
+                )
 
     def get_not_known_messages_and_mark_as_known(self) -> list[dict[str, bool | str | Any]]:
         resp = [message for message in self.messages if message['id'] not in self.__known_messages]
@@ -401,6 +411,10 @@ class Librus:
     @property
     def do_read_grades(self) -> bool:
         return self.__do_read_grades
+
+    @property
+    def do_read_timetable(self) -> bool:
+        return self.__do_read_timetable
 
     def fetch_grades(self, force: bool = False):
         if not self.__do_read_grades and not force:
@@ -509,6 +523,168 @@ class Librus:
         self.__known_grades.update(grade['id'] for grade in self.grades)
         self.save_state()
         return resp
+
+    def _parse_timetable_soup(self, soup: BeautifulSoup) -> list[dict[str, Any]]:
+        m_sel = soup.find('select', {'name': 'miesiac'})
+        r_sel = soup.find('select', {'name': 'rok'})
+        cal_month = None
+        cal_year = None
+        if m_sel:
+            selected_m = [opt.get('value') for opt in m_sel.find_all('option') if opt.get('selected') is not None]
+            if selected_m and str(selected_m[0]).isdigit():
+                cal_month = int(selected_m[0])
+        if r_sel:
+            selected_r = [opt.get('value') for opt in r_sel.find_all('option') if opt.get('selected') is not None]
+            if selected_r and str(selected_r[0]).isdigit():
+                cal_year = int(selected_r[0])
+
+        if not cal_month or not cal_year:
+            now = datetime.now()
+            cal_month = cal_month or now.month
+            cal_year = cal_year or now.year
+
+        entries: list[dict[str, Any]] = []
+        for num_div in soup.find_all('div', class_='kalendarz-numer-dnia'):
+            day_str = num_div.get_text(strip=True)
+            if not day_str.isdigit():
+                continue
+            day = int(day_str)
+            date_str = f"{cal_year:04d}-{cal_month:02d}-{day:02d}"
+
+            parent_day = num_div.find_parent('div', class_='kalendarz-dzien')
+            if not parent_day:
+                continue
+
+            for td in parent_day.find_all('td'):
+                onclick = td.get('onclick', '')
+                title_attr = td.get('title', '')
+
+                if 'szczegoly_wolne' in onclick:
+                    # Nieobecność nauczyciela
+                    m_id = re.search(r'/(\d+)', onclick)
+                    raw_id = m_id.group(1) if m_id else f"absence_{date_str}"
+                    entry_id = f"{raw_id}_{date_str}"
+
+                    text = td.get_text(separator=' ', strip=True)
+                    teacher = ""
+                    hours = "Cały dzień"
+                    if 'Nauczyciel:' in text:
+                        t_part = text.split('Nauczyciel:')[1]
+                        if 'Godziny:' in t_part:
+                            teacher = t_part.split('Godziny:')[0].strip()
+                            hours = t_part.split('Godziny:')[1].strip()
+                        else:
+                            teacher = t_part.strip()
+
+                    entries.append({
+                        'id': entry_id,
+                        'date': date_str,
+                        'type': 'absence',
+                        'category': 'Nieobecność nauczyciela',
+                        'teacher': teacher,
+                        'time': hours,
+                        'raw_text': text,
+                    })
+
+                elif 'szczegoly' in onclick:
+                    m_id = re.search(r'/(\d+)', onclick)
+                    entry_id = m_id.group(1) if m_id else None
+                    if not entry_id:
+                        continue
+
+                    subject_span = td.find('span', class_='przedmiot')
+                    subject = subject_span.get_text(strip=True) if subject_span else ''
+
+                    teacher = ''
+                    description = ''
+                    add_date = ''
+                    if title_attr:
+                        clean_title = re.sub(r'<br\s*/?>', '\n', title_attr)
+                        for line in clean_title.split('\n'):
+                            line = line.strip()
+                            if line.startswith('Nauczyciel:'):
+                                teacher = line.replace('Nauczyciel:', '').strip()
+                            elif line.startswith('Opis:'):
+                                description = line.replace('Opis:', '').strip()
+                            elif line.startswith('Data dodania:'):
+                                add_date = line.replace('Data dodania:', '').strip()
+
+                    td_lines = [line_text.strip() for line_text in td.get_text(separator='\n').split('\n') if line_text.strip()]
+                    lesson_no = ''
+                    category = 'Inne'
+
+                    for line in td_lines:
+                        clean_line = line.strip(',').strip()
+                        if 'Nr lekcji:' in clean_line:
+                            lesson_no = clean_line.replace('Nr lekcji:', '').strip()
+                        for cat in ['Sprawdzian', 'Kartkówka', 'Praca klasowa', 'Zadanie domowe', 'Projekt', 'Wycieczka']:
+                            if cat.lower() in clean_line.lower():
+                                category = cat
+                                break
+
+                    entry_type = 'test' if any(cat in category for cat in ['Sprawdzian', 'Kartkówka', 'Praca klasowa']) else 'event'
+
+                    entries.append({
+                        'id': entry_id,
+                        'date': date_str,
+                        'type': entry_type,
+                        'category': category,
+                        'subject': subject,
+                        'lesson_no': lesson_no,
+                        'teacher': teacher,
+                        'description': description,
+                        'add_date': add_date,
+                    })
+
+        return entries
+
+    def fetch_timetable(self, force: bool = False, month: int | None = None, year: int | None = None) -> list[dict[str, Any]]:
+        if not self.__do_read_timetable and not force:
+            logger.info("Pobieranie terminarza jest wyłączone w konfiguracji (read_timetable: false)")
+            self.timetable = []
+            return []
+
+        if not self.logged:
+            raise NotLogged()
+
+        logger.info("Pobieram terminarz (sprawdziany i nieobecności)")
+        if month and year:
+            headers = {**self.__headers, 'Referer': TIMETABLE_URL}
+            res = self.__session.post(TIMETABLE_URL, data={'miesiac': str(month), 'rok': str(year)}, headers=headers)
+            if res.status_code != 200:
+                logger.error(f"Pobieranie terminarza dla {month}/{year}: {res.status_code} {res.reason}")
+                raise requests.HTTPError(f"HTTP {res.status_code}: {res.reason}", response=res)
+            soup = BeautifulSoup(res.content, 'html.parser')
+            entries = self._parse_timetable_soup(soup)
+        else:
+            soup = self.parse_page(TIMETABLE_URL)
+            entries = self._parse_timetable_soup(soup)
+
+            # Jeśli jesteśmy pod koniec miesiąca (od 24. dnia), pobieramy również kolejny miesiąc
+            if datetime.now().day >= 24:
+                try:
+                    now = datetime.now()
+                    next_month = 1 if now.month == 12 else now.month + 1
+                    next_year = now.year + 1 if now.month == 12 else now.year
+                    sleep(2)
+                    headers = {**self.__headers, 'Referer': TIMETABLE_URL}
+                    res_next = self.__session.post(TIMETABLE_URL, data={'miesiac': str(next_month), 'rok': str(next_year)}, headers=headers)
+                    if res_next.status_code == 200:
+                        soup_next = BeautifulSoup(res_next.content, 'html.parser')
+                        next_entries = self._parse_timetable_soup(soup_next)
+                        existing_ids = {e['id'] for e in entries}
+                        for ne in next_entries:
+                            if ne['id'] not in existing_ids:
+                                entries.append(ne)
+                                existing_ids.add(ne['id'])
+                except Exception as e:
+                    logger.warning(f"Nie udało się pobrać terminarza na kolejny miesiąc: {e}")
+
+        entries.sort(key=lambda e: (e.get('date', ''), e.get('lesson_no', '')))
+        logger.info(f"Pobrano {len(entries)} wpisów z terminarza")
+        self.timetable = entries
+        self.save_state()
+        return entries
 
     def parse_page(self, url: str) -> BeautifulSoup:
         headers = {

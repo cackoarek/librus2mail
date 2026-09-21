@@ -36,12 +36,12 @@ class SmtpSender(MailSender):
         title = f"{user_config['librus_login_name']} ma nowe oceny w Librusie ({grades_summary})"
         self.__send_smtp(user_config, title, mail_content)
 
-    def send_mail_with_summary(self, user_config, messages=None, notifications=None, grades=None):
+    def send_mail_with_summary(self, user_config, messages=None, notifications=None, grades=None, timetable=None):
         messages = messages or []
         notifications = notifications or []
         grades = grades or []
-        mail_content = self.create_mail_content_for_summary(user_config, messages, notifications, grades)
-        title = self._create_summary_title(user_config, messages, notifications, grades)
+        mail_content = self.create_mail_content_for_summary(user_config, messages, notifications, grades, timetable=timetable)
+        title = self._create_summary_title(user_config, messages, notifications, grades, timetable=timetable)
         self.__send_smtp(user_config, title, mail_content)
 
     def send_error_notification(self, user_config, error, step_name="", details=None, storage=None, cooldown_s=3600):
@@ -70,13 +70,13 @@ class SmtpSender(MailSender):
             logger.error(f"Nie udało się wysłać powiadomienia o błędzie przez SMTP: {e}")
             return False
 
-    def send_progress_report(self, user_config: dict, analysis: dict) -> bool:
+    def send_progress_report(self, user_config: dict, analysis: dict, timetable: dict | None = None) -> bool:
         receivers = user_config.get('notification_receivers')
         if not receivers:
             logger.warning(f"Brak odbiorców powiadomień (notification_receivers) dla konta {user_config.get('librus_login')}")
             return False
 
-        mail_content = self.create_mail_content_for_progress_report(user_config, analysis)
+        mail_content = self.create_mail_content_for_progress_report(user_config, analysis, timetable=timetable)
         title = self._create_progress_report_title(user_config, analysis)
         try:
             logger.info(f"Wysyłam raport postępów dla {user_config.get('librus_login')} do {receivers}")

@@ -120,6 +120,11 @@ class LibrusCollector:
                 sleep(5)
                 librus.fetch_grades()
 
+            if user_config.get('read_timetable', True):
+                step = "terminarz"
+                sleep(5)
+                librus.fetch_timetable()
+
             if hasattr(self.storage, 'set_student_name'):
                 self.storage.set_student_name(login, name)
 
@@ -135,15 +140,17 @@ class LibrusCollector:
             if hasattr(self.storage, 'clear_last_error'):
                 self.storage.clear_last_error(login)
 
+            timetable_count = len(getattr(librus, 'timetable', []))
             if new_msgs or new_notifs or new_grades:
                 logger.info(
                     f"{name} ({login}): Zakończono pobieranie danych ze szkoły. Wykryto nowe wpisy w dzienniku: "
-                    f"wiadomości: {len(new_msgs)}, ogłoszenia: {len(new_notifs)}, oceny: {len(new_grades)}."
+                    f"wiadomości: {len(new_msgs)}, ogłoszenia: {len(new_notifs)}, oceny: {len(new_grades)} "
+                    f"(wpisy w terminarzu: {timetable_count})."
                 )
             else:
                 logger.info(
                     f"{name} ({login}): Zakończono pobieranie danych ze szkoły. Brak nowych wpisów w dzienniku "
-                    f"(wiadomości: 0, ogłoszenia: 0, oceny: 0)."
+                    f"(wiadomości: 0, ogłoszenia: 0, oceny: 0, wpisy w terminarzu: {timetable_count})."
                 )
 
             return {
@@ -154,6 +161,7 @@ class LibrusCollector:
                 'messages': getattr(librus, 'messages', []),
                 'notifications': getattr(librus, 'notifications', []),
                 'grades': getattr(librus, 'grades', []),
+                'timetable': getattr(librus, 'timetable', []),
                 'new_messages': new_msgs,
                 'new_notifications': new_notifs,
                 'new_grades': new_grades,

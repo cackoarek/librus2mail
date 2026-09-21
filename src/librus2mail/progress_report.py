@@ -17,6 +17,7 @@ from .mail_sender import (
 )
 from .progress_analyzer import ProgressAnalyzer
 from .storage import create_storage
+from .updates_notifier import prepare_timetable_summary
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +87,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def print_cli_summary(user_name: str, login: str, analysis: dict):
+def print_cli_summary(user_name: str, login: str, analysis: dict, timetable: dict | None = None):
     print("\n" + "=" * 75)
     print(f"📊 RAPORT POSTĘPÓW: {user_name} (Konto: {login})")
     print(f"🗓️  Okres analizy: {analysis['period_start_str']} – {analysis['period_end_str']}")
@@ -182,6 +183,28 @@ def print_cli_summary(user_name: str, login: str, analysis: dict):
         print(f"\n📝 Nowe oceny w okresie ({len(analysis['period_grades'])}):")
         for g in analysis['period_grades']:
             print(f"  • {g['subject']}: {g['grade']} (waga: {g.get('weight', '-')}, data: {g.get('date', '-')}, kat: {g.get('category', '-')})")
+
+    # Terminarz i sprawdziany
+    if timetable and timetable.get('has_any'):
+        print("\n📅 Nadchodzący tydzień w szkole (Terminarz):")
+        if timetable.get('immediate_tests'):
+            print(f"  🔔 {timetable.get('immediate_label')}:")
+            for t in timetable['immediate_tests']:
+                desc = f" — {t['description']}" if t.get('description') else ""
+                les = f" (Lekcja {t.get('lesson_no')})" if t.get('lesson_no') else ""
+                print(f"    • [{t.get('category', 'Sprawdzian')}] {t.get('subject')}{les}{desc}")
+        elif timetable.get('immediate_absences'):
+            print(f"  🔔 {timetable.get('immediate_label')}: brak sprawdzianów")
+            for a in timetable['immediate_absences']:
+                print(f"    • ℹ️ Nieobecność: {a.get('teacher')} ({a.get('time')})")
+
+        if timetable.get('upcoming_days'):
+            print("  🗓️  W kolejnych dniach:")
+            for day in timetable['upcoming_days']:
+                for t in day.get('tests', []):
+                    desc = f" — {t['description']}" if t.get('description') else ""
+                    les = f" (Lekcja {t.get('lesson_no')})" if t.get('lesson_no') else ""
+                    print(f"    • {day['weekday']} ({day['date_str']}): [{t.get('category')}] {t.get('subject')}{les}{desc}")
 
     # Przewodnik rodzica (Legenda)
     legend = analysis.get('legend', {})
@@ -388,6 +411,12 @@ def run_progress_reports(
             period_end=now
         )
 
+        # 4.5 Przygotowanie zestawienia terminarza (sprawdziany i nieobecności)
+        timetable_summary = None
+        if user_config.get('read_timetable', True) and hasattr(storage, 'get_timetable_history'):
+            raw_timetable = storage.get_timetable_history(login)
+            timetable_summary = prepare_timetable_summary(raw_timetable, reference_date=now.date())
+
         # 5. Weryfikacja czy są nowe oceny do zaraportowania
         if analysis['period_grades_count'] == 0 and not force and not dry_run and not save_html:
             logger.info(
@@ -399,7 +428,7 @@ def run_progress_reports(
         # 6. Zapis do pliku HTML (jeśli podano --save-html / -o)
         if save_html:
             out_file = resolve_output_path(save_html, login, len(users))
-            body_html = MailSender.create_mail_content_for_progress_report(user_config, analysis)
+            body_html = MailSender.create_mail_content_for_progress_report(user_config, analysis, timetable=timetable_summary)
             title = MailSender._create_progress_report_title(user_config, analysis)
             full_html = render_standalone_html(title, body_html)
             try:
@@ -413,10 +442,10 @@ def run_progress_reports(
         # 7. Tryb Dry-Run lub wysyłka pocztowa
         if dry_run:
             logger.info("Tryb DRY-RUN: prezentacja wyników analizy w terminalu (bez wysyłki maila):")
-            print_cli_summary(name, login, analysis)
+            print_cli_summary(name, login, analysis, timetable=timetable_summary)
         elif not save_html:
             logger.info(f"Wysyłam raport postępów dla ucznia {name} ({login})...")
-            sent = mail_sender.send_progress_report(user_config, analysis)
+            sent = mail_sender.send_progress_report(user_config, analysis, timetable=timetable_summary)
             if sent:
                 storage.save_last_progress_report_date(login, now.isoformat())
                 logger.info(f"Raport postępów dla {name} ({login}) został pomyślnie wysłany!")

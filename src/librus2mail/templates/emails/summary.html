@@ -52,65 +52,249 @@
             </tr>
         </table>
 
+        <!-- Nadchodzące sprawdziany i terminarz -->
+        {% if timetable and timetable.has_any %}
+        <div style="margin-bottom: 28px;">
+            <div style="border-bottom: 2px solid #6366f1; padding-bottom: 8px; margin-bottom: 14px;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                    <tr>
+                        <td align="left" valign="middle">
+                            <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #0f172a;">
+                                📅 Nadchodzące sprawdziany i terminarz
+                            </h3>
+                        </td>
+                        <td align="right" valign="middle">
+                            <span style="background-color: #ede9fe; color: #6d28d9; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; text-transform: uppercase;">
+                                Horyzont tygodnia
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Boks 1: Najbliższy dzień szkolny / Jutro -->
+            <div style="background: {{ '#fff1f2' if timetable.immediate_tests else ('#f8fafc' if timetable.immediate_absences else '#f0fdf4') }}; border: 1px solid {{ '#fecdd3' if timetable.immediate_tests else ('#e2e8f0' if timetable.immediate_absences else '#bbf7d0') }}; border-left: 4px solid {{ '#e11d48' if timetable.immediate_tests else ('#3b82f6' if timetable.immediate_absences else '#10b981') }}; border-radius: 8px; padding: 14px 16px; margin-bottom: 12px;">
+                <div style="display: table; width: 100%;">
+                    <div style="display: table-cell; vertical-align: middle;">
+                        <span style="font-size: 13px; font-weight: 800; color: {{ '#9f1239' if timetable.immediate_tests else ('#1e3a8a' if timetable.immediate_absences else '#065f46') }}; text-transform: uppercase; letter-spacing: 0.04em;">
+                            {{ '⚠️' if timetable.immediate_tests else '🔔' }} {{ timetable.immediate_label }}
+                        </span>
+                    </div>
+                    {% if timetable.immediate_tests %}
+                    <div style="display: table-cell; vertical-align: middle; text-align: right;">
+                        <span style="background: #e11d48; color: #ffffff; padding: 2px 8px; border-radius: 10px; font-weight: 800; font-size: 11px;">
+                            {{ timetable.immediate_tests | length }} zapowiedzian{{ 'y' if (timetable.immediate_tests | length) == 1 else 'e' }}
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if timetable.immediate_tests %}
+                <div style="margin-top: 8px;">
+                    {% for test in timetable.immediate_tests %}
+                    {% set is_big_test = ('sprawdzian' in test.category | lower or 'klasow' in test.category | lower or 'klasów' in test.category | lower or 'egzamin' in test.category | lower) %}
+                    {% set t_border = '#fca5a5' if is_big_test else '#fed7aa' %}
+                    {% set t_strip = '#dc2626' if is_big_test else '#f97316' %}
+                    {% set t_badge_bg = '#fee2e2' if is_big_test else '#ffedd5' %}
+                    {% set t_badge_color = '#991b1b' if is_big_test else '#c2410c' %}
+                    {% set t_badge_border = '#fca5a5' if is_big_test else '#fed7aa' %}
+                    {% set t_icon = '📕' if is_big_test else '📙' %}
+                    <div style="background: #ffffff; border: 1px solid {{ t_border }}; border-left: 4px solid {{ t_strip }}; border-radius: 6px; padding: 9px 12px; margin-top: 6px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);">
+                        <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                            <tr>
+                                <td valign="top" style="font-weight: 700; color: #1e293b; font-size: 13px;">
+                                    <span style="background-color: {{ t_badge_bg }}; color: {{ t_badge_color }}; border: 1px solid {{ t_badge_border }}; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 800; margin-right: 6px; display: inline-block;">
+                                        {{ t_icon }} {{ test.category }}
+                                    </span>
+                                    {{ test.subject }}
+                                    {% if test.lesson_no %}
+                                    <span style="color: #64748b; font-size: 11px; font-weight: normal; margin-left: 4px;">(Lekcja {{ test.lesson_no }})</span>
+                                    {% endif %}
+                                </td>
+                                <td align="right" valign="top" style="font-size: 11px; color: #64748b; white-space: nowrap;">
+                                    {{ test.teacher }}
+                                </td>
+                            </tr>
+                        </table>
+                        {% if test.description %}
+                        <div style="font-size: 12px; color: #475569; margin-top: 5px; font-style: italic; line-height: 1.4;">
+                            Zakres: {{ test.description }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% elif not timetable.immediate_absences %}
+                <div style="font-size: 12px; color: #047857; margin-top: 4px;">
+                    Czyste konto – brak zapowiedzianych sprawdzianów ani kartkówek! 🎉
+                </div>
+                {% endif %}
+
+                {% if timetable.immediate_absences %}
+                <div style="margin-top: {{ '10px' if timetable.immediate_tests else '6px' }};">
+                    {% for abs in timetable.immediate_absences %}
+                    <div style="font-size: 12px; color: #1e40af; margin-top: 4px;">
+                        ℹ️ <strong>Nieobecność nauczyciela:</strong> {{ abs.teacher }} {% if abs.time and abs.time != 'Cały dzień' %}(godziny: {{ abs.time }}){% else %}(cały dzień){% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Boks 2: W kolejnych dniach tygodnia -->
+            {% if timetable.upcoming_days %}
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
+                <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 8px;">
+                    🗓️ W kolejnych dniach (ten tydzień)
+                </div>
+                {% for day in timetable.upcoming_days %}
+                <div style="margin-bottom: 10px; padding-bottom: 8px; border-bottom: {{ '1px dashed #f1f5f9' if not loop.last else 'none' }};">
+                    <div style="font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px;">
+                        📌 {{ day.weekday }}, {{ day.date_str }}
+                    </div>
+                    {% for test in day.tests %}
+                    {% set is_big_test = ('sprawdzian' in test.category | lower or 'klasow' in test.category | lower or 'klasów' in test.category | lower or 'egzamin' in test.category | lower) %}
+                    {% set t_badge_bg = '#fee2e2' if is_big_test else '#ffedd5' %}
+                    {% set t_badge_color = '#991b1b' if is_big_test else '#c2410c' %}
+                    {% set t_badge_border = '#fca5a5' if is_big_test else '#fed7aa' %}
+                    {% set t_icon = '📕' if is_big_test else '📙' %}
+                    <div style="margin-left: 12px; margin-bottom: 5px; font-size: 12px; color: #1e293b;">
+                        <span style="background-color: {{ t_badge_bg }}; color: {{ t_badge_color }}; border: 1px solid {{ t_badge_border }}; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 800; margin-right: 4px; display: inline-block;">
+                            {{ t_icon }} {{ test.category }}
+                        </span>
+                        <strong>{{ test.subject }}</strong>
+                        {% if test.lesson_no %}
+                        <span style="color: #64748b; font-size: 11px;">(Lekcja {{ test.lesson_no }})</span>
+                        {% endif %}
+                        {% if test.description %}
+                        — <span style="color: #475569; font-style: italic;">{{ test.description }}</span>
+                        {% endif %}
+                        {% if test.teacher %}
+                        <span style="color: #94a3b8; font-size: 11px;">[{{ test.teacher }}]</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    {% for abs in day.absences %}
+                    <div style="margin-left: 12px; margin-bottom: 3px; font-size: 11px; color: #64748b;">
+                        ℹ️ Nieobecność: {{ abs.teacher }} ({{ abs.time }})
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
         <!-- Nowe oceny -->
         {% if grades %}
         <div style="margin-bottom: 28px;">
-            <div style="border-bottom: 2px solid #10b981; padding-bottom: 8px; margin-bottom: 12px;">
-                <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #0f172a;">📝 Nowe oceny ({{ grades | length }})</h3>
+            <div style="border-bottom: 2px solid #10b981; padding-bottom: 8px; margin-bottom: 14px;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                    <tr>
+                        <td align="left" valign="middle">
+                            <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #0f172a;">📝 Nowe oceny ({{ grades | length }})</h3>
+                        </td>
+                        <td align="right" valign="middle" style="font-size: 12px; color: #10b981; font-weight: 600;">
+                            {% if (grades | length) == 1 %}1 nowa ocena{% elif (grades | length) < 5 %}{{ grades | length }} nowe oceny{% else %}{{ grades | length }} nowych ocen{% endif %}
+                        </td>
+                    </tr>
+                </table>
             </div>
-            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
-                <thead>
-                    <tr style="background-color: #f8fafc; color: #475569; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e2e8f0;">
-                    <th style="padding: 10px 10px;">Przedmiot</th>
-                    <th style="padding: 10px 6px; text-align: center;">Ocena</th>
-                    <th style="padding: 10px 8px;">Kategoria</th>
-                    <th style="padding: 10px 6px; text-align: center;">Waga</th>
-                    <th style="padding: 10px 8px;">Data</th>
-                    <th style="padding: 10px 10px;">Nauczyciel</th>
-                    <th style="padding: 10px 10px;">Komentarz</th>
-                </tr>
-            </thead>
-            <tbody>
+
             {% for grade in grades %}
-                <tr style="border-bottom: 1px solid #f1f5f9; background-color: {{ '#ffffff' if loop.index0 % 2 == 0 else '#fafafa' }};">
-                    <td style="padding: 10px 10px; font-weight: 600; color: #1e293b;">
-                        {{ grade.subject }}
-                    </td>
-                    <td style="padding: 10px 6px; text-align: center;">
-                        {{ grade.grade | grade_badge }}
-                    </td>
-                    <td style="padding: 10px 8px; color: #475569;">
-                        {{ grade.category or '-' }}
-                    </td>
-                    <td style="padding: 10px 6px; text-align: center;">
-                        {% if grade.weight and grade.weight != '-' %}
-                        <span style="background-color: #f1f5f9; color: #334155; font-weight: 700; font-size: 12px; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0;">
-                            ×{{ grade.weight }}
-                        </span>
-                        {% else %}
-                        <span style="color: #94a3b8;">-</span>
-                        {% endif %}
-                    </td>
-                    <td style="padding: 10px 8px; color: #64748b; white-space: nowrap; font-size: 12px;">
-                        {{ grade.date or '-' }}
-                    </td>
-                    <td style="padding: 10px 10px; color: #475569; font-size: 12px;">
-                        {{ grade.teacher or '-' }}
-                    </td>
-                    <td style="padding: 10px 10px; font-size: 12px;">
-                        {% if grade.comment and grade.comment != '-' %}
-                        <span style="color: #0f172a; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 2px 7px; display: inline-block; font-size: 11px; line-height: 1.4;">
-                            💬 {{ grade.comment }}
-                        </span>
-                        {% else %}
-                        <span style="color: #94a3b8;">-</span>
-                        {% endif %}
-                    </td>
-                </tr>
+            {% set clean_g = grade.grade | string | replace('+','') | replace('-','') | replace('=','') %}
+            {% set border_color = '#10b981' if clean_g in ['5','6'] else ('#3b82f6' if clean_g == '4' else ('#f59e0b' if clean_g == '3' else ('#ef4444' if clean_g in ['1','2'] else '#64748b'))) %}
+
+            {% set cat = (grade.category or '') | lower %}
+            {% if 'sprawdzian' in cat or 'klasow' in cat or 'klasów' in cat or 'egzamin' in cat %}
+                {% set cat_bg = '#fee2e2' %}
+                {% set cat_color = '#991b1b' %}
+                {% set cat_border = '#fca5a5' %}
+                {% set cat_icon = '📕' %}
+            {% elif 'kartków' in cat or 'kartkow' in cat %}
+                {% set cat_bg = '#ffedd5' %}
+                {% set cat_color = '#c2410c' %}
+                {% set cat_border = '#fed7aa' %}
+                {% set cat_icon = '📙' %}
+            {% elif 'odpowiedź' in cat or 'odpowiedz' in cat or 'projekt' in cat %}
+                {% set cat_bg = '#eff6ff' %}
+                {% set cat_color = '#1d4ed8' %}
+                {% set cat_border = '#bfdbfe' %}
+                {% set cat_icon = '📘' %}
+            {% elif 'aktywność' in cat or 'aktywnosc' in cat or 'domow' in cat or 'lekcj' in cat %}
+                {% set cat_bg = '#f0fdf4' %}
+                {% set cat_color = '#15803d' %}
+                {% set cat_border = '#bbf7d0' %}
+                {% set cat_icon = '📗' %}
+            {% else %}
+                {% set cat_bg = '#f1f5f9' %}
+                {% set cat_color = '#475569' %}
+                {% set cat_border = '#cbd5e1' %}
+                {% set cat_icon = '🏷️' %}
+            {% endif %}
+
+            {% set w_raw = (grade.weight or '') | string | replace('×','') | replace('x','') | trim %}
+            {% set w_val = w_raw | float(default=1.0) %}
+            {% if w_val >= 3.0 %}
+                {% set w_bg = '#fee2e2' %}
+                {% set w_color = '#991b1b' %}
+                {% set w_border = '#fca5a5' %}
+            {% elif w_val >= 2.0 %}
+                {% set w_bg = '#ffedd5' %}
+                {% set w_color = '#c2410c' %}
+                {% set w_border = '#fed7aa' %}
+            {% else %}
+                {% set w_bg = '#f1f5f9' %}
+                {% set w_color = '#475569' %}
+                {% set w_border = '#e2e8f0' %}
+            {% endif %}
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-left: 4px solid {{ border_color }}; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);">
+                <!-- Wiersz 1: Przedmiot, Ocena, Waga, Data -->
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td align="left" valign="middle">
+                            <span style="font-size: 15px; font-weight: 700; color: #1e293b;">{{ grade.subject }}</span>
+                            <span style="margin-left: 8px; vertical-align: middle; display: inline-block;">
+                                {{ grade.grade | grade_badge }}
+                            </span>
+                            {% if grade.weight and grade.weight != '-' %}
+                            <span style="background-color: {{ w_bg }}; color: {{ w_color }}; font-weight: 800; font-size: 11px; padding: 2px 6px; border-radius: 4px; border: 1px solid {{ w_border }}; margin-left: 6px; vertical-align: middle; display: inline-block;">
+                                waga ×{{ w_raw }}
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td align="right" valign="middle" style="text-align: right; font-size: 12px; color: #64748b; white-space: nowrap; padding-left: 8px;">
+                            📅 {{ grade.date or '-' }}
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- Wiersz 2: Kategoria oraz Nauczyciel -->
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; border-collapse: collapse; margin-top: 6px;">
+                    <tr>
+                        <td align="left" valign="middle" style="font-size: 12px; color: #475569;">
+                            <span style="background-color: {{ cat_bg }}; color: {{ cat_color }}; border: 1px solid {{ cat_border }}; border-radius: 4px; padding: 2px 8px; font-weight: 700; font-size: 11px; display: inline-block; letter-spacing: 0.02em;">
+                                {{ cat_icon }} {{ grade.category or 'Brak kategorii' }}
+                            </span>
+                            {% if grade.teacher and grade.teacher != '-' %}
+                            <span style="color: #64748b; margin-left: 8px; display: inline-block;">
+                                👤 {{ grade.teacher }}
+                            </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- Wiersz 3: Komentarz nauczyciela (jeśli jest) -->
+                {% if grade.comment and grade.comment != '-' %}
+                <div style="margin-top: 8px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-left: 3px solid #3b82f6; border-radius: 6px; padding: 8px 10px; font-size: 12px; color: #1e293b; line-height: 1.45;">
+                    💬 <strong>Komentarz nauczyciela:</strong> {{ grade.comment }}
+                </div>
+                {% endif %}
+            </div>
             {% endfor %}
-            </tbody>
-        </table>
-    </div>
+        </div>
         {% endif %}
 
         <!-- Nowe wiadomości -->

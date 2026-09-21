@@ -1004,6 +1004,21 @@ class TestLibrus(unittest.TestCase):
         self.assertIn('Ciche przedmioty', html)
         self.assertIn('Dynamika i forma ucznia', html)
 
+        # Weryfikacja renderowania sekcji terminarza w raporcie postępów
+        mock_timetable = {
+            'has_any': True,
+            'immediate_label': 'Jutro (poniedziałek, 21.09)',
+            'immediate_tests': [
+                {'category': 'Sprawdzian', 'subject': 'Historia', 'lesson_no': '2', 'description': 'Starożytność', 'teacher': 'A. Nowak'}
+            ],
+            'immediate_absences': [],
+            'upcoming_days': [],
+        }
+        html_with_timetable = MailSender.create_mail_content_for_progress_report(user_cfg, analysis, timetable=mock_timetable)
+        self.assertIn('Perspektywa: Nadchodzący tydzień w szkole', html_with_timetable)
+        self.assertIn('Historia', html_with_timetable)
+        self.assertIn('Starożytność', html_with_timetable)
+
     def test_progress_analyzer_period_comparison_metrics(self):
         from datetime import datetime, timedelta
 
@@ -1780,6 +1795,431 @@ class TestLibrus(unittest.TestCase):
             res = collector.collect_user(user_cfg)
             self.assertTrue(res['success'])
             self.assertEqual(mock_inst.login.call_count, 2)
+
+    def test_collector_fetches_timetable(self):
+        config = {'storage_dir': 'storage'}
+        mock_storage = MagicMock()
+        collector = LibrusCollector(config, storage=mock_storage)
+        user_cfg = {
+            'librus_login': '12345',
+            'librus_login_name': 'Janek',
+            'read_messages': False,
+            'read_grades': False,
+            'read_timetable': True,
+        }
+        with patch('librus2mail.librus_collector.Librus') as mock_librus_cls, \
+             patch('librus2mail.librus_collector.sleep'):
+            mock_inst = MagicMock()
+            mock_inst.timetable = [{'id': '1', 'date': '2026-09-23'}]
+            mock_librus_cls.return_value = mock_inst
+            res = collector.collect_user(user_cfg)
+            self.assertTrue(res['success'])
+            mock_inst.fetch_timetable.assert_called_once()
+            self.assertEqual(res['timetable'], [{'id': '1', 'date': '2026-09-23'}])
+
+    def test_fetch_timetable_disabled_when_read_timetable_false(self):
+        cfg = {
+            'librus_login': '123456',
+            'librus_password': 'secret_password',
+            'read_timetable': False,
+        }
+        lib = Librus(cfg)
+        lib.logged = True
+        entries = lib.fetch_timetable()
+        self.assertEqual(entries, [])
+        self.assertEqual(lib.timetable, [])
+
+    def test_fetch_timetable_with_valid_calendar(self):
+        sample_calendar_html = """
+        <html>
+        <body>
+            <form id="scheduleForm" action="/terminarz">
+                <select name="miesiac">
+                    <option value="9" selected="selected">Wrzesień</option>
+                </select>
+                <select name="rok">
+                    <option value="2026" selected="selected">2026</option>
+                </select>
+            </form>
+            <table class="kalendarz decorated center">
+                <tr>
+                    <td>
+                        <div class="kalendarz-dzien">
+                            <div class="kalendarz-numer-dnia">21</div>
+                            <table>
+                                <tr>
+                                    <td onclick="location.href='/terminarz/szczegoly_wolne/2325943'">
+                                        Nieobecność:<br/>Nauczyciel: Doszko Janina
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td onclick="location.href='/terminarz/szczegoly_wolne/2326757'">
+                                        Nieobecność:<br/>Nauczyciel: Skurka Renata<br/>Godziny: 08:30 do 09:15
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="kalendarz-dzien">
+                            <div class="kalendarz-numer-dnia">23</div>
+                            <table>
+                                <tr>
+                                    <td onclick="location.href='/terminarz/szczegoly/9329532'" title="Nauczyciel: Artur Węgiel<br />Opis: Kapitel 3<br />Data dodania: 2026-09-09 13:11:23">
+                                        Nr lekcji: 1<br/><span class="przedmiot">Język niemiecki</span>, Sprawdzian<br/>6b SP
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td onclick="location.href='/terminarz/szczegoly/9359885'" title="Nauczyciel: Magdalena Kiljańczyk<br />Opis: słownictwo part<br />Data dodania: 2026-09-18 14:51:07">
+                                        Nr lekcji: 5<br/><span class="przedmiot">Język angielski</span>, Kartkówka<br/>6b SP
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+        self.librus.logged = True
+        with patch.object(self.librus, 'parse_page') as mock_parse:
+            from bs4 import BeautifulSoup
+            mock_parse.return_value = BeautifulSoup(sample_calendar_html, 'html.parser')
+            entries = self.librus.fetch_timetable()
+
+            self.assertEqual(len(entries), 4)
+
+            # 21.09 nieobecności
+            abs1 = [e for e in entries if e['id'] == '2325943_2026-09-21'][0]
+            self.assertEqual(abs1['date'], '2026-09-21')
+            self.assertEqual(abs1['type'], 'absence')
+            self.assertEqual(abs1['teacher'], 'Doszko Janina')
+            self.assertEqual(abs1['time'], 'Cały dzień')
+
+            abs2 = [e for e in entries if e['id'] == '2326757_2026-09-21'][0]
+            self.assertEqual(abs2['date'], '2026-09-21')
+            self.assertEqual(abs2['teacher'], 'Skurka Renata')
+            self.assertEqual(abs2['time'], '08:30 do 09:15')
+
+            # 23.09 sprawdzian i kartkówka
+            test1 = [e for e in entries if e['id'] == '9329532'][0]
+            self.assertEqual(test1['date'], '2026-09-23')
+            self.assertEqual(test1['type'], 'test')
+            self.assertEqual(test1['category'], 'Sprawdzian')
+            self.assertEqual(test1['subject'], 'Język niemiecki')
+            self.assertEqual(test1['lesson_no'], '1')
+            self.assertEqual(test1['teacher'], 'Artur Węgiel')
+            self.assertEqual(test1['description'], 'Kapitel 3')
+
+            quiz1 = [e for e in entries if e['id'] == '9359885'][0]
+            self.assertEqual(quiz1['date'], '2026-09-23')
+            self.assertEqual(quiz1['type'], 'test')
+            self.assertEqual(quiz1['category'], 'Kartkówka')
+            self.assertEqual(quiz1['subject'], 'Język angielski')
+            self.assertEqual(quiz1['lesson_no'], '5')
+            self.assertEqual(quiz1['teacher'], 'Magdalena Kiljańczyk')
+
+    def test_storage_save_and_get_timetable_entries(self):
+        from librus2mail.storage import FileStorage
+        with tempfile.TemporaryDirectory() as tmpdir:
+            storage = FileStorage(storage_dir=tmpdir)
+            sample_entries = [
+                {
+                    'id': '9329532',
+                    'date': '2026-09-23',
+                    'type': 'test',
+                    'category': 'Sprawdzian',
+                    'subject': 'Język niemiecki',
+                    'lesson_no': '1',
+                    'teacher': 'Artur Węgiel',
+                    'description': 'Kapitel 3',
+                },
+                {
+                    'id': '2325943_2026-09-21',
+                    'date': '2026-09-21',
+                    'type': 'absence',
+                    'category': 'Nieobecność nauczyciela',
+                    'teacher': 'Janina Doszko',
+                    'time': 'Cały dzień',
+                }
+            ]
+            storage.save_timetable_entries('123456', sample_entries)
+
+            history = storage.get_timetable_history('123456')
+            self.assertEqual(len(history), 2)
+            hist_ids = {e['id'] for e in history}
+            self.assertIn('9329532', hist_ids)
+            self.assertIn('2325943_2026-09-21', hist_ids)
+
+            # Upsert update
+            updated_entries = [
+                {
+                    'id': '9329532',
+                    'date': '2026-09-23',
+                    'type': 'test',
+                    'category': 'Sprawdzian',
+                    'subject': 'Język niemiecki',
+                    'description': 'Kapitel 3 - zaktualizowany zakres',
+                }
+            ]
+            storage.save_timetable_entries('123456', updated_entries)
+            history2 = storage.get_timetable_history('123456')
+            self.assertEqual(len(history2), 2)
+            german_test = [e for e in history2 if e['id'] == '9329532'][0]
+            self.assertEqual(german_test['description'], 'Kapitel 3 - zaktualizowany zakres')
+            self.assertIsNotNone(storage.get_last_timetable_sync('123456'))
+
+    def test_timetable_summary_preparation_and_template_rendering(self):
+        from datetime import datetime
+
+        from librus2mail.mail_sender import MailSender
+        from librus2mail.updates_notifier import prepare_timetable_summary
+
+        # Symulacja: referencyjna data to piątek 2026-09-18
+        ref_dt = datetime(2026, 9, 18, 16, 0)
+        entries = [
+            # Poniedziałek 21.09 (najbliższy dzień nauki)
+            {
+                'id': 'abs_1',
+                'date': '2026-09-21',
+                'type': 'absence',
+                'category': 'Nieobecność nauczyciela',
+                'teacher': 'Janina Doszko',
+                'time': 'Cały dzień',
+            },
+            # Środa 23.09 (późniejszy dzień w tygodniu)
+            {
+                'id': 'test_1',
+                'date': '2026-09-23',
+                'type': 'test',
+                'category': 'Sprawdzian',
+                'subject': 'Język niemiecki',
+                'lesson_no': '1',
+                'teacher': 'Artur Węgiel',
+                'description': 'Kapitel 3',
+            },
+            {
+                'id': 'test_2',
+                'date': '2026-09-23',
+                'type': 'test',
+                'category': 'Kartkówka',
+                'subject': 'Język angielski',
+                'lesson_no': '5',
+                'teacher': 'Magdalena Kiljańczyk',
+                'description': 'Słówka',
+            }
+        ]
+
+        summary = prepare_timetable_summary(entries, reference_date=ref_dt.date())
+        self.assertTrue(summary['has_any'])
+        self.assertIn('21.09', summary['immediate_date_str'])
+        self.assertIn('poniedziałek', summary['immediate_label'].lower())
+        self.assertEqual(len(summary['immediate_absences']), 1)
+        self.assertEqual(len(summary['immediate_tests']), 0)
+        self.assertEqual(len(summary['upcoming_days']), 1)
+        self.assertEqual(summary['upcoming_days'][0]['date'], '2026-09-23')
+        self.assertEqual(len(summary['upcoming_days'][0]['tests']), 2)
+
+        # Weryfikacja renderowania HTML szablonu summary.html
+        user_cfg = {'librus_login': '123456', 'librus_login_name': 'Kacper'}
+        html = MailSender.create_mail_content_for_summary(
+            user_config=user_cfg,
+            messages=[],
+            notifications=[],
+            grades=[],
+            timetable=summary,
+        )
+        self.assertIn('Nadchodzące sprawdziany i terminarz', html)
+        self.assertIn('Najbliższy dzień nauki (poniedziałek, 21.09)', html)
+        self.assertIn('Janina Doszko (cały dzień)', html)
+        self.assertIn('Środa, 23.09.2026', html)
+        self.assertIn('Język niemiecki', html)
+        self.assertIn('Kapitel 3', html)
+        self.assertIn('Artur Węgiel', html)
+
+        # Weryfikacja tytułu wiadomości
+        title_with_absence = MailSender._create_summary_title(user_cfg, timetable=summary)
+        self.assertIn('nieobecność nauczyciela', title_with_absence)
+
+        # Weryfikacja tytułu ze sprawdzianem w poniedziałek (gdy dziś jest piątek)
+        entries_with_monday_test = [
+            {
+                'id': 'test_mon',
+                'date': '2026-09-21',
+                'type': 'test',
+                'category': 'Sprawdzian',
+                'subject': 'Historia',
+                'lesson_no': '2',
+                'teacher': 'Adam Nowak',
+            }
+        ]
+        summary_mon = prepare_timetable_summary(entries_with_monday_test, reference_date=ref_dt.date())
+        title_with_monday = MailSender._create_summary_title(user_cfg, timetable=summary_mon)
+        self.assertIn('⚠️ 1 sprawdzian w poniedziałek', title_with_monday)
+
+        # Weryfikacja tytułu ze sprawdzianem jutro (gdy dziś jest wtorek)
+        tue_dt = datetime(2026, 9, 22, 12, 0)
+        entries_with_wed_test = [
+            {
+                'id': 'test_wed',
+                'date': '2026-09-23',
+                'type': 'test',
+                'category': 'Sprawdzian',
+                'subject': 'Biologia',
+                'lesson_no': '3',
+                'teacher': 'Ewa Zielińska',
+            }
+        ]
+        summary_wed = prepare_timetable_summary(entries_with_wed_test, reference_date=tue_dt.date())
+        title_with_wed = MailSender._create_summary_title(user_cfg, timetable=summary_wed)
+        self.assertIn('⚠️ 1 sprawdzian jutro', title_with_wed)
+
+    def test_should_trigger_timetable_reminder_variant_a(self):
+        from datetime import datetime
+
+        from librus2mail.updates_notifier import prepare_timetable_summary, should_trigger_timetable_reminder
+
+        # Test dla środy (2026-09-23) sprawdzian z Biologii
+        test_entry = {
+            'id': 'bio_101',
+            'date': '2026-09-23',
+            'type': 'test',
+            'category': 'Sprawdzian',
+            'subject': 'Biologia',
+        }
+
+        # 1. Wtorek (dzień przed sprawdzianem): jeszcze nie powiadomiono dzisiaj -> POWINNO wysłać
+        tue_dt = datetime(2026, 9, 22, 14, 0)
+        summary_tue = prepare_timetable_summary([test_entry], reference_date=tue_dt.date())
+        should_send, unnotified = should_trigger_timetable_reminder(summary_tue, now=tue_dt)
+        self.assertTrue(should_send)
+        self.assertEqual(len(unnotified), 1)
+
+        # 2. Wtorek: już powiadomiono dzisiaj -> NIE powinno wysyłać
+        test_entry_notified_today = dict(test_entry)
+        test_entry_notified_today['last_notified_at'] = '2026-09-22T10:00:00'
+        summary_tue_notified = prepare_timetable_summary([test_entry_notified_today], reference_date=tue_dt.date())
+        should_send_2, _ = should_trigger_timetable_reminder(summary_tue_notified, now=tue_dt)
+        self.assertFalse(should_send_2)
+
+        # 3. Sprawdzian w poniedziałek (2026-09-21)
+        monday_test = {
+            'id': 'math_201',
+            'date': '2026-09-21',
+            'type': 'test',
+            'category': 'Sprawdzian',
+            'subject': 'Matematyka',
+        }
+
+        # Piątek: POWINNO wysłać (Wariant A - planowanie weekendu)
+        fri_dt = datetime(2026, 9, 18, 15, 0)
+        summary_fri = prepare_timetable_summary([monday_test], reference_date=fri_dt.date())
+        should_send_fri, _ = should_trigger_timetable_reminder(summary_fri, now=fri_dt)
+        self.assertTrue(should_send_fri)
+
+        # Sobota: CISZA (Wariant A - sobota wolna od autonomicznych przypomnień)
+        sat_dt = datetime(2026, 9, 19, 12, 0)
+        summary_sat = prepare_timetable_summary([monday_test], reference_date=sat_dt.date())
+        should_send_sat, _ = should_trigger_timetable_reminder(summary_sat, now=sat_dt)
+        self.assertFalse(should_send_sat)
+
+        # Niedziela przed 16:00: CISZA
+        sun_early_dt = datetime(2026, 9, 20, 11, 0)
+        summary_sun_early = prepare_timetable_summary([monday_test], reference_date=sun_early_dt.date())
+        should_send_sun_early, _ = should_trigger_timetable_reminder(summary_sun_early, now=sun_early_dt)
+        self.assertFalse(should_send_sun_early)
+
+        # Niedziela po 16:00 (np. 16:30): POWINNO wysłać (ostatnie przypomnienie przed poniedziałkiem)
+        sun_late_dt = datetime(2026, 9, 20, 16, 30)
+        # Test miał oznaczone powiadomienie z piątku, ale nie z niedzieli!
+        monday_test_fri_notified = dict(monday_test)
+        monday_test_fri_notified['last_notified_at'] = '2026-09-18T15:00:00'
+        summary_sun_late = prepare_timetable_summary([monday_test_fri_notified], reference_date=sun_late_dt.date())
+        should_send_sun_late, unnotified_sun = should_trigger_timetable_reminder(summary_sun_late, now=sun_late_dt)
+        self.assertTrue(should_send_sun_late)
+        self.assertEqual(len(unnotified_sun), 1)
+
+        # Niedziela po 16:00: po wysłaniu w niedzielę -> NIE powinno wysyłać ponownie (brak spamu)
+        monday_test_sun_notified = dict(monday_test)
+        monday_test_sun_notified['last_notified_at'] = '2026-09-20T16:30:00'
+        summary_sun_done = prepare_timetable_summary([monday_test_sun_notified], reference_date=sun_late_dt.date())
+        should_send_sun_done, _ = should_trigger_timetable_reminder(summary_sun_done, now=sun_late_dt)
+        self.assertFalse(should_send_sun_done)
+
+    def test_timetable_reminder_storage_marking_and_process_notifications(self):
+        from datetime import datetime
+
+        from librus2mail.storage import FileStorage
+        from librus2mail.updates_notifier import UpdatesNotifier
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            storage = FileStorage(storage_dir=tmpdir)
+            user_login = "test_reminder_user"
+            user_cfg = {
+                'librus_login': user_login,
+                'librus_login_name': 'Staś',
+                'one_summary_message': False,
+                'read_timetable': True,
+                'read_grades': True,
+                'read_messages': True,
+            }
+
+            # Zapisujemy sprawdzian na środę 2026-09-23
+            test_entries = [
+                {
+                    'id': 'quiz_777',
+                    'date': '2026-09-23',
+                    'type': 'test',
+                    'category': 'Kartkówka',
+                    'subject': 'Chemia',
+                    'lesson_no': '4',
+                    'teacher': 'Maria Curie',
+                    'description': 'Kwasy i zasady',
+                }
+            ]
+            storage.save_timetable_entries(user_login, test_entries)
+
+            # Test mark_timetable_entries_notified bezpośrednio na storage
+            storage.mark_timetable_entries_notified(user_login, ['quiz_777'], notified_at_iso='2026-09-20T12:00:00')
+            h = storage.get_timetable_history(user_login)
+            self.assertEqual(len(h), 1)
+            self.assertEqual(h[0]['last_notified_at'], '2026-09-20T12:00:00')
+
+            # Teraz symulujemy wtorek 2026-09-22 17:00 (brak nowych ocen, wiadomości ani ogłoszeń)
+            tue_dt = datetime(2026, 9, 22, 17, 0)
+            mock_sender = MagicMock()
+            notifier = UpdatesNotifier(config={'mail': {'use_gmail': False}}, storage=storage)
+            notifier.get_or_create_mail_sender = MagicMock(return_value=mock_sender)
+
+            # Pierwszy obieg we wtorek: brak ocen/wiadomości, ale sprawdzian jutro -> wysyła summary
+            res1 = notifier.process_user_notifications(
+                user_config=user_cfg,
+                new_messages=[],
+                new_notifications=[],
+                new_grades=[],
+                actual_date=tue_dt,
+            )
+            mock_sender.send_mail_with_summary.assert_called_once()
+            self.assertEqual(res1['login'], user_login)
+
+            # Sprawdzamy czy wpis w storage został zaktualizowany o datę wtorkową
+            h_after = storage.get_timetable_history(user_login)
+            self.assertTrue(h_after[0]['last_notified_at'].startswith('2026-09-22'))
+
+            mock_sender.reset_mock()
+
+            # Drugi obieg we wtorek 17:15: brak nowych ocen/wiadomości, sprawdzian już dziś notyfikowany -> NIE wysyła
+            tue_dt_later = datetime(2026, 9, 22, 17, 15)
+            notifier.process_user_notifications(
+                user_config=user_cfg,
+                new_messages=[],
+                new_notifications=[],
+                new_grades=[],
+                actual_date=tue_dt_later,
+            )
+            mock_sender.send_mail_with_summary.assert_not_called()
+            mock_sender.send_mail_with_messages.assert_not_called()
 
 
 if __name__ == '__main__':

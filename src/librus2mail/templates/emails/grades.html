@@ -25,61 +25,111 @@
     </div>
 
     <div style="padding: 20px 24px; box-sizing: border-box;">
-        <div style="border-bottom: 2px solid #10b981; padding-bottom: 8px; margin-bottom: 12px;">
-            <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #0f172a;">Nowe oceny ({{ grades | length }})</h3>
+        <div style="border-bottom: 2px solid #10b981; padding-bottom: 8px; margin-bottom: 14px;">
+            <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                    <td align="left" valign="middle">
+                        <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #0f172a;">Nowe oceny ({{ grades | length }})</h3>
+                    </td>
+                    <td align="right" valign="middle" style="font-size: 12px; color: #10b981; font-weight: 600;">
+                        {% if (grades | length) == 1 %}1 nowa ocena{% elif (grades | length) < 5 %}{{ grades | length }} nowe oceny{% else %}{{ grades | length }} nowych ocen{% endif %}
+                    </td>
+                </tr>
+            </table>
         </div>
-        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
-            <thead>
-                <tr style="background-color: #f8fafc; color: #475569; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e2e8f0;">
-                    <th style="padding: 10px 10px;">Przedmiot</th>
-                    <th style="padding: 10px 6px; text-align: center;">Ocena</th>
-                    <th style="padding: 10px 8px;">Kategoria</th>
-                    <th style="padding: 10px 6px; text-align: center;">Waga</th>
-                    <th style="padding: 10px 8px;">Data</th>
-                    <th style="padding: 10px 10px;">Nauczyciel</th>
-                    <th style="padding: 10px 10px;">Komentarz</th>
-                </tr>
-            </thead>
-            <tbody>
-            {% for grade in grades %}
-                <tr style="border-bottom: 1px solid #f1f5f9; background-color: {{ '#ffffff' if loop.index0 % 2 == 0 else '#fafafa' }};">
-                    <td style="padding: 10px 10px; font-weight: 600; color: #1e293b;">
-                        {{ grade.subject }}
-                    </td>
-                    <td style="padding: 10px 6px; text-align: center;">
-                        {{ grade.grade | grade_badge }}
-                    </td>
-                    <td style="padding: 10px 8px; color: #475569;">
-                        {{ grade.category or '-' }}
-                    </td>
-                    <td style="padding: 10px 6px; text-align: center;">
+
+        {% for grade in grades %}
+        {% set clean_g = grade.grade | string | replace('+','') | replace('-','') | replace('=','') %}
+        {% set border_color = '#10b981' if clean_g in ['5','6'] else ('#3b82f6' if clean_g == '4' else ('#f59e0b' if clean_g == '3' else ('#ef4444' if clean_g in ['1','2'] else '#64748b'))) %}
+
+        {% set cat = (grade.category or '') | lower %}
+        {% if 'sprawdzian' in cat or 'klasow' in cat or 'klasów' in cat or 'egzamin' in cat %}
+            {% set cat_bg = '#fee2e2' %}
+            {% set cat_color = '#991b1b' %}
+            {% set cat_border = '#fca5a5' %}
+            {% set cat_icon = '📕' %}
+        {% elif 'kartków' in cat or 'kartkow' in cat %}
+            {% set cat_bg = '#ffedd5' %}
+            {% set cat_color = '#c2410c' %}
+            {% set cat_border = '#fed7aa' %}
+            {% set cat_icon = '📙' %}
+        {% elif 'odpowiedź' in cat or 'odpowiedz' in cat or 'projekt' in cat %}
+            {% set cat_bg = '#eff6ff' %}
+            {% set cat_color = '#1d4ed8' %}
+            {% set cat_border = '#bfdbfe' %}
+            {% set cat_icon = '📘' %}
+        {% elif 'aktywność' in cat or 'aktywnosc' in cat or 'domow' in cat or 'lekcj' in cat %}
+            {% set cat_bg = '#f0fdf4' %}
+            {% set cat_color = '#15803d' %}
+            {% set cat_border = '#bbf7d0' %}
+            {% set cat_icon = '📗' %}
+        {% else %}
+            {% set cat_bg = '#f1f5f9' %}
+            {% set cat_color = '#475569' %}
+            {% set cat_border = '#cbd5e1' %}
+            {% set cat_icon = '🏷️' %}
+        {% endif %}
+
+        {% set w_raw = (grade.weight or '') | string | replace('×','') | replace('x','') | trim %}
+        {% set w_val = w_raw | float(default=1.0) %}
+        {% if w_val >= 3.0 %}
+            {% set w_bg = '#fee2e2' %}
+            {% set w_color = '#991b1b' %}
+            {% set w_border = '#fca5a5' %}
+        {% elif w_val >= 2.0 %}
+            {% set w_bg = '#ffedd5' %}
+            {% set w_color = '#c2410c' %}
+            {% set w_border = '#fed7aa' %}
+        {% else %}
+            {% set w_bg = '#f1f5f9' %}
+            {% set w_color = '#475569' %}
+            {% set w_border = '#e2e8f0' %}
+        {% endif %}
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-left: 4px solid {{ border_color }}; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);">
+            <!-- Wiersz 1: Przedmiot, Ocena, Waga, Data -->
+            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td align="left" valign="middle">
+                        <span style="font-size: 15px; font-weight: 700; color: #1e293b;">{{ grade.subject }}</span>
+                        <span style="margin-left: 8px; vertical-align: middle; display: inline-block;">
+                            {{ grade.grade | grade_badge }}
+                        </span>
                         {% if grade.weight and grade.weight != '-' %}
-                        <span style="background-color: #f1f5f9; color: #334155; font-weight: 700; font-size: 12px; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0;">
-                            ×{{ grade.weight }}
+                        <span style="background-color: {{ w_bg }}; color: {{ w_color }}; font-weight: 800; font-size: 11px; padding: 2px 6px; border-radius: 4px; border: 1px solid {{ w_border }}; margin-left: 6px; vertical-align: middle; display: inline-block;">
+                            waga ×{{ w_raw }}
                         </span>
-                        {% else %}
-                        <span style="color: #94a3b8;">-</span>
                         {% endif %}
                     </td>
-                    <td style="padding: 10px 8px; color: #64748b; white-space: nowrap; font-size: 12px;">
-                        {{ grade.date or '-' }}
+                    <td align="right" valign="middle" style="text-align: right; font-size: 12px; color: #64748b; white-space: nowrap; padding-left: 8px;">
+                        📅 {{ grade.date or '-' }}
                     </td>
-                    <td style="padding: 10px 10px; color: #475569; font-size: 12px;">
-                        {{ grade.teacher or '-' }}
-                    </td>
-                    <td style="padding: 10px 10px; font-size: 12px;">
-                        {% if grade.comment and grade.comment != '-' %}
-                        <span style="color: #0f172a; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 2px 7px; display: inline-block; font-size: 11px; line-height: 1.4;">
-                            💬 {{ grade.comment }}
+                </tr>
+            </table>
+
+            <!-- Wiersz 2: Kategoria oraz Nauczyciel -->
+            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; border-collapse: collapse; margin-top: 6px;">
+                <tr>
+                    <td align="left" valign="middle" style="font-size: 12px; color: #475569;">
+                        <span style="background-color: {{ cat_bg }}; color: {{ cat_color }}; border: 1px solid {{ cat_border }}; border-radius: 4px; padding: 2px 8px; font-weight: 700; font-size: 11px; display: inline-block; letter-spacing: 0.02em;">
+                            {{ cat_icon }} {{ grade.category or 'Brak kategorii' }}
                         </span>
-                        {% else %}
-                        <span style="color: #94a3b8;">-</span>
+                        {% if grade.teacher and grade.teacher != '-' %}
+                        <span style="color: #64748b; margin-left: 8px; display: inline-block;">
+                            👤 {{ grade.teacher }}
+                        </span>
                         {% endif %}
                     </td>
                 </tr>
-            {% endfor %}
-            </tbody>
-        </table>
+            </table>
+
+            <!-- Wiersz 3: Komentarz nauczyciela (jeśli jest) -->
+            {% if grade.comment and grade.comment != '-' %}
+            <div style="margin-top: 8px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-left: 3px solid #3b82f6; border-radius: 6px; padding: 8px 10px; font-size: 12px; color: #1e293b; line-height: 1.45;">
+                💬 <strong>Komentarz nauczyciela:</strong> {{ grade.comment }}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
 
         <!-- Stopka -->
         <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0; text-align: center;">

@@ -741,7 +741,7 @@ class Librus:
 
         rows = table.find_all('tr')
         for row in rows:
-            cells = row.find_all('td')
+            cells = row.find_all(['td', 'th'])
             if not cells:
                 continue
 
@@ -771,22 +771,34 @@ class Librus:
                 if not date_str:
                     continue
 
-                time_from = cell.get('data-date-from') or cell.get('date_from') or row_time_from
-                time_to = cell.get('data-date-to') or cell.get('date_to') or row_time_to
+                time_from = (
+                    cell.get('data-time_from')
+                    or cell.get('data-time-from')
+                    or cell.get('data-date-from')
+                    or cell.get('date_from')
+                    or row_time_from
+                )
+                time_to = (
+                    cell.get('data-time_to')
+                    or cell.get('data-time-to')
+                    or cell.get('data-date-to')
+                    or cell.get('date_to')
+                    or row_time_to
+                )
                 if time_from and len(time_from) < 5 and ':' in time_from:
                     time_from = time_from.zfill(5)
                 if time_to and len(time_to) < 5 and ':' in time_to:
                     time_to = time_to.zfill(5)
 
-                cell_text = cell.get_text(separator=' ', strip=True)
-                if not cell_text or cell_text in ('-', '\xa0', '') or cell_text.isdigit():
+                cell_text = cell.get_text(separator=' ', strip=True).replace('\xa0', ' ')
+                if not cell_text or cell_text in ('-', '') or cell_text.isdigit():
                     continue
 
                 text_divs = cell.find_all('div', class_='text')
                 blocks = text_divs if text_divs else [cell]
 
                 info_div = cell.find('div', class_=lambda c: c and 'plan-lekcji-info' in c)
-                info_text = info_div.get_text(separator=' ', strip=True) if info_div else ""
+                info_text = info_div.get_text(separator=' ', strip=True).replace('\xa0', ' ') if info_div else ""
 
                 tooltip_attrs: dict[str, str] = {}
                 a_tag = cell.find('a')
@@ -800,7 +812,7 @@ class Librus:
                             tooltip_attrs[k.strip().lower()] = v.strip()
 
                 for b_idx, block in enumerate(blocks):
-                    block_text = block.get_text(separator=' ', strip=True).replace('\xa0', ' ')
+                    block_text = re.sub(r'\s+', ' ', block.get_text(separator=' ', strip=True).replace('\xa0', ' ')).strip()
                     if not block_text:
                         continue
 
@@ -808,7 +820,7 @@ class Librus:
                     subject = ""
                     rest = ""
                     if sub_tag:
-                        subject = sub_tag.get_text(strip=True).replace('\xa0', ' ')
+                        subject = re.sub(r'\s+', ' ', sub_tag.get_text(strip=True).replace('\xa0', ' ')).strip()
                         rest = block_text.replace(subject, '', 1).strip(' -')
                     elif '-' in block_text:
                         parts = block_text.split('-', 1)
@@ -822,20 +834,22 @@ class Librus:
                         else:
                             subject = block_text
 
+                    subject = re.sub(r'\s+', ' ', subject).strip(' -')
                     teacher = ""
                     classroom = ""
                     if rest:
                         m_room = re.search(r'(?:s\.|sala)\s*([0-9a-zA-Z_.-]+)', rest, re.IGNORECASE)
                         if m_room:
                             classroom = m_room.group(1).strip('. ')
-                            teacher = re.sub(r'(?:s\.|sala)\s*([0-9a-zA-Z_.-]+)', '', rest, flags=re.IGNORECASE).strip(' ,().-')
+                            teacher = re.sub(r'(?:s\.|sala)\s*([0-9a-zA-Z_.-]+)', '', rest, flags=re.IGNORECASE).strip(' ,.-')
                         else:
                             teacher = rest.strip(' ,()')
 
+                    teacher = re.sub(r'\s+', ' ', teacher).strip(' ,.-')
                     if 'nauczyciel' in tooltip_attrs and not teacher:
-                        teacher = tooltip_attrs['nauczyciel'].replace('\xa0', ' ').strip()
+                        teacher = re.sub(r'\s+', ' ', tooltip_attrs['nauczyciel'].replace('\xa0', ' ')).strip()
                     if 'sala' in tooltip_attrs and not classroom:
-                        classroom = tooltip_attrs['sala'].replace('\xa0', ' ').strip('. ')
+                        classroom = re.sub(r'\s+', ' ', tooltip_attrs['sala'].replace('\xa0', ' ')).strip('. ')
 
                     has_strike = bool(
                         block.find(['s', 'strike', 'del'])

@@ -2,12 +2,12 @@
 
 # 📬 Librus2mail
 
-**Nowoczesny, bezobsługowy asystent rodzica i analityk postępów nauki dizecka dla e-dziennika Librus Synergia**
+**Nowoczesny, bezobsługowy asystent szkolny rodzica i analityk postępów nauki dziecka dla e-dziennika Librus Synergia**
 
 [![CI Status](https://img.shields.io/github/actions/workflow/status/cackoarek/librus2mail/ci.yml?branch=main&label=CI&style=flat-square&logo=githubactions&logoColor=white)](https://github.com/cackoarek/librus2mail/actions/workflows/ci.yml)
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-3776AB.svg?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![Code Style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg?style=flat-square&logo=ruff&logoColor=white)](https://github.com/astral-sh/ruff)
-[![Tests: pytest](https://img.shields.io/badge/tests-pytest%20(93%20passed)-success.svg?style=flat-square&logo=pytest&logoColor=white)](tests/)
+[![Tests: pytest](https://img.shields.io/badge/tests-pytest%20(97%20passed)-success.svg?style=flat-square&logo=pytest&logoColor=white)](tests/)
 [![Packaging: PEP 517/518](https://img.shields.io/badge/packaging-PEP%20517%2F518-00599C.svg?style=flat-square)](pyproject.toml)
 [![Docker Ready](https://img.shields.io/badge/docker-ready-2496ED.svg?style=flat-square&logo=docker&logoColor=white)](Dockerfile)
 [![systemd Supported](https://img.shields.io/badge/systemd-supported-lightgrey.svg?style=flat-square&logo=linux&logoColor=white)](deploy/systemd/)
@@ -98,8 +98,8 @@ Poniżej możesz zobaczyć jak wyglądają e-maile generowane przez projekt — 
 ## Główne możliwości
 
 * **Wsparcie dla wielu kont**: Możliwość jednoczesnego monitorowania kont dla kilkorga dzieci (każde konto może mieć przypisanych innych odbiorców powiadomień).
-* **Nowoczesny przepływ OAuth**: Zgodność z aktualnym procesem autoryzacji Librus Synergia (uwzględniającym przekierowania `portalRodzina`, pominięcie ekranu 2FA oraz grant autoryzacyjny).
 * **Obsługa wiadomości, ogłoszeń i ocen**: Monitorowanie wiadomości prywatnych od nauczycieli, ogólnych ogłoszeń szkolnych oraz nowo wystawionych ocen (cząstkowych, semestralnych i rocznych).
+* **Plan lekcji ze zmianami i terminarz szkolny**: Pobieranie rozkładu zajęć na bieżący i kolejny dzień z informacjami o godzinach pobytu w szkole (np. `08:00 – 13:35`), salach lekcyjnych, nauczycielach, zastępstwach i odwołanych lekcjach, a także monitorowanie terminarza sprawdzianów i kartkówek powiązanych z lekcjami.
 * **Elastyczna wysyłka e-mail**:
   * **Gmail**: zoptymalizowana obsługa przez bibliotekę `yagmail` (wymagane hasło aplikacji Google).
   * **SMTP**: standardowy protokół SMTP z szyfrowaniem STARTTLS (działa z dowolnym serwerem pocztowym: hostingodawcy, OVH, Cyberfolks, WP, Onet itp.).

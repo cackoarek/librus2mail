@@ -131,6 +131,7 @@ class MailSender:
         notifications: list = None,
         grades: list = None,
         timetable: dict = None,
+        schedule: dict = None,
     ) -> str:
         parts = []
         if messages:
@@ -157,6 +158,16 @@ class MailSender:
                 grades_summary += f" (+{len(grades) - 2})"
             parts.append(f"nowe oceny ({grades_summary})")
 
+        if schedule and (schedule.get('substitution_count', 0) > 0 or schedule.get('cancelled_count', 0) > 0):
+            sub_count = schedule.get('substitution_count', 0)
+            canc_count = schedule.get('cancelled_count', 0)
+            ch_parts = []
+            if sub_count > 0:
+                ch_parts.append(f"{sub_count} zast.")
+            if canc_count > 0:
+                ch_parts.append(f"{canc_count} odwoł.")
+            parts.append(f"zmiany w planie ({', '.join(ch_parts)})")
+
         if timetable and timetable.get('immediate_tests'):
             t_count = len(timetable['immediate_tests'])
             t_suffix = 'y' if 1 < t_count < 5 else ('ów' if t_count >= 5 else '')
@@ -180,6 +191,7 @@ class MailSender:
         notifications: list = None,
         grades: list = None,
         timetable: dict = None,
+        schedule: dict = None,
     ) -> str:
         template = jinja_env.get_template('summary.html')
         return template.render(
@@ -188,6 +200,7 @@ class MailSender:
             notifications=notifications or [],
             grades=grades or [],
             timetable=timetable,
+            schedule=schedule,
         )
 
     def send_mail_with_messages(self, user_config, messages):
@@ -199,7 +212,7 @@ class MailSender:
     def send_mail_with_grades(self, user_config, grades):
         pass
 
-    def send_mail_with_summary(self, user_config, messages=None, notifications=None, grades=None, timetable=None):
+    def send_mail_with_summary(self, user_config, messages=None, notifications=None, grades=None, timetable=None, schedule=None):
         pass
 
     @classmethod

@@ -3,7 +3,7 @@ import random
 import re
 import time
 import urllib.parse
-from datetime import datetime
+from datetime import datetime, timedelta
 from time import sleep
 from typing import Any
 
@@ -20,6 +20,7 @@ MESSAGE_BODY_URL = 'https://synergia.librus.pl'
 NOTIFICATIONS_URL = 'https://synergia.librus.pl/ogloszenia'
 GRADES_URL = 'https://synergia.librus.pl/przegladaj_oceny/uczen'
 TIMETABLE_URL = 'https://synergia.librus.pl/terminarz'
+PLAN_LEKCJI_URL = 'https://synergia.librus.pl/przegladaj_plan_lekcji'
 
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
 
@@ -29,6 +30,20 @@ class NotLogged(Exception):
         logger.error(f"Nie zalogowany: {message}")
         self.message = message
         super().__init__(self.message)
+
+
+DEFAULT_LESSON_TIMES: dict[int, tuple[str, str]] = {
+    1: ("08:00", "08:45"),
+    2: ("08:55", "09:40"),
+    3: ("09:50", "10:35"),
+    4: ("10:45", "11:30"),
+    5: ("11:50", "12:35"),
+    6: ("12:50", "13:35"),
+    7: ("13:45", "14:30"),
+    8: ("14:35", "15:20"),
+    9: ("15:25", "16:10"),
+    10: ("16:15", "17:00"),
+}
 
 
 class Librus:
@@ -44,6 +59,12 @@ class Librus:
         self.__do_read_messages = config.get('read_messages', True)
         self.__do_read_grades = config.get('read_grades', True)
         self.__do_read_timetable = config.get('read_timetable', True)
+        self.__do_read_schedule = config.get('read_schedule', True)
+        raw_ret = config.get('schedule_retention_days', 30)
+        try:
+            self.__schedule_retention_days = int(raw_ret) if raw_ret is not None else 30
+        except (ValueError, TypeError):
+            self.__schedule_retention_days = 30
         self.__librus_login = config.get('librus_login')
         self.__librus_password = config.get('librus_password')
 
@@ -59,6 +80,7 @@ class Librus:
 
         self.grades = []
         self.timetable = []
+        self.schedule = []
         # Używamy spójnego, nowoczesnego User-Agenta desktopowego.
         # Losowanie random za każdym razem sprawia, że Librus traktuje każde zapytanie
         # jako logowanie z nowego urządzenia i wymusza procedurę 2FA.
@@ -68,6 +90,7 @@ class Librus:
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
             'Accept-Language': 'pl-PL,pl;q=0.9,en-US;q=0.8,en;q=0.7',
         }
+        self.__session = requests.Session()
 
     @staticmethod
     def __generate_baner_header() -> dict[str, str]:
@@ -347,6 +370,12 @@ class Librus:
                 self.__storage.save_timetable_entries(
                     str(self.__librus_login),
                     self.timetable
+                )
+            if hasattr(self, 'schedule') and self.schedule and hasattr(self.__storage, 'save_schedule_entries'):
+                self.__storage.save_schedule_entries(
+                    str(self.__librus_login),
+                    self.schedule,
+                    retention_days=self.__schedule_retention_days,
                 )
 
     def get_not_known_messages_and_mark_as_known(self) -> list[dict[str, bool | str | Any]]:
@@ -683,6 +712,223 @@ class Librus:
         entries.sort(key=lambda e: (e.get('date', ''), e.get('lesson_no', '')))
         logger.info(f"Pobrano {len(entries)} wpisów z terminarza")
         self.timetable = entries
+        self.save_state()
+        return entries
+
+    def _parse_schedule_soup(self, soup: BeautifulSoup) -> list[dict[str, Any]]:
+        table = soup.find('table', class_=lambda c: c and 'plan-lekcji' in c)
+        if not table:
+            table = soup.find('table', class_=lambda c: c and 'decorated' in c and soup.find('td', id='timetableEntryBox'))
+        if not table:
+            return []
+
+        # Wykrycie dat w nagłówkach kolumn
+        header_dates: dict[int, str] = {}
+        header_row = table.find('tr')
+        if header_row:
+            ths = header_row.find_all(['th', 'td'])
+            for idx, th in enumerate(ths):
+                th_text = th.get_text(separator=' ', strip=True)
+                m_iso = re.search(r'(\d{4}-\d{2}-\d{2})', th_text)
+                if m_iso:
+                    header_dates[idx] = m_iso.group(1)
+                else:
+                    m_pl = re.search(r'(\d{2})\.(\d{2})\.(\d{4})', th_text)
+                    if m_pl:
+                        header_dates[idx] = f"{m_pl.group(3)}-{m_pl.group(2)}-{m_pl.group(1)}"
+
+        entries: list[dict[str, Any]] = []
+
+        rows = table.find_all('tr')
+        for row in rows:
+            cells = row.find_all('td')
+            if not cells:
+                continue
+
+            first_text = cells[0].get_text(strip=True)
+            if not first_text.isdigit():
+                continue
+            lesson_no = int(first_text)
+
+            row_time_from = ""
+            row_time_to = ""
+            for c in cells[:3]:
+                c_text = c.get_text(separator=' ', strip=True).replace('\xa0', ' ')
+                m_times = re.findall(r'\b\d{1,2}[:.]\d{2}\b', c_text)
+                if len(m_times) >= 2:
+                    row_time_from = m_times[0].replace('.', ':').zfill(5)
+                    row_time_to = m_times[1].replace('.', ':').zfill(5)
+                    break
+            if not row_time_from and lesson_no in DEFAULT_LESSON_TIMES:
+                row_time_from, row_time_to = DEFAULT_LESSON_TIMES[lesson_no]
+
+            for col_idx, cell in enumerate(cells):
+                is_entry_box = cell.get('id') == 'timetableEntryBox' or 'timetableEntryBox' in cell.get('class', [])
+                if not is_entry_box and col_idx not in header_dates:
+                    continue
+
+                date_str = cell.get('data-date') or cell.get('date') or header_dates.get(col_idx)
+                if not date_str:
+                    continue
+
+                time_from = cell.get('data-date-from') or cell.get('date_from') or row_time_from
+                time_to = cell.get('data-date-to') or cell.get('date_to') or row_time_to
+                if time_from and len(time_from) < 5 and ':' in time_from:
+                    time_from = time_from.zfill(5)
+                if time_to and len(time_to) < 5 and ':' in time_to:
+                    time_to = time_to.zfill(5)
+
+                cell_text = cell.get_text(separator=' ', strip=True)
+                if not cell_text or cell_text in ('-', '\xa0', '') or cell_text.isdigit():
+                    continue
+
+                text_divs = cell.find_all('div', class_='text')
+                blocks = text_divs if text_divs else [cell]
+
+                info_div = cell.find('div', class_=lambda c: c and 'plan-lekcji-info' in c)
+                info_text = info_div.get_text(separator=' ', strip=True) if info_div else ""
+
+                tooltip_attrs: dict[str, str] = {}
+                a_tag = cell.find('a')
+                if a_tag and a_tag.get('title'):
+                    raw_title = a_tag.get('title', '')
+                    clean_title = re.sub(r'<br\s*/?>', '\n', raw_title)
+                    clean_title = re.sub(r'<[^>]+>', '', clean_title)
+                    for line in clean_title.split('\n'):
+                        if ':' in line:
+                            k, v = line.split(':', 1)
+                            tooltip_attrs[k.strip().lower()] = v.strip()
+
+                for b_idx, block in enumerate(blocks):
+                    block_text = block.get_text(separator=' ', strip=True).replace('\xa0', ' ')
+                    if not block_text:
+                        continue
+
+                    sub_tag = block.find('b')
+                    subject = ""
+                    rest = ""
+                    if sub_tag:
+                        subject = sub_tag.get_text(strip=True).replace('\xa0', ' ')
+                        rest = block_text.replace(subject, '', 1).strip(' -')
+                    elif '-' in block_text:
+                        parts = block_text.split('-', 1)
+                        subject = parts[0].strip()
+                        rest = parts[1].strip()
+                    else:
+                        m_split = re.search(r'^(.*?)(?:\s+(?:s\.|sala|\()\s*.*)$', block_text, re.IGNORECASE)
+                        if m_split and m_split.group(1).strip():
+                            subject = m_split.group(1).strip()
+                            rest = block_text[len(subject):].strip(' -')
+                        else:
+                            subject = block_text
+
+                    teacher = ""
+                    classroom = ""
+                    if rest:
+                        m_room = re.search(r'(?:s\.|sala)\s*([0-9a-zA-Z_.-]+)', rest, re.IGNORECASE)
+                        if m_room:
+                            classroom = m_room.group(1).strip('. ')
+                            teacher = re.sub(r'(?:s\.|sala)\s*([0-9a-zA-Z_.-]+)', '', rest, flags=re.IGNORECASE).strip(' ,().-')
+                        else:
+                            teacher = rest.strip(' ,()')
+
+                    if 'nauczyciel' in tooltip_attrs and not teacher:
+                        teacher = tooltip_attrs['nauczyciel'].replace('\xa0', ' ').strip()
+                    if 'sala' in tooltip_attrs and not classroom:
+                        classroom = tooltip_attrs['sala'].replace('\xa0', ' ').strip('. ')
+
+                    has_strike = bool(
+                        block.find(['s', 'strike', 'del'])
+                        or 'line-through' in block.get('style', '')
+                        or 'line-through' in cell.get('style', '')
+                        or 'odwolana' in block.get('class', [])
+                        or 'odwolana' in cell.get('class', [])
+                    )
+
+                    all_context = f"{info_text} {cell_text} {' '.join(tooltip_attrs.values())}".lower()
+                    is_cancelled = False
+                    is_substitution = False
+                    is_moved = False
+                    substitution_info = ""
+
+                    if 'odwołan' in all_context or 'odwolana' in all_context or (has_strike and 'zastęp' not in all_context):
+                        is_cancelled = True
+                    elif 'zastęp' in all_context or 'zastep' in all_context:
+                        is_substitution = True
+                        if tooltip_attrs:
+                            sub_parts = []
+                            if 'przedmiot' in tooltip_attrs:
+                                sub_parts.append(tooltip_attrs['przedmiot'])
+                            if 'nauczyciel' in tooltip_attrs:
+                                sub_parts.append(f"p. {tooltip_attrs['nauczyciel']}")
+                            if 'sala' in tooltip_attrs:
+                                sub_parts.append(f"s. {tooltip_attrs['sala']}")
+                            substitution_info = ", ".join(sub_parts)
+                        elif info_text:
+                            substitution_info = info_text
+                    elif 'przesunię' in all_context or 'przesunie' in all_context:
+                        is_moved = True
+
+                    entry_id = f"sched_{date_str}_{lesson_no}_{subject}_{b_idx}"
+                    entries.append({
+                        'id': entry_id,
+                        'date': date_str,
+                        'lesson_no': lesson_no,
+                        'time_from': time_from,
+                        'time_to': time_to,
+                        'time_range': f"{time_from} - {time_to}" if time_from and time_to else "",
+                        'subject': subject,
+                        'teacher': teacher,
+                        'classroom': classroom,
+                        'is_cancelled': is_cancelled,
+                        'is_substitution': is_substitution,
+                        'is_moved': is_moved,
+                        'substitution_info': substitution_info,
+                        'info': info_text,
+                        'raw_text': block_text,
+                    })
+
+        entries.sort(key=lambda x: (x.get('date', ''), x.get('lesson_no', 0)))
+        return entries
+
+    def fetch_schedule(self, force: bool = False, date: datetime | None = None) -> list[dict[str, Any]]:
+        if not self.__do_read_schedule and not force:
+            logger.info("Pobieranie planu lekcji jest wyłączone w konfiguracji (read_schedule: false)")
+            self.schedule = []
+            return []
+
+        if not self.logged:
+            raise NotLogged()
+
+        logger.info("Pobieram plan lekcji")
+        target_dt = date or datetime.now()
+        if target_dt.weekday() == 4 and target_dt.hour >= 15:
+            target_dt = target_dt + timedelta(days=3)
+        elif target_dt.weekday() == 5:
+            target_dt = target_dt + timedelta(days=2)
+        elif target_dt.weekday() == 6:
+            target_dt = target_dt + timedelta(days=1)
+
+        monday = target_dt - timedelta(days=target_dt.weekday())
+        sunday = monday + timedelta(days=6)
+        week_str = f"{monday.strftime('%Y-%m-%d')}_{sunday.strftime('%Y-%m-%d')}"
+
+        headers = {**self.__headers, 'Referer': PLAN_LEKCJI_URL}
+        entries = []
+        try:
+            res = self.__session.post(PLAN_LEKCJI_URL, data={'tydzien': week_str}, headers=headers)
+            if res.status_code == 200:
+                soup = BeautifulSoup(res.content, 'html.parser')
+                entries = self._parse_schedule_soup(soup)
+        except Exception as e:
+            logger.warning(f"POST do planu lekcji ({week_str}) nie powiódł się ({e}), próbuję GET...")
+
+        if not entries:
+            soup = self.parse_page(PLAN_LEKCJI_URL)
+            entries = self._parse_schedule_soup(soup)
+
+        logger.info(f"Pobrano {len(entries)} lekcji z planu lekcji")
+        self.schedule = entries
         self.save_state()
         return entries
 

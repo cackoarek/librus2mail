@@ -2,7 +2,7 @@ import json
 import logging
 import os
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import date, datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -133,6 +133,32 @@ class BaseStorage(ABC):
     @abstractmethod
     def mark_timetable_entries_notified(self, user_login: str, entry_ids: list[str], notified_at_iso: str | None = None) -> None:
         """Oznacza wpisy terminarza jako uwzględnione w wysłanym powiadomieniu (last_notified_at)."""
+        pass
+
+    @abstractmethod
+    def save_schedule_entries(
+        self,
+        user_login: str,
+        entries: list[dict],
+        retention_days: int | None = 30,
+        reference_date: datetime | date | None = None,
+    ) -> None:
+        """Zapisuje listę lekcji i zmian z planu lekcji wraz z opcjonalną retencją starszych wpisów."""
+        pass
+
+    @abstractmethod
+    def get_schedule_history(self, user_login: str) -> list[dict]:
+        """Zwraca listę lekcji z planu lekcji."""
+        pass
+
+    @abstractmethod
+    def get_last_schedule_sync(self, user_login: str) -> str | None:
+        """Zwraca znacznik czasu (ISO) ostatniej synchronizacji planu lekcji lub None."""
+        pass
+
+    @abstractmethod
+    def save_last_schedule_sync(self, user_login: str, date_iso: str) -> None:
+        """Zapisuje znacznik czasu (ISO) ostatniej synchronizacji planu lekcji."""
         pass
 
 
@@ -687,6 +713,119 @@ class FileStorage(BaseStorage):
                 os.replace(temp_path, file_path)
             except Exception as e:
                 logger.error(f"Błąd podczas zapisywania last_notified_at w {file_path}: {e}")
+
+    def save_schedule_entries(
+        self,
+        user_login: str,
+        entries: list[dict],
+        retention_days: int | None = 30,
+        reference_date: datetime | date | None = None,
+    ) -> None:
+        """Zapisuje listę wpisów z planu lekcji w storage z automatyczną retencją (domyślnie >30 dni)."""
+        if not entries and retention_days is None:
+            return
+        file_path = self._get_file_path(user_login)
+        temp_path = f"{file_path}.tmp"
+        data = {}
+        if os.path.isfile(file_path):
+            try:
+                with open(file_path, encoding='utf-8') as f:
+                    data = json.load(f)
+            except Exception:
+                data = {}
+
+        existing = {e.get('id'): e for e in data.get('schedule_history', []) if e.get('id')}
+        now_iso = datetime.now().isoformat()
+        for e in entries or []:
+            eid = e.get('id')
+            if eid:
+                if eid in existing:
+                    existing[eid].update({k: v for k, v in e.items() if v is not None})
+                    existing[eid]['updated_at'] = now_iso
+                else:
+                    e_copy = dict(e)
+                    e_copy['added_at'] = e_copy.get('added_at') or now_iso
+                    e_copy['updated_at'] = now_iso
+                    existing[eid] = e_copy
+
+        # Retencja wpisów starszych niż retention_days (domyślnie 30 dni)
+        if retention_days is not None and retention_days > 0:
+            if reference_date:
+                ref_d = reference_date.date() if isinstance(reference_date, datetime) else reference_date
+            else:
+                ref_d = datetime.now().date()
+            cutoff_date_str = (ref_d - timedelta(days=retention_days)).isoformat()
+
+            retained = {}
+            for eid, item in existing.items():
+                item_date = item.get('date')
+                if item_date:
+                    if item_date >= cutoff_date_str:
+                        retained[eid] = item
+                else:
+                    retained[eid] = item
+            existing = retained
+
+        data['schedule_history'] = sorted(
+            existing.values(),
+            key=lambda x: (
+                x.get('date', ''),
+                int(x.get('lesson_no', 0)) if str(x.get('lesson_no', '')).isdigit() else 99
+            )
+        )
+        data['schedule_last_sync'] = now_iso
+        try:
+            with open(temp_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            os.replace(temp_path, file_path)
+        except Exception as e:
+            logger.error(f"Błąd podczas zapisywania planu lekcji do {file_path}: {e}")
+
+    def get_schedule_history(self, user_login: str) -> list[dict]:
+        file_path = self._get_file_path(user_login)
+        if not os.path.isfile(file_path):
+            return []
+        try:
+            with open(file_path, encoding='utf-8') as f:
+                data = json.load(f)
+            sh = data.get('schedule_history', [])
+            if isinstance(sh, dict):
+                return list(sh.values())
+            elif isinstance(sh, list):
+                return sh
+            return []
+        except Exception as e:
+            logger.error(f"Błąd podczas odczytu schedule_history z {file_path}: {e}")
+            return []
+
+    def get_last_schedule_sync(self, user_login: str) -> str | None:
+        file_path = self._get_file_path(user_login)
+        if not os.path.isfile(file_path):
+            return None
+        try:
+            with open(file_path, encoding='utf-8') as f:
+                data = json.load(f)
+            return data.get('schedule_last_sync')
+        except Exception:
+            return None
+
+    def save_last_schedule_sync(self, user_login: str, date_iso: str) -> None:
+        file_path = self._get_file_path(user_login)
+        temp_path = f"{file_path}.tmp"
+        data = {}
+        if os.path.isfile(file_path):
+            try:
+                with open(file_path, encoding='utf-8') as f:
+                    data = json.load(f)
+            except Exception:
+                data = {}
+        data['schedule_last_sync'] = date_iso
+        try:
+            with open(temp_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            os.replace(temp_path, file_path)
+        except Exception as e:
+            logger.error(f"Błąd podczas zapisu schedule_last_sync do {file_path}: {e}")
 
 
 def create_storage(storage_dir: str = 'storage', *args, **kwargs) -> FileStorage:

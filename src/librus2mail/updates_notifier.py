@@ -132,6 +132,116 @@ def prepare_timetable_summary(
     }
 
 
+def prepare_schedule_summary(
+    schedule_entries: list[dict[str, Any]],
+    timetable_entries: list[dict[str, Any]] | None = None,
+    now: datetime | None = None,
+    day_offset: int = 1,
+) -> dict[str, Any]:
+    """
+    Przygotowuje podsumowanie planu lekcji na wybrany dzień nauki:
+    - day_offset: przesunięcie dnia względem daty bazowej (domyślnie 1, czyli następny dzień nauki; 0 = bieżący dzień).
+    - Jeśli dzień docelowy wypada w weekend (sobota/niedziela), automatycznie przesuwa na najbliższy poniedziałek.
+    - Filtruje lekcje, sortuje chronologicznie.
+    - Wylicza ramy czasowe pobytu w szkole (od pierwszej do ostatniej aktywnej lekcji).
+    - Zlicza zastępstwa i odwołane lekcje.
+    - Jeśli przekazano wpisy z terminarza, koreluje sprawdziany/kartkówki z lekcjami danego dnia.
+    """
+    if not schedule_entries:
+        return {'has_any': False, 'lessons': []}
+
+    ref_now = now or datetime.now()
+    ref_date = ref_now.date()
+    ref_weekday = ref_date.weekday()
+
+    try:
+        offset_val = int(day_offset) if day_offset is not None else 1
+    except (ValueError, TypeError):
+        offset_val = 1
+
+    weekdays_pl = [
+        "poniedziałek", "wtorek", "środa", "czwartek",
+        "piątek", "sobota", "niedziela"
+    ]
+
+    target_date = ref_date + timedelta(days=offset_val)
+    # Jeśli data docelowa wypada w weekend, przesuń na najbliższy poniedziałek
+    if target_date.weekday() == 5:  # Sobota
+        target_date += timedelta(days=2)
+    elif target_date.weekday() == 6:  # Niedziela
+        target_date += timedelta(days=1)
+
+    if target_date == ref_date:
+        target_label = f"Dzisiaj ({weekdays_pl[target_date.weekday()]}, {target_date.strftime('%d.%m')})"
+    elif target_date == ref_date + timedelta(days=1):
+        target_label = f"Jutro ({weekdays_pl[target_date.weekday()]}, {target_date.strftime('%d.%m')})"
+    elif ref_weekday in (4, 5) and target_date == ref_date + timedelta(days=(7 - ref_weekday)):
+        target_label = f"Najbliższy dzień nauki (poniedziałek, {target_date.strftime('%d.%m')})"
+    else:
+        target_label = f"Plan lekcji ({weekdays_pl[target_date.weekday()]}, {target_date.strftime('%d.%m')})"
+
+    target_date_str = target_date.isoformat()
+
+    day_lessons = [entry for entry in schedule_entries if entry.get('date') == target_date_str]
+
+    if not day_lessons:
+        future_dates = sorted({entry.get('date') for entry in schedule_entries if entry.get('date') and entry.get('date') >= ref_date.isoformat()})
+        if future_dates:
+            target_date_str = future_dates[0]
+            try:
+                d_obj = datetime.strptime(target_date_str, "%Y-%m-%d").date()
+                w_name = weekdays_pl[d_obj.weekday()]
+                target_label = f"Plan lekcji ({w_name}, {d_obj.strftime('%d.%m')})"
+                target_date = d_obj
+            except Exception:
+                pass
+            day_lessons = [entry for entry in schedule_entries if entry.get('date') == target_date_str]
+
+    if not day_lessons:
+        return {'has_any': False, 'lessons': []}
+
+    day_lessons.sort(key=lambda x: (int(x.get('lesson_no', 0)) if str(x.get('lesson_no', '')).isdigit() else 99, x.get('time_from', '')))
+
+    if timetable_entries:
+        tests_on_day = [t for t in timetable_entries if t.get('date') == target_date_str and t.get('type') == 'test']
+        for lesson in day_lessons:
+            l_num = str(lesson.get('lesson_no', '')).strip()
+            l_sub = lesson.get('subject', '').strip().lower()
+            matched_test = None
+            for test in tests_on_day:
+                t_num = str(test.get('lesson_no', '')).strip()
+                t_sub = test.get('subject', '').strip().lower()
+                if (t_num and t_num == l_num) or (not t_num and (t_sub in l_sub or l_sub in t_sub)):
+                    matched_test = test
+                    break
+            if matched_test:
+                lesson['test'] = matched_test
+
+    active_lessons = [entry for entry in day_lessons if not entry.get('is_cancelled')]
+    cancelled_lessons = [entry for entry in day_lessons if entry.get('is_cancelled')]
+    substitutions = [entry for entry in day_lessons if entry.get('is_substitution')]
+
+    start_time = active_lessons[0].get('time_from') if active_lessons else (day_lessons[0].get('time_from') if day_lessons else '')
+    end_time = active_lessons[-1].get('time_to') if active_lessons else (day_lessons[-1].get('time_to') if day_lessons else '')
+    time_span = f"{start_time} – {end_time}" if start_time and end_time else ""
+
+    return {
+        'has_any': True,
+        'date': target_date_str,
+        'date_str': target_date.strftime("%d.%m.%Y"),
+        'weekday': weekdays_pl[target_date.weekday()].capitalize(),
+        'label': target_label,
+        'lessons': day_lessons,
+        'total_count': len(day_lessons),
+        'active_count': len(active_lessons),
+        'cancelled_count': len(cancelled_lessons),
+        'substitution_count': len(substitutions),
+        'start_time': start_time,
+        'end_time': end_time,
+        'time_span': time_span,
+    }
+
+
 def should_trigger_timetable_reminder(
     timetable_summary: dict[str, Any] | None,
     now: datetime,
@@ -250,6 +360,7 @@ def print_cli_summary(
     grades: list[dict],
     period_desc: str = "",
     timetable: dict | None = None,
+    schedule: dict | None = None,
 ) -> None:
     """Wyświetla estetyczne podsumowanie wykrytych nowości w terminalu (ASCII/tekst)."""
     header = f"📬 POWIADOMIENIE (LIBRUS NOTIFIER): {student_name} ({login})"
@@ -259,10 +370,35 @@ def print_cli_summary(
     print(f"\n{sep}\n{header}\n{sep}\n")
 
     has_timetable = bool(timetable and timetable.get('has_any'))
-    if not messages and not notifications and not grades and not has_timetable:
+    has_schedule = bool(schedule and schedule.get('has_any'))
+    if not messages and not notifications and not grades and not has_timetable and not has_schedule:
         print("Brak nowych wpisów w wybranym okresie.")
         print(f"\n{sep}\n")
         return
+
+    if schedule and schedule.get('has_any'):
+        time_info = f" ({schedule.get('time_span')})" if schedule.get('time_span') else ""
+        print(f"🏫 PLAN LEKCJI • {schedule.get('label')}{time_info}:")
+        if schedule.get('substitution_count', 0) > 0 or schedule.get('cancelled_count', 0) > 0:
+            print(f"  ⚠️ Zmiany w planie: {schedule.get('substitution_count', 0)} zastępstw, {schedule.get('cancelled_count', 0)} odwołanych lekcji")
+        for les in schedule.get('lessons', []):
+            l_no = les.get('lesson_no', '')
+            t_from = les.get('time_from', '')
+            t_to = les.get('time_to', '')
+            subj = les.get('subject', '')
+            room = f" [s. {les['classroom']}]" if les.get('classroom') else ""
+            teacher = f" ({les['teacher']})" if les.get('teacher') else ""
+            status = ""
+            if les.get('is_cancelled'):
+                status = " [❌ ODWOŁANA]"
+            elif les.get('is_substitution'):
+                status = " [🔄 ZASTĘPSTWO]"
+            test_info = ""
+            if les.get('test'):
+                test_info = f" [📝 {les['test'].get('category')}: {les['test'].get('subject')}]"
+            sub_info = f" -> {les['substitution_info']}" if les.get('substitution_info') else ""
+            print(f"  #{l_no} {t_from}-{t_to}: {subj}{status}{test_info}{room}{teacher}{sub_info}")
+        print()
 
     if timetable and timetable.get('has_any'):
         print("📅 TERMINARZ I NAJBLIŻSZE SPRAWDZIANY:")
@@ -381,6 +517,7 @@ class UpdatesNotifier:
         total_users: int = 1,
         summary: bool | None = None,
         actual_date: datetime | None = None,
+        schedule_day_offset: int | None = None,
     ) -> dict[str, Any]:
         """
         Przetwarza powiadomienie dla pojedynczego ucznia:
@@ -449,15 +586,31 @@ class UpdatesNotifier:
 
         saved_file = None
 
-        # 2.5 Przygotowanie zestawienia terminarza (sprawdziany, nieobecności)
+        # 2.5 Przygotowanie zestawienia terminarza (sprawdziany, nieobecności) oraz planu lekcji
         all_timetable = self.storage.get_timetable_history(login) if hasattr(self.storage, 'get_timetable_history') else []
         timetable_summary = prepare_timetable_summary(all_timetable, reference_date=now.date()) if user_config.get('read_timetable', True) else None
+
+        eff_schedule_offset = schedule_day_offset
+        if eff_schedule_offset is None:
+            eff_schedule_offset = user_config.get('schedule_day_offset', self.config.get('schedule_day_offset', 1))
+
+        all_schedule = self.storage.get_schedule_history(login) if hasattr(self.storage, 'get_schedule_history') else []
+        schedule_summary = (
+            prepare_schedule_summary(
+                all_schedule,
+                timetable_entries=all_timetable,
+                now=now,
+                day_offset=eff_schedule_offset,
+            )
+            if user_config.get('read_schedule', True)
+            else None
+        )
 
         # 3. Zapis do pliku HTML (jeśli podano -o / --save-html)
         if output_html:
             out_file = resolve_output_path(output_html, login, total_users, default_prefix="powiadomienie")
-            title = MailSender._create_summary_title(user_config, filtered_messages, filtered_notifications, filtered_grades, timetable=timetable_summary)
-            body = MailSender.create_mail_content_for_summary(user_config, filtered_messages, filtered_notifications, filtered_grades, timetable=timetable_summary)
+            title = MailSender._create_summary_title(user_config, filtered_messages, filtered_notifications, filtered_grades, timetable=timetable_summary, schedule=schedule_summary)
+            body = MailSender.create_mail_content_for_summary(user_config, filtered_messages, filtered_notifications, filtered_grades, timetable=timetable_summary, schedule=schedule_summary)
             full_html = render_standalone_html(title, body)
             try:
                 with open(out_file, 'w', encoding='utf-8') as f:
@@ -486,7 +639,7 @@ class UpdatesNotifier:
                     f"{name} ({login}): Tryb symulacji (dry-run) – wykryto nowe pozycje (wiadomości: {len(filtered_messages)}, "
                     f"ogłoszenia: {len(filtered_notifications)}, oceny: {len(filtered_grades)}). Brak wysyłki e-mail."
                 )
-            print_cli_summary(name, login, filtered_messages, filtered_notifications, filtered_grades, period_desc, timetable=timetable_summary)
+            print_cli_summary(name, login, filtered_messages, filtered_notifications, filtered_grades, period_desc, timetable=timetable_summary, schedule=schedule_summary)
 
         # 5. Rzeczywista wysyłka pocztowa
         if not dry_run and not output_html:
@@ -530,7 +683,7 @@ class UpdatesNotifier:
                             f"ogłoszenia: {len(filtered_notifications)}, oceny: {len(filtered_grades)}). "
                             "Wysyłam zbiorcze podsumowanie e-mail."
                         )
-                    sender.send_mail_with_summary(user_config, filtered_messages, filtered_notifications, filtered_grades, timetable=timetable_summary)
+                    sender.send_mail_with_summary(user_config, filtered_messages, filtered_notifications, filtered_grades, timetable=timetable_summary, schedule=schedule_summary)
                 else:
                     if filtered_messages:
                         logger.info(f"Wysyłam e-mail z {len(filtered_messages)} nowymi wiadomościami dla {name}")
@@ -557,6 +710,7 @@ class UpdatesNotifier:
             'notifications': filtered_notifications,
             'grades': filtered_grades,
             'timetable': timetable_summary,
+            'schedule': schedule_summary,
             'output_file': saved_file,
         }
 
@@ -573,6 +727,7 @@ def run_notifier(
     collected_data: dict[str, dict] | None = None,
     summary: bool | None = None,
     actual_date: datetime | None = None,
+    schedule_day_offset: int | None = None,
 ) -> list[dict[str, Any]]:
     """
     Główna funkcja uruchamiająca moduł UpdatesNotifier.
@@ -601,6 +756,7 @@ def run_notifier(
                 default_read_grades = first_user.get('read_grades', config.get('read_grades', True))
                 default_read_messages = first_user.get('read_messages', config.get('read_messages', True))
                 default_read_timetable = first_user.get('read_timetable', config.get('read_timetable', True))
+                default_read_schedule = first_user.get('read_schedule', config.get('read_schedule', True))
                 custom_name = storage.get_student_name(user_filter) if hasattr(storage, 'get_student_name') else None
                 student_name = custom_name or f"Uczeń ({user_filter})"
                 matched = [{
@@ -611,6 +767,7 @@ def run_notifier(
                     'read_grades': default_read_grades,
                     'read_messages': default_read_messages,
                     'read_timetable': default_read_timetable,
+                    'read_schedule': default_read_schedule,
                 }]
                 logger.info(f"Załadowano profil ze storage dla '{user_filter}': '{student_name}'.")
             else:
@@ -629,6 +786,7 @@ def run_notifier(
             default_read_grades = first_user.get('read_grades', config.get('read_grades', True))
             default_read_messages = first_user.get('read_messages', config.get('read_messages', True))
             default_read_timetable = first_user.get('read_timetable', config.get('read_timetable', True))
+            default_read_schedule = first_user.get('read_schedule', config.get('read_schedule', True))
             auto_users = []
             for s_login in stored_logins:
                 s_name = storage.get_student_name(s_login) or f"Uczeń ({s_login})"
@@ -640,6 +798,7 @@ def run_notifier(
                     'read_grades': default_read_grades,
                     'read_messages': default_read_messages,
                     'read_timetable': default_read_timetable,
+                    'read_schedule': default_read_schedule,
                 })
             logger.info(f"Załadowano profile uczniów odnalezione w '{effective_storage_dir}': {[u['librus_login_name'] for u in auto_users]}")
             users = auto_users
@@ -663,6 +822,7 @@ def run_notifier(
             total_users=len(users),
             summary=summary,
             actual_date=actual_date,
+            schedule_day_offset=schedule_day_offset,
         )
         results.append(res)
 
@@ -736,6 +896,13 @@ def main():
         )
     )
     parser.add_argument(
+        '--schedule-offset', '--schedule-day-offset',
+        dest='schedule_day_offset',
+        type=int,
+        default=None,
+        help="Przesunięcie dnia planu lekcji w powiadomieniu (w dniach, domyślnie: 1, czyli następny dzień nauki; 0 = bieżący dzień raportu)"
+    )
+    parser.add_argument(
         'config',
         nargs='?',
         default=None,
@@ -763,6 +930,7 @@ def main():
         offline=True,
         summary=args.summary,
         actual_date=actual_date,
+        schedule_day_offset=args.schedule_day_offset,
     )
 
 

@@ -47,6 +47,7 @@ def run_pipeline(
     once: bool = False,
     loop: bool = False,
     summary: bool | None = None,
+    schedule_day_offset: int | None = None,
 ):
     """
     Główna funkcja wykonawcza potoku collect-and-notify:
@@ -93,6 +94,7 @@ def run_pipeline(
             user_filter=user_filter,
             offline=offline,
             summary=summary,
+            schedule_day_offset=schedule_day_offset,
         )
         return
 
@@ -108,6 +110,7 @@ def run_pipeline(
             once=once,
             loop=loop,
             summary=summary,
+            schedule_day_offset=schedule_day_offset,
         )
         return
 
@@ -127,6 +130,7 @@ def run_pipeline(
         once=once,
         loop=loop,
         summary=summary,
+        schedule_day_offset=schedule_day_offset,
     )
 
 
@@ -241,6 +245,13 @@ def main():
         help="Wymuś wysłanie 1 zbiorczego e-maila ze wszystkimi nowościami zamiast osobnych wiadomości, ogłoszeń i ocen"
     )
     parser.add_argument(
+        '--schedule-offset', '--schedule-day-offset',
+        dest='schedule_day_offset',
+        type=int,
+        default=None,
+        help="Przesunięcie dnia planu lekcji w powiadomieniu (w dniach, domyślnie: 1, czyli następny dzień nauki; 0 = bieżący dzień raportu)"
+    )
+    parser.add_argument(
         'config',
         nargs='?',
         default=None,
@@ -269,6 +280,7 @@ def main():
         once=args.once,
         loop=args.loop,
         summary=args.summary,
+        schedule_day_offset=args.schedule_day_offset,
     )
 
 

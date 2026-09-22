@@ -2221,6 +2221,318 @@ class TestLibrus(unittest.TestCase):
             mock_sender.send_mail_with_summary.assert_not_called()
             mock_sender.send_mail_with_messages.assert_not_called()
 
+    def test_schedule_storage_persistence(self):
+        import tempfile
+
+        from librus2mail.storage import FileStorage
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage = FileStorage(temp_dir)
+            login = "test_sched_user"
+
+            # 1. Puste początkowe wpisy
+            self.assertEqual(storage.get_schedule_history(login), [])
+            self.assertIsNone(storage.get_last_schedule_sync(login))
+
+            # 2. Zapis lekcji
+            entries = [
+                {
+                    'id': 'sched_2026-09-22_1_mat',
+                    'date': '2026-09-22',
+                    'lesson_no': 1,
+                    'time_from': '08:00',
+                    'time_to': '08:45',
+                    'subject': 'Matematyka',
+                    'teacher': 'A. Nowak',
+                    'classroom': '12',
+                    'is_cancelled': False,
+                    'is_substitution': False,
+                },
+                {
+                    'id': 'sched_2026-09-22_2_pol',
+                    'date': '2026-09-22',
+                    'lesson_no': 2,
+                    'time_from': '08:55',
+                    'time_to': '09:40',
+                    'subject': 'Język polski',
+                    'teacher': 'B. Kowalska',
+                    'classroom': '5',
+                    'is_cancelled': True,
+                    'is_substitution': False,
+                }
+            ]
+            storage.save_schedule_entries(login, entries)
+            storage.save_last_schedule_sync(login, "2026-09-22T07:30:00")
+
+            # 3. Odczyt i weryfikacja
+            loaded = storage.get_schedule_history(login)
+            self.assertEqual(len(loaded), 2)
+            self.assertEqual(loaded[0]['subject'], 'Matematyka')
+            self.assertTrue(loaded[1]['is_cancelled'])
+            self.assertEqual(storage.get_last_schedule_sync(login), "2026-09-22T07:30:00")
+
+            # 4. Aktualizacja istniejącej lekcji (upsert)
+            updated_entries = [
+                {
+                    'id': 'sched_2026-09-22_2_pol',
+                    'date': '2026-09-22',
+                    'lesson_no': 2,
+                    'time_from': '08:55',
+                    'time_to': '09:40',
+                    'subject': 'Język polski',
+                    'teacher': 'C. Zastępczy',
+                    'classroom': '5',
+                    'is_cancelled': False,
+                    'is_substitution': True,
+                    'substitution_info': 'Zastępstwo za B. Kowalska',
+                }
+            ]
+            storage.save_schedule_entries(login, updated_entries)
+            reloaded = storage.get_schedule_history(login)
+            self.assertEqual(len(reloaded), 2)
+            pol = next(x for x in reloaded if x['id'] == 'sched_2026-09-22_2_pol')
+            self.assertFalse(pol['is_cancelled'])
+            self.assertTrue(pol['is_substitution'])
+            self.assertEqual(pol['substitution_info'], 'Zastępstwo za B. Kowalska')
+
+            # 5. Test retencji (usuwanie lekcji starszych niż retention_days, np. 30 dni)
+            old_entry = {
+                'id': 'sched_2026-08-01_1_stara',
+                'date': '2026-08-01',  # 52 dni przed 2026-09-22
+                'lesson_no': 1,
+                'subject': 'Stara lekcja',
+            }
+            storage.save_schedule_entries(login, [old_entry], retention_days=None)
+            self.assertEqual(len(storage.get_schedule_history(login)), 3)
+
+            # Wywołanie z retencją 30 dni względem daty odniesienia 2026-09-22
+            from datetime import date
+            ref_d = date(2026, 9, 22)
+            storage.save_schedule_entries(login, [], retention_days=30, reference_date=ref_d)
+            retained = storage.get_schedule_history(login)
+            self.assertEqual(len(retained), 2)
+            self.assertNotIn('sched_2026-08-01_1_stara', [x['id'] for x in retained])
+
+    def test_parse_schedule_soup_and_fetch(self):
+        from bs4 import BeautifulSoup
+
+        sample_html = """
+        <html>
+        <body>
+            <table class="decorated plan-lekcji">
+                <tr>
+                    <th>Nr</th>
+                    <th>Godz</th>
+                    <th>Poniedziałek 2026-09-21</th>
+                    <th>Wtorek 2026-09-22</th>
+                </tr>
+                <tr>
+                    <td class="center">1</td>
+                    <td class="center">08:00 - 08:45</td>
+                    <td id="timetableEntryBox" class="timetableEntryBox" data-date="2026-09-21" data-date-from="08:00" data-date-to="08:45">
+                        <div class="text">
+                            <b>Matematyka</b> s. 101 (Nowak J.)
+                        </div>
+                    </td>
+                    <td id="timetableEntryBox" class="timetableEntryBox" data-date="2026-09-22" data-date-from="08:00" data-date-to="08:45">
+                        <div class="text" style="text-decoration: line-through;">
+                            Biologia s. 202
+                        </div>
+                        <div class="plan-lekcji-info">lekcja odwołana</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="center">2</td>
+                    <td class="center">08:55 - 09:40</td>
+                    <td id="timetableEntryBox" class="timetableEntryBox" data-date="2026-09-21" data-date-from="08:55" data-date-to="09:40">
+                        <div class="text">
+                            Geografia s. 104
+                        </div>
+                        <div class="plan-lekcji-info" title="Zastępstwo: mgr Kowalski">zastępstwo</div>
+                    </td>
+                    <td>-</td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+        soup = BeautifulSoup(sample_html, 'html.parser')
+        librus = Librus(self.config)
+        parsed = librus._parse_schedule_soup(soup)
+
+        self.assertEqual(len(parsed), 3)
+
+        # 1. Matematyka (poniedziałek, lekcja 1)
+        mat = next(p for p in parsed if p['subject'] == 'Matematyka')
+        self.assertEqual(mat['date'], '2026-09-21')
+        self.assertEqual(mat['lesson_no'], 1)
+        self.assertEqual(mat['time_from'], '08:00')
+        self.assertEqual(mat['time_to'], '08:45')
+        self.assertEqual(mat['classroom'], '101')
+        self.assertFalse(mat['is_cancelled'])
+        self.assertFalse(mat['is_substitution'])
+
+        # 2. Biologia (wtorek, odwołana)
+        bio = next(p for p in parsed if p['subject'] == 'Biologia')
+        self.assertEqual(bio['date'], '2026-09-22')
+        self.assertTrue(bio['is_cancelled'])
+
+        # 3. Geografia (poniedziałek, zastępstwo)
+        geo = next(p for p in parsed if p['subject'] == 'Geografia')
+        self.assertEqual(geo['date'], '2026-09-21')
+        self.assertTrue(geo['is_substitution'])
+        self.assertIn('zastępstwo', geo['substitution_info'].lower())
+
+    def test_fetch_schedule_disabled_and_enabled(self):
+        import copy
+
+        # 1. Test when read_schedule: False
+        cfg_disabled = copy.deepcopy(self.config)
+        cfg_disabled['read_schedule'] = False
+        l_disabled = Librus(cfg_disabled)
+        l_disabled.logged = True
+        res_dis = l_disabled.fetch_schedule()
+        self.assertEqual(res_dis, [])
+        self.assertEqual(l_disabled.schedule, [])
+
+        # 2. Test when read_schedule: True
+        l_enabled = Librus(self.config)
+        l_enabled.logged = True
+        sample_html = """
+        <table class="plan-lekcji">
+            <tr><th>Nr</th><th>Godz</th><th>2026-09-21</th></tr>
+            <tr><td class="center">1</td><td>08:00-08:45</td><td id="timetableEntryBox" data-date="2026-09-21">Fizyka s. 12</td></tr>
+        </table>
+        """
+        with patch.object(l_enabled, 'parse_page') as mock_parse:
+            from bs4 import BeautifulSoup
+            mock_parse.return_value = BeautifulSoup(sample_html, 'html.parser')
+            res_en = l_enabled.fetch_schedule(force=True)
+            self.assertEqual(len(res_en), 1)
+            self.assertEqual(res_en[0]['subject'], 'Fizyka')
+            self.assertEqual(l_enabled.schedule, res_en)
+
+    def test_schedule_summary_preparation_and_email_rendering(self):
+        from librus2mail.mail_sender import MailSender
+        from librus2mail.updates_notifier import prepare_schedule_summary
+
+        schedule_entries = [
+            {
+                'id': 's1',
+                'date': '2026-09-22',
+                'lesson_no': 1,
+                'time_from': '08:00',
+                'time_to': '08:45',
+                'subject': 'Matematyka',
+                'classroom': '10',
+                'teacher': 'A. Nowak',
+                'is_cancelled': False,
+                'is_substitution': False,
+            },
+            {
+                'id': 's2',
+                'date': '2026-09-22',
+                'lesson_no': 2,
+                'time_from': '08:55',
+                'time_to': '09:40',
+                'subject': 'Fizyka',
+                'classroom': '12',
+                'teacher': 'B. Zastępczy',
+                'is_cancelled': False,
+                'is_substitution': True,
+                'substitution_info': 'Zastępstwo',
+            },
+            {
+                'id': 's3',
+                'date': '2026-09-22',
+                'lesson_no': 3,
+                'time_from': '09:50',
+                'time_to': '10:35',
+                'subject': 'Historia',
+                'classroom': '15',
+                'teacher': 'C. Historyk',
+                'is_cancelled': True,
+                'is_substitution': False,
+            },
+        ]
+
+        timetable_entries = [
+            {
+                'id': 't1',
+                'date': '2026-09-22',
+                'type': 'test',
+                'category': 'Sprawdzian',
+                'subject': 'Matematyka',
+                'lesson_no': '1',
+                'description': 'Funkcja liniowa',
+            }
+        ]
+
+        # 1. Test z day_offset=0 (bieżący dzień, 2026-09-22)
+        ref_day = datetime(2026, 9, 22, 10, 00)
+        summary_today = prepare_schedule_summary(
+            schedule_entries,
+            timetable_entries=timetable_entries,
+            now=ref_day,
+            day_offset=0,
+        )
+        self.assertTrue(summary_today['has_any'])
+        self.assertEqual(summary_today['date'], '2026-09-22')
+        self.assertIn('Dzisiaj', summary_today['label'])
+
+        # 2. Test domyślnego day_offset=1 (z poniedziałku 2026-09-21 celujemy w jutro 2026-09-22)
+        ref_yesterday = datetime(2026, 9, 21, 18, 00)
+        summary = prepare_schedule_summary(
+            schedule_entries,
+            timetable_entries=timetable_entries,
+            now=ref_yesterday,
+        )
+
+        self.assertTrue(summary['has_any'])
+        self.assertEqual(summary['date'], '2026-09-22')
+        self.assertIn('Jutro', summary['label'])
+        self.assertEqual(summary['total_count'], 3)
+        self.assertEqual(summary['active_count'], 2)
+        self.assertEqual(summary['cancelled_count'], 1)
+        self.assertEqual(summary['substitution_count'], 1)
+        self.assertEqual(summary['time_span'], '08:00 – 09:40')
+
+        # 3. Test przesuwania weekendowego: z piątku (2026-09-18) z day_offset=1 celujemy w poniedziałek (2026-09-21)
+        friday_ref = datetime(2026, 9, 18, 15, 0)
+        friday_summary = prepare_schedule_summary(
+            [{'id': 'mon1', 'date': '2026-09-21', 'lesson_no': 1, 'subject': 'Polski', 'time_from': '08:00', 'time_to': '08:45'}],
+            now=friday_ref,
+            day_offset=1,
+        )
+        self.assertTrue(friday_summary['has_any'])
+        self.assertEqual(friday_summary['date'], '2026-09-21')
+        self.assertIn('Najbliższy dzień nauki (poniedziałek', friday_summary['label'])
+
+        # Sprawdzamy korelację sprawdzianu z lekcją matematyki
+        mat_lesson = summary['lessons'][0]
+        self.assertIn('test', mat_lesson)
+        self.assertEqual(mat_lesson['test']['category'], 'Sprawdzian')
+
+        # Test renderowania szablonu summary.html z sekcją planu lekcji
+        user_cfg = {
+            'librus_login': '12345',
+            'librus_login_name': 'Michał Testowy',
+        }
+        html = MailSender.create_mail_content_for_summary(
+            user_config=user_cfg,
+            schedule=summary,
+        )
+        self.assertIn('Plan lekcji', html)
+        self.assertIn('08:00 – 09:40', html)
+        self.assertIn('Matematyka', html)
+        self.assertIn('Odwołana', html)
+        self.assertIn('Zastępstwo', html)
+        self.assertIn('Sprawdzian', html)
+
+        # Test tytułu maila uwzględniającego zmiany w planie
+        title = MailSender._create_summary_title(user_cfg, schedule=summary)
+        self.assertIn('zmiany w planie', title)
+
 
 if __name__ == '__main__':
     unittest.main()

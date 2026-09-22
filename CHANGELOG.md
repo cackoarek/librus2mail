@@ -9,6 +9,20 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ## [Unreleased]
 
+### Dodane
+- **Pobieranie i synchronizacja planu lekcji (`plan_lekcji`)**: moduł `Librus` pobiera tygodniowy rozkład zajęć ze szkolnego planu (`/przegladaj_plan_lekcji`), wykrywając sale lekcyjne, nauczycieli, odwołane lekcje oraz zastępstwa.
+- **Trwała persystencja planu w `FileStorage`**: zapis i historia lekcji w plikach JSON (`schedule_history`, `schedule_last_sync`).
+- **Sekcja planu lekcji w codziennym powiadomieniu (`summary.html`)**:
+  - Wyświetlanie godzin pobytu dziecka w szkole (np. `⏰ 08:00 – 13:35`) i liczby zaplanowanych lekcji.
+  - Wyraźne alerty o zmianach w planie (liczba zastępstw, odwołanych lekcji oraz notatka o zastępstwie).
+  - Korelacja lekcji ze sprawdzianami i kartkówkami z terminarza szkolnego na dany dzień (oznaczenia `📕 Sprawdzian`, `📙 Kartkówka`).
+  - W pełni responsywny layout mobilny dostosowany do czytania na smartfonach i komputerach.
+- Opcja konfiguracyjna `read_schedule: true` (domyślnie włączona) w profilach uczniów.
+- **Automatyczna retencja wpisów planu lekcji**: parametr `schedule_retention_days` (domyślnie `30` dni), usuwający historyczne lekcje sprzed podanej liczby dni z lokalnego storage przy zachowaniu lekcji bieżących i przyszłych.
+- **Konfigurowalne przesunięcie dnia planu lekcji (`schedule_day_offset`)**:
+  - Domyślnie `1` (+1 dzień roboczy, czyli jutro, a w piątek/weekend najbliższy poniedziałek).
+  - Możliwość ustawienia `0` (bieżący dzień raportu) w `config.yaml` lub przełącznikiem CLI `--schedule-offset` / `--schedule-day-offset` we wszystkich modułach CLI (`librus_updates_notifier.py`, `librus_collector.py`, `librus_collect_and_notify.py`).
+
 ---
 
 ## [1.3.0] – 2026-09-21

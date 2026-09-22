@@ -77,7 +77,10 @@ class LibrusCollector:
 
         try:
             if user_key not in self.parsers:
-                self.parsers[user_key] = Librus(user_config, storage=self.storage)
+                eff_user_config = dict(user_config)
+                if 'schedule_retention_days' not in eff_user_config and 'schedule_retention_days' in self.config:
+                    eff_user_config['schedule_retention_days'] = self.config['schedule_retention_days']
+                self.parsers[user_key] = Librus(eff_user_config, storage=self.storage)
             librus = self.parsers[user_key]
 
             step = "logowanie"
@@ -125,6 +128,11 @@ class LibrusCollector:
                 sleep(5)
                 librus.fetch_timetable()
 
+            if user_config.get('read_schedule', True):
+                step = "plan_lekcji"
+                sleep(5)
+                librus.fetch_schedule()
+
             if hasattr(self.storage, 'set_student_name'):
                 self.storage.set_student_name(login, name)
 
@@ -141,16 +149,17 @@ class LibrusCollector:
                 self.storage.clear_last_error(login)
 
             timetable_count = len(getattr(librus, 'timetable', []))
+            schedule_count = len(getattr(librus, 'schedule', []))
             if new_msgs or new_notifs or new_grades:
                 logger.info(
                     f"{name} ({login}): Zakończono pobieranie danych ze szkoły. Wykryto nowe wpisy w dzienniku: "
                     f"wiadomości: {len(new_msgs)}, ogłoszenia: {len(new_notifs)}, oceny: {len(new_grades)} "
-                    f"(wpisy w terminarzu: {timetable_count})."
+                    f"(wpisy w terminarzu: {timetable_count}, lekcje w planie: {schedule_count})."
                 )
             else:
                 logger.info(
                     f"{name} ({login}): Zakończono pobieranie danych ze szkoły. Brak nowych wpisów w dzienniku "
-                    f"(wiadomości: 0, ogłoszenia: 0, oceny: 0, wpisy w terminarzu: {timetable_count})."
+                    f"(wiadomości: 0, ogłoszenia: 0, oceny: 0, wpisy w terminarzu: {timetable_count}, lekcje w planie: {schedule_count})."
                 )
 
             return {
@@ -162,6 +171,7 @@ class LibrusCollector:
                 'notifications': getattr(librus, 'notifications', []),
                 'grades': getattr(librus, 'grades', []),
                 'timetable': getattr(librus, 'timetable', []),
+                'schedule': getattr(librus, 'schedule', []),
                 'new_messages': new_msgs,
                 'new_notifications': new_notifs,
                 'new_grades': new_grades,
@@ -247,6 +257,7 @@ def run_collector(
     once: bool = False,
     loop: bool = False,
     summary: bool | None = None,
+    schedule_day_offset: int | None = None,
 ):
     """
     Główna usługa pobierająca (collector):
@@ -289,6 +300,8 @@ def run_collector(
                 default_one_summary = first_user.get('one_summary_message', config.get('one_summary_message', False))
                 default_read_grades = first_user.get('read_grades', config.get('read_grades', True))
                 default_read_messages = first_user.get('read_messages', config.get('read_messages', True))
+                default_read_timetable = first_user.get('read_timetable', config.get('read_timetable', True))
+                default_read_schedule = first_user.get('read_schedule', config.get('read_schedule', True))
                 custom_name = storage.get_student_name(user_filter) if hasattr(storage, 'get_student_name') else None
                 student_name = custom_name or f"Uczeń ({user_filter})"
                 matched = [{
@@ -298,6 +311,8 @@ def run_collector(
                     'one_summary_message': default_one_summary,
                     'read_grades': default_read_grades,
                     'read_messages': default_read_messages,
+                    'read_timetable': default_read_timetable,
+                    'read_schedule': default_read_schedule,
                 }]
                 logger.info(f"Załadowano profil ze storage: '{student_name}'.")
             else:
@@ -314,6 +329,8 @@ def run_collector(
             default_one_summary = first_user.get('one_summary_message', config.get('one_summary_message', False))
             default_read_grades = first_user.get('read_grades', config.get('read_grades', True))
             default_read_messages = first_user.get('read_messages', config.get('read_messages', True))
+            default_read_timetable = first_user.get('read_timetable', config.get('read_timetable', True))
+            default_read_schedule = first_user.get('read_schedule', config.get('read_schedule', True))
             auto_users = []
             for s_login in stored_logins:
                 s_name = storage.get_student_name(s_login) or f"Uczeń ({s_login})"
@@ -324,6 +341,8 @@ def run_collector(
                     'one_summary_message': default_one_summary,
                     'read_grades': default_read_grades,
                     'read_messages': default_read_messages,
+                    'read_timetable': default_read_timetable,
+                    'read_schedule': default_read_schedule,
                 })
             logger.info(f"Załadowano profile uczniów odnalezione w '{effective_storage_dir}': {[u['librus_login_name'] for u in auto_users]}")
             users = auto_users
@@ -373,6 +392,7 @@ def run_collector(
                     output_html=output_html,
                     total_users=len(users),
                     summary=summary,
+                    schedule_day_offset=schedule_day_offset,
                 )
                 if user_config.get('dry-parse'):
                     user_config['dry-parse'] = False
@@ -471,6 +491,13 @@ def main():
         help="Wymuś wysłanie 1 zbiorczego e-maila ze wszystkimi nowościami zamiast osobnych wiadomości, ogłoszeń i ocen"
     )
     parser.add_argument(
+        '--schedule-offset', '--schedule-day-offset',
+        dest='schedule_day_offset',
+        type=int,
+        default=None,
+        help="Przesunięcie dnia planu lekcji w powiadomieniu (w dniach, domyślnie: 1, czyli następny dzień nauki; 0 = bieżący dzień raportu)"
+    )
+    parser.add_argument(
         'config',
         nargs='?',
         default=None,
@@ -492,6 +519,7 @@ def main():
         once=args.once,
         loop=args.loop,
         summary=args.summary,
+        schedule_day_offset=args.schedule_day_offset,
     )
 
 

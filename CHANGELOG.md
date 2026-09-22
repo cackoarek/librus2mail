@@ -9,6 +9,10 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ## [Unreleased]
 
+---
+
+## [1.4.0] – 2026-09-22
+
 ### Dodane
 - **Pobieranie i synchronizacja planu lekcji (`plan_lekcji`)**: moduł `Librus` pobiera tygodniowy rozkład zajęć ze szkolnego planu (`/przegladaj_plan_lekcji`), wykrywając sale lekcyjne, nauczycieli, odwołane lekcje oraz zastępstwa.
 - **Trwała persystencja planu w `FileStorage`**: zapis i historia lekcji w plikach JSON (`schedule_history`, `schedule_last_sync`).
@@ -24,7 +28,6 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
   - Możliwość ustawienia `0` (bieżący dzień raportu) w `config.yaml` lub przełącznikiem CLI `--schedule-offset` / `--schedule-day-offset` we wszystkich modułach CLI (`librus_updates_notifier.py`, `librus_collector.py`, `librus_collect_and_notify.py`).
 
 ---
-
 ## [1.3.0] – 2026-09-21
 
 ### Dodane
@@ -105,7 +108,8 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ---
 
-[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/cackoarek/librus2mail/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/cackoarek/librus2mail/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/cackoarek/librus2mail/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/cackoarek/librus2mail/compare/v1.1.0...v1.1.1

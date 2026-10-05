@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="pl" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pulpit - Jan Kowalski (Przykładowy Uczeń) (8979296) - Librus2mail</title>
+    <!-- TailwindCSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- HTMX CDN -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+        .htmx-indicator { display: none; }
+        .htmx-request .htmx-indicator { display: inline-flex; }
+        .htmx-request.htmx-indicator { display: inline-flex; }
+    </style>
+    
+</head>
+<body class="h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white">
+
+    <!-- Pasek nawigacyjny -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Lewa strona: Logo + Menu -->
+                <div class="flex items-center gap-8">
+                    <a href="web_dashboard.html" class="flex items-center gap-3 group">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-sky-500 flex items-center justify-center text-white text-xl shadow-md shadow-indigo-100 group-hover:scale-105 transition-transform">
+                            🏫
+                        </div>
+                        <div>
+                            <span class="font-extrabold text-lg text-slate-900 tracking-tight flex items-center gap-1.5">
+                                Librus<span class="text-indigo-600">2mail</span>
+                            </span>
+                            <span class="block text-[10px] uppercase font-bold text-slate-400 tracking-wider">Web Dashboard</span>
+                        </div>
+                    </a>
+
+                    <!-- Nawigacja Desktop -->
+                    
+                    <nav class="hidden md:flex items-center gap-1">
+                        <a href="web_dashboard.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors bg-indigo-50 text-indigo-700">
+                            📊 Pulpit
+                        </a>
+                        <a href="web_plan.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📅 Plan lekcji
+                        </a>
+                        <a href="web_oceny.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📝 Oceny
+                        </a>
+                        <a href="web_terminarz.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            🔔 Terminarz
+                        </a>
+                        <a href="web_wiadomosci.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            ✉️ Wiadomości
+                        </a>
+                        <a href="web_akcje.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            ⚡ Akcje CLI
+                        </a>
+                    </nav>
+                    
+                </div>
+
+                <!-- Prawa strona: Przełącznik ucznia + Auth -->
+                <div class="flex items-center gap-3">
+                    
+                        
+                        <div class="relative inline-block text-left">
+                            <select onchange="window.location.href='/student/' + this.value + '?next=' + encodeURIComponent(window.location.pathname)"
+                                    class="bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold rounded-lg px-3 py-2 pr-8 focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
+                                
+                                <option value="8912345" >
+                                    👤 Jan Kowalski (klasa 5A) (8912345)
+                                </option>
+                                
+                                <option value="8976543" >
+                                    👤 Anna Kowalska (Liceum 2A) (8976543)
+                                </option>
+                                
+                                <option value="8979296" selected>
+                                    👤 Jan Kowalski (Przykładowy Uczeń) (8979296)
+                                </option>
+                                
+                            </select>
+                        </div>
+                        
+
+                        
+                        <a href="web_login.html"
+                           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors"
+                           title="Wyloguj rodzica">
+                            🔒 Wyloguj
+                        </a>
+                        
+                    
+
+                    
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobilny pasek skrótów -->
+        
+        <div class="md:hidden border-t border-slate-100 bg-slate-50 px-2 py-1.5 overflow-x-auto flex gap-1 scrollbar-none">
+            <a href="web_dashboard.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap bg-indigo-600 text-white">📊 Pulpit</a>
+            <a href="web_plan.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📅 Plan</a>
+            <a href="web_oceny.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📝 Oceny</a>
+            <a href="web_terminarz.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">🔔 Terminarz</a>
+            <a href="web_wiadomosci.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">✉️ Wiadomości</a>
+            <a href="web_akcje.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">⚡ Akcje</a>
+        </div>
+        
+    </header>
+
+    <!-- Komunikaty Flash -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 w-full">
+        
+            
+        
+    </div>
+
+    <!-- Główna zawartość -->
+    <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
+        
+
+
+<!-- Nagłówek Ucznia & Status -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-200">
+    <div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
+            <span>Jan Kowalski (Przykładowy Uczeń) (8979296)</span>
+            
+        </h1>
+        <p class="text-xs text-slate-500 mt-1 flex items-center gap-2">
+            <span>🔄 Ostatnia synchronizacja ze szkołą:</span>
+            <strong class="text-slate-700">2026-09-09T20:55:00.000000</strong>
+        </p>
+    </div>
+
+    <!-- Przyciski szybkich akcji -->
+    <div class="flex items-center gap-2">
+        <a href="web_akcje.html"
+           class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 shadow-sm transition-all">
+            ⚡ Centrum Akcji
+        </a>
+        <button hx-post="/api/action/sync"
+                hx-vals='{"login": "8979296"}'
+                hx-target="#action-toast"
+                hx-indicator="#sync-spinner"
+                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm shadow-indigo-100 transition-all cursor-pointer">
+            <span id="sync-spinner" class="htmx-indicator animate-spin">⏳</span>
+            <span>Pobierz z Librusa</span>
+        </button>
+    </div>
+</div>
+
+<div id="action-toast" class="mt-4"></div>
+
+<!-- 4 Kluczowe Karty KPI -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 my-6">
+    <!-- Karta 1: Średnia ocen -->
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Średnia ocen</span>
+            <span class="p-2 rounded-xl bg-indigo-50 text-indigo-600 text-sm">📈</span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+            <span class="text-3xl font-extrabold text-slate-900">
+                4.55
+            </span>
+            <span class="text-xs font-semibold text-slate-500">ogólna</span>
+        </div>
+    </div>
+
+    <!-- Karta 2: Liczba ocen -->
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Liczba ocen</span>
+            <span class="p-2 rounded-xl bg-emerald-50 text-emerald-600 text-sm">📝</span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+            <span class="text-3xl font-extrabold text-slate-900">39</span>
+            <span class="text-xs font-semibold text-slate-500">w historii</span>
+        </div>
+    </div>
+
+    <!-- Karta 3: Najbliższy dzień nauki -->
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Najbliższy dzień</span>
+            <span class="p-2 rounded-xl bg-sky-50 text-sky-600 text-sm">🏫</span>
+        </div>
+        <div class="mt-3">
+            <div class="text-lg font-extrabold text-slate-900 truncate">
+                Najbliższy dzień nauki (poniedziałek, 21.09)
+            </div>
+            <div class="text-xs font-semibold text-sky-700 mt-0.5">
+                
+                ⏰ 08:00 – 12:35 (5 lekcji)
+                
+            </div>
+        </div>
+    </div>
+
+    <!-- Karta 4: Sprawdziany w terminarzu -->
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Sprawdziany</span>
+            <span class="p-2 rounded-xl bg-amber-50 text-amber-600 text-sm">🔔</span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+            <span class="text-3xl font-extrabold text-slate-900">6</span>
+            <span class="text-xs font-semibold text-slate-500">w terminarzu</span>
+        </div>
+    </div>
+</div>
+
+<!-- Główny Układ Siatki (2/3 lewa strona, 1/3 prawa strona) -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Lewa Kolumna (2/3): Plan lekcji + Ostatnie oceny -->
+    <div class="lg:col-span-2 space-y-6">
+
+        <!-- Moduł: Plan Lekcji na Najbliższy Dzień -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">🏫</span>
+                    <h2 class="text-base font-bold text-slate-900">
+                        Najbliższy dzień nauki (poniedziałek, 21.09)
+                    </h2>
+                </div>
+                
+                <span class="px-3 py-1 bg-indigo-50 text-indigo-700 font-extrabold text-xs rounded-full border border-indigo-100">
+                    ⏰ 08:00 – 12:35
+                </span>
+                
+            </div>
+
+            
+                <!-- Alerty o zmianach w planie -->
+                
+                <div class="p-3.5 mx-4 mt-4 bg-amber-50 border border-amber-200 rounded-xl text-xs font-semibold text-amber-900 flex items-center gap-3">
+                    <span>⚠️</span>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span>Uwaga na zmiany:</span>
+                        
+                        <span class="px-2 py-0.5 bg-amber-100 rounded text-amber-800 font-bold">🔄 1 zastępstwo</span>
+                        
+                        
+                        <span class="px-2 py-0.5 bg-rose-100 rounded text-rose-800 font-bold">❌ 1 odwołana</span>
+                        
+                    </div>
+                </div>
+                
+
+                <!-- Lista lekcji -->
+                <div class="divide-y divide-slate-100 p-2">
+                    
+                    <div class="p-3.5 rounded-xl transition-colors flex items-center justify-between gap-4
+                         hover:bg-slate-50 border-l-4 border-transparent ">
+
+                        <div class="flex items-center gap-4">
+                            <!-- Godziny i numer -->
+                            <div class="w-16 text-center">
+                                <span class="inline-block px-2 py-0.5 bg-slate-100 text-slate-700 text-[11px] font-extrabold rounded">
+                                    #1
+                                </span>
+                                <div class="text-[11px] font-medium text-slate-500 mt-1 whitespace-nowrap">
+                                    08:00-08:45
+                                </div>
+                            </div>
+
+                            <!-- Szczegóły przedmiotu -->
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-sm text-slate-900">
+                                        Język polski
+                                    </span>
+
+                                    
+
+                                    
+
+                                    
+                                </div>
+
+                                <div class="text-xs text-slate-500 mt-1 flex items-center gap-3">
+                                    
+                                    <span>sala: <strong class="text-slate-700">104</strong></span>
+                                    
+                                    
+                                    <span>•</span>
+                                    <span>Jagna Czaplewska-Eyoum</span>
+                                    
+                                </div>
+
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="p-3.5 rounded-xl transition-colors flex items-center justify-between gap-4
+                         bg-amber-50/60 border-l-4 border-amber-500
+                        ">
+
+                        <div class="flex items-center gap-4">
+                            <!-- Godziny i numer -->
+                            <div class="w-16 text-center">
+                                <span class="inline-block px-2 py-0.5 bg-slate-100 text-slate-700 text-[11px] font-extrabold rounded">
+                                    #2
+                                </span>
+                                <div class="text-[11px] font-medium text-slate-500 mt-1 whitespace-nowrap">
+                                    08:55-09:40
+                                </div>
+                            </div>
+
+                            <!-- Szczegóły przedmiotu -->
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-sm text-slate-900">
+                                        Matematyka
+                                    </span>
+
+                                    
+                                    <span class="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-extrabold rounded border border-amber-200">
+                                        🔄 Zastępstwo
+                                    </span>
+                                    
+
+                                    
+
+                                    
+                                </div>
+
+                                <div class="text-xs text-slate-500 mt-1 flex items-center gap-3">
+                                    
+                                    <span>sala: <strong class="text-slate-700">102</strong></span>
+                                    
+                                    
+                                    <span>•</span>
+                                    <span>Renata Matyk</span>
+                                    
+                                </div>
+
+                                
+                                <div class="text-xs font-semibold text-amber-800 mt-1">
+                                    ℹ️ Matematyka, p. Krzysztof Liczydło, s. 102
+                                </div>
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="p-3.5 rounded-xl transition-colors flex items-center justify-between gap-4
+                         bg-indigo-50/40 border-l-4 border-indigo-500
+                        ">
+
+                        <div class="flex items-center gap-4">
+                            <!-- Godziny i numer -->
+                            <div class="w-16 text-center">
+                                <span class="inline-block px-2 py-0.5 bg-slate-100 text-slate-700 text-[11px] font-extrabold rounded">
+                                    #3
+                                </span>
+                                <div class="text-[11px] font-medium text-slate-500 mt-1 whitespace-nowrap">
+                                    09:50-10:35
+                                </div>
+                            </div>
+
+                            <!-- Szczegóły przedmiotu -->
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-sm text-slate-900">
+                                        Geografia
+                                    </span>
+
+                                    
+
+                                    
+
+                                    
+                                    <span class="px-2 py-0.5 bg-indigo-100 text-indigo-800 text-[10px] font-extrabold rounded border border-indigo-200">
+                                        📝 Kartkówka: Stolice i kraje Europy
+                                    </span>
+                                    
+                                </div>
+
+                                <div class="text-xs text-slate-500 mt-1 flex items-center gap-3">
+                                    
+                                    <span>sala: <strong class="text-slate-700">203</strong></span>
+                                    
+                                    
+                                    <span>•</span>
+                                    <span>Dorota Opolska</span>
+                                    
+                                </div>
+
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="p-3.5 rounded-xl transition-colors flex items-center justify-between gap-4
+                         bg-rose-50/60 border-l-4 border-rose-500
+                        ">
+
+                        <div class="flex items-center gap-4">
+                            <!-- Godziny i numer -->
+                            <div class="w-16 text-center">
+                                <span class="inline-block px-2 py-0.5 bg-slate-100 text-slate-700 text-[11px] font-extrabold rounded">
+                                    #4
+                                </span>
+                                <div class="text-[11px] font-medium text-slate-500 mt-1 whitespace-nowrap">
+                                    10:45-11:30
+                                </div>
+                            </div>
+
+                            <!-- Szczegóły przedmiotu -->
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-sm text-slate-400 line-through">
+                                        Muzyka
+                                    </span>
+
+                                    
+
+                                    
+                                    <span class="px-2 py-0.5 bg-rose-100 text-rose-800 text-[10px] font-extrabold rounded border border-rose-200">
+                                        ❌ Odwołana
+                                    </span>
+                                    
+
+                                    
+                                </div>
+
+                                <div class="text-xs text-slate-500 mt-1 flex items-center gap-3">
+                                    
+                                    <span>sala: <strong class="text-slate-700">12</strong></span>
+                                    
+                                    
+                                    <span>•</span>
+                                    <span>Janina Doszko</span>
+                                    
+                                </div>
+
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="p-3.5 rounded-xl transition-colors flex items-center justify-between gap-4
+                         hover:bg-slate-50 border-l-4 border-transparent ">
+
+                        <div class="flex items-center gap-4">
+                            <!-- Godziny i numer -->
+                            <div class="w-16 text-center">
+                                <span class="inline-block px-2 py-0.5 bg-slate-100 text-slate-700 text-[11px] font-extrabold rounded">
+                                    #5
+                                </span>
+                                <div class="text-[11px] font-medium text-slate-500 mt-1 whitespace-nowrap">
+                                    11:50-12:35
+                                </div>
+                            </div>
+
+                            <!-- Szczegóły przedmiotu -->
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-sm text-slate-900">
+                                        Informatyka
+                                    </span>
+
+                                    
+
+                                    
+
+                                    
+                                </div>
+
+                                <div class="text-xs text-slate-500 mt-1 flex items-center gap-3">
+                                    
+                                    <span>sala: <strong class="text-slate-700">0.6</strong></span>
+                                    
+                                    
+                                    <span>•</span>
+                                    <span>Daniel Marecki</span>
+                                    
+                                </div>
+
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+            
+        </div>
+
+        <!-- Moduł: Ostatnio Wystawione Oceny -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">📝</span>
+                    <h2 class="text-base font-bold text-slate-900">Ostatnio wystawione oceny</h2>
+                </div>
+                <a href="web_oceny.html" class="text-xs font-bold text-indigo-600 hover:text-indigo-800">
+                    Zobacz wszystkie (39) ➔
+                </a>
+            </div>
+
+            
+                <div class="divide-y divide-slate-100">
+                    
+                    <div class="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                        <div class="flex items-center gap-3.5">
+                            <!-- Odznaka oceny -->
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-base shadow-sm
+                                 bg-emerald-500 text-white
+                                ">
+                                5
+                            </div>
+
+                            <div>
+                                <div class="font-bold text-sm text-slate-900 flex items-center gap-2">
+                                    <span>Język angielski</span>
+                                    
+                                    <span class="text-[11px] font-semibold text-slate-500 px-2 py-0.5 bg-slate-100 rounded-md">
+                                        Zadanie domowe
+                                    </span>
+                                    
+                                </div>
+                                <div class="text-xs text-slate-400 mt-0.5">
+                                    waga: <strong>1</strong> • data: 2026-09-18 (pt.)
+                                    
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-right text-xs text-slate-400 hidden sm:block">
+                            Magdalena Wiaderko
+                        </div>
+                    </div>
+                    
+                    <div class="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                        <div class="flex items-center gap-3.5">
+                            <!-- Odznaka oceny -->
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-base shadow-sm
+                                 bg-emerald-500 text-white
+                                ">
+                                5
+                            </div>
+
+                            <div>
+                                <div class="font-bold text-sm text-slate-900 flex items-center gap-2">
+                                    <span>Matematyka</span>
+                                    
+                                    <span class="text-[11px] font-semibold text-slate-500 px-2 py-0.5 bg-slate-100 rounded-md">
+                                        Zadanie domowe
+                                    </span>
+                                    
+                                </div>
+                                <div class="text-xs text-slate-400 mt-0.5">
+                                    waga: <strong>1</strong> • data: 2026-09-17 (czw.)
+                                    
+                                    • <span class="italic text-slate-600">"zadanie z gwiazdką wykonane bezbłędnie"</span>
+                                    
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-right text-xs text-slate-400 hidden sm:block">
+                            Renata Matyk
+                        </div>
+                    </div>
+                    
+                    <div class="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                        <div class="flex items-center gap-3.5">
+                            <!-- Odznaka oceny -->
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-base shadow-sm
+                                 bg-emerald-500 text-white
+                                ">
+                                5
+                            </div>
+
+                            <div>
+                                <div class="font-bold text-sm text-slate-900 flex items-center gap-2">
+                                    <span>Język polski</span>
+                                    
+                                    <span class="text-[11px] font-semibold text-slate-500 px-2 py-0.5 bg-slate-100 rounded-md">
+                                        Odpowiedź
+                                    </span>
+                                    
+                                </div>
+                                <div class="text-xs text-slate-400 mt-0.5">
+                                    waga: <strong>1</strong> • data: 2026-09-17 (czw.)
+                                    
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-right text-xs text-slate-400 hidden sm:block">
+                            Karolina Kurdej
+                        </div>
+                    </div>
+                    
+                    <div class="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                        <div class="flex items-center gap-3.5">
+                            <!-- Odznaka oceny -->
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-base shadow-sm
+                                 bg-sky-500 text-white
+                                ">
+                                4
+                            </div>
+
+                            <div>
+                                <div class="font-bold text-sm text-slate-900 flex items-center gap-2">
+                                    <span>Fizyka</span>
+                                    
+                                    <span class="text-[11px] font-semibold text-slate-500 px-2 py-0.5 bg-slate-100 rounded-md">
+                                        Sprawdzian
+                                    </span>
+                                    
+                                </div>
+                                <div class="text-xs text-slate-400 mt-0.5">
+                                    waga: <strong>2</strong> • data: 2026-09-17 (czw.)
+                                    
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-right text-xs text-slate-400 hidden sm:block">
+                            Marek Jarecki
+                        </div>
+                    </div>
+                    
+                    <div class="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                        <div class="flex items-center gap-3.5">
+                            <!-- Odznaka oceny -->
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-base shadow-sm
+                                 bg-emerald-500 text-white
+                                ">
+                                6
+                            </div>
+
+                            <div>
+                                <div class="font-bold text-sm text-slate-900 flex items-center gap-2">
+                                    <span>Historia</span>
+                                    
+                                    <span class="text-[11px] font-semibold text-slate-500 px-2 py-0.5 bg-slate-100 rounded-md">
+                                        Kartkówka
+                                    </span>
+                                    
+                                </div>
+                                <div class="text-xs text-slate-400 mt-0.5">
+                                    waga: <strong>1</strong> • data: 2026-09-17 (czw.)
+                                    
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-right text-xs text-slate-400 hidden sm:block">
+                            Małgorzata Potopińska
+                        </div>
+                    </div>
+                    
+                    <div class="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                        <div class="flex items-center gap-3.5">
+                            <!-- Odznaka oceny -->
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-base shadow-sm
+                                 bg-emerald-500 text-white
+                                ">
+                                5
+                            </div>
+
+                            <div>
+                                <div class="font-bold text-sm text-slate-900 flex items-center gap-2">
+                                    <span>Geografia</span>
+                                    
+                                    <span class="text-[11px] font-semibold text-slate-500 px-2 py-0.5 bg-slate-100 rounded-md">
+                                        Zadanie domowe
+                                    </span>
+                                    
+                                </div>
+                                <div class="text-xs text-slate-400 mt-0.5">
+                                    waga: <strong>1</strong> • data: 2026-09-17 (czw.)
+                                    
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-right text-xs text-slate-400 hidden sm:block">
+                            Piotr Werner
+                        </div>
+                    </div>
+                    
+                    <div class="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                        <div class="flex items-center gap-3.5">
+                            <!-- Odznaka oceny -->
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-base shadow-sm
+                                 bg-slate-200 text-slate-800 ">
+                                np
+                            </div>
+
+                            <div>
+                                <div class="font-bold text-sm text-slate-900 flex items-center gap-2">
+                                    <span>Wychowanie fizyczne</span>
+                                    
+                                    <span class="text-[11px] font-semibold text-slate-500 px-2 py-0.5 bg-slate-100 rounded-md">
+                                        Aktywność
+                                    </span>
+                                    
+                                </div>
+                                <div class="text-xs text-slate-400 mt-0.5">
+                                    waga: <strong>-</strong> • data: 2026-09-17 (czw.)
+                                    
+                                    • <span class="italic text-slate-600">"brak stroju sportowego"</span>
+                                    
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-right text-xs text-slate-400 hidden sm:block">
+                            Michał Feryc
+                        </div>
+                    </div>
+                    
+                    <div class="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                        <div class="flex items-center gap-3.5">
+                            <!-- Odznaka oceny -->
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-base shadow-sm
+                                 bg-slate-200 text-slate-800 ">
+                                +
+                            </div>
+
+                            <div>
+                                <div class="font-bold text-sm text-slate-900 flex items-center gap-2">
+                                    <span>Matematyka</span>
+                                    
+                                    <span class="text-[11px] font-semibold text-slate-500 px-2 py-0.5 bg-slate-100 rounded-md">
+                                        Odpowiedź
+                                    </span>
+                                    
+                                </div>
+                                <div class="text-xs text-slate-400 mt-0.5">
+                                    waga: <strong>-</strong> • data: 2026-09-16 (śr.)
+                                    
+                                    • <span class="italic text-slate-600">"aktywność przy tablicy"</span>
+                                    
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-right text-xs text-slate-400 hidden sm:block">
+                            Renata Matyk
+                        </div>
+                    </div>
+                    
+                </div>
+            
+        </div>
+
+    </div>
+
+    <!-- Prawa Kolumna (1/3): Terminarz + Wiadomości -->
+    <div class="space-y-6">
+
+        <!-- Moduł: Nadchodzące Sprawdziany (Terminarz) -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">🔔</span>
+                    <h2 class="text-base font-bold text-slate-900">Sprawdziany & Terminarz</h2>
+                </div>
+                <a href="web_terminarz.html" class="text-xs font-bold text-indigo-600 hover:text-indigo-800">
+                    Więcej ➔
+                </a>
+            </div>
+
+            <div class="p-4 space-y-4">
+                <!-- Najbliższy dzień z terminarza -->
+                
+                <div class="p-3 bg-indigo-50/60 rounded-xl border border-indigo-100">
+                    <div class="text-xs font-extrabold text-indigo-900 uppercase tracking-wider mb-2">
+                        Najbliższy dzień nauki (poniedziałek, 21.09)
+                    </div>
+
+                    
+                    <div class="text-xs font-semibold text-indigo-950 flex items-start gap-2 py-1">
+                        <span>📝</span>
+                        <div>
+                            <strong>Kartkówka:</strong> Geografia (lekcja 3)
+                            <div class="text-[11px] text-indigo-700 italic">Stolice i kraje Europy</div>
+                        </div>
+                    </div>
+                    
+
+                    
+                    <div class="text-xs font-semibold text-rose-900 flex items-center gap-2 py-1">
+                        <span>ℹ️</span>
+                        <span>Nieobecność: <strong>Janina Doszko</strong> (Cały dzień)</span>
+                    </div>
+                    
+                    <div class="text-xs font-semibold text-rose-900 flex items-center gap-2 py-1">
+                        <span>ℹ️</span>
+                        <span>Nieobecność: <strong>Renata Skurka</strong> (08:30 do 09:15)</span>
+                    </div>
+                    
+                </div>
+                
+
+                <!-- Kolejne dni -->
+                
+                    <div class="space-y-3">
+                        <div class="text-xs font-bold uppercase text-slate-400 tracking-wider">W kolejnych dniach:</div>
+                        
+                        <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-xs">
+                            <div class="font-bold text-slate-700 mb-1">📌 Środa, 23.09.2026</div>
+                            
+                            <div class="text-slate-600 pl-2 border-l-2 border-indigo-400 my-1">
+                                <strong>Sprawdzian:</strong> Język niemiecki (lekcja 1)
+                            </div>
+                            
+                            <div class="text-slate-600 pl-2 border-l-2 border-indigo-400 my-1">
+                                <strong>Kartkówka:</strong> Język angielski (lekcja 5)
+                            </div>
+                            
+                            <div class="text-slate-600 pl-2 border-l-2 border-indigo-400 my-1">
+                                <strong>Kartkówka:</strong> Język angielski (lekcja 7)
+                            </div>
+                            
+                        </div>
+                        
+                        <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-xs">
+                            <div class="font-bold text-slate-700 mb-1">📌 Piątek, 25.09.2026</div>
+                            
+                            <div class="text-slate-600 pl-2 border-l-2 border-indigo-400 my-1">
+                                <strong>Sprawdzian:</strong> Matematyka (lekcja 3)
+                            </div>
+                            
+                            <div class="text-slate-600 pl-2 border-l-2 border-indigo-400 my-1">
+                                <strong>Kartkówka:</strong> Język francuski (lekcja 7)
+                            </div>
+                            
+                        </div>
+                        
+                    </div>
+                
+            </div>
+        </div>
+
+        <!-- Moduł: Najnowsze Komunikaty i Ogłoszenia -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">📢</span>
+                    <h2 class="text-base font-bold text-slate-900">Ogłoszenia szkolne</h2>
+                </div>
+                <a href="web_wiadomosci.html" class="text-xs font-bold text-indigo-600 hover:text-indigo-800">
+                    Wszystkie (13) ➔
+                </a>
+            </div>
+
+            <div class="p-4 space-y-3">
+                
+                    
+                    <div class="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors text-xs border border-slate-100">
+                        <div class="font-bold text-slate-900 leading-snug">17 września - upamiętnienie agresji Rosji Sowieckiej na Polskę</div>
+                        <div class="text-[11px] text-slate-400 mt-1 flex items-center justify-between">
+                            <span>Daniel Marecki (Dyrekcja)</span>
+                            <span>2026-09-15</span>
+                        </div>
+                    </div>
+                    
+                    <div class="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors text-xs border border-slate-100">
+                        <div class="font-bold text-slate-900 leading-snug">JADŁOSPIS 14 IX - 18 IX</div>
+                        <div class="text-[11px] text-slate-400 mt-1 flex items-center justify-between">
+                            <span>Renata Lublińska (Intendent)</span>
+                            <span>2026-09-13</span>
+                        </div>
+                    </div>
+                    
+                    <div class="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors text-xs border border-slate-100">
+                        <div class="font-bold text-slate-900 leading-snug">Karta rowerowa - egz. poprawkowy</div>
+                        <div class="text-[11px] text-slate-400 mt-1 flex items-center justify-between">
+                            <span>Joanna Lipska</span>
+                            <span>2026-09-10</span>
+                        </div>
+                    </div>
+                    
+                    <div class="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors text-xs border border-slate-100">
+                        <div class="font-bold text-slate-900 leading-snug">Konkursy przedmiotowe</div>
+                        <div class="text-[11px] text-slate-400 mt-1 flex items-center justify-between">
+                            <span>Dorota Opolska</span>
+                            <span>2026-09-10</span>
+                        </div>
+                    </div>
+                    
+                
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+
+
+    </main>
+
+    <!-- Stopka -->
+    <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex items-center gap-2 font-medium">
+                <span>🏫 Librus2mail v1.4.0</span>
+                <span>•</span>
+                <span>Prywatny Dashboard Rodzica</span>
+            </div>
+            <div class="text-slate-400 text-[11px]">
+                Bezpieczny odczyt z lokalnej pamięci <code>storage/</code> • Stan na: 18.09.2026 00:00
+            </div>
+        </div>
+    </footer>
+
+    
+</body>
+</html>

@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="pl" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Centrum Akcji CLI - Jan Kowalski (Przykładowy Uczeń) (8979296) - Librus2mail</title>
+    <!-- TailwindCSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- HTMX CDN -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+        .htmx-indicator { display: none; }
+        .htmx-request .htmx-indicator { display: inline-flex; }
+        .htmx-request.htmx-indicator { display: inline-flex; }
+    </style>
+    
+</head>
+<body class="h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white">
+
+    <!-- Pasek nawigacyjny -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Lewa strona: Logo + Menu -->
+                <div class="flex items-center gap-8">
+                    <a href="web_dashboard.html" class="flex items-center gap-3 group">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-sky-500 flex items-center justify-center text-white text-xl shadow-md shadow-indigo-100 group-hover:scale-105 transition-transform">
+                            🏫
+                        </div>
+                        <div>
+                            <span class="font-extrabold text-lg text-slate-900 tracking-tight flex items-center gap-1.5">
+                                Librus<span class="text-indigo-600">2mail</span>
+                            </span>
+                            <span class="block text-[10px] uppercase font-bold text-slate-400 tracking-wider">Web Dashboard</span>
+                        </div>
+                    </a>
+
+                    <!-- Nawigacja Desktop -->
+                    
+                    <nav class="hidden md:flex items-center gap-1">
+                        <a href="web_dashboard.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📊 Pulpit
+                        </a>
+                        <a href="web_plan.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📅 Plan lekcji
+                        </a>
+                        <a href="web_oceny.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📝 Oceny
+                        </a>
+                        <a href="web_terminarz.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            🔔 Terminarz
+                        </a>
+                        <a href="web_wiadomosci.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            ✉️ Wiadomości
+                        </a>
+                        <a href="web_akcje.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors bg-indigo-50 text-indigo-700">
+                            ⚡ Akcje CLI
+                        </a>
+                    </nav>
+                    
+                </div>
+
+                <!-- Prawa strona: Przełącznik ucznia + Auth -->
+                <div class="flex items-center gap-3">
+                    
+                        
+                        <div class="relative inline-block text-left">
+                            <select onchange="window.location.href='/student/' + this.value + '?next=' + encodeURIComponent(window.location.pathname)"
+                                    class="bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold rounded-lg px-3 py-2 pr-8 focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
+                                
+                                <option value="8912345" >
+                                    👤 Jan Kowalski (klasa 5A) (8912345)
+                                </option>
+                                
+                                <option value="8976543" >
+                                    👤 Anna Kowalska (Liceum 2A) (8976543)
+                                </option>
+                                
+                                <option value="8979296" selected>
+                                    👤 Jan Kowalski (Przykładowy Uczeń) (8979296)
+                                </option>
+                                
+                            </select>
+                        </div>
+                        
+
+                        
+                        <a href="web_login.html"
+                           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors"
+                           title="Wyloguj rodzica">
+                            🔒 Wyloguj
+                        </a>
+                        
+                    
+
+                    
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobilny pasek skrótów -->
+        
+        <div class="md:hidden border-t border-slate-100 bg-slate-50 px-2 py-1.5 overflow-x-auto flex gap-1 scrollbar-none">
+            <a href="web_dashboard.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📊 Pulpit</a>
+            <a href="web_plan.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📅 Plan</a>
+            <a href="web_oceny.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📝 Oceny</a>
+            <a href="web_terminarz.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">🔔 Terminarz</a>
+            <a href="web_wiadomosci.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">✉️ Wiadomości</a>
+            <a href="web_akcje.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap bg-indigo-600 text-white">⚡ Akcje</a>
+        </div>
+        
+    </header>
+
+    <!-- Komunikaty Flash -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 w-full">
+        
+            
+        
+    </div>
+
+    <!-- Główna zawartość -->
+    <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
+        
+<!-- Nagłówek -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-200">
+    <div>
+        <div class="flex items-center gap-2">
+            <a href="web_dashboard.html" class="text-xs font-bold text-indigo-600 hover:text-indigo-800">
+                ← Powrót do pulpitu
+            </a>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1 flex items-center gap-3">
+            <span>⚡ Centrum Operacyjne CLI</span>
+            <span class="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full border border-slate-200">
+                Jan Kowalski (Przykładowy Uczeń) (8979296)
+            </span>
+        </h1>
+        <p class="text-xs text-slate-500 mt-1">
+            Wyzwalaj kluczowe moduły i raporty systemu Librus2mail za pomocą jednego kliknięcia z bezpośrednim podglądem logów.
+        </p>
+    </div>
+</div>
+
+<!-- Wskaźnik wykonywania (HTMX indicator) -->
+<div id="action-spinner" class="htmx-indicator my-4 p-4 bg-indigo-50 border border-indigo-200 rounded-2xl flex items-center gap-3 text-indigo-900 shadow-sm animate-pulse">
+    <span class="text-xl animate-spin">⏳</span>
+    <div>
+        <div class="font-extrabold text-sm">Wykonywanie zadania w toku...</div>
+        <div class="text-xs text-indigo-600">Aplikacja przetwarza żądanie, generuje raport lub komunikuje się z serwerem. Proszę czekać.</div>
+    </div>
+</div>
+
+<!-- Miejsce na wyniki akcji (Terminal konsoli) -->
+<div id="action-console"></div>
+
+<!-- Siatka 4 kart akcji -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+
+    <!-- Karta 1: Synchronizacja ze szkołą -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between hover:border-indigo-300 transition-all">
+        <div>
+            <div class="flex items-center justify-between">
+                <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-2xl shadow-xs">
+                    🔄
+                </div>
+                <span class="px-2.5 py-1 bg-indigo-50 text-indigo-700 text-[10px] font-bold rounded-lg uppercase tracking-wider">
+                    librus_collector
+                </span>
+            </div>
+
+            <h3 class="text-lg font-extrabold text-slate-900 mt-4">
+                Pobierz dane z Librusa (Sync)
+            </h3>
+            <p class="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                Loguje się bezpośrednio do portalu Librus Synergia i pobiera najświeższe oceny, terminarz, plan lekcji oraz wiadomości do lokalnej pamięci <code>storage/</code>.
+            </p>
+
+            <div class="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-100 font-mono text-[11px] text-slate-600">
+                python librus_collector.py -u 8979296 --sync-only --once
+            </div>
+        </div>
+
+        <div class="mt-6 pt-4 border-t border-slate-100">
+            <button hx-post="/api/action/sync"
+                    hx-vals='{"login": "8979296"}'
+                    hx-target="#action-console"
+                    hx-indicator="#action-spinner"
+                    class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm shadow-indigo-100 transition-all cursor-pointer">
+                <span>🚀 Uruchom synchronizację konta</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Karta 2: Wysyłka powiadomienia e-mail -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between hover:border-sky-300 transition-all">
+        <div>
+            <div class="flex items-center justify-between">
+                <div class="w-12 h-12 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center text-2xl shadow-xs">
+                    📧
+                </div>
+                <span class="px-2.5 py-1 bg-sky-50 text-sky-700 text-[10px] font-bold rounded-lg uppercase tracking-wider">
+                    updates_notifier
+                </span>
+            </div>
+
+            <h3 class="text-lg font-extrabold text-slate-900 mt-4">
+                Wyślij powiadomienie e-mail
+            </h3>
+            <p class="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                Generuje i wysyła zestawienie ostatnich zmian, planu lekcji i ocen do rodzica zgodnie z regułami powiadomień.
+            </p>
+
+            <form id="form-notify"
+                  hx-post="/api/action/notify"
+                  hx-target="#action-console"
+                  hx-indicator="#action-spinner"
+                  class="mt-4 space-y-3">
+                <input type="hidden" name="login" value="8979296">
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Dni wstecz</label>
+                        <select name="days" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800">
+                            <option value="1" selected>1 dzień (dzisiejszy/ostatni)</option>
+                            <option value="2">2 dni</option>
+                            <option value="7">7 dni</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-1.5 pt-4">
+                        <label class="flex items-center gap-2 text-xs text-slate-700 font-medium cursor-pointer">
+                            <input type="checkbox" name="dry_run" value="1" class="rounded text-sky-600">
+                            <span>Tryb symulacji (dry-run)</span>
+                        </label>
+                        <label class="flex items-center gap-2 text-xs text-slate-700 font-medium cursor-pointer">
+                            <input type="checkbox" name="summary" value="1" class="rounded text-sky-600">
+                            <span>Tylko podsumowanie</span>
+                        </label>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="mt-6 pt-4 border-t border-slate-100">
+            <button type="submit" form="form-notify"
+                    class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold text-white bg-sky-600 hover:bg-sky-700 shadow-sm shadow-sky-100 transition-all cursor-pointer">
+                <span>✉️ Wyślij / Przetestuj powiadomienie</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Karta 3: Raport postępów ucznia -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between hover:border-emerald-300 transition-all">
+        <div>
+            <div class="flex items-center justify-between">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl shadow-xs">
+                    📊
+                </div>
+                <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded-lg uppercase tracking-wider">
+                    progress_report
+                </span>
+            </div>
+
+            <h3 class="text-lg font-extrabold text-slate-900 mt-4">
+                Raport postępów i trendów
+            </h3>
+            <p class="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                Generuje analityczny raport HTML z ocenami ważonymi, trendami wzrostów i spadków oraz rekomendacjami dla rodziców.
+            </p>
+
+            <form id="form-progress"
+                  hx-post="/api/action/progress-report"
+                  hx-target="#action-console"
+                  hx-indicator="#action-spinner"
+                  class="mt-4">
+                <input type="hidden" name="login" value="8979296">
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Okres analizy</label>
+                    <select name="days" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800">
+                        <option value="7" selected>Ostatnie 7 dni</option>
+                        <option value="14">Ostatnie 14 dni</option>
+                        <option value="30">Ostatnie 30 dni</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+
+        <div class="mt-6 pt-4 border-t border-slate-100">
+            <button type="submit" form="form-progress"
+                    class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm shadow-emerald-100 transition-all cursor-pointer">
+                <span>📈 Wygeneruj raport postępów</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Karta 4: Raport motywacyjny ucznia -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between hover:border-amber-300 transition-all">
+        <div>
+            <div class="flex items-center justify-between">
+                <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-2xl shadow-xs">
+                    🏆
+                </div>
+                <span class="px-2.5 py-1 bg-amber-50 text-amber-700 text-[10px] font-bold rounded-lg uppercase tracking-wider">
+                    student_report
+                </span>
+            </div>
+
+            <h3 class="text-lg font-extrabold text-slate-900 mt-4">
+                Raport motywacyjny dla ucznia
+            </h3>
+            <p class="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                Generuje kolorowy raport z osiągnięciami, supermocami, odznakami i wyzwaniami dopasowanymi do wieku dziecka.
+            </p>
+
+            <form id="form-student"
+                  hx-post="/api/action/student-report"
+                  hx-target="#action-console"
+                  hx-indicator="#action-spinner"
+                  class="mt-4 space-y-3">
+                <input type="hidden" name="login" value="8979296">
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Styl raportu</label>
+                        <select name="template" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800">
+                            <option value="kids" selected>Dziecięcy (odznaki, grywalizacja)</option>
+                            <option value="teen">Młodzieżowy (nowoczesny)</option>
+                            <option value="standard">Standardowy</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Okres</label>
+                        <select name="days" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800">
+                            <option value="7" selected>7 dni</option>
+                            <option value="14">14 dni</option>
+                            <option value="30">30 dni</option>
+                        </select>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="mt-6 pt-4 border-t border-slate-100">
+            <button type="submit" form="form-student"
+                    class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold text-white bg-amber-600 hover:bg-amber-700 shadow-sm shadow-amber-100 transition-all cursor-pointer">
+                <span>🌟 Wygeneruj raport motywacyjny</span>
+            </button>
+        </div>
+    </div>
+
+</div>
+
+<!-- Ściągawka z useful-scripts.md -->
+<div class="mt-10 bg-slate-100/70 border border-slate-200 rounded-2xl p-5">
+    <div class="flex items-center gap-2 mb-2 font-bold text-xs uppercase tracking-wider text-slate-600">
+        <span>📖</span>
+        <span>Dokumentacja & Odpowiedniki CLI z <code>useful-scripts.md</code></span>
+    </div>
+    <p class="text-xs text-slate-500 leading-relaxed">
+        Powyższe przyciski uruchamiają dokładnie te same procedury Python, które są udokumentowane w podręczniku <a href="file:///home/acacko/PycharmProjects/librus2mail/useful-scripts.md" class="text-indigo-600 font-semibold underline">useful-scripts.md</a>. Możesz wywoływać je zarówno z poziomu tego panelu webowego, jak i bezpośrednio z wiersza poleceń terminala.
+    </p>
+</div>
+
+
+    </main>
+
+    <!-- Stopka -->
+    <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex items-center gap-2 font-medium">
+                <span>🏫 Librus2mail v1.4.0</span>
+                <span>•</span>
+                <span>Prywatny Dashboard Rodzica</span>
+            </div>
+            <div class="text-slate-400 text-[11px]">
+                Bezpieczny odczyt z lokalnej pamięci <code>storage/</code> • Stan na: 18.09.2026 00:00
+            </div>
+        </div>
+    </footer>
+
+    
+</body>
+</html>

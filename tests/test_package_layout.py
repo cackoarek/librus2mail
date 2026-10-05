@@ -77,12 +77,14 @@ class TestPackageLayout(unittest.TestCase):
         import librus_progress_report
         import librus_student_report
         import librus_updates_notifier
+        import librus_web
 
         self.assertTrue(hasattr(librus_collect_and_notify, "run_pipeline"))
         self.assertTrue(hasattr(librus_collector, "run_collector"))
         self.assertTrue(hasattr(librus_updates_notifier, "run_notifier"))
         self.assertTrue(hasattr(librus_progress_report, "run_progress_reports"))
         self.assertTrue(hasattr(librus_student_report, "run_student_reports"))
+        self.assertTrue(hasattr(librus_web, "main"))
 
     def test_jinja_templates_accessible_via_package(self):
         from librus2mail.mail_sender import jinja_env

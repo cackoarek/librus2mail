@@ -1,17 +1,17 @@
 import html
-import os
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from markupsafe import Markup
 
-_pkg_templates = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates', 'emails')
-_root_templates = os.path.join(os.getcwd(), 'templates', 'emails')
-TEMPLATES_DIRS = [_pkg_templates]
-if os.path.isdir(_root_templates) and _root_templates != _pkg_templates:
-    TEMPLATES_DIRS.append(_root_templates)
-TEMPLATES_DIR = _pkg_templates if os.path.isdir(_pkg_templates) else _root_templates
+_pkg_templates = Path(__file__).resolve().parent / 'templates' / 'emails'
+_root_templates = Path.cwd() / 'templates' / 'emails'
+TEMPLATES_DIRS = [str(_pkg_templates)]
+if _root_templates.is_dir() and _root_templates != _pkg_templates:
+    TEMPLATES_DIRS.append(str(_root_templates))
+TEMPLATES_DIR = str(_pkg_templates if _pkg_templates.is_dir() else _root_templates)
 
 jinja_env = Environment(
     loader=FileSystemLoader(TEMPLATES_DIRS),
@@ -20,7 +20,7 @@ jinja_env = Environment(
 
 
 def resolve_output_path(
-    output_path: str,
+    output_path: str | Path,
     user_login: str,
     total_users: int = 1,
     default_prefix: str = "raport"
@@ -33,30 +33,26 @@ def resolve_output_path(
     - W przeciwnym razie zwraca bezpośrednio output_path.
     Automatycznie tworzy katalogi nadrzędne, jeśli nie istnieją.
     """
-    if os.path.isdir(output_path) or output_path.endswith('/') or output_path.endswith('\\'):
-        os.makedirs(output_path, exist_ok=True)
-        return os.path.join(output_path, f"{default_prefix}_{user_login}.html")
+    raw_str = str(output_path)
+    p = Path(raw_str)
 
-    if "{login}" in output_path or "{user}" in output_path:
-        formatted = output_path.format(login=user_login, user=user_login)
-        parent = os.path.dirname(formatted)
-        if parent:
-            os.makedirs(parent, exist_ok=True)
-        return formatted
+    if p.is_dir() or raw_str.endswith(('/', '\\')):
+        p.mkdir(parents=True, exist_ok=True)
+        return str(p / f"{default_prefix}_{user_login}.html")
+
+    if "{login}" in raw_str or "{user}" in raw_str:
+        formatted = Path(raw_str.format(login=user_login, user=user_login))
+        formatted.parent.mkdir(parents=True, exist_ok=True)
+        return str(formatted)
 
     if total_users > 1:
-        base, ext = os.path.splitext(output_path)
-        ext = ext if ext else ".html"
-        filename = f"{base}_{user_login}{ext}"
-        parent = os.path.dirname(filename)
-        if parent:
-            os.makedirs(parent, exist_ok=True)
-        return filename
+        ext = p.suffix if p.suffix else ".html"
+        filename = p.with_name(f"{p.stem}_{user_login}{ext}")
+        filename.parent.mkdir(parents=True, exist_ok=True)
+        return str(filename)
 
-    parent = os.path.dirname(output_path)
-    if parent:
-        os.makedirs(parent, exist_ok=True)
-    return output_path
+    p.parent.mkdir(parents=True, exist_ok=True)
+    return str(p)
 
 
 def render_standalone_html(title: str, body_html: str) -> str:

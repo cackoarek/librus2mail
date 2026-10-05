@@ -1,10 +1,43 @@
 import json
 import logging
-import os
 from abc import ABC, abstractmethod
 from datetime import date, datetime, timedelta
+from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
+
+
+def read_json_safe(path: Path | str) -> dict[str, Any]:
+    """Bezpiecznie wczytuje dane z pliku JSON; jeśli plik nie istnieje lub jest uszkodzony, zwraca pusty słownik."""
+    p = Path(path)
+    if not p.is_file():
+        return {}
+    try:
+        with open(p, encoding='utf-8') as f:
+            data = json.load(f)
+            return data if isinstance(data, dict) else {}
+    except Exception as e:
+        logger.error(f"Błąd podczas odczytu pliku JSON {p}: {e}")
+        return {}
+
+
+def write_json_atomic(path: Path | str, data: Any) -> None:
+    """Atomowo zapisuje strukturę danych do pliku JSON za pośrednictwem pliku tymczasowego (.tmp)."""
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = p.with_name(f"{p.name}.tmp")
+    try:
+        with open(temp_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        temp_path.replace(p)
+    except Exception as e:
+        logger.error(f"Błąd podczas atomowego zapisu JSON do {p}: {e}")
+        if temp_path.exists():
+            try:
+                temp_path.unlink()
+            except OSError:
+                pass
 
 
 class BaseStorage(ABC):
@@ -170,137 +203,81 @@ class BaseStorage(ABC):
 class FileStorage(BaseStorage):
     """Trwałe przechowywanie stanu w plikach JSON w wyznaczonym katalogu (np. storage/<login>.json)."""
 
-    def __init__(self, storage_dir: str = 'storage'):
-        self.storage_dir = storage_dir
-        os.makedirs(self.storage_dir, exist_ok=True)
+    def __init__(self, storage_dir: str | Path = 'storage'):
+        self.storage_dir = Path(storage_dir)
+        self.storage_dir.mkdir(parents=True, exist_ok=True)
 
-    def _get_file_path(self, user_login: str) -> str:
+    def _get_file_path(self, user_login: str) -> Path:
         safe_login = str(user_login).replace('/', '_').replace('\\', '_')
-        return os.path.join(self.storage_dir, f"{safe_login}.json")
+        return self.storage_dir / f"{safe_login}.json"
 
     def has_existing_data(self, user_login: str) -> bool:
-        file_path = self._get_file_path(user_login)
-        if not os.path.isfile(file_path):
+        path = self._get_file_path(user_login)
+        if not path.is_file():
             return False
-        try:
-            with open(file_path, encoding='utf-8') as f:
-                data = json.load(f)
-            return bool(data.get('known_messages') or data.get('known_notifications') or data.get('known_grades'))
-        except Exception:
-            return False
+        data = read_json_safe(path)
+        return bool(data.get('known_messages') or data.get('known_notifications') or data.get('known_grades'))
 
     def load_known_items(self, user_login: str) -> dict[str, set]:
-        file_path = self._get_file_path(user_login)
-        if not os.path.isfile(file_path):
-            logger.info(f"Brak pliku stanu dla {user_login} ({file_path}). Zostanie utworzony nowy stan.")
+        path = self._get_file_path(user_login)
+        if not path.is_file():
+            logger.info(f"Brak pliku stanu dla {user_login} ({path}). Zostanie utworzony nowy stan.")
             return {'messages': set(), 'notifications': set(), 'grades': set()}
 
-        try:
-            with open(file_path, encoding='utf-8') as f:
-                data = json.load(f)
-            messages = set(data.get('known_messages', []))
-            notifications = set(data.get('known_notifications', []))
-            grades = set(data.get('known_grades', []))
-            logger.info(
-                f"Wczytano stan z {file_path} dla konta {user_login}: "
-                f"wiadomości: {len(messages)}, ogłoszenia: {len(notifications)}, oceny: {len(grades)}"
-            )
-            return {
-                'messages': messages,
-                'notifications': notifications,
-                'grades': grades
-            }
-        except Exception as e:
-            logger.error(f"Błąd podczas wczytywania pliku stanu {file_path}: {e}")
-            return {'messages': set(), 'notifications': set(), 'grades': set()}
+        data = read_json_safe(path)
+        messages = set(data.get('known_messages', []))
+        notifications = set(data.get('known_notifications', []))
+        grades = set(data.get('known_grades', []))
+        logger.info(
+            f"Wczytano stan z {path} dla konta {user_login}: "
+            f"wiadomości: {len(messages)}, ogłoszenia: {len(notifications)}, oceny: {len(grades)}"
+        )
+        return {
+            'messages': messages,
+            'notifications': notifications,
+            'grades': grades,
+        }
 
     def get_last_error(self, user_login: str) -> dict | None:
-        file_path = self._get_file_path(user_login)
-        if not os.path.isfile(file_path):
-            return None
-        try:
-            with open(file_path, encoding='utf-8') as f:
-                data = json.load(f)
-            return data.get('last_error')
-        except Exception as e:
-            logger.error(f"Błąd podczas odczytu last_error z {file_path}: {e}")
-            return None
+        path = self._get_file_path(user_login)
+        return read_json_safe(path).get('last_error')
 
     def save_last_error(self, user_login: str, error_str: str, step: str = "") -> None:
-        file_path = self._get_file_path(user_login)
-        temp_path = f"{file_path}.tmp"
-        data = {}
-        if os.path.isfile(file_path):
-            try:
-                with open(file_path, encoding='utf-8') as f:
-                    data = json.load(f)
-            except Exception:
-                data = {}
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
         now = datetime.now()
         data['librus_login'] = str(user_login)
         data['last_error'] = {
             'error': str(error_str),
             'step': step,
             'timestamp': now.timestamp(),
-            'time_str': now.strftime("%Y-%m-%d %H:%M:%S")
+            'time_str': now.strftime("%Y-%m-%d %H:%M:%S"),
         }
-        try:
-            with open(temp_path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            os.replace(temp_path, file_path)
-        except Exception as e:
-            logger.error(f"Błąd podczas zapisywania last_error do pliku {file_path}: {e}")
+        write_json_atomic(path, data)
 
     def clear_last_error(self, user_login: str) -> None:
-        file_path = self._get_file_path(user_login)
-        if not os.path.isfile(file_path):
+        path = self._get_file_path(user_login)
+        if not path.is_file():
             return
-        try:
-            with open(file_path, encoding='utf-8') as f:
-                data = json.load(f)
-            if data.get('last_error') is not None:
-                data['last_error'] = None
-                temp_path = f"{file_path}.tmp"
-                with open(temp_path, 'w', encoding='utf-8') as f:
-                    json.dump(data, f, ensure_ascii=False, indent=2)
-                os.replace(temp_path, file_path)
-        except Exception as e:
-            logger.error(f"Błąd podczas czyszczenia last_error w pliku {file_path}: {e}")
+        data = read_json_safe(path)
+        if data.get('last_error') is not None:
+            data['last_error'] = None
+            write_json_atomic(path, data)
 
     def save_known_items(self, user_login: str, known_messages: set, known_notifications: set, known_grades: set) -> None:
-        file_path = self._get_file_path(user_login)
-        temp_path = f"{file_path}.tmp"
-        data = {}
-        if os.path.isfile(file_path):
-            try:
-                with open(file_path, encoding='utf-8') as f:
-                    data = json.load(f)
-            except Exception:
-                data = {}
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
         data['librus_login'] = str(user_login)
         data['last_updated'] = datetime.now().isoformat()
         data['known_messages'] = sorted(list(known_messages))
         data['known_notifications'] = sorted(list(known_notifications))
         data['known_grades'] = sorted(list(known_grades))
-        try:
-            with open(temp_path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            os.replace(temp_path, file_path)
-            logger.debug(f"Zapisano stan do pliku {file_path} dla {user_login}")
-        except Exception as e:
-            logger.error(f"Błąd podczas zapisywania pliku stanu {file_path}: {e}")
+        write_json_atomic(path, data)
+        logger.debug(f"Zapisano stan do pliku {path} dla {user_login}")
 
     def save_grades_details(self, user_login: str, grades: list[dict]) -> None:
-        file_path = self._get_file_path(user_login)
-        temp_path = f"{file_path}.tmp"
-        data = {}
-        if os.path.isfile(file_path):
-            try:
-                with open(file_path, encoding='utf-8') as f:
-                    data = json.load(f)
-            except Exception:
-                data = {}
-
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
         data['librus_login'] = str(user_login)
         data['last_updated'] = datetime.now().isoformat()
         raw_history = data.get('grades_history', {})
@@ -324,28 +301,16 @@ class FileStorage(BaseStorage):
                 grades_history[gid].update({k: v for k, v in g.items() if v})
 
         data['grades_history'] = grades_history
-
-        try:
-            with open(temp_path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            os.replace(temp_path, file_path)
-            logger.debug(f"Zapisano historię ocen do pliku {file_path} dla {user_login}")
-        except Exception as e:
-            logger.error(f"Błąd podczas zapisywania historii ocen do {file_path}: {e}")
+        write_json_atomic(path, data)
+        logger.debug(f"Zapisano historię ocen do pliku {path} dla {user_login}")
 
     def save_messages_details(self, user_login: str, messages: list[dict]) -> None:
         """Zapisuje listę wiadomości ze szczegółami w storage."""
         if not messages:
             return
-        file_path = self._get_file_path(user_login)
-        temp_path = f"{file_path}.tmp"
-        data = {}
-        if os.path.isfile(file_path):
-            try:
-                with open(file_path, encoding='utf-8') as f:
-                    data = json.load(f)
-            except Exception:
-                data = {}
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
+        data['librus_login'] = str(user_login)
         existing = {m.get('id'): m for m in data.get('messages_history', []) if m.get('id')}
         now_iso = datetime.now().isoformat()
         for m in messages:
@@ -358,26 +323,15 @@ class FileStorage(BaseStorage):
                     m_copy['added_at'] = m_copy.get('added_at') or now_iso
                     existing[mid] = m_copy
         data['messages_history'] = list(existing.values())
-        try:
-            with open(temp_path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            os.replace(temp_path, file_path)
-        except Exception as e:
-            logger.error(f"Błąd podczas zapisywania historii wiadomości do {file_path}: {e}")
+        write_json_atomic(path, data)
 
     def save_notifications_details(self, user_login: str, notifications: list[dict]) -> None:
         """Zapisuje listę ogłoszeń ze szczegółami w storage."""
         if not notifications:
             return
-        file_path = self._get_file_path(user_login)
-        temp_path = f"{file_path}.tmp"
-        data = {}
-        if os.path.isfile(file_path):
-            try:
-                with open(file_path, encoding='utf-8') as f:
-                    data = json.load(f)
-            except Exception:
-                data = {}
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
+        data['librus_login'] = str(user_login)
         existing = {n.get('id'): n for n in data.get('notifications_history', []) if n.get('id')}
         now_iso = datetime.now().isoformat()
         for n in notifications:
@@ -390,261 +344,155 @@ class FileStorage(BaseStorage):
                     n_copy['added_at'] = n_copy.get('added_at') or now_iso
                     existing[nid] = n_copy
         data['notifications_history'] = list(existing.values())
-        try:
-            with open(temp_path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            os.replace(temp_path, file_path)
-        except Exception as e:
-            logger.error(f"Błąd podczas zapisywania historii ogłoszeń do {file_path}: {e}")
+        write_json_atomic(path, data)
 
     def get_grades_history(self, user_login: str) -> list[dict]:
-        file_path = self._get_file_path(user_login)
-        if not os.path.isfile(file_path):
-            return []
-        try:
-            with open(file_path, encoding='utf-8') as f:
-                data = json.load(f)
-            gh = data.get('grades_history', {})
-            if isinstance(gh, dict):
-                return list(gh.values())
-            elif isinstance(gh, list):
-                return gh
-            return []
-        except Exception as e:
-            logger.error(f"Błąd podczas odczytu grades_history z {file_path}: {e}")
-            return []
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
+        gh = data.get('grades_history', {})
+        if isinstance(gh, dict):
+            return list(gh.values())
+        elif isinstance(gh, list):
+            return gh
+        return []
 
     def get_last_progress_report_date(self, user_login: str) -> str | None:
-        file_path = self._get_file_path(user_login)
-        if not os.path.isfile(file_path):
-            return None
-        try:
-            with open(file_path, encoding='utf-8') as f:
-                data = json.load(f)
-            return data.get('last_progress_report_date')
-        except Exception as e:
-            logger.error(f"Błąd podczas odczytu last_progress_report_date z {file_path}: {e}")
-            return None
+        path = self._get_file_path(user_login)
+        return read_json_safe(path).get('last_progress_report_date')
 
     def save_last_progress_report_date(self, user_login: str, date_iso: str) -> None:
-        file_path = self._get_file_path(user_login)
-        temp_path = f"{file_path}.tmp"
-        data = {}
-        if os.path.isfile(file_path):
-            try:
-                with open(file_path, encoding='utf-8') as f:
-                    data = json.load(f)
-            except Exception:
-                data = {}
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
         data['librus_login'] = str(user_login)
         data['last_progress_report_date'] = date_iso
-        try:
-            with open(temp_path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            os.replace(temp_path, file_path)
-            logger.debug(f"Zapisano last_progress_report_date do {file_path}")
-        except Exception as e:
-            logger.error(f"Błąd podczas zapisywania last_progress_report_date do {file_path}: {e}")
+        write_json_atomic(path, data)
+        logger.debug(f"Zapisano last_progress_report_date do {path}")
 
     def get_last_collect_time(self, user_login: str) -> str | None:
         """Zwraca znacznik czasu (ISO) ostatniej synchronizacji danych z Librusa."""
-        file_path = self._get_file_path(user_login)
-        if not os.path.isfile(file_path):
-            return None
-        try:
-            with open(file_path, encoding='utf-8') as f:
-                data = json.load(f)
-            return data.get('last_collect_time') or data.get('last_updated')
-        except Exception as e:
-            logger.error(f"Błąd podczas odczytu last_collect_time z {file_path}: {e}")
-            return None
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
+        return data.get('last_collect_time') or data.get('last_updated')
 
     def save_last_collect_time(self, user_login: str, date_iso: str) -> None:
         """Zapisuje znacznik czasu (ISO) ostatniej synchronizacji danych z Librusa."""
-        file_path = self._get_file_path(user_login)
-        temp_path = f"{file_path}.tmp"
-        data = {}
-        if os.path.isfile(file_path):
-            try:
-                with open(file_path, encoding='utf-8') as f:
-                    data = json.load(f)
-            except Exception:
-                data = {}
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
         data['librus_login'] = str(user_login)
         data['last_collect_time'] = date_iso
         data['last_updated'] = date_iso
-        try:
-            with open(temp_path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            os.replace(temp_path, file_path)
-            logger.debug(f"Zapisano last_collect_time do {file_path}")
-        except Exception as e:
-            logger.error(f"Błąd podczas zapisywania last_collect_time do {file_path}: {e}")
+        write_json_atomic(path, data)
+        logger.debug(f"Zapisano last_collect_time do {path}")
 
     def get_last_notify_time(self, user_login: str) -> str | None:
         """Zwraca znacznik czasu (ISO) ostatniego wysłanego/wygenerowanego powiadomienia."""
-        file_path = self._get_file_path(user_login)
-        if not os.path.isfile(file_path):
-            return None
-        try:
-            with open(file_path, encoding='utf-8') as f:
-                data = json.load(f)
-            return data.get('last_notify_time') or data.get('last_update_create')
-        except Exception as e:
-            logger.error(f"Błąd podczas odczytu last_notify_time z {file_path}: {e}")
-            return None
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
+        return data.get('last_notify_time') or data.get('last_update_create')
 
     def save_last_notify_time(self, user_login: str, date_iso: str) -> None:
         """Zapisuje znacznik czasu (ISO) ostatniego wysłanego/wygenerowanego powiadomienia."""
-        file_path = self._get_file_path(user_login)
-        temp_path = f"{file_path}.tmp"
-        data = {}
-        if os.path.isfile(file_path):
-            try:
-                with open(file_path, encoding='utf-8') as f:
-                    data = json.load(f)
-            except Exception:
-                data = {}
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
         data['librus_login'] = str(user_login)
         data['last_notify_time'] = date_iso
         data['last_update_create'] = date_iso
-        try:
-            with open(temp_path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            os.replace(temp_path, file_path)
-            logger.debug(f"Zapisano last_notify_time do {file_path}")
-        except Exception as e:
-            logger.error(f"Błąd podczas zapisywania last_notify_time do {file_path}: {e}")
+        write_json_atomic(path, data)
+        logger.debug(f"Zapisano last_notify_time do {path}")
 
     def get_student_name(self, user_login: str) -> str | None:
-        file_path = self._get_file_path(user_login)
-        if not os.path.isfile(file_path):
-            return None
-        try:
-            with open(file_path, encoding='utf-8') as f:
-                data = json.load(f)
-            return data.get('librus_login_name') or data.get('student_name')
-        except Exception as e:
-            logger.error(f"Błąd podczas odczytu nazwy ucznia z {file_path}: {e}")
-            return None
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
+        return data.get('librus_login_name') or data.get('student_name')
 
     def set_student_name(self, user_login: str, name: str) -> None:
         """Zapisuje nazwę ucznia w storage."""
         if not name:
             return
-        file_path = self._get_file_path(user_login)
-        if not os.path.isfile(file_path):
+        path = self._get_file_path(user_login)
+        if not path.is_file():
             return
-        try:
-            with open(file_path, encoding='utf-8') as f:
-                data = json.load(f)
-            if data.get('librus_login_name') != name or data.get('student_name') != name:
-                data['student_name'] = name
-                data['librus_login_name'] = name
-                temp_path = f"{file_path}.tmp"
-                with open(temp_path, 'w', encoding='utf-8') as f:
-                    json.dump(data, f, ensure_ascii=False, indent=2)
-                os.replace(temp_path, file_path)
-                logger.debug(f"Zaktualizowano nazwę ucznia '{name}' w {file_path}")
-        except Exception as e:
-            logger.error(f"Błąd podczas zapisywania nazwy ucznia do {file_path}: {e}")
-
+        data = read_json_safe(path)
+        if data.get('librus_login_name') != name or data.get('student_name') != name:
+            data['student_name'] = name
+            data['librus_login_name'] = name
+            write_json_atomic(path, data)
+            logger.debug(f"Zaktualizowano nazwę ucznia '{name}' w {path}")
 
     def list_stored_logins(self) -> list[str]:
         """Zwraca listę loginów odnalezionych na podstawie plików *.json w katalogu storage_dir."""
-        if not os.path.isdir(self.storage_dir):
+        if not self.storage_dir.is_dir():
             return []
         logins = []
         try:
-            for fname in os.listdir(self.storage_dir):
-                if fname.endswith('.json') and not fname.endswith('.tmp'):
-                    logins.append(fname[:-5])
+            for p in self.storage_dir.glob("*.json"):
+                if p.is_file() and not p.name.endswith('.tmp'):
+                    logins.append(p.stem)
         except Exception as e:
             logger.error(f"Błąd podczas listowania plików w {self.storage_dir}: {e}")
         return sorted(logins)
 
     def get_stored_messages(self, user_login: str) -> list[dict]:
         """Zwraca listę wiadomości zapisanych w storage (ze szczegółami jeśli dostępne)."""
-        file_path = self._get_file_path(user_login)
-        if not os.path.isfile(file_path):
-            return []
-        try:
-            with open(file_path, encoding='utf-8') as f:
-                data = json.load(f)
-            if 'messages_history' in data and isinstance(data['messages_history'], list):
-                return data['messages_history']
-            messages = []
-            import re
-            for item in data.get('known_messages', []):
-                s = str(item).strip()
-                m = re.search(r'(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})', s)
-                if m:
-                    dt = m.group(1)
-                    title = s[:m.start()].strip() or "Wiadomość"
-                    sender = s[m.end():].strip() or "-"
-                else:
-                    dt = ""
-                    title = s
-                    sender = "-"
-                messages.append({
-                    'id': s,
-                    'title': title,
-                    'sender': sender,
-                    'datetime': dt,
-                    'body': '',
-                })
-            return messages
-        except Exception as e:
-            logger.error(f"Błąd podczas odczytu wiadomości ze storage ({file_path}): {e}")
-            return []
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
+        if 'messages_history' in data and isinstance(data['messages_history'], list):
+            return data['messages_history']
+        messages = []
+        import re
+        for item in data.get('known_messages', []):
+            s = str(item).strip()
+            m = re.search(r'(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})', s)
+            if m:
+                dt = m.group(1)
+                title = s[:m.start()].strip() or "Wiadomość"
+                sender = s[m.end():].strip() or "-"
+            else:
+                dt = ""
+                title = s
+                sender = "-"
+            messages.append({
+                'id': s,
+                'title': title,
+                'sender': sender,
+                'datetime': dt,
+                'body': '',
+            })
+        return messages
 
     def get_stored_notifications(self, user_login: str) -> list[dict]:
         """Zwraca listę ogłoszeń zapisanych w storage."""
-        file_path = self._get_file_path(user_login)
-        if not os.path.isfile(file_path):
-            return []
-        try:
-            with open(file_path, encoding='utf-8') as f:
-                data = json.load(f)
-            if 'notifications_history' in data and isinstance(data['notifications_history'], list):
-                return data['notifications_history']
-            notifications = []
-            import re
-            for item in data.get('known_notifications', []):
-                s = str(item).strip()
-                m = re.search(r'(\d{4}-\d{2}-\d{2})$', s)
-                if m:
-                    dt = m.group(1)
-                    rest = s[:m.start()].strip()
-                else:
-                    dt = ""
-                    rest = s
-                notifications.append({
-                    'id': s,
-                    'title': rest,
-                    'sender': "Szkoła",
-                    'datetime': dt,
-                    'body': '',
-                })
-            return notifications
-        except Exception as e:
-            logger.error(f"Błąd podczas odczytu ogłoszeń ze storage ({file_path}): {e}")
-            return []
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
+        if 'notifications_history' in data and isinstance(data['notifications_history'], list):
+            return data['notifications_history']
+        notifications = []
+        import re
+        for item in data.get('known_notifications', []):
+            s = str(item).strip()
+            m = re.search(r'(\d{4}-\d{2}-\d{2})$', s)
+            if m:
+                dt = m.group(1)
+                rest = s[:m.start()].strip()
+            else:
+                dt = ""
+                rest = s
+            notifications.append({
+                'id': s,
+                'title': rest,
+                'sender': "Szkoła",
+                'datetime': dt,
+                'body': '',
+            })
+        return notifications
 
     def save_timetable_entries(self, user_login: str, entries: list[dict]) -> None:
         """Zapisuje listę wpisów z terminarza (sprawdziany, kartkówki, nieobecności) w storage."""
         if not entries:
             return
-        file_path = self._get_file_path(user_login)
-        temp_path = f"{file_path}.tmp"
-        data = {}
-        if os.path.isfile(file_path):
-            try:
-                with open(file_path, encoding='utf-8') as f:
-                    data = json.load(f)
-            except Exception:
-                data = {}
-
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
+        data['librus_login'] = str(user_login)
         existing = {e.get('id'): e for e in data.get('timetable_history', []) if e.get('id')}
         now_iso = datetime.now().isoformat()
         for e in entries:
@@ -661,70 +509,34 @@ class FileStorage(BaseStorage):
 
         data['timetable_history'] = list(existing.values())
         data['timetable_last_sync'] = now_iso
-        try:
-            with open(temp_path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            os.replace(temp_path, file_path)
-        except Exception as e:
-            logger.error(f"Błąd podczas zapisywania terminarza do {file_path}: {e}")
+        write_json_atomic(path, data)
 
     def get_timetable_history(self, user_login: str) -> list[dict]:
-        file_path = self._get_file_path(user_login)
-        if not os.path.isfile(file_path):
-            return []
-        try:
-            with open(file_path, encoding='utf-8') as f:
-                data = json.load(f)
-            th = data.get('timetable_history', [])
-            if isinstance(th, dict):
-                return list(th.values())
-            elif isinstance(th, list):
-                return th
-            return []
-        except Exception as e:
-            logger.error(f"Błąd podczas odczytu timetable_history z {file_path}: {e}")
-            return []
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
+        th = data.get('timetable_history', [])
+        if isinstance(th, dict):
+            return list(th.values())
+        elif isinstance(th, list):
+            return th
+        return []
 
     def get_last_timetable_sync(self, user_login: str) -> str | None:
-        file_path = self._get_file_path(user_login)
-        if not os.path.isfile(file_path):
-            return None
-        try:
-            with open(file_path, encoding='utf-8') as f:
-                data = json.load(f)
-            return data.get('timetable_last_sync')
-        except Exception:
-            return None
+        path = self._get_file_path(user_login)
+        return read_json_safe(path).get('timetable_last_sync')
 
     def save_last_timetable_sync(self, user_login: str, date_iso: str) -> None:
-        file_path = self._get_file_path(user_login)
-        temp_path = f"{file_path}.tmp"
-        data = {}
-        if os.path.isfile(file_path):
-            try:
-                with open(file_path, encoding='utf-8') as f:
-                    data = json.load(f)
-            except Exception:
-                data = {}
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
+        data['librus_login'] = str(user_login)
         data['timetable_last_sync'] = date_iso
-        try:
-            with open(temp_path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            os.replace(temp_path, file_path)
-        except Exception as e:
-            logger.error(f"Błąd podczas zapisu timetable_last_sync do {file_path}: {e}")
+        write_json_atomic(path, data)
 
     def mark_timetable_entries_notified(self, user_login: str, entry_ids: list[str], notified_at_iso: str | None = None) -> None:
-        file_path = self._get_file_path(user_login)
-        if not os.path.isfile(file_path):
+        path = self._get_file_path(user_login)
+        if not path.is_file():
             return
-        temp_path = f"{file_path}.tmp"
-        try:
-            with open(file_path, encoding='utf-8') as f:
-                data = json.load(f)
-        except Exception:
-            return
-
+        data = read_json_safe(path)
         id_set = set(entry_ids)
         stamp = notified_at_iso or datetime.now().isoformat()
         updated = False
@@ -734,12 +546,7 @@ class FileStorage(BaseStorage):
                 updated = True
 
         if updated:
-            try:
-                with open(temp_path, 'w', encoding='utf-8') as f:
-                    json.dump(data, f, ensure_ascii=False, indent=2)
-                os.replace(temp_path, file_path)
-            except Exception as e:
-                logger.error(f"Błąd podczas zapisywania last_notified_at w {file_path}: {e}")
+            write_json_atomic(path, data)
 
     def save_schedule_entries(
         self,
@@ -751,16 +558,9 @@ class FileStorage(BaseStorage):
         """Zapisuje listę wpisów z planu lekcji w storage z automatyczną retencją (domyślnie >30 dni)."""
         if not entries and retention_days is None:
             return
-        file_path = self._get_file_path(user_login)
-        temp_path = f"{file_path}.tmp"
-        data = {}
-        if os.path.isfile(file_path):
-            try:
-                with open(file_path, encoding='utf-8') as f:
-                    data = json.load(f)
-            except Exception:
-                data = {}
-
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
+        data['librus_login'] = str(user_login)
         existing = {e.get('id'): e for e in data.get('schedule_history', []) if e.get('id')}
         now_iso = datetime.now().isoformat()
         for e in entries or []:
@@ -797,65 +597,35 @@ class FileStorage(BaseStorage):
             existing.values(),
             key=lambda x: (
                 x.get('date', ''),
-                int(x.get('lesson_no', 0)) if str(x.get('lesson_no', '')).isdigit() else 99
-            )
+                int(x.get('lesson_no', 0)) if str(x.get('lesson_no', '')).isdigit() else 99,
+            ),
         )
         data['schedule_last_sync'] = now_iso
-        try:
-            with open(temp_path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            os.replace(temp_path, file_path)
-        except Exception as e:
-            logger.error(f"Błąd podczas zapisywania planu lekcji do {file_path}: {e}")
+        write_json_atomic(path, data)
 
     def get_schedule_history(self, user_login: str) -> list[dict]:
-        file_path = self._get_file_path(user_login)
-        if not os.path.isfile(file_path):
-            return []
-        try:
-            with open(file_path, encoding='utf-8') as f:
-                data = json.load(f)
-            sh = data.get('schedule_history', [])
-            if isinstance(sh, dict):
-                return list(sh.values())
-            elif isinstance(sh, list):
-                return sh
-            return []
-        except Exception as e:
-            logger.error(f"Błąd podczas odczytu schedule_history z {file_path}: {e}")
-            return []
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
+        sh = data.get('schedule_history', [])
+        if isinstance(sh, dict):
+            return list(sh.values())
+        elif isinstance(sh, list):
+            return sh
+        return []
 
     def get_last_schedule_sync(self, user_login: str) -> str | None:
-        file_path = self._get_file_path(user_login)
-        if not os.path.isfile(file_path):
-            return None
-        try:
-            with open(file_path, encoding='utf-8') as f:
-                data = json.load(f)
-            return data.get('schedule_last_sync')
-        except Exception:
-            return None
+        path = self._get_file_path(user_login)
+        return read_json_safe(path).get('schedule_last_sync')
 
     def save_last_schedule_sync(self, user_login: str, date_iso: str) -> None:
-        file_path = self._get_file_path(user_login)
-        temp_path = f"{file_path}.tmp"
-        data = {}
-        if os.path.isfile(file_path):
-            try:
-                with open(file_path, encoding='utf-8') as f:
-                    data = json.load(f)
-            except Exception:
-                data = {}
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
+        data['librus_login'] = str(user_login)
         data['schedule_last_sync'] = date_iso
-        try:
-            with open(temp_path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            os.replace(temp_path, file_path)
-        except Exception as e:
-            logger.error(f"Błąd podczas zapisu schedule_last_sync do {file_path}: {e}")
+        write_json_atomic(path, data)
 
 
-def create_storage(storage_dir: str = 'storage', *args, **kwargs) -> FileStorage:
+def create_storage(storage_dir: str | Path = 'storage', *args, **kwargs) -> FileStorage:
     """
     Tworzy trwałą pamięć stanu opartą na plikach JSON (FileStorage).
     Dla wstecznej kompatybilności ignoruje dawny parametr storage_type.

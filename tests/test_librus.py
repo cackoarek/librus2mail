@@ -3,6 +3,7 @@ import sys
 import tempfile
 import unittest
 from datetime import datetime, timedelta
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import yaml
@@ -329,7 +330,7 @@ class TestLibrus(unittest.TestCase):
         from librus2mail.storage import FileStorage, create_storage
         st = create_storage()
         self.assertIsInstance(st, FileStorage)
-        self.assertEqual(st.storage_dir, "storage")
+        self.assertEqual(st.storage_dir, Path("storage"))
 
     def test_file_storage_persistence(self):
         import tempfile

@@ -9,6 +9,10 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ## [Unreleased]
 
+---
+
+## [2.0.0] – 2026-10-05
+
 ### Dodane
 - **Nowy moduł Web: Interaktywny Dashboard Rodzica (`librus_web.py` / `librus-web`)**:
   - Lekki serwer WWW w Pythonie oparty na Flask 3.x z nowoczesnym, responsywnym frontendem w TailwindCSS i HTMX (bez konieczności instalowania Node.js / npm).
@@ -31,7 +35,6 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
   - Punkt wejścia CLI `librus_web.py` oraz konsolowe polecenie `librus-web`.
 
 ---
-
 ## [1.4.0] – 2026-09-22
 
 ### Dodane
@@ -129,7 +132,8 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ---
 
-[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/cackoarek/librus2mail/compare/v1.4.0...v2.0.0
 [1.4.0]: https://github.com/cackoarek/librus2mail/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/cackoarek/librus2mail/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/cackoarek/librus2mail/compare/v1.1.1...v1.2.0

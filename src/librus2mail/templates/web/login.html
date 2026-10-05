@@ -1,0 +1,79 @@
+{% extends "web/base.html" %}
+
+{% block title %}Logowanie Rodzica{% endblock %}
+
+{% block content %}
+<div class="min-h-[70vh] flex flex-col justify-center items-center py-12 sm:px-6 lg:px-8">
+    <div class="sm:mx-auto sm:w-full sm:max-w-md text-center">
+        <div class="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 to-sky-500 flex items-center justify-center text-white text-3xl shadow-lg shadow-indigo-100 mb-4">
+            🔒
+        </div>
+        <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight">
+            Panel Rodzica Librus2mail
+        </h2>
+        <p class="mt-2 text-sm text-slate-500">
+            Wprowadź hasło dostępu, aby przeglądać oceny i plan lekcji dziecka.
+        </p>
+    </div>
+
+    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div class="bg-white py-8 px-6 shadow-xl shadow-slate-200/50 sm:rounded-2xl border border-slate-200 sm:px-10">
+            {% if is_locked %}
+            <div class="mb-5 p-4 bg-rose-50 border-2 border-rose-300 text-rose-900 rounded-xl text-xs space-y-1.5">
+                <div class="flex items-center gap-2 font-extrabold text-sm text-rose-800">
+                    <span>🛑</span>
+                    <span>Adres IP tymczasowo zablokowany</span>
+                </div>
+                <p class="font-medium text-rose-800">
+                    Wykryto zbyt wiele nieudanych prób logowania. Ze względów bezpieczeństwa możliwość logowania z tego adresu IP została wstrzymana.
+                </p>
+                <div class="pt-2 font-bold text-rose-900 flex items-center gap-2">
+                    <span>⏱️ Spróbuj ponownie za około:</span>
+                    <span class="px-2 py-0.5 bg-rose-200/80 rounded font-mono font-extrabold">{{ remaining_minutes }} min.</span>
+                </div>
+            </div>
+            {% elif error %}
+            <div class="mb-5 p-3.5 bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold rounded-xl flex items-center gap-2">
+                <span>⚠️</span>
+                <span>{{ error }}</span>
+            </div>
+            {% endif %}
+
+            <form method="POST" action="{{ url_for('auth.login', next=next) }}" class="space-y-5">
+                <div>
+                    <label for="password" class="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                        Hasło dostępu rodzica
+                    </label>
+                    <div class="mt-2 relative">
+                        <input id="password" name="password" type="password" required autofocus
+                               {% if is_locked %}disabled placeholder="Logowanie zablokowane..." class="opacity-60 bg-slate-100 cursor-not-allowed appearance-none block w-full px-4 py-3 border border-slate-300 rounded-xl text-slate-500 font-medium text-sm"{% else %}placeholder="Wpisz hasło..." class="appearance-none block w-full px-4 py-3 border border-slate-300 rounded-xl placeholder-slate-400 text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-all"{% endif %}>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <input id="remember" name="remember" type="checkbox"
+                               {% if is_locked %}disabled{% endif %}
+                               class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-slate-300 rounded">
+                        <label for="remember" class="ml-2 block text-xs font-medium text-slate-600">
+                            Zapamiętaj sesję na tym urządzeniu
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <button type="submit"
+                            {% if is_locked %}disabled class="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-slate-400 cursor-not-allowed opacity-60"{% else %}class="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all cursor-pointer"{% endif %}>
+                        Odblokuj dostęp ➔
+                    </button>
+                </div>
+            </form>
+
+            <div class="mt-6 pt-5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+                <span>Adres IP: <strong class="font-mono text-slate-600">{{ client_ip }}</strong></span>
+                <span>Limit: Max <strong>{{ max_attempts }}</strong> prób</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="pl" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wiadomości i Ogłoszenia - Jan Kowalski (Przykładowy Uczeń) (8979296) - Librus2mail</title>
+    <!-- TailwindCSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- HTMX CDN -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+        .htmx-indicator { display: none; }
+        .htmx-request .htmx-indicator { display: inline-flex; }
+        .htmx-request.htmx-indicator { display: inline-flex; }
+    </style>
+    
+</head>
+<body class="h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white">
+
+    <!-- Pasek nawigacyjny -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Lewa strona: Logo + Menu -->
+                <div class="flex items-center gap-8">
+                    <a href="web_dashboard.html" class="flex items-center gap-3 group">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-sky-500 flex items-center justify-center text-white text-xl shadow-md shadow-indigo-100 group-hover:scale-105 transition-transform">
+                            🏫
+                        </div>
+                        <div>
+                            <span class="font-extrabold text-lg text-slate-900 tracking-tight flex items-center gap-1.5">
+                                Librus<span class="text-indigo-600">2mail</span>
+                            </span>
+                            <span class="block text-[10px] uppercase font-bold text-slate-400 tracking-wider">Web Dashboard</span>
+                        </div>
+                    </a>
+
+                    <!-- Nawigacja Desktop -->
+                    
+                    <nav class="hidden md:flex items-center gap-1">
+                        <a href="web_dashboard.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📊 Pulpit
+                        </a>
+                        <a href="web_plan.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📅 Plan lekcji
+                        </a>
+                        <a href="web_oceny.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📝 Oceny
+                        </a>
+                        <a href="web_terminarz.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            🔔 Terminarz
+                        </a>
+                        <a href="web_wiadomosci.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors bg-indigo-50 text-indigo-700">
+                            ✉️ Wiadomości
+                        </a>
+                        <a href="web_akcje.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            ⚡ Akcje CLI
+                        </a>
+                    </nav>
+                    
+                </div>
+
+                <!-- Prawa strona: Przełącznik ucznia + Auth -->
+                <div class="flex items-center gap-3">
+                    
+                        
+                        <div class="relative inline-block text-left">
+                            <select onchange="window.location.href='/student/' + this.value + '?next=' + encodeURIComponent(window.location.pathname)"
+                                    class="bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold rounded-lg px-3 py-2 pr-8 focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
+                                
+                                <option value="8979295" >
+                                    👤 Ignacy Cacko (8979295)
+                                </option>
+                                
+                                <option value="8979296" selected>
+                                    👤 Jan Kowalski (Przykładowy Uczeń) (8979296)
+                                </option>
+                                
+                            </select>
+                        </div>
+                        
+
+                        
+                        <a href="web_login.html"
+                           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors"
+                           title="Wyloguj rodzica">
+                            🔒 Wyloguj
+                        </a>
+                        
+                    
+
+                    
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobilny pasek skrótów -->
+        
+        <div class="md:hidden border-t border-slate-100 bg-slate-50 px-2 py-1.5 overflow-x-auto flex gap-1 scrollbar-none">
+            <a href="web_dashboard.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📊 Pulpit</a>
+            <a href="web_plan.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📅 Plan</a>
+            <a href="web_oceny.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📝 Oceny</a>
+            <a href="web_terminarz.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">🔔 Terminarz</a>
+            <a href="web_wiadomosci.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap bg-indigo-600 text-white">✉️ Wiadomości</a>
+            <a href="web_akcje.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">⚡ Akcje</a>
+        </div>
+        
+    </header>
+
+    <!-- Komunikaty Flash -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 w-full">
+        
+            
+        
+    </div>
+
+    <!-- Główna zawartość -->
+    <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
+        
+<!-- Nagłówek -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-200">
+    <div>
+        <div class="flex items-center gap-2">
+            <a href="web_dashboard.html" class="text-xs font-bold text-indigo-600 hover:text-indigo-800">
+                ← Powrót do pulpitu
+            </a>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1 flex items-center gap-3">
+            <span>✉️ Wiadomości i Ogłoszenia: Jan Kowalski (Przykładowy Uczeń) (8979296)</span>
+            
+        </h1>
+        <p class="text-xs text-slate-500 mt-1">
+            Rejestr korespondencji z nauczycielami oraz oficjalnych komunikatów i ogłoszeń szkolnych.
+        </p>
+    </div>
+
+    <!-- Przyciski akcji -->
+    <div class="flex items-center gap-2">
+        <button hx-post="/api/action/sync"
+                hx-vals='{"login": "8979296"}'
+                hx-target="#messages-action-toast"
+                hx-indicator="#messages-sync-spinner"
+                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm shadow-indigo-100 transition-all cursor-pointer">
+            <span id="messages-sync-spinner" class="htmx-indicator animate-spin">⏳</span>
+            <span>Sprawdź nowe wiadomości</span>
+        </button>
+    </div>
+</div>
+
+<div id="messages-action-toast" class="mt-4"></div>
+
+<!-- Karty KPI -->
+<div class="grid grid-cols-2 gap-4 my-6">
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Wiadomości</span>
+            <span class="p-2 rounded-xl bg-indigo-50 text-indigo-600 text-sm">✉️</span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+            <span class="text-3xl font-extrabold text-slate-900">4</span>
+            <span class="text-xs font-semibold text-slate-500">od nauczycieli</span>
+        </div>
+    </div>
+
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Ogłoszenia szkolne</span>
+            <span class="p-2 rounded-xl bg-amber-50 text-amber-600 text-sm">📢</span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+            <span class="text-3xl font-extrabold text-slate-900">13</span>
+            <span class="text-xs font-semibold text-slate-500">komunikatów</span>
+        </div>
+    </div>
+</div>
+
+<!-- Główna zawartość: Dwie kolumny (Wiadomości vs Ogłoszenia) -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    <!-- Kolumna 1: Wiadomości -->
+    <div class="space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-200">
+            <h2 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                <span>✉️</span>
+                <span>Wiadomości od nauczycieli</span>
+            </h2>
+            <span class="text-xs font-bold px-2 py-0.5 bg-indigo-100 text-indigo-800 rounded-md">
+                4
+            </span>
+        </div>
+
+        
+        <div class="space-y-3">
+            
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="font-extrabold text-sm text-slate-900 leading-snug">
+                        Podręczniki - j. niemiecki
+                    </div>
+                    
+                    <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
+                        2026-09-08 14:14
+                    </span>
+                    
+                </div>
+
+                <div class="text-xs text-indigo-700 font-semibold mt-1 flex items-center gap-1.5">
+                    <span>👨‍🏫 Nadawca:</span>
+                    <span>Węglarczyk Marian (Nauczyciel)</span>
+                </div>
+
+                
+                <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
+                    Dzień dobry Państwu,
+
+Informuję, że w klasie 5 na lekcjach języka niemieckiego obowiązuje podręcznik i zeszyt ćwiczeń &#34;Wir smart 2&#34; wydawnictwa Klett. Uczniowie, którzy jeszcze nie odebrali zestawu z biblioteki szkolnej, proszeni są o zgłoszenie się w najbliższy czwartek.
+
+Pozdrawiam serdecznie,
+Marian Węglarczyk
+                </div>
+                
+            </div>
+            
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="font-extrabold text-sm text-slate-900 leading-snug">
+                        Podziękowanie
+                    </div>
+                    
+                    <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
+                        2026-09-11 10:12
+                    </span>
+                    
+                </div>
+
+                <div class="text-xs text-indigo-700 font-semibold mt-1 flex items-center gap-1.5">
+                    <span>👨‍🏫 Nadawca:</span>
+                    <span>Wiaderko Magdalena (Wychowawca)</span>
+                </div>
+
+                
+                <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
+                    Szanowni Rodzice,
+
+Serdecznie dziękuję za zaangażowanie i pomoc w organizacji kiermaszu podręczników i przyborów szkolnych. Dzięki Państwa wsparciu udało się zebrać środki na doposażenie kącika czytelniczego w naszej sali lekcyjnej.
+
+Z wyrazami szacunku,
+Magdalena Wiaderko
+                </div>
+                
+            </div>
+            
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="font-extrabold text-sm text-slate-900 leading-snug">
+                        Zajęcia wych.fizycznego
+                    </div>
+                    
+                    <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
+                        2026-09-15 09:24
+                    </span>
+                    
+                </div>
+
+                <div class="text-xs text-indigo-700 font-semibold mt-1 flex items-center gap-1.5">
+                    <span>👨‍🏫 Nadawca:</span>
+                    <span>Staszewska Elżbieta (Nauczyciel)</span>
+                </div>
+
+                
+                <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
+                    Drodzy Rodzice,
+
+Przypominam, że ze względu na sprzyjające warunki pogodowe, lekcje wychowania fizycznego w najbliższym tygodniu będą odbywać się na boisku szkolnym (&#34;Orlik&#34;). Proszę o wyposażenie dzieci w odpowiedni strój sportowy dostosowany do temperatury zewnętrznej (dres/bluza).
+
+Elżbieta Staszewska
+                </div>
+                
+            </div>
+            
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="font-extrabold text-sm text-slate-900 leading-snug">
+                        Zajęcia SKS dla uczniów klas 5-6
+                    </div>
+                    
+                    <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
+                        2026-09-16 15:39
+                    </span>
+                    
+                </div>
+
+                <div class="text-xs text-indigo-700 font-semibold mt-1 flex items-center gap-1.5">
+                    <span>👨‍🏫 Nadawca:</span>
+                    <span>Feryc Michał (Nauczyciel)</span>
+                </div>
+
+                
+                <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
+                    Dzień dobry,
+
+Od przyszłego tygodnia ruszają bezpłatne zajęcia SKS z piłki siatkowej i koszykówki dla uczniów klas 5-6. Treningi będą odbywać się w środy w godzinach 15:30-17:00 w dużej sali gimnastycznej. Wymagana jest pisemna zgoda rodziców oraz obuwie zmienne z białą podeszwą.
+
+Pozdrawiam,
+Michał Feryc
+                </div>
+                
+            </div>
+            
+        </div>
+        
+    </div>
+
+    <!-- Kolumna 2: Ogłoszenia szkolne -->
+    <div class="space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-200">
+            <h2 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                <span>📢</span>
+                <span>Ogłoszenia szkoły</span>
+            </h2>
+            <span class="text-xs font-bold px-2 py-0.5 bg-amber-100 text-amber-800 rounded-md">
+                13
+            </span>
+        </div>
+
+        
+        <div class="space-y-3">
+            
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="font-extrabold text-sm text-slate-900 leading-snug">
+                        17 września - upamiętnienie agresji Rosji Sowieckiej na Polskę
+                    </div>
+                    
+                    <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
+                        2026-09-15
+                    </span>
+                    
+                </div>
+
+                <div class="text-xs text-amber-800 font-semibold mt-1 flex items-center gap-1.5">
+                    <span>🏫 Autor:</span>
+                    <span>Daniel Marecki (Dyrekcja)</span>
+                </div>
+
+                
+                <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
+                    W czwartek 17 września w naszej szkole odbędzie się uroczysty apel upamiętniający rocznicę agresji ZSRR na Polskę oraz Dzień Sybiraka. Obowiązuje strój galowy dla wszystkich uczniów klas 4-8.
+                </div>
+                
+            </div>
+            
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="font-extrabold text-sm text-slate-900 leading-snug">
+                        JADŁOSPIS 14 IX - 18 IX
+                    </div>
+                    
+                    <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
+                        2026-09-13
+                    </span>
+                    
+                </div>
+
+                <div class="text-xs text-amber-800 font-semibold mt-1 flex items-center gap-1.5">
+                    <span>🏫 Autor:</span>
+                    <span>Renata Lublińska (Intendent)</span>
+                </div>
+
+                
+                <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
+                    W załączniku oraz na tablicy ogłoszeń przy stołówce szkolnej dostępny jest jadłospis na bieżący tydzień. Przypominamy o konieczności zgłaszania nieobecności na obiadach do godziny 8:00 danego dnia rano pod numerem telefonu sekretariatu.
+                </div>
+                
+            </div>
+            
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="font-extrabold text-sm text-slate-900 leading-snug">
+                        Karta rowerowa - egz. poprawkowy
+                    </div>
+                    
+                    <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
+                        2026-09-10
+                    </span>
+                    
+                </div>
+
+                <div class="text-xs text-amber-800 font-semibold mt-1 flex items-center gap-1.5">
+                    <span>🏫 Autor:</span>
+                    <span>Joanna Lipska</span>
+                </div>
+
+                
+                <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
+                    Egzamin poprawkowy na kartę rowerową (część teoretyczna oraz jazda sprawnościowa na miasteczku ruchu drogowego) odbędzie się w piątek 25 września o godzinie 14:30. Zgłoszenia przyjmuje pani Joanna Lipska w sali 12.
+                </div>
+                
+            </div>
+            
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="font-extrabold text-sm text-slate-900 leading-snug">
+                        Konkursy przedmiotowe
+                    </div>
+                    
+                    <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
+                        2026-09-10
+                    </span>
+                    
+                </div>
+
+                <div class="text-xs text-amber-800 font-semibold mt-1 flex items-center gap-1.5">
+                    <span>🏫 Autor:</span>
+                    <span>Dorota Opolska</span>
+                </div>
+
+                
+                <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
+                    Rozpoczęły się zapisy do kuratoryjnych konkursów przedmiotowych z języka polskiego, matematyki, historii oraz języka angielskiego dla klas 6-8. Uczniowie zainteresowani udziałem proszeni są o zgłaszanie się do nauczycieli poszczególnych przedmiotów do 30 września.
+                </div>
+                
+            </div>
+            
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="font-extrabold text-sm text-slate-900 leading-snug">
+                        LEGITYMACJE SZKOLNE
+                    </div>
+                    
+                    <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
+                        2026-09-17
+                    </span>
+                    
+                </div>
+
+                <div class="text-xs text-amber-800 font-semibold mt-1 flex items-center gap-1.5">
+                    <span>🏫 Autor:</span>
+                    <span>Renata Lublińska (Sekretariat)</span>
+                </div>
+
+                
+                <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
+                    Przypominamy o konieczności dostarczenia do sekretariatu szkolnego papierowych legitymacji szkolnych celem przedłużenia ważności (podbicia pieczęci) na rok szkolny 2026/2027. Ostateczny termin mija 30 września.
+                </div>
+                
+            </div>
+            
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="font-extrabold text-sm text-slate-900 leading-snug">
+                        Majsterki - warsztaty techniczne
+                    </div>
+                    
+                    <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
+                        2026-09-10
+                    </span>
+                    
+                </div>
+
+                <div class="text-xs text-amber-800 font-semibold mt-1 flex items-center gap-1.5">
+                    <span>🏫 Autor:</span>
+                    <span>Joanna Lipska</span>
+                </div>
+
+                
+                <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
+                    Zapraszamy chętnych uczniów klas 4-6 na warsztaty techniczno-konstrukcyjne &#34;Majsterki&#34;, które będą odbywać się w każdy wtorek w pracowni technicznej w godzinach 14:40-16:10. Liczba miejsc ograniczona, decyduje kolejność zgłoszeń.
+                </div>
+                
+            </div>
+            
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="font-extrabold text-sm text-slate-900 leading-snug">
+                        Koło Robotyki LEGO Spike
+                    </div>
+                    
+                    <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
+                        2026-09-10
+                    </span>
+                    
+                </div>
+
+                <div class="text-xs text-amber-800 font-semibold mt-1 flex items-center gap-1.5">
+                    <span>🏫 Autor:</span>
+                    <span>Joanna Lipska</span>
+                </div>
+
+                
+                <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
+                    Dla pasjonatów programowania i klocków LEGO Spike Prime organizujemy popołudniowe koło robotyki. Pierwsze spotkanie organizacyjne odbędzie się w najbliższy piątek o 15:30 w sali komputerowej.
+                </div>
+                
+            </div>
+            
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="font-extrabold text-sm text-slate-900 leading-snug">
+                        Zapisy na zajęcia dodatkowe i koła zainteresowań
+                    </div>
+                    
+                    <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
+                        2026-09-10
+                    </span>
+                    
+                </div>
+
+                <div class="text-xs text-amber-800 font-semibold mt-1 flex items-center gap-1.5">
+                    <span>🏫 Autor:</span>
+                    <span>Renata Lublińska</span>
+                </div>
+
+                
+                <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
+                    Sekretariat szkoły prowadzi zapisy na koła zainteresowań i zajęcia pozalekcyjne (chór szkolny, koło szachowe, teatr, basen). Formularze deklaracji dostępne są na stronie szkoły oraz w portierni do 25 września.
+                </div>
+                
+            </div>
+            
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="font-extrabold text-sm text-slate-900 leading-snug">
+                        Diety w szkolnej stołówce
+                    </div>
+                    
+                    <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
+                        2026-09-03
+                    </span>
+                    
+                </div>
+
+                <div class="text-xs text-amber-800 font-semibold mt-1 flex items-center gap-1.5">
+                    <span>🏫 Autor:</span>
+                    <span>Dorota Opolska</span>
+                </div>
+
+                
+                <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
+                    Rodzice dzieci wymagających diet eliminacyjnych (np. bezglutenowa, bezmleczna) proszeni są o dostarczenie aktualnych zaświadczeń lekarskich do gabinetu pielęgniarki szkolnej.
+                </div>
+                
+            </div>
+            
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="font-extrabold text-sm text-slate-900 leading-snug">
+                        Konkurs z okazji Jubileuszu św. Franciszka
+                    </div>
+                    
+                    <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
+                        2026-09-05
+                    </span>
+                    
+                </div>
+
+                <div class="text-xs text-amber-800 font-semibold mt-1 flex items-center gap-1.5">
+                    <span>🏫 Autor:</span>
+                    <span>Renata Wejmar</span>
+                </div>
+
+                
+                <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
+                    Zapraszamy do udziału w międzyszkolnym konkursie plastyczno-literackim poświęconym św. Franciszkowi. Prace można składać do końca września u katechetów.
+                </div>
+                
+            </div>
+            
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="font-extrabold text-sm text-slate-900 leading-snug">
+                        Szermierka - nabór do sekcji
+                    </div>
+                    
+                    <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
+                        2026-09-03
+                    </span>
+                    
+                </div>
+
+                <div class="text-xs text-amber-800 font-semibold mt-1 flex items-center gap-1.5">
+                    <span>🏫 Autor:</span>
+                    <span>Jolanta Bojar</span>
+                </div>
+
+                
+                <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
+                    Szkolny klub sportowy ogłasza nabór do sekcji szermierczej (floret) dla klas 3-5. Treningi pokazowe odbędą się w najbliższy poniedziałek o 16:00.
+                </div>
+                
+            </div>
+            
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="font-extrabold text-sm text-slate-900 leading-snug">
+                        Ubezpieczenie NNW uczniów
+                    </div>
+                    
+                    <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
+                        2026-08-25
+                    </span>
+                    
+                </div>
+
+                <div class="text-xs text-amber-800 font-semibold mt-1 flex items-center gap-1.5">
+                    <span>🏫 Autor:</span>
+                    <span>Jolanta Bojar</span>
+                </div>
+
+                
+                <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
+                    Informacja Rady Rodziców: składka na dobrowolne ubezpieczenie NNW uczniów w roku szkolnym 2026/2027 wynosi 55 zł. Wpłat można dokonywać na konto Rady Rodziców.
+                </div>
+                
+            </div>
+            
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="font-extrabold text-sm text-slate-900 leading-snug">
+                        Zajęcia edukacja zdrowotna - informacje
+                    </div>
+                    
+                    <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
+                        2026-08-24
+                    </span>
+                    
+                </div>
+
+                <div class="text-xs text-amber-800 font-semibold mt-1 flex items-center gap-1.5">
+                    <span>🏫 Autor:</span>
+                    <span>Dorota Opolska</span>
+                </div>
+
+                
+                <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
+                    Informujemy o procedurze składania ewentualnych rezygnacji z zajęć wychowania do życia w rodzinie / edukacji zdrowotnej. Wnioski przyjmuje sekretariat szkoły.
+                </div>
+                
+            </div>
+            
+        </div>
+        
+    </div>
+
+</div>
+
+
+    </main>
+
+    <!-- Stopka -->
+    <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex items-center gap-2 font-medium">
+                <span>🏫 Librus2mail v1.4.0</span>
+                <span>•</span>
+                <span>Prywatny Dashboard Rodzica</span>
+            </div>
+            <div class="text-slate-400 text-[11px]">
+                Bezpieczny odczyt z lokalnej pamięci <code>storage/</code> • Stan na: 18.09.2026 00:00
+            </div>
+        </div>
+    </footer>
+
+    
+</body>
+</html>

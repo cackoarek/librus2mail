@@ -9,6 +9,27 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ## [Unreleased]
 
+### Dodane
+- **Nowy moduł Web: Interaktywny Dashboard Rodzica (`librus_web.py` / `librus-web`)**:
+  - Lekki serwer WWW w Pythonie oparty na Flask 3.x z nowoczesnym, responsywnym frontendem w TailwindCSS i HTMX (bez konieczności instalowania Node.js / npm).
+  - **Ochrona hasłem rodzica (Parent Gate) i blokada IP przed atakami brute-force**:
+    - Zabezpieczenie dostępu hasłem/PINem zdefiniowanym w `config.yaml` (`web: password: ...`), zmiennej środowiskowej `LIBRUS_WEB_PASSWORD` lub przełączniku CLI `--password`, z opcjonalnym trybem otwartym `--no-auth`.
+    - **Aktywna ochrona brute-force i rate limiting**: inteligentne monitorowanie błędnych prób logowania per adres IP klienta (`LoginRateLimiter`) z obsługą nagłówków proxy (`X-Forwarded-For`, `X-Real-IP`).
+    - **Tymczasowa blokada IP (Lockout)**: po przekroczeniu limitu nieudanych prób (domyślnie 5) adres IP zostaje zablokowany na konfigurowalny czas (domyślnie 15 minut) z kodem HTTP 429 Too Many Requests, odliczaniem czasu w interfejsie logowania i wyłączeniem pól formularza.
+    - Parametry konfiguracyjne w `config.yaml` (`max_login_attempts`, `lockout_duration_s`) oraz przełączniki CLI `--max-attempts` i `--lockout-duration`.
+  - **Przełącznik uczniów (Multi-account Switcher)**: Wygodne przełączanie profilu dziecka na górnym pasku nawigacji.
+  - **Główny Pulpit (Dashboard)**: Szybki przegląd kluczowych wskaźników KPI (średnia ogólna, liczba ocen, plan na najbliższy dzień, nadchodzące sprawdziany w terminarzu).
+  - **Przeglądarka planu lekcji (`/plan`)**: Widok rozkładu lekcji w układzie dni tygodnia z wyróżnieniem zastępstw, odwołanych lekcji oraz powiązanych sprawdzianów.
+  - **Przeglądarka ocen & Symulator "Co jeśli?" (`/oceny`, `/api/whatif`)**: Wyliczone średnie ważone per przedmiot oraz dynamiczny kalkulator symulujący wpływ potencjalnej nowej oceny z wagą na średnią ważoną przedmiotu (HTMX).
+  - **Terminarz i zapowiedzi (`/terminarz`)**: Chronologiczny kalendarz nadchodzących sprawdzianów i nieobecności nauczycieli.
+  - **Wiadomości i ogłoszenia (`/wiadomosci`)**: Przegląd korespondencji od nauczycieli i oficjalnych komunikatów dyrekcji szkoły.
+  - **Centrum Operacyjne CLI (`/akcje`)**: Interaktywne przyciski wyzwalające kluczowe operacje systemowe (synchronizacja ze szkołą, wysyłka maila, generowanie raportu postępów, raport motywacyjny ucznia) z bezpośrednim podglądem logów konsoli w przeglądarce.
+  - **Generator i eksporter widoków statycznych HTML (`--export-html <DIR>`)**:
+    - Możliwość wygenerowania pełnego zestawu statycznych widoków HTML (strona logowania przed zalogowaniem `web_login.html`, pulpit `web_dashboard.html`, plan lekcji `web_plan.html`, oceny `web_oceny.html`, terminarz `web_terminarz.html`, wiadomości `web_wiadomosci.html`, akcje `web_akcje.html`) do przeglądania offline.
+    - Automatyczne przepinanie odnośników na relatywne ścieżki (`make_offline_friendly`), umożliwiające klikanie pomiędzy zakładkami bezpośrednio z dysku w dowolnej przeglądarce bez uruchomionego serwera HTTP.
+    - Włączenie generowania podglądów webowych do skryptu `examples/reports/regenerate_reports.sh`.
+  - Punkt wejścia CLI `librus_web.py` oraz konsolowe polecenie `librus-web`.
+
 ---
 
 ## [1.4.0] – 2026-09-22

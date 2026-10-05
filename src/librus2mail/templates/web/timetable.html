@@ -1,0 +1,246 @@
+{% extends "web/base.html" %}
+
+{% block title %}Terminarz - {{ data.name }}{% endblock %}
+
+{% block content %}
+<!-- Nagłówek -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-200">
+    <div>
+        <div class="flex items-center gap-2">
+            <a href="{{ url_for('web.dashboard') }}" class="text-xs font-bold text-indigo-600 hover:text-indigo-800">
+                ← Powrót do pulpitu
+            </a>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1 flex items-center gap-3">
+            <span>🔔 Terminarz & Zapowiedzi: {{ data.name }}</span>
+            {% if '(' ~ data.login ~ ')' not in data.name %}
+            <span class="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full border border-slate-200">
+                {{ data.login }}
+            </span>
+            {% endif %}
+        </h1>
+        <p class="text-xs text-slate-500 mt-1">
+            Zapowiedziane sprawdziany, kartkówki, prace klasowe oraz nieobecności nauczycieli zarejestrowane w terminarzu szkoły.
+        </p>
+    </div>
+
+    <!-- Przyciski akcji -->
+    <div class="flex items-center gap-2">
+        <button hx-post="{{ url_for('web.action_sync') }}"
+                hx-vals='{"login": "{{ data.login }}"}'
+                hx-target="#timetable-action-toast"
+                hx-indicator="#timetable-sync-spinner"
+                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm shadow-indigo-100 transition-all cursor-pointer">
+            <span id="timetable-sync-spinner" class="htmx-indicator animate-spin">⏳</span>
+            <span>Odśwież terminarz</span>
+        </button>
+    </div>
+</div>
+
+<div id="timetable-action-toast" class="mt-4"></div>
+
+<!-- Karty KPI -->
+<div class="grid grid-cols-2 lg:grid-cols-3 gap-4 my-6">
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Najbliższy dzień nauki</span>
+            <span class="p-2 rounded-xl bg-indigo-50 text-indigo-600 text-sm">⚡</span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+            <span class="text-3xl font-extrabold text-slate-900">
+                {{ data.timetable_summary.immediate_tests|length if data.timetable_summary else 0 }}
+            </span>
+            <span class="text-xs font-semibold text-slate-500">sprawdzianów</span>
+        </div>
+    </div>
+
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Nadchodzący tydzień</span>
+            <span class="p-2 rounded-xl bg-amber-50 text-amber-600 text-sm">📅</span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+            <span class="text-3xl font-extrabold text-slate-900">{{ data.upcoming_tests_count }}</span>
+            <span class="text-xs font-semibold text-slate-500">w horyzoncie 7 dni</span>
+        </div>
+    </div>
+
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Łącznie w bazie</span>
+            <span class="p-2 rounded-xl bg-sky-50 text-sky-600 text-sm">📚</span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+            <span class="text-3xl font-extrabold text-slate-900">{{ data.all_timetable|length }}</span>
+            <span class="text-xs font-semibold text-slate-500">wszystkich wpisów</span>
+        </div>
+    </div>
+</div>
+
+<!-- Sekcja 1: Najbliższy dzień nauki (Pilne) -->
+{% if data.timetable_summary and (data.timetable_summary.immediate_tests or data.timetable_summary.immediate_absences) %}
+<div class="mb-8 bg-indigo-50/70 border-2 border-indigo-200 rounded-2xl p-5 shadow-sm">
+    <div class="flex items-center justify-between pb-3 border-b border-indigo-100 mb-4">
+        <div class="flex items-center gap-2">
+            <span class="text-xl">🚨</span>
+            <h2 class="text-base font-extrabold text-indigo-950">
+                {{ data.timetable_summary.immediate_label or 'Najbliższy dzień nauki' }}
+            </h2>
+        </div>
+        <span class="px-2.5 py-1 bg-indigo-600 text-white font-extrabold text-xs rounded-lg shadow-xs">
+            Ważne
+        </span>
+    </div>
+
+    <!-- Sprawdziany w najbliższym dniu -->
+    {% if data.timetable_summary.immediate_tests %}
+    <div class="space-y-2.5 mb-4">
+        {% for t in data.timetable_summary.immediate_tests %}
+        <div class="p-4 bg-white rounded-xl border border-indigo-200 shadow-xs flex items-center justify-between gap-4">
+            <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="px-2.5 py-0.5 bg-rose-100 text-rose-800 text-xs font-extrabold rounded-md border border-rose-200">
+                        {{ t.category or 'Sprawdzian' }}
+                    </span>
+                    <span class="font-extrabold text-slate-900 text-sm">
+                        {{ t.subject }}
+                    </span>
+                    {% if t.lesson_no %}
+                    <span class="text-xs text-slate-500 font-semibold">
+                        (lekcja nr {{ t.lesson_no }})
+                    </span>
+                    {% endif %}
+                </div>
+                {% if t.description %}
+                <div class="text-xs text-slate-700 mt-1.5 font-medium">
+                    📌 {{ t.description }}
+                </div>
+                {% endif %}
+            </div>
+            {% if t.teacher %}
+            <div class="text-xs text-slate-500 whitespace-nowrap hidden sm:block">
+                👨‍🏫 {{ t.teacher }}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Nieobecności w najbliższym dniu -->
+    {% if data.timetable_summary.immediate_absences %}
+    <div class="space-y-2">
+        <div class="text-xs font-bold text-indigo-900 uppercase tracking-wider mb-1">Nieobecności nauczycieli:</div>
+        {% for a in data.timetable_summary.immediate_absences %}
+        <div class="p-3 bg-white/80 rounded-xl border border-indigo-100 text-xs flex items-center gap-2 text-indigo-950 font-medium">
+            <span>ℹ️</span>
+            <span><strong>{{ a.teacher }}</strong> - {{ a.description or 'Nieobecność' }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Sekcja 2: Nadchodzące dni w horyzoncie tygodnia -->
+<div class="mb-8">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+            <span>📅</span>
+            <span>Kolejne zapowiedzi w horyzoncie 7 dni</span>
+        </h2>
+    </div>
+
+    {% if data.timetable_summary and data.timetable_summary.upcoming_days %}
+    <div class="space-y-4">
+        {% for day in data.timetable_summary.upcoming_days %}
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <!-- Nagłówek dnia -->
+            <div class="p-4 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="font-extrabold text-sm text-slate-900">{{ day.weekday }}</span>
+                    <span class="text-xs font-medium text-slate-500">({{ day.date_str }})</span>
+                </div>
+                <span class="text-xs font-semibold px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md">
+                    {{ day.tests|length }} zapowiedzi
+                </span>
+            </div>
+
+            <!-- Lista sprawdzianów w danym dniu -->
+            <div class="p-4 space-y-2.5">
+                {% for t in day.tests %}
+                <div class="p-3.5 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-colors flex items-center justify-between gap-3">
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 text-xs font-bold rounded-md">
+                                {{ t.category or 'Zapowiedź' }}
+                            </span>
+                            <span class="font-bold text-sm text-slate-900">
+                                {{ t.subject }}
+                            </span>
+                            {% if t.lesson_no %}
+                            <span class="text-xs text-slate-400">
+                                (lekcja #{{ t.lesson_no }})
+                            </span>
+                            {% endif %}
+                        </div>
+                        {% if t.description %}
+                        <div class="text-xs text-slate-600 mt-1 font-medium">
+                            {{ t.description }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% if t.teacher %}
+                    <div class="text-xs text-slate-500 hidden sm:block whitespace-nowrap">
+                        {{ t.teacher }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+
+                <!-- Nieobecności -->
+                {% for a in day.absences %}
+                <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 flex items-center gap-2">
+                    <span>⚠️</span>
+                    <span>Nieobecność: <strong>{{ a.teacher }}</strong> - {{ a.description or 'Nieobecność w pracy' }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="p-8 bg-white border border-slate-200 rounded-2xl text-center text-slate-500 text-sm">
+        Brak zapowiedzianych sprawdzianów w horyzoncie kolejnych 7 dni.
+    </div>
+    {% endif %}
+</div>
+
+<!-- Sekcja 3: Wszystkie historyczne i przyszłe wpisy -->
+<div class="mt-8">
+    <details class="group bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <summary class="p-4 sm:p-5 font-bold text-sm text-slate-800 flex items-center justify-between cursor-pointer select-none bg-slate-50/50 hover:bg-slate-100/50 transition-colors">
+            <span class="flex items-center gap-2">
+                <span>📋</span>
+                <span>Wszystkie zarejestrowane wpisy w terminarzu ({{ data.all_timetable|length }})</span>
+            </span>
+            <span class="text-xs text-indigo-600 font-semibold group-open:rotate-180 transition-transform">▼</span>
+        </summary>
+        <div class="p-4 divide-y divide-slate-100 max-h-96 overflow-y-auto">
+            {% for item in data.all_timetable %}
+            <div class="py-2.5 flex items-center justify-between text-xs gap-3">
+                <div class="flex items-center gap-2">
+                    <span class="font-mono text-slate-400 font-medium whitespace-nowrap">{{ item.date }}</span>
+                    <span class="font-bold text-slate-800">{{ item.subject or item.teacher or 'Wpis' }}</span>
+                    <span class="text-slate-500 truncate max-w-xs sm:max-w-md">{{ item.description or item.category }}</span>
+                </div>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
+                    {{ item.type or 'wpis' }}
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+    </details>
+</div>
+
+{% endblock %}

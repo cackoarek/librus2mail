@@ -1,0 +1,37 @@
+<div class="mt-6 rounded-2xl border overflow-hidden shadow-lg transition-all animate-fade-in
+    {% if success %} border-emerald-300 bg-slate-900 {% else %} border-rose-300 bg-slate-900 {% endif %}">
+
+    <!-- Pasek nagłówka terminala -->
+    <div class="px-4 py-3 flex items-center justify-between border-b
+        {% if success %} bg-emerald-950/80 border-emerald-900/60 {% else %} bg-rose-950/80 border-rose-900/60 {% endif %}">
+        <div class="flex items-center gap-3">
+            <div class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span>
+                <span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>
+                <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+            </div>
+            <span class="text-xs font-bold font-mono tracking-wide {% if success %} text-emerald-300 {% else %} text-rose-300 {% endif %}">
+                {{ title }}
+            </span>
+        </div>
+
+        <button type="button" onclick="this.closest('.animate-fade-in').remove()"
+                class="text-slate-400 hover:text-white text-xs font-mono px-2 py-0.5 rounded hover:bg-slate-800 transition-colors">
+            ✕ Zamknij
+        </button>
+    </div>
+
+    <!-- Treść logów wyjściowych -->
+    <div class="p-4 sm:p-5 bg-slate-950 max-h-96 overflow-y-auto font-mono text-[11px] sm:text-xs leading-relaxed text-slate-300 scrollbar-thin">
+        {% if output %}
+        <pre class="whitespace-pre-wrap font-mono">{{ output }}</pre>
+        {% else %}
+        <div class="text-slate-500 italic">Brak dodatkowych komunikatów w strumieniu wyjściowym konsoli.</div>
+        {% endif %}
+    </div>
+
+    <div class="px-4 py-2 bg-slate-900/90 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-400 font-mono">
+        <span>Status: <strong class="{% if success %}text-emerald-400{% else %}text-rose-400{% endif %}">{% if success %}SUKCES (0){% else %}BŁĄD (1){% endif %}</strong></span>
+        <span>Zakończono pomyślnie przechwytywanie strumienia</span>
+    </div>
+</div>

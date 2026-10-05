@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="pl" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plan lekcji - Jan Kowalski (Przykładowy Uczeń) (8979296) - Librus2mail</title>
+    <!-- TailwindCSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- HTMX CDN -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+        .htmx-indicator { display: none; }
+        .htmx-request .htmx-indicator { display: inline-flex; }
+        .htmx-request.htmx-indicator { display: inline-flex; }
+    </style>
+    
+</head>
+<body class="h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white">
+
+    <!-- Pasek nawigacyjny -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Lewa strona: Logo + Menu -->
+                <div class="flex items-center gap-8">
+                    <a href="web_dashboard.html" class="flex items-center gap-3 group">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-sky-500 flex items-center justify-center text-white text-xl shadow-md shadow-indigo-100 group-hover:scale-105 transition-transform">
+                            🏫
+                        </div>
+                        <div>
+                            <span class="font-extrabold text-lg text-slate-900 tracking-tight flex items-center gap-1.5">
+                                Librus<span class="text-indigo-600">2mail</span>
+                            </span>
+                            <span class="block text-[10px] uppercase font-bold text-slate-400 tracking-wider">Web Dashboard</span>
+                        </div>
+                    </a>
+
+                    <!-- Nawigacja Desktop -->
+                    
+                    <nav class="hidden md:flex items-center gap-1">
+                        <a href="web_dashboard.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📊 Pulpit
+                        </a>
+                        <a href="web_plan.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors bg-indigo-50 text-indigo-700">
+                            📅 Plan lekcji
+                        </a>
+                        <a href="web_oceny.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📝 Oceny
+                        </a>
+                        <a href="web_terminarz.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            🔔 Terminarz
+                        </a>
+                        <a href="web_wiadomosci.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            ✉️ Wiadomości
+                        </a>
+                        <a href="web_akcje.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            ⚡ Akcje CLI
+                        </a>
+                    </nav>
+                    
+                </div>
+
+                <!-- Prawa strona: Przełącznik ucznia + Auth -->
+                <div class="flex items-center gap-3">
+                    
+                        
+                        <div class="relative inline-block text-left">
+                            <select onchange="window.location.href='/student/' + this.value + '?next=' + encodeURIComponent(window.location.pathname)"
+                                    class="bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold rounded-lg px-3 py-2 pr-8 focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
+                                
+                                <option value="8979295" >
+                                    👤 Ignacy Cacko (8979295)
+                                </option>
+                                
+                                <option value="8979296" selected>
+                                    👤 Jan Kowalski (Przykładowy Uczeń) (8979296)
+                                </option>
+                                
+                            </select>
+                        </div>
+                        
+
+                        
+                        <a href="web_login.html"
+                           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors"
+                           title="Wyloguj rodzica">
+                            🔒 Wyloguj
+                        </a>
+                        
+                    
+
+                    
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobilny pasek skrótów -->
+        
+        <div class="md:hidden border-t border-slate-100 bg-slate-50 px-2 py-1.5 overflow-x-auto flex gap-1 scrollbar-none">
+            <a href="web_dashboard.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📊 Pulpit</a>
+            <a href="web_plan.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap bg-indigo-600 text-white">📅 Plan</a>
+            <a href="web_oceny.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📝 Oceny</a>
+            <a href="web_terminarz.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">🔔 Terminarz</a>
+            <a href="web_wiadomosci.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">✉️ Wiadomości</a>
+            <a href="web_akcje.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">⚡ Akcje</a>
+        </div>
+        
+    </header>
+
+    <!-- Komunikaty Flash -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 w-full">
+        
+            
+        
+    </div>
+
+    <!-- Główna zawartość -->
+    <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
+        
+<!-- Nagłówek -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-200">
+    <div>
+        <div class="flex items-center gap-2">
+            <a href="web_dashboard.html" class="text-xs font-bold text-indigo-600 hover:text-indigo-800">
+                ← Powrót do pulpitu
+            </a>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1 flex items-center gap-3">
+            <span>📅 Plan lekcji: Jan Kowalski (Przykładowy Uczeń) (8979296)</span>
+            
+        </h1>
+        <p class="text-xs text-slate-500 mt-1">
+            Zestawienie zarejestrowanych planów lekcji, zastępstw, odwołanych zajęć i zapowiedzianych sprawdzianów.
+        </p>
+    </div>
+
+    <!-- Przyciski akcji -->
+    <div class="flex items-center gap-2">
+        <button hx-post="/api/action/sync"
+                hx-vals='{"login": "8979296"}'
+                hx-target="#schedule-action-toast"
+                hx-indicator="#schedule-sync-spinner"
+                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm shadow-indigo-100 transition-all cursor-pointer">
+            <span id="schedule-sync-spinner" class="htmx-indicator animate-spin">⏳</span>
+            <span>Odśwież ze szkoły</span>
+        </button>
+    </div>
+</div>
+
+<div id="schedule-action-toast" class="mt-4"></div>
+
+
+
+<!-- Szybka nawigacja po dniach tygodnia -->
+<div class="flex items-center gap-2 overflow-x-auto py-4 scrollbar-none">
+    
+    <a href="#day-2026-09-18"
+       class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-white border border-slate-200 hover:border-indigo-400 hover:text-indigo-600 shadow-sm transition-all whitespace-nowrap">
+        <span>Piątek</span>
+        <span class="text-slate-400 font-normal">09-18</span>
+        
+        <span class="w-2 h-2 rounded-full bg-rose-500" title="Odwołane lekcje"></span>
+        
+    </a>
+    
+    <a href="#day-2026-09-21"
+       class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-white border border-slate-200 hover:border-indigo-400 hover:text-indigo-600 shadow-sm transition-all whitespace-nowrap">
+        <span>Poniedziałek</span>
+        <span class="text-slate-400 font-normal">09-21</span>
+        
+        <span class="w-2 h-2 rounded-full bg-rose-500" title="Odwołane lekcje"></span>
+        
+    </a>
+    
+</div>
+
+<!-- Karty poszczególnych dni -->
+<div class="space-y-6 mt-2">
+    
+    <div id="day-2026-09-18" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden scroll-mt-20">
+        <!-- Nagłówek Dnia -->
+        <div class="p-4 sm:p-5 border-b border-slate-100 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-base shadow-sm">
+                    Pi
+                </div>
+                <div>
+                    <h2 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                        <span>Piątek</span>
+                        <span class="text-xs font-normal text-slate-500">(2026-09-18)</span>
+                    </h2>
+                    <div class="text-xs text-slate-500 font-medium">
+                        Liczba lekcji: <strong>6</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Podsumowanie zmian w danym dniu -->
+            <div class="flex items-center gap-2 flex-wrap text-xs">
+                
+                <span class="px-2.5 py-1 bg-amber-100 text-amber-800 font-bold rounded-lg border border-amber-200">
+                    🔄 1 zastępstwo
+                </span>
+                
+                
+                <span class="px-2.5 py-1 bg-rose-100 text-rose-800 font-bold rounded-lg border border-rose-200">
+                    ❌ 1 odwołana
+                </span>
+                
+                
+            </div>
+        </div>
+
+        <!-- Tabela / Lista lekcji -->
+        <div class="divide-y divide-slate-100">
+            
+            <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors
+                 hover:bg-slate-50/80 border-l-4 border-transparent ">
+
+                <!-- Lewa kolumna: Godzina i przedmiot -->
+                <div class="flex items-start sm:items-center gap-4">
+                    <!-- Numer i godzina -->
+                    <div class="w-16 flex-shrink-0 text-center">
+                        <span class="inline-block px-2.5 py-0.5 bg-slate-100 text-slate-800 text-xs font-extrabold rounded-md border border-slate-200">
+                            #1
+                        </span>
+                        <div class="text-[11px] font-semibold text-slate-500 mt-1 whitespace-nowrap">
+                            08:00 - 08:45
+                        </div>
+                    </div>
+
+                    <!-- Przedmiot i detale -->
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-bold text-sm sm:text-base text-slate-900">
+                                Język angielski
+                            </span>
+
+                            
+
+                            
+
+                            
+                        </div>
+
+                        <!-- Sala i Nauczyciel -->
+                        <div class="text-xs text-slate-500 mt-1 flex items-center gap-3 flex-wrap">
+                            
+                            <span class="inline-flex items-center gap-1">
+                                <span>🚪 Sala:</span>
+                                <strong class="text-slate-700">101</strong>
+                            </span>
+                            
+                            
+                            <span>•</span>
+                            <span class="inline-flex items-center gap-1">
+                                <span>👨‍🏫 Magdalena Wiaderko</span>
+                            </span>
+                            
+                        </div>
+
+                        <!-- Dodatkowa informacja o zastępstwie -->
+                        
+                    </div>
+                </div>
+
+                <!-- Prawa kolumna: Etykieta statusu -->
+                <div class="flex items-center gap-2 sm:self-center text-xs">
+                    
+                    <span class="text-slate-500 text-[11px]">
+                        Planowo
+                    </span>
+                    
+                </div>
+            </div>
+            
+            <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors
+                 hover:bg-slate-50/80 border-l-4 border-transparent ">
+
+                <!-- Lewa kolumna: Godzina i przedmiot -->
+                <div class="flex items-start sm:items-center gap-4">
+                    <!-- Numer i godzina -->
+                    <div class="w-16 flex-shrink-0 text-center">
+                        <span class="inline-block px-2.5 py-0.5 bg-slate-100 text-slate-800 text-xs font-extrabold rounded-md border border-slate-200">
+                            #2
+                        </span>
+                        <div class="text-[11px] font-semibold text-slate-500 mt-1 whitespace-nowrap">
+                            08:55 - 09:40
+                        </div>
+                    </div>
+
+                    <!-- Przedmiot i detale -->
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-bold text-sm sm:text-base text-slate-900">
+                                Matematyka
+                            </span>
+
+                            
+
+                            
+
+                            
+                        </div>
+
+                        <!-- Sala i Nauczyciel -->
+                        <div class="text-xs text-slate-500 mt-1 flex items-center gap-3 flex-wrap">
+                            
+                            <span class="inline-flex items-center gap-1">
+                                <span>🚪 Sala:</span>
+                                <strong class="text-slate-700">102</strong>
+                            </span>
+                            
+                            
+                            <span>•</span>
+                            <span class="inline-flex items-center gap-1">
+                                <span>👨‍🏫 Renata Matyk</span>
+                            </span>
+                            
+                        </div>
+
+                        <!-- Dodatkowa informacja o zastępstwie -->
+                        
+                    </div>
+                </div>
+
+                <!-- Prawa kolumna: Etykieta statusu -->
+                <div class="flex items-center gap-2 sm:self-center text-xs">
+                    
+                    <span class="text-slate-500 text-[11px]">
+                        Planowo
+                    </span>
+                    
+                </div>
+            </div>
+            
+            <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors
+                 bg-amber-50/50 border-l-4 border-amber-500
+                ">
+
+                <!-- Lewa kolumna: Godzina i przedmiot -->
+                <div class="flex items-start sm:items-center gap-4">
+                    <!-- Numer i godzina -->
+                    <div class="w-16 flex-shrink-0 text-center">
+                        <span class="inline-block px-2.5 py-0.5 bg-slate-100 text-slate-800 text-xs font-extrabold rounded-md border border-slate-200">
+                            #3
+                        </span>
+                        <div class="text-[11px] font-semibold text-slate-500 mt-1 whitespace-nowrap">
+                            09:50 - 10:35
+                        </div>
+                    </div>
+
+                    <!-- Przedmiot i detale -->
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-bold text-sm sm:text-base text-slate-900">
+                                Historia
+                            </span>
+
+                            
+                            <span class="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-extrabold rounded border border-amber-200">
+                                🔄 Zastępstwo
+                            </span>
+                            
+
+                            
+
+                            
+                        </div>
+
+                        <!-- Sala i Nauczyciel -->
+                        <div class="text-xs text-slate-500 mt-1 flex items-center gap-3 flex-wrap">
+                            
+                            <span class="inline-flex items-center gap-1">
+                                <span>🚪 Sala:</span>
+                                <strong class="text-slate-700">201</strong>
+                            </span>
+                            
+                            
+                            <span>•</span>
+                            <span class="inline-flex items-center gap-1">
+                                <span>👨‍🏫 Małgorzata Dębik</span>
+                            </span>
+                            
+                        </div>
+
+                        <!-- Dodatkowa informacja o zastępstwie -->
+                        
+                        <div class="text-xs font-semibold text-amber-800 mt-1 bg-amber-100/60 px-2 py-1 rounded border border-amber-200 inline-block">
+                            ℹ️ Historia, p. Anna Zastępcza, s. 201
+                        </div>
+                        
+                    </div>
+                </div>
+
+                <!-- Prawa kolumna: Etykieta statusu -->
+                <div class="flex items-center gap-2 sm:self-center text-xs">
+                    
+                    <span class="text-amber-800 font-bold bg-amber-100 px-2.5 py-1 rounded-lg">
+                        Zmiana w planie
+                    </span>
+                    
+                </div>
+            </div>
+            
+            <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors
+                 bg-indigo-50/40 border-l-4 border-indigo-500
+                ">
+
+                <!-- Lewa kolumna: Godzina i przedmiot -->
+                <div class="flex items-start sm:items-center gap-4">
+                    <!-- Numer i godzina -->
+                    <div class="w-16 flex-shrink-0 text-center">
+                        <span class="inline-block px-2.5 py-0.5 bg-slate-100 text-slate-800 text-xs font-extrabold rounded-md border border-slate-200">
+                            #4
+                        </span>
+                        <div class="text-[11px] font-semibold text-slate-500 mt-1 whitespace-nowrap">
+                            10:45 - 11:30
+                        </div>
+                    </div>
+
+                    <!-- Przedmiot i detale -->
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-bold text-sm sm:text-base text-slate-900">
+                                Język polski
+                            </span>
+
+                            
+
+                            
+
+                            
+                            <span class="px-2 py-0.5 bg-indigo-100 text-indigo-800 text-[10px] font-extrabold rounded border border-indigo-200">
+                                📝 Sprawdzian: Lektura: Hobbit
+                            </span>
+                            
+                        </div>
+
+                        <!-- Sala i Nauczyciel -->
+                        <div class="text-xs text-slate-500 mt-1 flex items-center gap-3 flex-wrap">
+                            
+                            <span class="inline-flex items-center gap-1">
+                                <span>🚪 Sala:</span>
+                                <strong class="text-slate-700">104</strong>
+                            </span>
+                            
+                            
+                            <span>•</span>
+                            <span class="inline-flex items-center gap-1">
+                                <span>👨‍🏫 Jagna Czaplewska-Eyoum</span>
+                            </span>
+                            
+                        </div>
+
+                        <!-- Dodatkowa informacja o zastępstwie -->
+                        
+                    </div>
+                </div>
+
+                <!-- Prawa kolumna: Etykieta statusu -->
+                <div class="flex items-center gap-2 sm:self-center text-xs">
+                    
+                    <span class="text-indigo-800 font-bold bg-indigo-100 px-2.5 py-1 rounded-lg">
+                        Sprawdzian
+                    </span>
+                    
+                </div>
+            </div>
+            
+            <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors
+                 hover:bg-slate-50/80 border-l-4 border-transparent ">
+
+                <!-- Lewa kolumna: Godzina i przedmiot -->
+                <div class="flex items-start sm:items-center gap-4">
+                    <!-- Numer i godzina -->
+                    <div class="w-16 flex-shrink-0 text-center">
+                        <span class="inline-block px-2.5 py-0.5 bg-slate-100 text-slate-800 text-xs font-extrabold rounded-md border border-slate-200">
+                            #5
+                        </span>
+                        <div class="text-[11px] font-semibold text-slate-500 mt-1 whitespace-nowrap">
+                            11:50 - 12:35
+                        </div>
+                    </div>
+
+                    <!-- Przedmiot i detale -->
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-bold text-sm sm:text-base text-slate-900">
+                                Biologia
+                            </span>
+
+                            
+
+                            
+
+                            
+                        </div>
+
+                        <!-- Sala i Nauczyciel -->
+                        <div class="text-xs text-slate-500 mt-1 flex items-center gap-3 flex-wrap">
+                            
+                            <span class="inline-flex items-center gap-1">
+                                <span>🚪 Sala:</span>
+                                <strong class="text-slate-700">105</strong>
+                            </span>
+                            
+                            
+                            <span>•</span>
+                            <span class="inline-flex items-center gap-1">
+                                <span>👨‍🏫 Joanna Lipska</span>
+                            </span>
+                            
+                        </div>
+
+                        <!-- Dodatkowa informacja o zastępstwie -->
+                        
+                    </div>
+                </div>
+
+                <!-- Prawa kolumna: Etykieta statusu -->
+                <div class="flex items-center gap-2 sm:self-center text-xs">
+                    
+                    <span class="text-slate-500 text-[11px]">
+                        Planowo
+                    </span>
+                    
+                </div>
+            </div>
+            
+            <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors
+                 bg-rose-50/50 border-l-4 border-rose-500
+                ">
+
+                <!-- Lewa kolumna: Godzina i przedmiot -->
+                <div class="flex items-start sm:items-center gap-4">
+                    <!-- Numer i godzina -->
+                    <div class="w-16 flex-shrink-0 text-center">
+                        <span class="inline-block px-2.5 py-0.5 bg-slate-100 text-slate-800 text-xs font-extrabold rounded-md border border-slate-200">
+                            #6
+                        </span>
+                        <div class="text-[11px] font-semibold text-slate-500 mt-1 whitespace-nowrap">
+                            12:50 - 13:35
+                        </div>
+                    </div>
+
+                    <!-- Przedmiot i detale -->
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-bold text-sm sm:text-base text-slate-400 line-through">
+                                Wychowanie fizyczne
+                            </span>
+
+                            
+
+                            
+                            <span class="px-2 py-0.5 bg-rose-100 text-rose-800 text-[10px] font-extrabold rounded border border-rose-200">
+                                ❌ Odwołana
+                            </span>
+                            
+
+                            
+                        </div>
+
+                        <!-- Sala i Nauczyciel -->
+                        <div class="text-xs text-slate-500 mt-1 flex items-center gap-3 flex-wrap">
+                            
+                            <span class="inline-flex items-center gap-1">
+                                <span>🚪 Sala:</span>
+                                <strong class="text-slate-700">SG</strong>
+                            </span>
+                            
+                            
+                            <span>•</span>
+                            <span class="inline-flex items-center gap-1">
+                                <span>👨‍🏫 Michał Feryc</span>
+                            </span>
+                            
+                        </div>
+
+                        <!-- Dodatkowa informacja o zastępstwie -->
+                        
+                    </div>
+                </div>
+
+                <!-- Prawa kolumna: Etykieta statusu -->
+                <div class="flex items-center gap-2 sm:self-center text-xs">
+                    
+                    <span class="text-rose-700 font-bold bg-rose-100 px-2.5 py-1 rounded-lg">
+                        Lekcja odwołana
+                    </span>
+                    
+                </div>
+            </div>
+            
+        </div>
+    </div>
+    
+    <div id="day-2026-09-21" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden scroll-mt-20">
+        <!-- Nagłówek Dnia -->
+        <div class="p-4 sm:p-5 border-b border-slate-100 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-base shadow-sm">
+                    Po
+                </div>
+                <div>
+                    <h2 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                        <span>Poniedziałek</span>
+                        <span class="text-xs font-normal text-slate-500">(2026-09-21)</span>
+                    </h2>
+                    <div class="text-xs text-slate-500 font-medium">
+                        Liczba lekcji: <strong>5</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Podsumowanie zmian w danym dniu -->
+            <div class="flex items-center gap-2 flex-wrap text-xs">
+                
+                <span class="px-2.5 py-1 bg-amber-100 text-amber-800 font-bold rounded-lg border border-amber-200">
+                    🔄 1 zastępstwo
+                </span>
+                
+                
+                <span class="px-2.5 py-1 bg-rose-100 text-rose-800 font-bold rounded-lg border border-rose-200">
+                    ❌ 1 odwołana
+                </span>
+                
+                
+            </div>
+        </div>
+
+        <!-- Tabela / Lista lekcji -->
+        <div class="divide-y divide-slate-100">
+            
+            <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors
+                 hover:bg-slate-50/80 border-l-4 border-transparent ">
+
+                <!-- Lewa kolumna: Godzina i przedmiot -->
+                <div class="flex items-start sm:items-center gap-4">
+                    <!-- Numer i godzina -->
+                    <div class="w-16 flex-shrink-0 text-center">
+                        <span class="inline-block px-2.5 py-0.5 bg-slate-100 text-slate-800 text-xs font-extrabold rounded-md border border-slate-200">
+                            #1
+                        </span>
+                        <div class="text-[11px] font-semibold text-slate-500 mt-1 whitespace-nowrap">
+                            08:00 - 08:45
+                        </div>
+                    </div>
+
+                    <!-- Przedmiot i detale -->
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-bold text-sm sm:text-base text-slate-900">
+                                Język polski
+                            </span>
+
+                            
+
+                            
+
+                            
+                        </div>
+
+                        <!-- Sala i Nauczyciel -->
+                        <div class="text-xs text-slate-500 mt-1 flex items-center gap-3 flex-wrap">
+                            
+                            <span class="inline-flex items-center gap-1">
+                                <span>🚪 Sala:</span>
+                                <strong class="text-slate-700">104</strong>
+                            </span>
+                            
+                            
+                            <span>•</span>
+                            <span class="inline-flex items-center gap-1">
+                                <span>👨‍🏫 Jagna Czaplewska-Eyoum</span>
+                            </span>
+                            
+                        </div>
+
+                        <!-- Dodatkowa informacja o zastępstwie -->
+                        
+                    </div>
+                </div>
+
+                <!-- Prawa kolumna: Etykieta statusu -->
+                <div class="flex items-center gap-2 sm:self-center text-xs">
+                    
+                    <span class="text-slate-500 text-[11px]">
+                        Planowo
+                    </span>
+                    
+                </div>
+            </div>
+            
+            <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors
+                 bg-amber-50/50 border-l-4 border-amber-500
+                ">
+
+                <!-- Lewa kolumna: Godzina i przedmiot -->
+                <div class="flex items-start sm:items-center gap-4">
+                    <!-- Numer i godzina -->
+                    <div class="w-16 flex-shrink-0 text-center">
+                        <span class="inline-block px-2.5 py-0.5 bg-slate-100 text-slate-800 text-xs font-extrabold rounded-md border border-slate-200">
+                            #2
+                        </span>
+                        <div class="text-[11px] font-semibold text-slate-500 mt-1 whitespace-nowrap">
+                            08:55 - 09:40
+                        </div>
+                    </div>
+
+                    <!-- Przedmiot i detale -->
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-bold text-sm sm:text-base text-slate-900">
+                                Matematyka
+                            </span>
+
+                            
+                            <span class="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-extrabold rounded border border-amber-200">
+                                🔄 Zastępstwo
+                            </span>
+                            
+
+                            
+
+                            
+                        </div>
+
+                        <!-- Sala i Nauczyciel -->
+                        <div class="text-xs text-slate-500 mt-1 flex items-center gap-3 flex-wrap">
+                            
+                            <span class="inline-flex items-center gap-1">
+                                <span>🚪 Sala:</span>
+                                <strong class="text-slate-700">102</strong>
+                            </span>
+                            
+                            
+                            <span>•</span>
+                            <span class="inline-flex items-center gap-1">
+                                <span>👨‍🏫 Renata Matyk</span>
+                            </span>
+                            
+                        </div>
+
+                        <!-- Dodatkowa informacja o zastępstwie -->
+                        
+                        <div class="text-xs font-semibold text-amber-800 mt-1 bg-amber-100/60 px-2 py-1 rounded border border-amber-200 inline-block">
+                            ℹ️ Matematyka, p. Krzysztof Liczydło, s. 102
+                        </div>
+                        
+                    </div>
+                </div>
+
+                <!-- Prawa kolumna: Etykieta statusu -->
+                <div class="flex items-center gap-2 sm:self-center text-xs">
+                    
+                    <span class="text-amber-800 font-bold bg-amber-100 px-2.5 py-1 rounded-lg">
+                        Zmiana w planie
+                    </span>
+                    
+                </div>
+            </div>
+            
+            <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors
+                 bg-indigo-50/40 border-l-4 border-indigo-500
+                ">
+
+                <!-- Lewa kolumna: Godzina i przedmiot -->
+                <div class="flex items-start sm:items-center gap-4">
+                    <!-- Numer i godzina -->
+                    <div class="w-16 flex-shrink-0 text-center">
+                        <span class="inline-block px-2.5 py-0.5 bg-slate-100 text-slate-800 text-xs font-extrabold rounded-md border border-slate-200">
+                            #3
+                        </span>
+                        <div class="text-[11px] font-semibold text-slate-500 mt-1 whitespace-nowrap">
+                            09:50 - 10:35
+                        </div>
+                    </div>
+
+                    <!-- Przedmiot i detale -->
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-bold text-sm sm:text-base text-slate-900">
+                                Geografia
+                            </span>
+
+                            
+
+                            
+
+                            
+                            <span class="px-2 py-0.5 bg-indigo-100 text-indigo-800 text-[10px] font-extrabold rounded border border-indigo-200">
+                                📝 Kartkówka: Stolice i kraje Europy
+                            </span>
+                            
+                        </div>
+
+                        <!-- Sala i Nauczyciel -->
+                        <div class="text-xs text-slate-500 mt-1 flex items-center gap-3 flex-wrap">
+                            
+                            <span class="inline-flex items-center gap-1">
+                                <span>🚪 Sala:</span>
+                                <strong class="text-slate-700">203</strong>
+                            </span>
+                            
+                            
+                            <span>•</span>
+                            <span class="inline-flex items-center gap-1">
+                                <span>👨‍🏫 Dorota Opolska</span>
+                            </span>
+                            
+                        </div>
+
+                        <!-- Dodatkowa informacja o zastępstwie -->
+                        
+                    </div>
+                </div>
+
+                <!-- Prawa kolumna: Etykieta statusu -->
+                <div class="flex items-center gap-2 sm:self-center text-xs">
+                    
+                    <span class="text-indigo-800 font-bold bg-indigo-100 px-2.5 py-1 rounded-lg">
+                        Sprawdzian
+                    </span>
+                    
+                </div>
+            </div>
+            
+            <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors
+                 bg-rose-50/50 border-l-4 border-rose-500
+                ">
+
+                <!-- Lewa kolumna: Godzina i przedmiot -->
+                <div class="flex items-start sm:items-center gap-4">
+                    <!-- Numer i godzina -->
+                    <div class="w-16 flex-shrink-0 text-center">
+                        <span class="inline-block px-2.5 py-0.5 bg-slate-100 text-slate-800 text-xs font-extrabold rounded-md border border-slate-200">
+                            #4
+                        </span>
+                        <div class="text-[11px] font-semibold text-slate-500 mt-1 whitespace-nowrap">
+                            10:45 - 11:30
+                        </div>
+                    </div>
+
+                    <!-- Przedmiot i detale -->
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-bold text-sm sm:text-base text-slate-400 line-through">
+                                Muzyka
+                            </span>
+
+                            
+
+                            
+                            <span class="px-2 py-0.5 bg-rose-100 text-rose-800 text-[10px] font-extrabold rounded border border-rose-200">
+                                ❌ Odwołana
+                            </span>
+                            
+
+                            
+                        </div>
+
+                        <!-- Sala i Nauczyciel -->
+                        <div class="text-xs text-slate-500 mt-1 flex items-center gap-3 flex-wrap">
+                            
+                            <span class="inline-flex items-center gap-1">
+                                <span>🚪 Sala:</span>
+                                <strong class="text-slate-700">12</strong>
+                            </span>
+                            
+                            
+                            <span>•</span>
+                            <span class="inline-flex items-center gap-1">
+                                <span>👨‍🏫 Janina Doszko</span>
+                            </span>
+                            
+                        </div>
+
+                        <!-- Dodatkowa informacja o zastępstwie -->
+                        
+                    </div>
+                </div>
+
+                <!-- Prawa kolumna: Etykieta statusu -->
+                <div class="flex items-center gap-2 sm:self-center text-xs">
+                    
+                    <span class="text-rose-700 font-bold bg-rose-100 px-2.5 py-1 rounded-lg">
+                        Lekcja odwołana
+                    </span>
+                    
+                </div>
+            </div>
+            
+            <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors
+                 hover:bg-slate-50/80 border-l-4 border-transparent ">
+
+                <!-- Lewa kolumna: Godzina i przedmiot -->
+                <div class="flex items-start sm:items-center gap-4">
+                    <!-- Numer i godzina -->
+                    <div class="w-16 flex-shrink-0 text-center">
+                        <span class="inline-block px-2.5 py-0.5 bg-slate-100 text-slate-800 text-xs font-extrabold rounded-md border border-slate-200">
+                            #5
+                        </span>
+                        <div class="text-[11px] font-semibold text-slate-500 mt-1 whitespace-nowrap">
+                            11:50 - 12:35
+                        </div>
+                    </div>
+
+                    <!-- Przedmiot i detale -->
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-bold text-sm sm:text-base text-slate-900">
+                                Informatyka
+                            </span>
+
+                            
+
+                            
+
+                            
+                        </div>
+
+                        <!-- Sala i Nauczyciel -->
+                        <div class="text-xs text-slate-500 mt-1 flex items-center gap-3 flex-wrap">
+                            
+                            <span class="inline-flex items-center gap-1">
+                                <span>🚪 Sala:</span>
+                                <strong class="text-slate-700">0.6</strong>
+                            </span>
+                            
+                            
+                            <span>•</span>
+                            <span class="inline-flex items-center gap-1">
+                                <span>👨‍🏫 Daniel Marecki</span>
+                            </span>
+                            
+                        </div>
+
+                        <!-- Dodatkowa informacja o zastępstwie -->
+                        
+                    </div>
+                </div>
+
+                <!-- Prawa kolumna: Etykieta statusu -->
+                <div class="flex items-center gap-2 sm:self-center text-xs">
+                    
+                    <span class="text-slate-500 text-[11px]">
+                        Planowo
+                    </span>
+                    
+                </div>
+            </div>
+            
+        </div>
+    </div>
+    
+</div>
+
+
+    </main>
+
+    <!-- Stopka -->
+    <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex items-center gap-2 font-medium">
+                <span>🏫 Librus2mail v1.4.0</span>
+                <span>•</span>
+                <span>Prywatny Dashboard Rodzica</span>
+            </div>
+            <div class="text-slate-400 text-[11px]">
+                Bezpieczny odczyt z lokalnej pamięci <code>storage/</code> • Stan na: 18.09.2026 00:00
+            </div>
+        </div>
+    </footer>
+
+    
+</body>
+</html>

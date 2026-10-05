@@ -1,0 +1,166 @@
+{% extends "web/base.html" %}
+
+{% block title %}Wiadomości i Ogłoszenia - {{ data.name }}{% endblock %}
+
+{% block content %}
+<!-- Nagłówek -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-200">
+    <div>
+        <div class="flex items-center gap-2">
+            <a href="{{ url_for('web.dashboard') }}" class="text-xs font-bold text-indigo-600 hover:text-indigo-800">
+                ← Powrót do pulpitu
+            </a>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1 flex items-center gap-3">
+            <span>✉️ Wiadomości i Ogłoszenia: {{ data.name }}</span>
+            {% if '(' ~ data.login ~ ')' not in data.name %}
+            <span class="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full border border-slate-200">
+                {{ data.login }}
+            </span>
+            {% endif %}
+        </h1>
+        <p class="text-xs text-slate-500 mt-1">
+            Rejestr korespondencji z nauczycielami oraz oficjalnych komunikatów i ogłoszeń szkolnych.
+        </p>
+    </div>
+
+    <!-- Przyciski akcji -->
+    <div class="flex items-center gap-2">
+        <button hx-post="{{ url_for('web.action_sync') }}"
+                hx-vals='{"login": "{{ data.login }}"}'
+                hx-target="#messages-action-toast"
+                hx-indicator="#messages-sync-spinner"
+                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm shadow-indigo-100 transition-all cursor-pointer">
+            <span id="messages-sync-spinner" class="htmx-indicator animate-spin">⏳</span>
+            <span>Sprawdź nowe wiadomości</span>
+        </button>
+    </div>
+</div>
+
+<div id="messages-action-toast" class="mt-4"></div>
+
+<!-- Karty KPI -->
+<div class="grid grid-cols-2 gap-4 my-6">
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Wiadomości</span>
+            <span class="p-2 rounded-xl bg-indigo-50 text-indigo-600 text-sm">✉️</span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+            <span class="text-3xl font-extrabold text-slate-900">{{ data.messages|length }}</span>
+            <span class="text-xs font-semibold text-slate-500">od nauczycieli</span>
+        </div>
+    </div>
+
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Ogłoszenia szkolne</span>
+            <span class="p-2 rounded-xl bg-amber-50 text-amber-600 text-sm">📢</span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+            <span class="text-3xl font-extrabold text-slate-900">{{ data.notifications|length }}</span>
+            <span class="text-xs font-semibold text-slate-500">komunikatów</span>
+        </div>
+    </div>
+</div>
+
+<!-- Główna zawartość: Dwie kolumny (Wiadomości vs Ogłoszenia) -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    <!-- Kolumna 1: Wiadomości -->
+    <div class="space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-200">
+            <h2 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                <span>✉️</span>
+                <span>Wiadomości od nauczycieli</span>
+            </h2>
+            <span class="text-xs font-bold px-2 py-0.5 bg-indigo-100 text-indigo-800 rounded-md">
+                {{ data.messages|length }}
+            </span>
+        </div>
+
+        {% if not data.messages %}
+        <div class="p-8 bg-white border border-slate-200 rounded-2xl text-center text-slate-400 text-xs">
+            Brak zarejestrowanych wiadomości.
+        </div>
+        {% else %}
+        <div class="space-y-3">
+            {% for m in data.messages %}
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="font-extrabold text-sm text-slate-900 leading-snug">
+                        {{ m.title or 'Wiadomość ze szkoły' }}
+                    </div>
+                    {% if m.datetime %}
+                    <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
+                        {{ m.datetime[:16] }}
+                    </span>
+                    {% endif %}
+                </div>
+
+                <div class="text-xs text-indigo-700 font-semibold mt-1 flex items-center gap-1.5">
+                    <span>👨‍🏫 Nadawca:</span>
+                    <span>{{ m.sender or 'Nauczyciel' }}</span>
+                </div>
+
+                {% if m.body %}
+                <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
+                    {{ m.body }}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Kolumna 2: Ogłoszenia szkolne -->
+    <div class="space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-200">
+            <h2 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                <span>📢</span>
+                <span>Ogłoszenia szkoły</span>
+            </h2>
+            <span class="text-xs font-bold px-2 py-0.5 bg-amber-100 text-amber-800 rounded-md">
+                {{ data.notifications|length }}
+            </span>
+        </div>
+
+        {% if not data.notifications %}
+        <div class="p-8 bg-white border border-slate-200 rounded-2xl text-center text-slate-400 text-xs">
+            Brak zarejestrowanych ogłoszeń.
+        </div>
+        {% else %}
+        <div class="space-y-3">
+            {% for n in data.notifications %}
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="font-extrabold text-sm text-slate-900 leading-snug">
+                        {{ n.title or 'Ogłoszenie szkolne' }}
+                    </div>
+                    {% if n.datetime %}
+                    <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
+                        {{ n.datetime[:10] }}
+                    </span>
+                    {% endif %}
+                </div>
+
+                <div class="text-xs text-amber-800 font-semibold mt-1 flex items-center gap-1.5">
+                    <span>🏫 Autor:</span>
+                    <span>{{ n.sender or 'Dyrekcja / Szkoła' }}</span>
+                </div>
+
+                {% if n.body or n.content %}
+                <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
+                    {{ n.body or n.content }}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+{% endblock %}

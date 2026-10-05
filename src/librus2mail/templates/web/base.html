@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pl" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Pulpit Rodzica{% endblock %} - Librus2mail</title>
+    <!-- TailwindCSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- HTMX CDN -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+        .htmx-indicator { display: none; }
+        .htmx-request .htmx-indicator { display: inline-flex; }
+        .htmx-request.htmx-indicator { display: inline-flex; }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body class="h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white">
+
+    <!-- Pasek nawigacyjny -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Lewa strona: Logo + Menu -->
+                <div class="flex items-center gap-8">
+                    <a href="{{ url_for('web.dashboard') if (not is_auth_enabled or is_authenticated) else '#' }}" class="flex items-center gap-3 group">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-sky-500 flex items-center justify-center text-white text-xl shadow-md shadow-indigo-100 group-hover:scale-105 transition-transform">
+                            🏫
+                        </div>
+                        <div>
+                            <span class="font-extrabold text-lg text-slate-900 tracking-tight flex items-center gap-1.5">
+                                Librus<span class="text-indigo-600">2mail</span>
+                            </span>
+                            <span class="block text-[10px] uppercase font-bold text-slate-400 tracking-wider">Web Dashboard</span>
+                        </div>
+                    </a>
+
+                    <!-- Nawigacja Desktop -->
+                    {% if not is_auth_enabled or is_authenticated %}
+                    <nav class="hidden md:flex items-center gap-1">
+                        <a href="{{ url_for('web.dashboard') }}"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors {{ 'bg-indigo-50 text-indigo-700' if request.endpoint == 'web.dashboard' else 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                            📊 Pulpit
+                        </a>
+                        <a href="{{ url_for('web.schedule_view') }}"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors {{ 'bg-indigo-50 text-indigo-700' if request.endpoint == 'web.schedule_view' else 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                            📅 Plan lekcji
+                        </a>
+                        <a href="{{ url_for('web.grades_view') }}"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors {{ 'bg-indigo-50 text-indigo-700' if request.endpoint == 'web.grades_view' else 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                            📝 Oceny
+                        </a>
+                        <a href="{{ url_for('web.timetable_view') }}"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors {{ 'bg-indigo-50 text-indigo-700' if request.endpoint == 'web.timetable_view' else 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                            🔔 Terminarz
+                        </a>
+                        <a href="{{ url_for('web.messages_view') }}"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors {{ 'bg-indigo-50 text-indigo-700' if request.endpoint == 'web.messages_view' else 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                            ✉️ Wiadomości
+                        </a>
+                        <a href="{{ url_for('web.actions_view') }}"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors {{ 'bg-indigo-50 text-indigo-700' if request.endpoint == 'web.actions_view' else 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                            ⚡ Akcje CLI
+                        </a>
+                    </nav>
+                    {% endif %}
+                </div>
+
+                <!-- Prawa strona: Przełącznik ucznia + Auth -->
+                <div class="flex items-center gap-3">
+                    {% if not is_auth_enabled or is_authenticated %}
+                        {% if all_students and all_students|length > 1 %}
+                        <div class="relative inline-block text-left">
+                            <select onchange="window.location.href='/student/' + this.value + '?next=' + encodeURIComponent(window.location.pathname)"
+                                    class="bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold rounded-lg px-3 py-2 pr-8 focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
+                                {% for s in all_students %}
+                                <option value="{{ s.login }}" {% if s.login == active_login %}selected{% endif %}>
+                                    👤 {{ s.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% elif active_student %}
+                        <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-lg text-xs font-semibold text-slate-700 border border-slate-200">
+                            <span>👤</span>
+                            <span>{{ active_student.name }}</span>
+                        </div>
+                        {% endif %}
+
+                        {% if is_auth_enabled and is_authenticated %}
+                        <a href="{{ url_for('auth.logout') }}"
+                           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors"
+                           title="Wyloguj rodzica">
+                            🔒 Wyloguj
+                        </a>
+                        {% endif %}
+                    {% else %}
+                        <span class="inline-flex items-center gap-1 text-[11px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md">
+                            🔒 Logowanie
+                        </span>
+                    {% endif %}
+
+                    {% if not is_auth_enabled %}
+                    <span class="hidden lg:inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md" title="Dostęp bez hasła (lokalny)">
+                        🔓 Tryb otwarty
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobilny pasek skrótów -->
+        {% if not is_auth_enabled or is_authenticated %}
+        <div class="md:hidden border-t border-slate-100 bg-slate-50 px-2 py-1.5 overflow-x-auto flex gap-1 scrollbar-none">
+            <a href="{{ url_for('web.dashboard') }}" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap {{ 'bg-indigo-600 text-white' if request.endpoint == 'web.dashboard' else 'text-slate-600 bg-white border border-slate-200' }}">📊 Pulpit</a>
+            <a href="{{ url_for('web.schedule_view') }}" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap {{ 'bg-indigo-600 text-white' if request.endpoint == 'web.schedule_view' else 'text-slate-600 bg-white border border-slate-200' }}">📅 Plan</a>
+            <a href="{{ url_for('web.grades_view') }}" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap {{ 'bg-indigo-600 text-white' if request.endpoint == 'web.grades_view' else 'text-slate-600 bg-white border border-slate-200' }}">📝 Oceny</a>
+            <a href="{{ url_for('web.timetable_view') }}" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap {{ 'bg-indigo-600 text-white' if request.endpoint == 'web.timetable_view' else 'text-slate-600 bg-white border border-slate-200' }}">🔔 Terminarz</a>
+            <a href="{{ url_for('web.messages_view') }}" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap {{ 'bg-indigo-600 text-white' if request.endpoint == 'web.messages_view' else 'text-slate-600 bg-white border border-slate-200' }}">✉️ Wiadomości</a>
+            <a href="{{ url_for('web.actions_view') }}" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap {{ 'bg-indigo-600 text-white' if request.endpoint == 'web.actions_view' else 'text-slate-600 bg-white border border-slate-200' }}">⚡ Akcje</a>
+        </div>
+        {% endif %}
+    </header>
+
+    <!-- Komunikaty Flash -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 w-full">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="mb-3 p-3.5 rounded-xl border text-sm font-medium flex items-center justify-between shadow-sm
+                    {% if category == 'success' %} bg-emerald-50 text-emerald-900 border-emerald-200
+                    {% elif category == 'error' %} bg-rose-50 text-rose-900 border-rose-200
+                    {% else %} bg-sky-50 text-sky-900 border-sky-200 {% endif %}">
+                    <div class="flex items-center gap-2">
+                        <span>{% if category == 'success' %}✅{% elif category == 'error' %}⚠️{% else %}ℹ️{% endif %}</span>
+                        <span>{{ message }}</span>
+                    </div>
+                    <button type="button" onclick="this.parentElement.remove()" class="text-slate-400 hover:text-slate-700 text-xs">✕</button>
+                </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Główna zawartość -->
+    <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Stopka -->
+    <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex items-center gap-2 font-medium">
+                <span>🏫 Librus2mail v{{ app_version }}</span>
+                <span>•</span>
+                <span>Prywatny Dashboard Rodzica</span>
+            </div>
+            <div class="text-slate-400 text-[11px]">
+                Bezpieczny odczyt z lokalnej pamięci <code>storage/</code> • Stan na: {{ now.strftime('%d.%m.%Y %H:%M') if now else '-' }}
+            </div>
+        </div>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -347,7 +347,15 @@ jobs:
             -t youth \
             -o examples/reports/raport_youth.html
 
-          echo "✅ Raporty wygenerowane:"
+          echo "🌐 Generuję przykładowe widoki panelu webowego (dashboard WWW)..."
+          python librus_web.py \
+            -c config.yaml \
+            -u 8979296 \
+            -s examples/storage \
+            --actual-date "${ACTUAL_DATE}" \
+            --export-html examples/reports
+
+          echo "✅ Raporty i widoki wygenerowane:"
           ls -la examples/reports/
 
       - name: Checkout gh-pages branch
@@ -387,6 +395,7 @@ jobs:
           cp source/examples/reports/raport_kids.html "pages/${TAG}/"
           cp source/examples/reports/raport_teens.html "pages/${TAG}/"
           cp source/examples/reports/raport_youth.html "pages/${TAG}/"
+          cp source/examples/reports/web_*.html "pages/${TAG}/"
 
           # Wygeneruj index.html dla tej wersji
           cat > "pages/${TAG}/index.html" << HTML
@@ -416,7 +425,44 @@ jobs:
             <h1>📬 Librus2mail <span class="badge">${TAG}</span></h1>
             <p>Przykładowe raporty wygenerowane automatycznie przy wydaniu wersji <strong>${VERSION}</strong>.</p>
 
-            <div class="section-title">Raporty dla rodziców & powiadomienia</div>
+            <div class="section-title">Interaktywny Panel WWW (Dashboard Rodzica)</div>
+
+            <a class="card" href="web_dashboard.html">
+              <h3>📊 Główny pulpit rodzica (po zalogowaniu)</h3>
+              <p>Pulpit rodzica z podsumowaniem dnia, kluczowymi wskaźnikami KPI, planem na dziś i zapowiedzianymi sprawdzianami.</p>
+            </a>
+
+            <a class="card" href="web_login.html">
+              <h3>🔒 Ekran logowania rodzica (przed zalogowaniem)</h3>
+              <p>Ekran bramki rodzicielskiej (Parent Gate) z formularzem PIN i ochroną przed atakami brute-force.</p>
+            </a>
+
+            <a class="card" href="web_plan.html">
+              <h3>📅 Plan lekcji</h3>
+              <p>Tygodniowy rozkład zajęć ucznia z salami, nauczycielami oraz oznaczeniem zastępstw i odwołanych lekcji.</p>
+            </a>
+
+            <a class="card" href="web_oceny.html">
+              <h3>📝 Oceny i kalkulator "Co jeśli?"</h3>
+              <p>Zestawienie ocen ucznia, średnie ważone per przedmiot oraz symulator wpływu nowej oceny.</p>
+            </a>
+
+            <a class="card" href="web_terminarz.html">
+              <h3>🔔 Terminarz sprawdzianów</h3>
+              <p>Kalendarz nadchodzących sprawdzianów, kartkówek oraz nieobecności nauczycieli.</p>
+            </a>
+
+            <a class="card" href="web_wiadomosci.html">
+              <h3>✉️ Wiadomości i ogłoszenia</h3>
+              <p>Podgląd korespondencji ze szkołą oraz oficjalnych komunikatów dyrekcji.</p>
+            </a>
+
+            <a class="card" href="web_akcje.html">
+              <h3>⚡ Centrum operacyjne CLI</h3>
+              <p>Interaktywny panel wyzwalania operacji synchronizacji i raportowania z podglądem logów.</p>
+            </a>
+
+            <div class="section-title">Raporty dla rodziców & powiadomienia e-mail</div>
 
             <a class="card" href="powiadomienie_collector.html">
               <h3>📬 Powiadomienie e-mail</h3>
@@ -464,6 +510,7 @@ jobs:
             cp source/examples/reports/raport_kids.html pages/latest/
             cp source/examples/reports/raport_teens.html pages/latest/
             cp source/examples/reports/raport_youth.html pages/latest/
+            cp source/examples/reports/web_*.html pages/latest/
 
             # index.html dla latest (przekierowanie do bieżącej wersji + bezpośrednie linki)
             sed "s|${TAG}|latest|g; s|Librus2mail latest|Librus2mail latest (${TAG})|" \
@@ -497,7 +544,13 @@ jobs:
               YOUTH_LINK="<a href=\"${V}/raport_youth.html\">Youth</a>"
             fi
             STUDENT_LINKS="${KIDS_LINK} &nbsp;|&nbsp; ${TEENS_LINK} &nbsp;|&nbsp; ${YOUTH_LINK}"
-            ROWS="${ROWS}<tr><td><a href=\"${V}/\"><strong>${V}</strong></a></td><td><a href=\"${V}/powiadomienie_collector.html\">📬 Powiadomienie</a></td><td><a href=\"${V}/raport_8979296.html\">📊 Raport postępów</a></td><td>${STUDENT_LINKS}</td></tr>\n"
+
+            WEB_LINKS="—"
+            if [ -f "pages/${V}/web_dashboard.html" ]; then
+              WEB_LINKS="<a href=\"${V}/web_dashboard.html\">📊 Pulpit</a> &nbsp;|&nbsp; <a href=\"${V}/web_login.html\">🔒 Login</a> &nbsp;|&nbsp; <a href=\"${V}/web_plan.html\">📅 Plan</a> &nbsp;|&nbsp; <a href=\"${V}/web_oceny.html\">📝 Oceny</a>"
+            fi
+
+            ROWS="${ROWS}<tr><td><a href=\"${V}/\"><strong>${V}</strong></a></td><td><a href=\"${V}/powiadomienie_collector.html\">📬 Powiadomienie</a></td><td><a href=\"${V}/raport_8979296.html\">📊 Raport postępów</a></td><td>${STUDENT_LINKS}</td><td>${WEB_LINKS}</td></tr>\n"
           done
 
           cat > pages/index.html << HTML
@@ -509,7 +562,7 @@ jobs:
             <title>Librus2mail – Przykładowe raporty</title>
             <style>
               body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-                     max-width: 820px; margin: 60px auto; padding: 0 20px; color: #24292f; }
+                     max-width: 860px; margin: 60px auto; padding: 0 20px; color: #24292f; }
               h1 { font-size: 1.8rem; }
               p.lead { font-size: 1rem; color: #57606a; }
               .latest-box { border: 2px solid #0969da; border-radius: 8px; padding: 20px;
@@ -534,12 +587,14 @@ jobs:
             <div class="latest-box">
               <h2>🔗 Najnowsza wersja (latest)</h2>
               <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px;">
+                <a href="latest/web_dashboard.html">📊 Web Dashboard</a>
+                <a href="latest/web_login.html">🔒 Web Login</a>
                 <a href="latest/powiadomienie_collector.html">📬 Powiadomienie e-mail</a>
                 <a href="latest/raport_8979296.html">📊 Raport postępów</a>
                 <a href="latest/raport_kids.html">🎮 Kids (kl. 4–6)</a>
                 <a href="latest/raport_teens.html">🚀 Teens (kl. 7–8)</a>
                 <a href="latest/raport_youth.html">🎯 Youth (liceum)</a>
-                <a href="latest/">📁 Strona wersji</a>
+                <a href="latest/">📁 Wszystkie pliki wersji</a>
               </div>
             </div>
 
@@ -550,6 +605,7 @@ jobs:
                   <th>Powiadomienie e-mail</th>
                   <th>Raport postępów (rodzic)</th>
                   <th>Raporty ucznia (Kids / Teens / Youth)</th>
+                  <th>Panel WWW (Dashboard)</th>
                 </tr>
               </thead>
               <tbody>

@@ -66,6 +66,11 @@ class BaseStorage(ABC):
         pass
 
     @abstractmethod
+    def set_student_name(self, user_login: str, name: str) -> None:
+        """Zapisuje nazwę ucznia w storage."""
+        pass
+
+    @abstractmethod
     def list_stored_logins(self) -> list[str]:
         """Zwraca listę loginów odnalezionych w bazie pamięci stanu."""
         pass
@@ -522,6 +527,28 @@ class FileStorage(BaseStorage):
         except Exception as e:
             logger.error(f"Błąd podczas odczytu nazwy ucznia z {file_path}: {e}")
             return None
+
+    def set_student_name(self, user_login: str, name: str) -> None:
+        """Zapisuje nazwę ucznia w storage."""
+        if not name:
+            return
+        file_path = self._get_file_path(user_login)
+        if not os.path.isfile(file_path):
+            return
+        try:
+            with open(file_path, encoding='utf-8') as f:
+                data = json.load(f)
+            if data.get('librus_login_name') != name or data.get('student_name') != name:
+                data['student_name'] = name
+                data['librus_login_name'] = name
+                temp_path = f"{file_path}.tmp"
+                with open(temp_path, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+                os.replace(temp_path, file_path)
+                logger.debug(f"Zaktualizowano nazwę ucznia '{name}' w {file_path}")
+        except Exception as e:
+            logger.error(f"Błąd podczas zapisywania nazwy ucznia do {file_path}: {e}")
+
 
     def list_stored_logins(self) -> list[str]:
         """Zwraca listę loginów odnalezionych na podstawie plików *.json w katalogu storage_dir."""

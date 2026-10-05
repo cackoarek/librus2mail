@@ -28,13 +28,13 @@ flowchart TD
         N_MAIL[Bieżący E-mail o ocenach/wiadomościach]
     end
 
-    subgraph Moduł 3: Progress Report (Dla Rodziców)
+    subgraph Moduł 3: Progress Report - Dla Rodziców
         PR[librus_progress_report.py + ProgressAnalyzer]
         PR_HTML[Dashboard HTML / Podgląd CLI]
         PR_MAIL[Okresowy Raport Statystyk E-mail]
     end
 
-    subgraph Moduł 4: Student Report (Dla Ucznia)
+    subgraph Moduł 4: Student Report - Dla Ucznia
         SR[librus_student_report.py + StudentAnalyzer]
         SR_HTML[Raport HTML / Podgląd CLI]
         SR_MAIL[E-mail Ucznia kids/teens/youth]
@@ -68,9 +68,10 @@ flowchart TD
 4. [Moduł 2: Powiadomienia bieżące (Updates Notifier) – `librus_updates_notifier.py`](#4-moduł-2-powiadomienia-bieżące-updates-notifier--librus_updates_notifierpy)
 5. [Moduł 3: Generator raportów postępów dla rodziców – `librus_progress_report.py`](#5-moduł-3-generator-raportów-postępów-dla-rodziców--librus_progress_reportpy)
 6. [Moduł 4: Generator raportów motywacyjnych dla ucznia – `librus_student_report.py`](#6-moduł-4-generator-raportów-motywacyjnych-dla-ucznia--librus_student_reportpy)
-7. [Narzędzia deweloperskie i testowe (QA)](#7-narzędzia-deweloperskie-i-testowe-qa)
-8. [Zarządzanie wdrożeniem (Docker & systemd)](#8-zarządzanie-wdrożeniem-docker--systemd)
-9. [Tabela podsumowująca (Cheat Sheet)](#9-tabela-podsumowująca-cheat-sheet)
+7. [Moduł Web: Interaktywny Panel Rodzica (Dashboard WWW) – `librus_web.py`](#7-moduł-web-interaktywny-panel-rodzica-dashboard-www--librus_webpy--librus-web)
+8. [Narzędzia deweloperskie i testowe (QA)](#8-narzędzia-deweloperskie-i-testowe-qa)
+9. [Zarządzanie wdrożeniem (Docker & systemd)](#9-zarządzanie-wdrożeniem-docker--systemd)
+10. [Tabela podsumowująca (Cheat Sheet)](#10-tabela-podsumowująca-cheat-sheet)
 
 ---
 
@@ -84,6 +85,7 @@ python librus_collector.py          # Moduł 1: Collector (pobieranie surowych d
 python librus_updates_notifier.py   # Moduł 2: Updates Notifier (powiadomienia offline)
 python librus_progress_report.py    # Moduł 3: Progress Report (analityka postępów dla rodziców)
 python librus_student_report.py     # Moduł 4: Student Report (motywacja i cele dla ucznia)
+python librus_web.py                # Moduł Web: Interaktywny Dashboard Rodzica (WWW)
 ```
 
 ### Metoda B: Przez zarejestrowane polecenia CLI (po instalacji pakietu `pip install -e .`)
@@ -93,6 +95,7 @@ librus-collector           # moduł zbierania danych
 librus-notifier            # moduł bieżących powiadomień
 librus-report              # moduł okresowych raportów postępów dla rodziców
 librus-student-report      # moduł raportów motywacyjnych dla ucznia
+librus-web                 # moduł interaktywnego panelu webowego WWW
 ```
 
 ---
@@ -386,7 +389,66 @@ venv/bin/python librus_student_report.py -s examples/storage --actual-date 2026-
 
 ---
 
-## 7. Narzędzia deweloperskie i testowe (QA)
+## 7. Moduł Web: Interaktywny Panel Rodzica (Dashboard WWW) – `librus_web.py` / `librus-web`
+
+### 🎯 Cel działania
+Dostarcza nowoczesny, lekki i interaktywny pulpit rodzica w przeglądarce WWW (oparty o **Flask + TailwindCSS + HTMX** bez ciężkich narzędzi Node.js):
+- **Ochrona hasłem rodzica (Parent Gate)**: Zabezpiecza oceny i dane ucznia przed niepowołanym dostępem w sieci lokalnej lub internecie.
+- **Pulpit główny (Dashboard)**: Błyskawiczny podgląd kluczowych wskaźników KPI (średnia ogólna, liczba ocen, plan na najbliższy dzień, zapowiedziane sprawdziany).
+- **Plan lekcji (Schedule)**: Pełny widok tygodniowy z wyróżnieniem zastępstw, odwołanych lekcji i zapowiedzianych sprawdzianów.
+- **Zestawienie ocen & Symulator "Co jeśli?"**: Oceny z wagami per przedmiot oraz dynamiczny kalkulator prognozujący wpływ nowej oceny na średnią ważoną (HTMX).
+- **Terminarz (Timetable)**: Chronologiczny kalendarz nadchodzących sprawdzianów i nieobecności nauczycieli.
+- **Wiadomości & Ogłoszenia**: Przeglądarka korespondencji z nauczycielami i oficjalnych komunikatów dyrekcji.
+- **Centrum Akcji CLI**: Graficzny panel wyzwalania operacji (pobranie z Librusa, wysyłka maila, generowanie raportów) z bezpośrednim podglądem logów w konsoli przeglądarki.
+
+### 💻 Składnia polecenia
+```bash
+python librus_web.py [-h] [-c CONFIG] [-s STORAGE_DIR] [-u USER] [-p PORT] [-b HOST] [--password PASSWORD] [--no-auth] [--max-attempts MAX_ATTEMPTS] [--lockout-duration SECONDS] [--actual-date ACTUAL_DATE] [--export-html DIR] [--debug]
+```
+
+### ⚙️ Dostępne parametry
+| Parametr | Typ / Wartość | Domyślnie | Opis |
+| :--- | :--- | :--- | :--- |
+| `-c`, `--config` | Ścieżka do pliku | `config.yaml` | Ścieżka do pliku konfiguracyjnego YAML |
+| `-s`, `--storage-dir` | Ścieżka katalogu | z konfiguracji lub `storage/` | Ścieżka do katalogu z danymi stanu `storage/` |
+| `-u`, `--user` | Ciąg znaków | `None` (pierwszy uczeń) | Domyślny aktywny profil ucznia na starcie |
+| `-p`, `--port` | Liczba całkowita | `5000` | Port serwera HTTP |
+| `-b`, `--bind`, `--host`| Adres IP | `127.0.0.1` | Adres nasłuchu (`127.0.0.1` tylko lokalnie, `0.0.0.0` dla sieci domowej/Wi-Fi) |
+| `--password` | Ciąg znaków | z configu/env | Hasło rodzica wymagane do zalogowania do panelu |
+| `--no-auth` | Flaga (brak wartości)| `False` | Wyłącza bramkę logowania (dostęp otwarty - zalecany tylko lokalnie) |
+| `--max-attempts` | Liczba całkowita | `5` (z configu) | Maksymalna liczba nieudanych prób logowania przed blokadą adresu IP (ochrona brute-force) |
+| `--lockout-duration` | Liczba sekund | `900` (z configu) | Czas trwania blokady adresu IP w sekundach (domyślnie 900s = 15 min) |
+| `--actual-date` | Data (`RRRR-MM-DD`) | `None` (bieżąca data) | Referencyjna data analizy i planu lekcji (do testów i powtarzalnych raportów) |
+| `--export-html` | Ścieżka do katalogu | `None` | Eksportuje pełny komplet statycznych widoków HTML (strona logowania przed zalogowaniem, pulpit po zalogowaniu, plan, oceny, terminarz, wiadomości, akcje) do wskazanego katalogu i kończy działanie |
+| `--debug` | Flaga (brak wartości)| `False` | Uruchamia serwer w trybie deweloperskim Flask |
+
+### 🚀 Przykłady wywołań
+```bash
+# 1. Standardowe uruchomienie lokalne (hasło pobierane z config.yaml lub zmiennej LIBRUS_WEB_PASSWORD):
+venv/bin/python librus_web.py
+
+# 2. Udostępnienie w domowej sieci lokalnej (np. dostęp z telefonu lub tabletu):
+venv/bin/python librus_web.py -b 0.0.0.0 -p 5000
+
+# 3. Uruchomienie z hasłem podanym bezpośrednio w linii poleceń:
+venv/bin/python librus_web.py --password "SekretneHaslo123"
+
+# 4. Uruchomienie w trybie otwartym bez hasła (np. do szybkiego podglądu na komputerze):
+venv/bin/python librus_web.py --no-auth
+
+# 5. Dostosowanie ochrony brute-force (np. max 3 próby i blokada na 10 minut):
+venv/bin/python librus_web.py --max-attempts 3 --lockout-duration 600
+
+# 6. Podgląd danych testowych z katalogu examples/storage:
+venv/bin/python librus_web.py -s examples/storage --no-auth
+
+# 7. Wygenerowanie przykładowych statycznych plików HTML panelu webowego (offline preview):
+venv/bin/python librus_web.py -u 8979296 -s examples/storage --actual-date 2026-09-18 --export-html examples/reports
+```
+
+---
+
+## 8. Narzędzia deweloperskie i testowe (QA)
 
 W projekcie skonfigurowano zestaw narzędzi do weryfikacji jakości kodu i poprawności działania:
 
@@ -406,7 +468,7 @@ venv/bin/ruff check --fix .
 
 ---
 
-## 8. Zarządzanie wdrożeniem (Docker & systemd)
+## 9. Zarządzanie wdrożeniem (Docker & systemd)
 
 ### 🐳 Środowisko kontenerowe (Docker Compose)
 ```bash
@@ -440,7 +502,7 @@ sudo journalctl -u librus2mail -f -n 50
 
 ---
 
-## 9. Tabela podsumowująca (Cheat Sheet)
+## 10. Tabela podsumowująca (Cheat Sheet)
 
 | Zadanie | Rekomendowane polecenie |
 | :--- | :--- |
@@ -466,5 +528,7 @@ sudo journalctl -u librus2mail -f -n 50
 | **Raport postępów dla rodziców z zewnętrznego storage** | `venv/bin/python librus_progress_report.py -s examples/storage -o examples/reports/raport.html --days 14` |
 | **Raport postępów – stała data referencyjna (reprodukowalny)** | `venv/bin/python librus_progress_report.py -s examples/storage --days 14 --actual-date 2026-09-09 -o examples/reports/raport_postepow.html --force` |
 | **Raport miesięczny dla rodziców przez orkiestrator** | `venv/bin/python librus_collect_and_notify.py --report --days 30 -o miesiac.html` |
+| **Uruchomienie interaktywnego panelu webowego WWW** | `venv/bin/python librus_web.py` |
+| **Panel webowy w sieci lokalnej (dostęp ze smartfona)** | `venv/bin/python librus_web.py -b 0.0.0.0 -p 5000` |
 | **Uruchomienie testów jednostkowych** | `venv/bin/pytest` |
 | **Weryfikacja jakości kodu linterem** | `venv/bin/ruff check .` |

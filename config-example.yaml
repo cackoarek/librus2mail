@@ -150,3 +150,33 @@ mail:
   non_gmail_settings:
     smtp_host: "smtp.twoj-serwer-poczty.pl"
     port: 587
+
+
+# ------------------------------------------------------------------------------
+# 6. PANEL WEBOWY DASHBOARD RODZICA (web)
+# ------------------------------------------------------------------------------
+# Interaktywny, lekki pulpit rodzica dostępny przez przeglądarkę WWW (Flask + TailwindCSS + HTMX).
+# Uruchomienie: python librus_web.py (lub komenda: librus-web)
+web:
+  # Port, na którym nasłuchuje serwer HTTP (domyślnie: 5000):
+  port: 5000
+
+  # Adres nasłuchu (domyślnie: 127.0.0.1; użyj "0.0.0.0", aby umożliwić dostęp z sieci lokalnej/telefonu):
+  host: "127.0.0.1"
+
+  # Hasło rodzica chroniące dostęp do ocen i danych uczniów (zalecane w sieci):
+  # Jeśli ustawione, wejście do panelu wymaga podania hasła/kodu PIN.
+  # Można również przekazać zmienną środowiskową LIBRUS_WEB_PASSWORD lub flagę --password w CLI.
+  password: "TwojeTajneHasloRodzica123"
+
+  # Tajny klucz sesji Flask (opcjonalny - generowany bezpiecznie, jeśli pominięty):
+  # secret_key: "twoj_losowy_tajny_ciag_znakow"
+
+  # Ochrona przed atakami brute-force na hasło rodzica:
+  # Maksymalna dopuszczalna liczba błędnych prób logowania przed zablokowaniem IP (domyślnie: 5):
+  max_login_attempts: 5
+
+  # Czas trwania blokady adresu IP w sekundach po przekroczeniu limitu prób (domyślnie: 900 = 15 minut):
+  lockout_duration_s: 900
+
+

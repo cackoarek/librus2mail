@@ -20,6 +20,7 @@ dependencies = [
     "pyyaml>=6.0",
     "yagmail>=0.15",
     "jinja2>=3.1.0",
+    "flask>=3.0.0",
 ]
 
 [project.optional-dependencies]
@@ -35,13 +36,17 @@ librus-notifier = "librus2mail.updates_notifier:main"
 librus-report = "librus2mail.progress_report:main"
 librus-student-report = "librus2mail.student_report:main"
 librus-collect-and-notify = "librus2mail.collect_and_notify:main"
+librus-web = "librus2mail.web.app:main"
 librus2mail = "librus2mail.collect_and_notify:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-librus2mail = ["templates/emails/*.html"]
+librus2mail = [
+    "templates/emails/*.html",
+    "templates/web/*.html",
+]
 
 [tool.ruff]
 line-length = 120

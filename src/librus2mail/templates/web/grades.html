@@ -1,0 +1,245 @@
+{% extends "web/base.html" %}
+
+{% block title %}Oceny - {{ data.name }}{% endblock %}
+
+{% block content %}
+<!-- Nagłówek -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-200">
+    <div>
+        <div class="flex items-center gap-2">
+            <a href="{{ url_for('web.dashboard') }}" class="text-xs font-bold text-indigo-600 hover:text-indigo-800">
+                ← Powrót do pulpitu
+            </a>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1 flex items-center gap-3">
+            <span>📝 Oceny i Średnie: {{ data.name }}</span>
+            {% if '(' ~ data.login ~ ')' not in data.name %}
+            <span class="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full border border-slate-200">
+                {{ data.login }}
+            </span>
+            {% endif %}
+        </h1>
+        <p class="text-xs text-slate-500 mt-1">
+            Zestawienie wszystkich ocen z wagami, średnie ważone per przedmiot oraz interaktywny symulator ocen.
+        </p>
+    </div>
+
+    <!-- Przyciski akcji -->
+    <div class="flex items-center gap-2">
+        <button hx-post="{{ url_for('web.action_sync') }}"
+                hx-vals='{"login": "{{ data.login }}"}'
+                hx-target="#grades-action-toast"
+                hx-indicator="#grades-sync-spinner"
+                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm shadow-indigo-100 transition-all cursor-pointer">
+            <span id="grades-sync-spinner" class="htmx-indicator animate-spin">⏳</span>
+            <span>Pobierz świeże oceny</span>
+        </button>
+    </div>
+</div>
+
+<div id="grades-action-toast" class="mt-4"></div>
+
+<!-- Karty KPI -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 my-6">
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Średnia ogólna</span>
+            <span class="p-2 rounded-xl bg-indigo-50 text-indigo-600 text-sm">📈</span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+            <span class="text-3xl font-extrabold text-slate-900">{{ data.overall_average or '-' }}</span>
+            <span class="text-xs font-semibold text-slate-500">ze wszystkich</span>
+        </div>
+    </div>
+
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Wszystkich ocen</span>
+            <span class="p-2 rounded-xl bg-emerald-50 text-emerald-600 text-sm">📝</span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+            <span class="text-3xl font-extrabold text-slate-900">{{ data.grades_count }}</span>
+            <span class="text-xs font-semibold text-slate-500">wpisów</span>
+        </div>
+    </div>
+
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Przedmioty</span>
+            <span class="p-2 rounded-xl bg-sky-50 text-sky-600 text-sm">📚</span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+            <span class="text-3xl font-extrabold text-slate-900">{{ subject_averages|length }}</span>
+            <span class="text-xs font-semibold text-slate-500">z ocenami</span>
+        </div>
+    </div>
+
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Pasek z wyróżnieniem</span>
+            <span class="p-2 rounded-xl bg-amber-50 text-amber-600 text-sm">🎖️</span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+            {% if data.overall_average and data.overall_average >= 4.75 %}
+            <span class="text-xl font-extrabold text-emerald-600">Osiągnięty! 🎉</span>
+            {% elif data.overall_average %}
+            <span class="text-xl font-extrabold text-slate-700">Brakuje {{ "%.2f"|format(4.75 - data.overall_average) }}</span>
+            {% else %}
+            <span class="text-base font-bold text-slate-400">Brak danych</span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Interaktywny Kalkulator "Co jeśli?" (What-If Grade Simulator) -->
+<div class="bg-gradient-to-br from-indigo-900 to-slate-900 text-white p-6 rounded-2xl shadow-lg my-6">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-indigo-800/80 pb-4 mb-4">
+        <div>
+            <h2 class="text-lg font-extrabold flex items-center gap-2">
+                <span>🔮</span>
+                <span>Symulator Nowej Oceny ("Co jeśli?")</span>
+            </h2>
+            <p class="text-xs text-indigo-200 mt-1">
+                Sprawdź natychmiast, jak potencjalna ocena ze sprawdzianu lub kartkówki wpłynie na średnią ważoną z danego przedmiotu.
+            </p>
+        </div>
+    </div>
+
+    <form hx-post="{{ url_for('web.api_whatif') }}"
+          hx-target="#whatif-result"
+          hx-indicator="#whatif-spinner"
+          class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
+
+        <!-- Wybór przedmiotu -->
+        <div>
+            <label class="block text-xs font-bold text-indigo-200 uppercase tracking-wider mb-1.5">
+                Przedmiot
+            </label>
+            <select name="subject" required
+                    class="w-full bg-slate-800 border border-indigo-700/60 rounded-xl px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-400 focus:outline-none">
+                {% for subj, sdata in subject_averages.items() %}
+                <option value="{{ subj }}">{{ subj }} (śr. {{ sdata.average or '-' }})</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Nowa ocena -->
+        <div>
+            <label class="block text-xs font-bold text-indigo-200 uppercase tracking-wider mb-1.5">
+                Spodziewana ocena
+            </label>
+            <select name="grade"
+                    class="w-full bg-slate-800 border border-indigo-700/60 rounded-xl px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-400 focus:outline-none">
+                <option value="6.0">6 (Celujący)</option>
+                <option value="5.0" selected>5 (Bardzo dobry)</option>
+                <option value="4.0">4 (Dobry)</option>
+                <option value="3.0">3 (Dostateczny)</option>
+                <option value="2.0">2 (Dopuszczający)</option>
+                <option value="1.0">1 (Niedostateczny)</option>
+            </select>
+        </div>
+
+        <!-- Waga oceny -->
+        <div>
+            <label class="block text-xs font-bold text-indigo-200 uppercase tracking-wider mb-1.5">
+                Waga oceny
+            </label>
+            <select name="weight"
+                    class="w-full bg-slate-800 border border-indigo-700/60 rounded-xl px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-400 focus:outline-none">
+                <option value="1">Waga 1 (odpowiedź, zadanie)</option>
+                <option value="2">Waga 2 (kartkówka)</option>
+                <option value="3" selected>Waga 3 (sprawdzian, praca klasowa)</option>
+                <option value="4">Waga 4 (projekt)</option>
+                <option value="5">Waga 5 (duży test)</option>
+            </select>
+        </div>
+
+        <!-- Przycisk symulacji -->
+        <div>
+            <button type="submit"
+                    class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold text-indigo-950 bg-indigo-300 hover:bg-white shadow-md transition-all cursor-pointer">
+                <span id="whatif-spinner" class="htmx-indicator animate-spin">⏳</span>
+                <span>Oblicz nową średnią</span>
+            </button>
+        </div>
+    </form>
+
+    <div id="whatif-result" class="mt-4"></div>
+</div>
+
+<!-- Zestawienie Ocen per Przedmiot -->
+{% if not subject_averages %}
+<div class="p-12 bg-white border border-slate-200 rounded-2xl text-center">
+    <div class="text-4xl mb-3">📝</div>
+    <h3 class="text-lg font-bold text-slate-800">Brak ocen w pamięci podręcznej</h3>
+    <p class="text-sm text-slate-500 mt-1 max-w-md mx-auto">
+        Nie odnaleziono zarejestrowanych ocen dla tego konta. Kliknij przycisk "Pobierz świeże oceny", aby pobrać dane z systemu Librus.
+    </p>
+</div>
+{% else %}
+
+<div class="space-y-4">
+    {% for subj, sdata in subject_averages.items() %}
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden transition-all hover:border-slate-300">
+        <!-- Pasek przedmiotu -->
+        <div class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/50 border-b border-slate-100">
+            <div>
+                <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>{{ subj }}</span>
+                </h3>
+                <div class="text-xs text-slate-500 mt-0.5">
+                    Liczba ocen: <strong>{{ sdata.count }}</strong> (suma wag: {{ sdata.sum_weights|round(1) }})
+                </div>
+            </div>
+
+            <!-- Średnia ważona z odznaką -->
+            <div class="flex items-center gap-3">
+                <div class="text-right">
+                    <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
+                    <span class="text-xl font-extrabold
+                        {% if sdata.average and sdata.average >= 4.75 %} text-emerald-600
+                        {% elif sdata.average and sdata.average >= 3.75 %} text-sky-600
+                        {% elif sdata.average and sdata.average >= 2.75 %} text-amber-600
+                        {% elif sdata.average %} text-rose-600
+                        {% else %} text-slate-400 {% endif %}">
+                        {{ sdata.average or '-' }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Karty / Pigułki ocen -->
+        <div class="p-4 sm:p-5">
+            <div class="flex flex-wrap gap-2.5">
+                {% for g in sdata.grades %}
+                <div class="group relative inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300 shadow-xs transition-all cursor-default">
+                    <!-- Odznaka oceny -->
+                    <span class="w-7 h-7 rounded-lg flex items-center justify-center font-extrabold text-sm
+                        {% if g.grade in ['5', '6', '5+', '6-'] %} bg-emerald-100 text-emerald-800
+                        {% elif g.grade in ['4', '4+', '4-'] %} bg-sky-100 text-sky-800
+                        {% elif g.grade in ['3', '3+', '3-'] %} bg-amber-100 text-amber-800
+                        {% elif g.grade in ['1', '2', '1+', '2+'] %} bg-rose-100 text-rose-800
+                        {% else %} bg-slate-100 text-slate-700 {% endif %}">
+                        {{ g.grade }}
+                    </span>
+
+                    <!-- Szczegóły: Kategoria & Waga -->
+                    <div class="text-left">
+                        <div class="text-xs font-bold text-slate-800 truncate max-w-[140px] sm:max-w-[200px]" title="{{ g.category or 'Ocena' }}">
+                            {{ g.category or 'Ocena' }}
+                        </div>
+                        <div class="text-[10px] text-slate-400 font-medium">
+                            waga: {{ g.weight or '1' }} • {{ g.date or '' }}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% endif %}
+
+{% endblock %}

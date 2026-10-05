@@ -1,0 +1,208 @@
+{% extends "web/base.html" %}
+
+{% block title %}Plan lekcji - {{ data.name }}{% endblock %}
+
+{% block content %}
+<!-- Nagłówek -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-200">
+    <div>
+        <div class="flex items-center gap-2">
+            <a href="{{ url_for('web.dashboard') }}" class="text-xs font-bold text-indigo-600 hover:text-indigo-800">
+                ← Powrót do pulpitu
+            </a>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1 flex items-center gap-3">
+            <span>📅 Plan lekcji: {{ data.name }}</span>
+            {% if '(' ~ data.login ~ ')' not in data.name %}
+            <span class="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full border border-slate-200">
+                {{ data.login }}
+            </span>
+            {% endif %}
+        </h1>
+        <p class="text-xs text-slate-500 mt-1">
+            Zestawienie zarejestrowanych planów lekcji, zastępstw, odwołanych zajęć i zapowiedzianych sprawdzianów.
+        </p>
+    </div>
+
+    <!-- Przyciski akcji -->
+    <div class="flex items-center gap-2">
+        <button hx-post="{{ url_for('web.action_sync') }}"
+                hx-vals='{"login": "{{ data.login }}"}'
+                hx-target="#schedule-action-toast"
+                hx-indicator="#schedule-sync-spinner"
+                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm shadow-indigo-100 transition-all cursor-pointer">
+            <span id="schedule-sync-spinner" class="htmx-indicator animate-spin">⏳</span>
+            <span>Odśwież ze szkoły</span>
+        </button>
+    </div>
+</div>
+
+<div id="schedule-action-toast" class="mt-4"></div>
+
+{% if not days_data %}
+<div class="p-12 mt-6 bg-white border border-slate-200 rounded-2xl text-center">
+    <div class="text-4xl mb-3">📅</div>
+    <h3 class="text-lg font-bold text-slate-800">Brak zarejestrowanych lekcji w pamięci</h3>
+    <p class="text-sm text-slate-500 mt-1 max-w-md mx-auto">
+        Nie odnaleziono wpisów planu lekcji dla tego ucznia. Kliknij powyższy przycisk, aby zsynchronizować plan z systemem Librus Synergia.
+    </p>
+</div>
+{% else %}
+
+<!-- Szybka nawigacja po dniach tygodnia -->
+<div class="flex items-center gap-2 overflow-x-auto py-4 scrollbar-none">
+    {% for day in days_data %}
+    <a href="#day-{{ day.date }}"
+       class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-white border border-slate-200 hover:border-indigo-400 hover:text-indigo-600 shadow-sm transition-all whitespace-nowrap">
+        <span>{{ day.weekday_name }}</span>
+        <span class="text-slate-400 font-normal">{{ day.date[5:] }}</span>
+        {% if day.cancelled_count > 0 %}
+        <span class="w-2 h-2 rounded-full bg-rose-500" title="Odwołane lekcje"></span>
+        {% elif day.substitution_count > 0 %}
+        <span class="w-2 h-2 rounded-full bg-amber-500" title="Zastępstwa"></span>
+        {% endif %}
+    </a>
+    {% endfor %}
+</div>
+
+<!-- Karty poszczególnych dni -->
+<div class="space-y-6 mt-2">
+    {% for day in days_data %}
+    <div id="day-{{ day.date }}" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden scroll-mt-20">
+        <!-- Nagłówek Dnia -->
+        <div class="p-4 sm:p-5 border-b border-slate-100 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-base shadow-sm">
+                    {{ day.weekday_name[:2] }}
+                </div>
+                <div>
+                    <h2 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                        <span>{{ day.weekday_name }}</span>
+                        <span class="text-xs font-normal text-slate-500">({{ day.date }})</span>
+                    </h2>
+                    <div class="text-xs text-slate-500 font-medium">
+                        Liczba lekcji: <strong>{{ day.total_count }}</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Podsumowanie zmian w danym dniu -->
+            <div class="flex items-center gap-2 flex-wrap text-xs">
+                {% if day.substitution_count > 0 %}
+                <span class="px-2.5 py-1 bg-amber-100 text-amber-800 font-bold rounded-lg border border-amber-200">
+                    🔄 {{ day.substitution_count }} {% if day.substitution_count == 1 %}zastępstwo{% else %}zastępstwa{% endif %}
+                </span>
+                {% endif %}
+                {% if day.cancelled_count > 0 %}
+                <span class="px-2.5 py-1 bg-rose-100 text-rose-800 font-bold rounded-lg border border-rose-200">
+                    ❌ {{ day.cancelled_count }} {% if day.cancelled_count == 1 %}odwołana{% else %}odwołane{% endif %}
+                </span>
+                {% endif %}
+                {% if day.substitution_count == 0 and day.cancelled_count == 0 %}
+                <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 font-semibold rounded-lg border border-emerald-200">
+                    ✅ Plan bez zmian
+                </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Tabela / Lista lekcji -->
+        <div class="divide-y divide-slate-100">
+            {% for l in day.lessons %}
+            <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors
+                {% if l.is_cancelled %} bg-rose-50/50 border-l-4 border-rose-500
+                {% elif l.is_substitution %} bg-amber-50/50 border-l-4 border-amber-500
+                {% elif l.test %} bg-indigo-50/40 border-l-4 border-indigo-500
+                {% else %} hover:bg-slate-50/80 border-l-4 border-transparent {% endif %}">
+
+                <!-- Lewa kolumna: Godzina i przedmiot -->
+                <div class="flex items-start sm:items-center gap-4">
+                    <!-- Numer i godzina -->
+                    <div class="w-16 flex-shrink-0 text-center">
+                        <span class="inline-block px-2.5 py-0.5 bg-slate-100 text-slate-800 text-xs font-extrabold rounded-md border border-slate-200">
+                            #{{ l.lesson_no }}
+                        </span>
+                        <div class="text-[11px] font-semibold text-slate-500 mt-1 whitespace-nowrap">
+                            {{ l.time_from or '--:--' }} - {{ l.time_to or '--:--' }}
+                        </div>
+                    </div>
+
+                    <!-- Przedmiot i detale -->
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-bold text-sm sm:text-base {% if l.is_cancelled %}text-slate-400 line-through{% else %}text-slate-900{% endif %}">
+                                {{ l.subject }}
+                            </span>
+
+                            {% if l.is_substitution %}
+                            <span class="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-extrabold rounded border border-amber-200">
+                                🔄 Zastępstwo
+                            </span>
+                            {% endif %}
+
+                            {% if l.is_cancelled %}
+                            <span class="px-2 py-0.5 bg-rose-100 text-rose-800 text-[10px] font-extrabold rounded border border-rose-200">
+                                ❌ Odwołana
+                            </span>
+                            {% endif %}
+
+                            {% if l.test %}
+                            <span class="px-2 py-0.5 bg-indigo-100 text-indigo-800 text-[10px] font-extrabold rounded border border-indigo-200">
+                                📝 {{ l.test.category }}: {{ l.test.description or l.test.subject }}
+                            </span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Sala i Nauczyciel -->
+                        <div class="text-xs text-slate-500 mt-1 flex items-center gap-3 flex-wrap">
+                            {% if l.classroom %}
+                            <span class="inline-flex items-center gap-1">
+                                <span>🚪 Sala:</span>
+                                <strong class="text-slate-700">{{ l.classroom }}</strong>
+                            </span>
+                            {% endif %}
+                            {% if l.teacher %}
+                            <span>•</span>
+                            <span class="inline-flex items-center gap-1">
+                                <span>👨‍🏫 {{ l.teacher }}</span>
+                            </span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Dodatkowa informacja o zastępstwie -->
+                        {% if l.substitution_info %}
+                        <div class="text-xs font-semibold text-amber-800 mt-1 bg-amber-100/60 px-2 py-1 rounded border border-amber-200 inline-block">
+                            ℹ️ {{ l.substitution_info }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Prawa kolumna: Etykieta statusu -->
+                <div class="flex items-center gap-2 sm:self-center text-xs">
+                    {% if l.is_cancelled %}
+                    <span class="text-rose-700 font-bold bg-rose-100 px-2.5 py-1 rounded-lg">
+                        Lekcja odwołana
+                    </span>
+                    {% elif l.is_substitution %}
+                    <span class="text-amber-800 font-bold bg-amber-100 px-2.5 py-1 rounded-lg">
+                        Zmiana w planie
+                    </span>
+                    {% elif l.test %}
+                    <span class="text-indigo-800 font-bold bg-indigo-100 px-2.5 py-1 rounded-lg">
+                        Sprawdzian
+                    </span>
+                    {% else %}
+                    <span class="text-slate-500 text-[11px]">
+                        Planowo
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

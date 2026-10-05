@@ -1,0 +1,378 @@
+{% extends "web/base.html" %}
+
+{% block title %}Pulpit - {{ data.name }}{% endblock %}
+
+{% block content %}
+{% if error %}
+<div class="p-6 bg-rose-50 border border-rose-200 rounded-2xl text-center">
+    <div class="text-3xl mb-2">⚠️</div>
+    <h3 class="text-lg font-bold text-rose-900">{{ error }}</h3>
+    <p class="text-sm text-rose-700 mt-1">Sprawdź czy pliki profilu istnieją w katalogu <code>storage/</code>.</p>
+</div>
+{% else %}
+
+<!-- Nagłówek Ucznia & Status -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-200">
+    <div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
+            <span>{{ data.name }}</span>
+            {% if '(' ~ data.login ~ ')' not in data.name %}
+            <span class="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full border border-slate-200">
+                ID: {{ data.login }}
+            </span>
+            {% endif %}
+        </h1>
+        <p class="text-xs text-slate-500 mt-1 flex items-center gap-2">
+            <span>🔄 Ostatnia synchronizacja ze szkołą:</span>
+            <strong class="text-slate-700">{{ data.last_sync or 'Brak danych' }}</strong>
+        </p>
+    </div>
+
+    <!-- Przyciski szybkich akcji -->
+    <div class="flex items-center gap-2">
+        <a href="{{ url_for('web.actions_view') }}"
+           class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 shadow-sm transition-all">
+            ⚡ Centrum Akcji
+        </a>
+        <button hx-post="{{ url_for('web.action_sync') }}"
+                hx-vals='{"login": "{{ data.login }}"}'
+                hx-target="#action-toast"
+                hx-indicator="#sync-spinner"
+                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm shadow-indigo-100 transition-all cursor-pointer">
+            <span id="sync-spinner" class="htmx-indicator animate-spin">⏳</span>
+            <span>Pobierz z Librusa</span>
+        </button>
+    </div>
+</div>
+
+<div id="action-toast" class="mt-4"></div>
+
+<!-- 4 Kluczowe Karty KPI -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 my-6">
+    <!-- Karta 1: Średnia ocen -->
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Średnia ocen</span>
+            <span class="p-2 rounded-xl bg-indigo-50 text-indigo-600 text-sm">📈</span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+            <span class="text-3xl font-extrabold text-slate-900">
+                {{ data.overall_average or '-' }}
+            </span>
+            <span class="text-xs font-semibold text-slate-500">ogólna</span>
+        </div>
+    </div>
+
+    <!-- Karta 2: Liczba ocen -->
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Liczba ocen</span>
+            <span class="p-2 rounded-xl bg-emerald-50 text-emerald-600 text-sm">📝</span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+            <span class="text-3xl font-extrabold text-slate-900">{{ data.grades_count }}</span>
+            <span class="text-xs font-semibold text-slate-500">w historii</span>
+        </div>
+    </div>
+
+    <!-- Karta 3: Najbliższy dzień nauki -->
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Najbliższy dzień</span>
+            <span class="p-2 rounded-xl bg-sky-50 text-sky-600 text-sm">🏫</span>
+        </div>
+        <div class="mt-3">
+            <div class="text-lg font-extrabold text-slate-900 truncate">
+                {{ data.schedule_summary.label or 'Brak lekcji' }}
+            </div>
+            <div class="text-xs font-semibold text-sky-700 mt-0.5">
+                {% if data.schedule_summary.time_span %}
+                ⏰ {{ data.schedule_summary.time_span }} ({{ data.schedule_summary.total_count }} lekcji)
+                {% else %}
+                Cisza w planie
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Karta 4: Sprawdziany w terminarzu -->
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Sprawdziany</span>
+            <span class="p-2 rounded-xl bg-amber-50 text-amber-600 text-sm">🔔</span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+            <span class="text-3xl font-extrabold text-slate-900">{{ data.upcoming_tests_count }}</span>
+            <span class="text-xs font-semibold text-slate-500">w terminarzu</span>
+        </div>
+    </div>
+</div>
+
+<!-- Główny Układ Siatki (2/3 lewa strona, 1/3 prawa strona) -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Lewa Kolumna (2/3): Plan lekcji + Ostatnie oceny -->
+    <div class="lg:col-span-2 space-y-6">
+
+        <!-- Moduł: Plan Lekcji na Najbliższy Dzień -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">🏫</span>
+                    <h2 class="text-base font-bold text-slate-900">
+                        {{ data.schedule_summary.label or 'Plan lekcji' }}
+                    </h2>
+                </div>
+                {% if data.schedule_summary.time_span %}
+                <span class="px-3 py-1 bg-indigo-50 text-indigo-700 font-extrabold text-xs rounded-full border border-indigo-100">
+                    ⏰ {{ data.schedule_summary.time_span }}
+                </span>
+                {% endif %}
+            </div>
+
+            {% if data.schedule_summary.has_any and data.schedule_summary.lessons %}
+                <!-- Alerty o zmianach w planie -->
+                {% if data.schedule_summary.cancelled_count > 0 or data.schedule_summary.substitution_count > 0 %}
+                <div class="p-3.5 mx-4 mt-4 bg-amber-50 border border-amber-200 rounded-xl text-xs font-semibold text-amber-900 flex items-center gap-3">
+                    <span>⚠️</span>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span>Uwaga na zmiany:</span>
+                        {% if data.schedule_summary.substitution_count > 0 %}
+                        <span class="px-2 py-0.5 bg-amber-100 rounded text-amber-800 font-bold">🔄 {{ data.schedule_summary.substitution_count }} zastępstwo</span>
+                        {% endif %}
+                        {% if data.schedule_summary.cancelled_count > 0 %}
+                        <span class="px-2 py-0.5 bg-rose-100 rounded text-rose-800 font-bold">❌ {{ data.schedule_summary.cancelled_count }} odwołana</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Lista lekcji -->
+                <div class="divide-y divide-slate-100 p-2">
+                    {% for l in data.schedule_summary.lessons %}
+                    <div class="p-3.5 rounded-xl transition-colors flex items-center justify-between gap-4
+                        {% if l.is_cancelled %} bg-rose-50/60 border-l-4 border-rose-500
+                        {% elif l.is_substitution %} bg-amber-50/60 border-l-4 border-amber-500
+                        {% elif l.test %} bg-indigo-50/40 border-l-4 border-indigo-500
+                        {% else %} hover:bg-slate-50 border-l-4 border-transparent {% endif %}">
+
+                        <div class="flex items-center gap-4">
+                            <!-- Godziny i numer -->
+                            <div class="w-16 text-center">
+                                <span class="inline-block px-2 py-0.5 bg-slate-100 text-slate-700 text-[11px] font-extrabold rounded">
+                                    #{{ l.lesson_no }}
+                                </span>
+                                <div class="text-[11px] font-medium text-slate-500 mt-1 whitespace-nowrap">
+                                    {{ l.time_from or '' }}-{{ l.time_to or '' }}
+                                </div>
+                            </div>
+
+                            <!-- Szczegóły przedmiotu -->
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-sm {% if l.is_cancelled %}text-slate-400 line-through{% else %}text-slate-900{% endif %}">
+                                        {{ l.subject }}
+                                    </span>
+
+                                    {% if l.is_substitution %}
+                                    <span class="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-extrabold rounded border border-amber-200">
+                                        🔄 Zastępstwo
+                                    </span>
+                                    {% endif %}
+
+                                    {% if l.is_cancelled %}
+                                    <span class="px-2 py-0.5 bg-rose-100 text-rose-800 text-[10px] font-extrabold rounded border border-rose-200">
+                                        ❌ Odwołana
+                                    </span>
+                                    {% endif %}
+
+                                    {% if l.test %}
+                                    <span class="px-2 py-0.5 bg-indigo-100 text-indigo-800 text-[10px] font-extrabold rounded border border-indigo-200">
+                                        📝 {{ l.test.category }}: {{ l.test.description or l.test.subject }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+
+                                <div class="text-xs text-slate-500 mt-1 flex items-center gap-3">
+                                    {% if l.classroom %}
+                                    <span>sala: <strong class="text-slate-700">{{ l.classroom }}</strong></span>
+                                    {% endif %}
+                                    {% if l.teacher %}
+                                    <span>•</span>
+                                    <span>{{ l.teacher }}</span>
+                                    {% endif %}
+                                </div>
+
+                                {% if l.substitution_info %}
+                                <div class="text-xs font-semibold text-amber-800 mt-1">
+                                    ℹ️ {{ l.substitution_info }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="p-8 text-center text-slate-400 text-sm">
+                    Brak lekcji w planie na najbliższy dzień nauki.
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Moduł: Ostatnio Wystawione Oceny -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">📝</span>
+                    <h2 class="text-base font-bold text-slate-900">Ostatnio wystawione oceny</h2>
+                </div>
+                <a href="{{ url_for('web.grades_view') }}" class="text-xs font-bold text-indigo-600 hover:text-indigo-800">
+                    Zobacz wszystkie ({{ data.grades_count }}) ➔
+                </a>
+            </div>
+
+            {% if data.recent_grades %}
+                <div class="divide-y divide-slate-100">
+                    {% for g in data.recent_grades %}
+                    <div class="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                        <div class="flex items-center gap-3.5">
+                            <!-- Odznaka oceny -->
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-base shadow-sm
+                                {% if g.grade in ['5', '6', '5+', '6-'] %} bg-emerald-500 text-white
+                                {% elif g.grade in ['4', '4+', '4-'] %} bg-sky-500 text-white
+                                {% elif g.grade in ['3', '3+', '3-'] %} bg-amber-500 text-white
+                                {% elif g.grade in ['1', '2', '1+', '2+'] %} bg-rose-500 text-white
+                                {% else %} bg-slate-200 text-slate-800 {% endif %}">
+                                {{ g.grade }}
+                            </div>
+
+                            <div>
+                                <div class="font-bold text-sm text-slate-900 flex items-center gap-2">
+                                    <span>{{ g.subject }}</span>
+                                    {% if g.category and g.category != '-' %}
+                                    <span class="text-[11px] font-semibold text-slate-500 px-2 py-0.5 bg-slate-100 rounded-md">
+                                        {{ g.category }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <div class="text-xs text-slate-400 mt-0.5">
+                                    waga: <strong>{{ g.weight or '1' }}</strong> • data: {{ g.date or '-' }}
+                                    {% if g.comment and g.comment != '-' %}
+                                    • <span class="italic text-slate-600">"{{ g.comment }}"</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-right text-xs text-slate-400 hidden sm:block">
+                            {{ g.teacher or '' }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="p-8 text-center text-slate-400 text-sm">Brak zarejestrowanych ocen w historii.</div>
+            {% endif %}
+        </div>
+
+    </div>
+
+    <!-- Prawa Kolumna (1/3): Terminarz + Wiadomości -->
+    <div class="space-y-6">
+
+        <!-- Moduł: Nadchodzące Sprawdziany (Terminarz) -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">🔔</span>
+                    <h2 class="text-base font-bold text-slate-900">Sprawdziany & Terminarz</h2>
+                </div>
+                <a href="{{ url_for('web.timetable_view') }}" class="text-xs font-bold text-indigo-600 hover:text-indigo-800">
+                    Więcej ➔
+                </a>
+            </div>
+
+            <div class="p-4 space-y-4">
+                <!-- Najbliższy dzień z terminarza -->
+                {% if data.timetable_summary.immediate_tests or data.timetable_summary.immediate_absences %}
+                <div class="p-3 bg-indigo-50/60 rounded-xl border border-indigo-100">
+                    <div class="text-xs font-extrabold text-indigo-900 uppercase tracking-wider mb-2">
+                        {{ data.timetable_summary.immediate_label or 'Najbliższy dzień' }}
+                    </div>
+
+                    {% for t in data.timetable_summary.immediate_tests %}
+                    <div class="text-xs font-semibold text-indigo-950 flex items-start gap-2 py-1">
+                        <span>📝</span>
+                        <div>
+                            <strong>{{ t.category }}:</strong> {{ t.subject }} (lekcja {{ t.lesson_no }})
+                            {% if t.description %}<div class="text-[11px] text-indigo-700 italic">{{ t.description }}</div>{% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    {% for a in data.timetable_summary.immediate_absences %}
+                    <div class="text-xs font-semibold text-rose-900 flex items-center gap-2 py-1">
+                        <span>ℹ️</span>
+                        <span>Nieobecność: <strong>{{ a.teacher }}</strong> ({{ a.time }})</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Kolejne dni -->
+                {% if data.timetable_summary.upcoming_days %}
+                    <div class="space-y-3">
+                        <div class="text-xs font-bold uppercase text-slate-400 tracking-wider">W kolejnych dniach:</div>
+                        {% for day in data.timetable_summary.upcoming_days %}
+                        <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-xs">
+                            <div class="font-bold text-slate-700 mb-1">📌 {{ day.weekday }}, {{ day.date_str }}</div>
+                            {% for t in day.tests %}
+                            <div class="text-slate-600 pl-2 border-l-2 border-indigo-400 my-1">
+                                <strong>{{ t.category }}:</strong> {{ t.subject }} (lekcja {{ t.lesson_no }})
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% elif not data.timetable_summary.immediate_tests and not data.timetable_summary.immediate_absences %}
+                    <div class="p-6 text-center text-slate-400 text-xs">Brak zaplanowanych sprawdzianów w najbliższym czasie.</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Moduł: Najnowsze Komunikaty i Ogłoszenia -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">📢</span>
+                    <h2 class="text-base font-bold text-slate-900">Ogłoszenia szkolne</h2>
+                </div>
+                <a href="{{ url_for('web.messages_view') }}" class="text-xs font-bold text-indigo-600 hover:text-indigo-800">
+                    Wszystkie ({{ data.notifications_count }}) ➔
+                </a>
+            </div>
+
+            <div class="p-4 space-y-3">
+                {% if data.notifications %}
+                    {% for n in data.notifications[:4] %}
+                    <div class="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors text-xs border border-slate-100">
+                        <div class="font-bold text-slate-900 leading-snug">{{ n.title }}</div>
+                        <div class="text-[11px] text-slate-400 mt-1 flex items-center justify-between">
+                            <span>{{ n.sender or 'Szkoła' }}</span>
+                            <span>{{ n.datetime or '' }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="p-6 text-center text-slate-400 text-xs">Brak ogłoszeń szkolnych.</div>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+{% endif %}
+{% endblock %}

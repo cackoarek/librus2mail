@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="pl" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terminarz - Jan Kowalski (Przykładowy Uczeń) (8979296) - Librus2mail</title>
+    <!-- TailwindCSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- HTMX CDN -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+        .htmx-indicator { display: none; }
+        .htmx-request .htmx-indicator { display: inline-flex; }
+        .htmx-request.htmx-indicator { display: inline-flex; }
+    </style>
+    
+</head>
+<body class="h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white">
+
+    <!-- Pasek nawigacyjny -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Lewa strona: Logo + Menu -->
+                <div class="flex items-center gap-8">
+                    <a href="web_dashboard.html" class="flex items-center gap-3 group">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-sky-500 flex items-center justify-center text-white text-xl shadow-md shadow-indigo-100 group-hover:scale-105 transition-transform">
+                            🏫
+                        </div>
+                        <div>
+                            <span class="font-extrabold text-lg text-slate-900 tracking-tight flex items-center gap-1.5">
+                                Librus<span class="text-indigo-600">2mail</span>
+                            </span>
+                            <span class="block text-[10px] uppercase font-bold text-slate-400 tracking-wider">Web Dashboard</span>
+                        </div>
+                    </a>
+
+                    <!-- Nawigacja Desktop -->
+                    
+                    <nav class="hidden md:flex items-center gap-1">
+                        <a href="web_dashboard.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📊 Pulpit
+                        </a>
+                        <a href="web_plan.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📅 Plan lekcji
+                        </a>
+                        <a href="web_oceny.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📝 Oceny
+                        </a>
+                        <a href="web_terminarz.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors bg-indigo-50 text-indigo-700">
+                            🔔 Terminarz
+                        </a>
+                        <a href="web_wiadomosci.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            ✉️ Wiadomości
+                        </a>
+                        <a href="web_akcje.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            ⚡ Akcje CLI
+                        </a>
+                    </nav>
+                    
+                </div>
+
+                <!-- Prawa strona: Przełącznik ucznia + Auth -->
+                <div class="flex items-center gap-3">
+                    
+                        
+                        <div class="relative inline-block text-left">
+                            <select onchange="window.location.href='/student/' + this.value + '?next=' + encodeURIComponent(window.location.pathname)"
+                                    class="bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold rounded-lg px-3 py-2 pr-8 focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
+                                
+                                <option value="8979295" >
+                                    👤 Ignacy Cacko (8979295)
+                                </option>
+                                
+                                <option value="8979296" selected>
+                                    👤 Jan Kowalski (Przykładowy Uczeń) (8979296)
+                                </option>
+                                
+                            </select>
+                        </div>
+                        
+
+                        
+                        <a href="web_login.html"
+                           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors"
+                           title="Wyloguj rodzica">
+                            🔒 Wyloguj
+                        </a>
+                        
+                    
+
+                    
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobilny pasek skrótów -->
+        
+        <div class="md:hidden border-t border-slate-100 bg-slate-50 px-2 py-1.5 overflow-x-auto flex gap-1 scrollbar-none">
+            <a href="web_dashboard.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📊 Pulpit</a>
+            <a href="web_plan.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📅 Plan</a>
+            <a href="web_oceny.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📝 Oceny</a>
+            <a href="web_terminarz.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap bg-indigo-600 text-white">🔔 Terminarz</a>
+            <a href="web_wiadomosci.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">✉️ Wiadomości</a>
+            <a href="web_akcje.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">⚡ Akcje</a>
+        </div>
+        
+    </header>
+
+    <!-- Komunikaty Flash -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 w-full">
+        
+            
+        
+    </div>
+
+    <!-- Główna zawartość -->
+    <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
+        
+<!-- Nagłówek -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-200">
+    <div>
+        <div class="flex items-center gap-2">
+            <a href="web_dashboard.html" class="text-xs font-bold text-indigo-600 hover:text-indigo-800">
+                ← Powrót do pulpitu
+            </a>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1 flex items-center gap-3">
+            <span>🔔 Terminarz & Zapowiedzi: Jan Kowalski (Przykładowy Uczeń) (8979296)</span>
+            
+        </h1>
+        <p class="text-xs text-slate-500 mt-1">
+            Zapowiedziane sprawdziany, kartkówki, prace klasowe oraz nieobecności nauczycieli zarejestrowane w terminarzu szkoły.
+        </p>
+    </div>
+
+    <!-- Przyciski akcji -->
+    <div class="flex items-center gap-2">
+        <button hx-post="/api/action/sync"
+                hx-vals='{"login": "8979296"}'
+                hx-target="#timetable-action-toast"
+                hx-indicator="#timetable-sync-spinner"
+                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm shadow-indigo-100 transition-all cursor-pointer">
+            <span id="timetable-sync-spinner" class="htmx-indicator animate-spin">⏳</span>
+            <span>Odśwież terminarz</span>
+        </button>
+    </div>
+</div>
+
+<div id="timetable-action-toast" class="mt-4"></div>
+
+<!-- Karty KPI -->
+<div class="grid grid-cols-2 lg:grid-cols-3 gap-4 my-6">
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Najbliższy dzień nauki</span>
+            <span class="p-2 rounded-xl bg-indigo-50 text-indigo-600 text-sm">⚡</span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+            <span class="text-3xl font-extrabold text-slate-900">
+                1
+            </span>
+            <span class="text-xs font-semibold text-slate-500">sprawdzianów</span>
+        </div>
+    </div>
+
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Nadchodzący tydzień</span>
+            <span class="p-2 rounded-xl bg-amber-50 text-amber-600 text-sm">📅</span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+            <span class="text-3xl font-extrabold text-slate-900">6</span>
+            <span class="text-xs font-semibold text-slate-500">w horyzoncie 7 dni</span>
+        </div>
+    </div>
+
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Łącznie w bazie</span>
+            <span class="p-2 rounded-xl bg-sky-50 text-sky-600 text-sm">📚</span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+            <span class="text-3xl font-extrabold text-slate-900">11</span>
+            <span class="text-xs font-semibold text-slate-500">wszystkich wpisów</span>
+        </div>
+    </div>
+</div>
+
+<!-- Sekcja 1: Najbliższy dzień nauki (Pilne) -->
+
+<div class="mb-8 bg-indigo-50/70 border-2 border-indigo-200 rounded-2xl p-5 shadow-sm">
+    <div class="flex items-center justify-between pb-3 border-b border-indigo-100 mb-4">
+        <div class="flex items-center gap-2">
+            <span class="text-xl">🚨</span>
+            <h2 class="text-base font-extrabold text-indigo-950">
+                Najbliższy dzień nauki (poniedziałek, 21.09)
+            </h2>
+        </div>
+        <span class="px-2.5 py-1 bg-indigo-600 text-white font-extrabold text-xs rounded-lg shadow-xs">
+            Ważne
+        </span>
+    </div>
+
+    <!-- Sprawdziany w najbliższym dniu -->
+    
+    <div class="space-y-2.5 mb-4">
+        
+        <div class="p-4 bg-white rounded-xl border border-indigo-200 shadow-xs flex items-center justify-between gap-4">
+            <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="px-2.5 py-0.5 bg-rose-100 text-rose-800 text-xs font-extrabold rounded-md border border-rose-200">
+                        Kartkówka
+                    </span>
+                    <span class="font-extrabold text-slate-900 text-sm">
+                        Geografia
+                    </span>
+                    
+                    <span class="text-xs text-slate-500 font-semibold">
+                        (lekcja nr 3)
+                    </span>
+                    
+                </div>
+                
+                <div class="text-xs text-slate-700 mt-1.5 font-medium">
+                    📌 Stolice i kraje Europy
+                </div>
+                
+            </div>
+            
+            <div class="text-xs text-slate-500 whitespace-nowrap hidden sm:block">
+                👨‍🏫 Dorota Opolska
+            </div>
+            
+        </div>
+        
+    </div>
+    
+
+    <!-- Nieobecności w najbliższym dniu -->
+    
+    <div class="space-y-2">
+        <div class="text-xs font-bold text-indigo-900 uppercase tracking-wider mb-1">Nieobecności nauczycieli:</div>
+        
+        <div class="p-3 bg-white/80 rounded-xl border border-indigo-100 text-xs flex items-center gap-2 text-indigo-950 font-medium">
+            <span>ℹ️</span>
+            <span><strong>Janina Doszko</strong> - Nieobecność</span>
+        </div>
+        
+        <div class="p-3 bg-white/80 rounded-xl border border-indigo-100 text-xs flex items-center gap-2 text-indigo-950 font-medium">
+            <span>ℹ️</span>
+            <span><strong>Renata Skurka</strong> - Nieobecność</span>
+        </div>
+        
+    </div>
+    
+</div>
+
+
+<!-- Sekcja 2: Nadchodzące dni w horyzoncie tygodnia -->
+<div class="mb-8">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+            <span>📅</span>
+            <span>Kolejne zapowiedzi w horyzoncie 7 dni</span>
+        </h2>
+    </div>
+
+    
+    <div class="space-y-4">
+        
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <!-- Nagłówek dnia -->
+            <div class="p-4 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="font-extrabold text-sm text-slate-900">Środa</span>
+                    <span class="text-xs font-medium text-slate-500">(23.09.2026)</span>
+                </div>
+                <span class="text-xs font-semibold px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md">
+                    3 zapowiedzi
+                </span>
+            </div>
+
+            <!-- Lista sprawdzianów w danym dniu -->
+            <div class="p-4 space-y-2.5">
+                
+                <div class="p-3.5 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-colors flex items-center justify-between gap-3">
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 text-xs font-bold rounded-md">
+                                Sprawdzian
+                            </span>
+                            <span class="font-bold text-sm text-slate-900">
+                                Język niemiecki
+                            </span>
+                            
+                            <span class="text-xs text-slate-400">
+                                (lekcja #1)
+                            </span>
+                            
+                        </div>
+                        
+                        <div class="text-xs text-slate-600 mt-1 font-medium">
+                            Kapitel 3
+                        </div>
+                        
+                    </div>
+                    
+                    <div class="text-xs text-slate-500 hidden sm:block whitespace-nowrap">
+                        Artur Węgiel
+                    </div>
+                    
+                </div>
+                
+                <div class="p-3.5 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-colors flex items-center justify-between gap-3">
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 text-xs font-bold rounded-md">
+                                Kartkówka
+                            </span>
+                            <span class="font-bold text-sm text-slate-900">
+                                Język angielski
+                            </span>
+                            
+                            <span class="text-xs text-slate-400">
+                                (lekcja #5)
+                            </span>
+                            
+                        </div>
+                        
+                        <div class="text-xs text-slate-600 mt-1 font-medium">
+                            słownictwo part - słówka z zeszytu
+                        </div>
+                        
+                    </div>
+                    
+                    <div class="text-xs text-slate-500 hidden sm:block whitespace-nowrap">
+                        Magdalena Kiljańczyk
+                    </div>
+                    
+                </div>
+                
+                <div class="p-3.5 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-colors flex items-center justify-between gap-3">
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 text-xs font-bold rounded-md">
+                                Kartkówka
+                            </span>
+                            <span class="font-bold text-sm text-slate-900">
+                                Język angielski
+                            </span>
+                            
+                            <span class="text-xs text-slate-400">
+                                (lekcja #7)
+                            </span>
+                            
+                        </div>
+                        
+                        <div class="text-xs text-slate-600 mt-1 font-medium">
+                            słownictwo part - słówka z zeszytu
+                        </div>
+                        
+                    </div>
+                    
+                    <div class="text-xs text-slate-500 hidden sm:block whitespace-nowrap">
+                        Magdalena Kiljańczyk
+                    </div>
+                    
+                </div>
+                
+
+                <!-- Nieobecności -->
+                
+                <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 flex items-center gap-2">
+                    <span>⚠️</span>
+                    <span>Nieobecność: <strong>Janina Doszko</strong> - Nieobecność w pracy</span>
+                </div>
+                
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <!-- Nagłówek dnia -->
+            <div class="p-4 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="font-extrabold text-sm text-slate-900">Piątek</span>
+                    <span class="text-xs font-medium text-slate-500">(25.09.2026)</span>
+                </div>
+                <span class="text-xs font-semibold px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md">
+                    2 zapowiedzi
+                </span>
+            </div>
+
+            <!-- Lista sprawdzianów w danym dniu -->
+            <div class="p-4 space-y-2.5">
+                
+                <div class="p-3.5 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-colors flex items-center justify-between gap-3">
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 text-xs font-bold rounded-md">
+                                Sprawdzian
+                            </span>
+                            <span class="font-bold text-sm text-slate-900">
+                                Matematyka
+                            </span>
+                            
+                            <span class="text-xs text-slate-400">
+                                (lekcja #3)
+                            </span>
+                            
+                        </div>
+                        
+                        <div class="text-xs text-slate-600 mt-1 font-medium">
+                            Figury płaskie i wielokąty
+                        </div>
+                        
+                    </div>
+                    
+                    <div class="text-xs text-slate-500 hidden sm:block whitespace-nowrap">
+                        Michał Maliszewski
+                    </div>
+                    
+                </div>
+                
+                <div class="p-3.5 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-colors flex items-center justify-between gap-3">
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 text-xs font-bold rounded-md">
+                                Kartkówka
+                            </span>
+                            <span class="font-bold text-sm text-slate-900">
+                                Język francuski
+                            </span>
+                            
+                            <span class="text-xs text-slate-400">
+                                (lekcja #7)
+                            </span>
+                            
+                        </div>
+                        
+                        <div class="text-xs text-slate-600 mt-1 font-medium">
+                            Odmiana czasowników être i avoir
+                        </div>
+                        
+                    </div>
+                    
+                    <div class="text-xs text-slate-500 hidden sm:block whitespace-nowrap">
+                        Renata Skurka
+                    </div>
+                    
+                </div>
+                
+
+                <!-- Nieobecności -->
+                
+            </div>
+        </div>
+        
+    </div>
+    
+</div>
+
+<!-- Sekcja 3: Wszystkie historyczne i przyszłe wpisy -->
+<div class="mt-8">
+    <details class="group bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <summary class="p-4 sm:p-5 font-bold text-sm text-slate-800 flex items-center justify-between cursor-pointer select-none bg-slate-50/50 hover:bg-slate-100/50 transition-colors">
+            <span class="flex items-center gap-2">
+                <span>📋</span>
+                <span>Wszystkie zarejestrowane wpisy w terminarzu (11)</span>
+            </span>
+            <span class="text-xs text-indigo-600 font-semibold group-open:rotate-180 transition-transform">▼</span>
+        </summary>
+        <div class="p-4 divide-y divide-slate-100 max-h-96 overflow-y-auto">
+            
+            <div class="py-2.5 flex items-center justify-between text-xs gap-3">
+                <div class="flex items-center gap-2">
+                    <span class="font-mono text-slate-400 font-medium whitespace-nowrap">2026-09-15</span>
+                    <span class="font-bold text-slate-800">Historia</span>
+                    <span class="text-slate-500 truncate max-w-xs sm:max-w-md">Wojny perskie</span>
+                </div>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
+                    test
+                </span>
+            </div>
+            
+            <div class="py-2.5 flex items-center justify-between text-xs gap-3">
+                <div class="flex items-center gap-2">
+                    <span class="font-mono text-slate-400 font-medium whitespace-nowrap">2026-09-18</span>
+                    <span class="font-bold text-slate-800">Język polski</span>
+                    <span class="text-slate-500 truncate max-w-xs sm:max-w-md">Lektura: Hobbit</span>
+                </div>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
+                    test
+                </span>
+            </div>
+            
+            <div class="py-2.5 flex items-center justify-between text-xs gap-3">
+                <div class="flex items-center gap-2">
+                    <span class="font-mono text-slate-400 font-medium whitespace-nowrap">2026-09-21</span>
+                    <span class="font-bold text-slate-800">Geografia</span>
+                    <span class="text-slate-500 truncate max-w-xs sm:max-w-md">Stolice i kraje Europy</span>
+                </div>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
+                    test
+                </span>
+            </div>
+            
+            <div class="py-2.5 flex items-center justify-between text-xs gap-3">
+                <div class="flex items-center gap-2">
+                    <span class="font-mono text-slate-400 font-medium whitespace-nowrap">2026-09-21</span>
+                    <span class="font-bold text-slate-800">Janina Doszko</span>
+                    <span class="text-slate-500 truncate max-w-xs sm:max-w-md">Nieobecność nauczyciela</span>
+                </div>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
+                    absence
+                </span>
+            </div>
+            
+            <div class="py-2.5 flex items-center justify-between text-xs gap-3">
+                <div class="flex items-center gap-2">
+                    <span class="font-mono text-slate-400 font-medium whitespace-nowrap">2026-09-21</span>
+                    <span class="font-bold text-slate-800">Renata Skurka</span>
+                    <span class="text-slate-500 truncate max-w-xs sm:max-w-md">Nieobecność nauczyciela</span>
+                </div>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
+                    absence
+                </span>
+            </div>
+            
+            <div class="py-2.5 flex items-center justify-between text-xs gap-3">
+                <div class="flex items-center gap-2">
+                    <span class="font-mono text-slate-400 font-medium whitespace-nowrap">2026-09-23</span>
+                    <span class="font-bold text-slate-800">Janina Doszko</span>
+                    <span class="text-slate-500 truncate max-w-xs sm:max-w-md">Nieobecność nauczyciela</span>
+                </div>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
+                    absence
+                </span>
+            </div>
+            
+            <div class="py-2.5 flex items-center justify-between text-xs gap-3">
+                <div class="flex items-center gap-2">
+                    <span class="font-mono text-slate-400 font-medium whitespace-nowrap">2026-09-23</span>
+                    <span class="font-bold text-slate-800">Język niemiecki</span>
+                    <span class="text-slate-500 truncate max-w-xs sm:max-w-md">Kapitel 3</span>
+                </div>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
+                    test
+                </span>
+            </div>
+            
+            <div class="py-2.5 flex items-center justify-between text-xs gap-3">
+                <div class="flex items-center gap-2">
+                    <span class="font-mono text-slate-400 font-medium whitespace-nowrap">2026-09-23</span>
+                    <span class="font-bold text-slate-800">Język angielski</span>
+                    <span class="text-slate-500 truncate max-w-xs sm:max-w-md">słownictwo part - słówka z zeszytu</span>
+                </div>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
+                    test
+                </span>
+            </div>
+            
+            <div class="py-2.5 flex items-center justify-between text-xs gap-3">
+                <div class="flex items-center gap-2">
+                    <span class="font-mono text-slate-400 font-medium whitespace-nowrap">2026-09-23</span>
+                    <span class="font-bold text-slate-800">Język angielski</span>
+                    <span class="text-slate-500 truncate max-w-xs sm:max-w-md">słownictwo part - słówka z zeszytu</span>
+                </div>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
+                    test
+                </span>
+            </div>
+            
+            <div class="py-2.5 flex items-center justify-between text-xs gap-3">
+                <div class="flex items-center gap-2">
+                    <span class="font-mono text-slate-400 font-medium whitespace-nowrap">2026-09-25</span>
+                    <span class="font-bold text-slate-800">Matematyka</span>
+                    <span class="text-slate-500 truncate max-w-xs sm:max-w-md">Figury płaskie i wielokąty</span>
+                </div>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
+                    test
+                </span>
+            </div>
+            
+            <div class="py-2.5 flex items-center justify-between text-xs gap-3">
+                <div class="flex items-center gap-2">
+                    <span class="font-mono text-slate-400 font-medium whitespace-nowrap">2026-09-25</span>
+                    <span class="font-bold text-slate-800">Język francuski</span>
+                    <span class="text-slate-500 truncate max-w-xs sm:max-w-md">Odmiana czasowników être i avoir</span>
+                </div>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
+                    test
+                </span>
+            </div>
+            
+        </div>
+    </details>
+</div>
+
+
+    </main>
+
+    <!-- Stopka -->
+    <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex items-center gap-2 font-medium">
+                <span>🏫 Librus2mail v1.4.0</span>
+                <span>•</span>
+                <span>Prywatny Dashboard Rodzica</span>
+            </div>
+            <div class="text-slate-400 text-[11px]">
+                Bezpieczny odczyt z lokalnej pamięci <code>storage/</code> • Stan na: 18.09.2026 00:00
+            </div>
+        </div>
+    </footer>
+
+    
+</body>
+</html>

@@ -60,7 +60,7 @@
 
     <!-- Główny Formularz Konfiguratora -->
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
-        <form id="wizard-form" method="POST" action="{{ url_for('web.setup_submit') }}" class="space-y-6">
+        <form id="wizard-form" method="POST" action="{{ url_for('web.setup_submit') }}" class="space-y-6" novalidate>
 
             <!-- ================================================================= -->
             <!-- KROK 1: KONTA DZIECI W LIBRUSIE -->
@@ -200,8 +200,8 @@
                 <!-- Dane konta nadawcy -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
-                            Adres e-mail nadawcy *
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1" id="mail-login-label">
+                            Adres e-mail nadawcy (konto Gmail) *
                         </label>
                         <input type="email" id="mail_login" name="mail_login" required placeholder="np. twoje.powiadomienia@gmail.com"
                                class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
@@ -220,9 +220,9 @@
                 <div id="smtp-settings-box" class="hidden mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
-                            Host serwera SMTP
+                            Host serwera SMTP *
                         </label>
-                        <input type="text" name="smtp_host" placeholder="np. smtp.twojadomena.pl"
+                        <input type="text" id="smtp_host" name="smtp_host" placeholder="np. smtp.twojadomena.pl"
                                class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                     </div>
 
@@ -674,7 +674,31 @@ function updateStepperUI() {
     }
 }
 
+function validateStep(stepNum) {
+    const section = document.getElementById(`step-section-${stepNum}`);
+    if (!section) return true;
+
+    const elements = section.querySelectorAll('input, select, textarea');
+    for (const el of elements) {
+        // Ignoruj elementy w podkontenerach ukrytych wewnątrz sekcji (np. smtp-settings-box gdy wybrano Gmail)
+        const closestHidden = el.closest('.hidden');
+        if (closestHidden && closestHidden !== section) {
+            continue;
+        }
+
+        if (!el.checkValidity()) {
+            el.focus();
+            el.reportValidity();
+            return false;
+        }
+    }
+    return true;
+}
+
 function nextStep() {
+    if (!validateStep(currentStep)) {
+        return;
+    }
     if (currentStep < totalSteps) {
         currentStep++;
         updateStepperUI();
@@ -691,6 +715,17 @@ function prevStep() {
 }
 
 function goToStep(step) {
+    if (step > currentStep) {
+        for (let s = currentStep; s < step; s++) {
+            if (!validateStep(s)) {
+                if (currentStep !== s) {
+                    currentStep = s;
+                    updateStepperUI();
+                }
+                return;
+            }
+        }
+    }
     if (step >= 1 && step <= totalSteps) {
         currentStep = step;
         updateStepperUI();
@@ -699,11 +734,14 @@ function goToStep(step) {
 }
 
 function toggleMailProvider() {
-    const isGmail = document.querySelector('input[name="mail_provider"]:checked').value === 'gmail';
+    const isGmail = document.querySelector('input[name="mail_provider"]:checked')?.value === 'gmail';
     const smtpBox = document.getElementById('smtp-settings-box');
     const tipBox = document.getElementById('gmail-tip-box');
     const pwdLabel = document.getElementById('mail-password-label');
     const pwdInput = document.getElementById('mail_password');
+    const loginLabel = document.getElementById('mail-login-label');
+    const loginInput = document.getElementById('mail_login');
+    const smtpHostInput = document.getElementById('smtp_host');
 
     document.querySelectorAll('.provider-radio').forEach(label => {
         const radio = label.querySelector('input[type="radio"]');
@@ -715,15 +753,27 @@ function toggleMailProvider() {
     });
 
     if (isGmail) {
-        smtpBox.classList.add('hidden');
+        if (smtpBox) smtpBox.classList.add('hidden');
         if (tipBox) tipBox.classList.remove('hidden');
-        pwdLabel.innerText = "Hasło aplikacji Gmail (16 znaków) *";
-        pwdInput.placeholder = "abcd efgh ijkl mnop";
+        if (loginLabel) loginLabel.innerText = "Adres e-mail nadawcy (konto Gmail) *";
+        if (loginInput) {
+            loginInput.type = "email";
+            loginInput.placeholder = "np. twoje.powiadomienia@gmail.com";
+        }
+        if (pwdLabel) pwdLabel.innerText = "Hasło aplikacji Gmail (16 znaków) *";
+        if (pwdInput) pwdInput.placeholder = "abcd efgh ijkl mnop";
+        if (smtpHostInput) smtpHostInput.removeAttribute('required');
     } else {
-        smtpBox.classList.remove('hidden');
+        if (smtpBox) smtpBox.classList.remove('hidden');
         if (tipBox) tipBox.classList.add('hidden');
-        pwdLabel.innerText = "Hasło do skrzynki SMTP *";
-        pwdInput.placeholder = "Hasło do Twojego konta pocztowego";
+        if (loginLabel) loginLabel.innerText = "Login / Adres e-mail konta SMTP *";
+        if (loginInput) {
+            loginInput.type = "text";
+            loginInput.placeholder = "np. powiadomienia@twojadomena.pl lub login";
+        }
+        if (pwdLabel) pwdLabel.innerText = "Hasło do skrzynki SMTP *";
+        if (pwdInput) pwdInput.placeholder = "Hasło do Twojego konta pocztowego";
+        if (smtpHostInput) smtpHostInput.setAttribute('required', 'required');
     }
 }
 
@@ -1052,8 +1102,40 @@ function updateCronPreview() {
     preview.innerHTML = html;
 }
 
-// Inicjalizacja podglądu crona
+// Obsługa zatwierdzenia formularza z automatycznym przejściem do kroku z błędem
+const wizardForm = document.getElementById('wizard-form');
+if (wizardForm) {
+    wizardForm.addEventListener('submit', function(e) {
+        for (let s = 1; s <= totalSteps; s++) {
+            const section = document.getElementById(`step-section-${s}`);
+            if (!section) continue;
+
+            const elements = section.querySelectorAll('input, select, textarea');
+            for (const el of elements) {
+                const closestHidden = el.closest('.hidden');
+                if (closestHidden && closestHidden !== section) {
+                    continue;
+                }
+
+                if (!el.checkValidity()) {
+                    e.preventDefault();
+                    currentStep = s;
+                    updateStepperUI();
+                    window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 100, behavior: 'smooth' });
+                    setTimeout(() => {
+                        el.focus();
+                        el.reportValidity();
+                    }, 50);
+                    return;
+                }
+            }
+        }
+    });
+}
+
+// Inicjalizacja podglądu crona i dostawcy poczty
 document.addEventListener('DOMContentLoaded', () => {
+    toggleMailProvider();
     toggleCollectionMode();
     updateCronPreview();
 });

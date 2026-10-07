@@ -43,6 +43,13 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 - Poprawiono etykietę interwału: „Odstęp pomiędzy ściąganiem danych kolejnych dzieci (sekundy)”.
 - Wskazówka dotycząca hasła aplikacji Gmail jest teraz wyświetlana wyłącznie po zaznaczeniu opcji Gmail (dla SMTP pozostaje ukryta).
 
+### Poprawione
+- **Walidacja formularza kreatora konfiguracji (`/setup`)**:
+  - Wyeliminowano błąd przeglądarki `An invalid form control with name='mail_login' is not focusable.` przy próbie zapisu konfiguracji na ostatnim kroku kreatora.
+  - Wprowadzono atrybut `novalidate` na formularzu kreatora w połączeniu z automatyczną, sekwencyjną walidacją każdego kroku (krok po kroku i przy przeskakiwaniu kroków).
+  - W przypadku jakichkolwiek brakujących lub błędnych danych w poprzednich krokach kreator automatycznie cofa widok do właściwego kroku, przewija ekran i podświetla pole z komunikatem pomocy.
+  - Dostosowano typ pola loginu (`type="email"` dla Gmail, `type="text"` dla własnego serwera SMTP).
+
 ---
 
 ## [2.1.0] – 2026-10-07

@@ -537,15 +537,18 @@ def parse_schedule_from_form(form: Any, existing_schedule: dict[str, Any] | None
         except (ValueError, TypeError):
             r_days = 7
 
-        reports_list.append({
+        rep_entry = {
             'name': r_name,
             'enabled': bool(r_enabled),
             'frequency': r_freq,
-            'weekday': r_weekday,
-            'day_of_month': r_dom,
             'time': r_time,
             'interval_days': r_days,
-        })
+        }
+        if r_freq == 'monthly':
+            rep_entry['day_of_month'] = r_dom
+        else:
+            rep_entry['weekday'] = r_weekday
+        reports_list.append(rep_entry)
 
     # Kompatybilność wsteczna z pojedynczymi polami legacy
     if not reports_list and ('reports_enabled' in form or 'reports_weekday' in form or 'reports_time' in form or 'reports_interval_days' in form):
@@ -570,13 +573,20 @@ def parse_schedule_from_form(form: Any, existing_schedule: dict[str, Any] | None
     if not reports_list and existing_sched.get('reports'):
         reports_list = get_reports_schedules(existing_sched)
 
-    sched_cfg = {
-        'collection': {
-            'mode': col_mode,
+    if col_mode == 'interval':
+        col_cfg = {
+            'mode': 'interval',
+            'interval_hours': col_interval,
+        }
+    else:
+        col_cfg = {
+            'mode': 'daily',
             'time': col_time,
             'days': col_days,
-            'interval_hours': col_interval,
-        },
+        }
+
+    sched_cfg = {
+        'collection': col_cfg,
         'reports': reports_list,
     }
 

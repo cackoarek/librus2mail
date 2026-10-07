@@ -1,6 +1,7 @@
 """Główna aplikacja webowa Flask dla interfejsu Librus2mail."""
 
 import argparse
+import collections.abc
 import functools
 import importlib.metadata
 import logging
@@ -494,9 +495,9 @@ def action_student_report():
 # KREATOR PIERWSZEGO URUCHOMIENIA & PANEL USTAWIEŃ (SETUP & SETTINGS)
 # ------------------------------------------------------------------------------
 
-def _has_valid_config(app_config: dict | None) -> bool:
+def _has_valid_config(app_config: Any) -> bool:
     """Sprawdza, czy konfiguracja zawiera co najmniej jedno aktywne konto ucznia."""
-    if not isinstance(app_config, dict):
+    if not isinstance(app_config, (dict, collections.abc.Mapping)):
         return False
     users = app_config.get('librus_users', [])
     return isinstance(users, list) and len(users) > 0 and any(u.get('librus_login') for u in users)
@@ -793,7 +794,7 @@ def settings_view():
             return redirect(url_for('web.settings_view'))
 
         # 2. Poczta
-        existing_mail = config.get('mail', {}) if isinstance(config.get('mail'), dict) else {}
+        existing_mail = config.get('mail', {}) if isinstance(config.get('mail'), (dict, collections.abc.Mapping)) else {}
         mail_provider = form.get('mail_provider', 'gmail')
         mail_login = form.get('mail_login', '').strip() or existing_mail.get('login', '')
         gmail_auth_mode = form.get('gmail_auth_mode', 'app_password')
@@ -819,11 +820,11 @@ def settings_view():
             }
 
         # 3. Harmonogram i automatyzacja
-        existing_sched = config.get('schedule', {}) if isinstance(config.get('schedule'), dict) else {}
+        existing_sched = config.get('schedule', {}) if isinstance(config.get('schedule'), (dict, collections.abc.Mapping)) else {}
         sched_cfg, wait_time_s = parse_schedule_from_form(form, existing_schedule=existing_sched)
 
         # 4. Panel WWW i ochrona
-        existing_web = config.get('web', {}) if isinstance(config.get('web'), dict) else {}
+        existing_web = config.get('web', {}) if isinstance(config.get('web'), (dict, collections.abc.Mapping)) else {}
         new_web_pwd = form.get('web_password', '').strip()
         effective_web_pwd = new_web_pwd if new_web_pwd else existing_web.get('password')
 
@@ -861,8 +862,8 @@ def settings_view():
         return redirect(url_for('web.settings_view'))
 
     users = config.get('librus_users', []) if isinstance(config.get('librus_users'), list) else []
-    mail = config.get('mail', {}) if isinstance(config.get('mail'), dict) else {}
-    web_cfg = config.get('web', {}) if isinstance(config.get('web'), dict) else {}
+    mail = config.get('mail', {}) if isinstance(config.get('mail'), (dict, collections.abc.Mapping)) else {}
+    web_cfg = config.get('web', {}) if isinstance(config.get('web'), (dict, collections.abc.Mapping)) else {}
 
     return render_template(
         'web/settings.html',
@@ -905,7 +906,7 @@ def create_app(
     storage = get_storage(app_config, effective_storage)
 
     # Konfiguracja hasła i sesji
-    web_cfg = app_config.get('web', {}) if isinstance(app_config.get('web'), dict) else {}
+    web_cfg = app_config.get('web', {}) if isinstance(app_config.get('web'), (dict, collections.abc.Mapping)) else {}
     configured_pwd = web_password or os.environ.get('LIBRUS_WEB_PASSWORD') or web_cfg.get('password')
 
     if no_auth:

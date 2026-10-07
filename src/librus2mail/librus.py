@@ -66,7 +66,12 @@ class Librus:
         except (ValueError, TypeError):
             self.__schedule_retention_days = 30
         self.__librus_login = config.get('librus_login')
-        self.__librus_password = config.get('librus_password')
+        raw_password = config.get('librus_password')
+        self.__librus_password = (
+            raw_password.get_secret_value()
+            if hasattr(raw_password, 'get_secret_value')
+            else raw_password
+        )
 
         if self.__storage:
             known = self.__storage.load_known_items(str(self.__librus_login))

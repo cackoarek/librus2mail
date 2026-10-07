@@ -433,7 +433,7 @@
                     <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
                         Ścieżka do pliku OAuth2 JSON
                     </label>
-                    <input type="text" name="gmail_oauth2_file" value="" placeholder="np. yagmail_client.json"
+                    <input type="text" name="gmail_oauth2_file" value="None" placeholder="np. yagmail_client.json"
                            class="w-full text-sm font-mono px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 </div>
             </div>
@@ -599,8 +599,8 @@
                         </label>
                         
                         <select name="collection_days" id="collection_days_settings" onchange="updateCronPreviewSettings()" class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
-                            <option value="all" selected>Codziennie (poniedziałek – niedziela)</option>
-                            <option value="workdays" >Tylko w dni robocze (poniedziałek – piątek)</option>
+                            <option value="all" >Codziennie (poniedziałek – niedziela)</option>
+                            <option value="workdays" selected>Tylko w dni robocze (poniedziałek – piątek)</option>
                         </select>
                     </div>
                 </div>

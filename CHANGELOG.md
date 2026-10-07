@@ -9,6 +9,13 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ## [Unreleased]
 
+- **Wczesna walidacja konfiguracji i typowane modele z Pydantic / pydantic-settings (Issue #8 - Etap 1)**:
+  - Zastąpienie surowego, nietypowanego słownika konfiguracji silnie typowanymi modelami Pydantic v2 (`AppSettings`, `LibrusUserConfig`, `MailConfig`, `WebConfig`, `ScheduleConfig`, `NonGmailSettings`).
+  - Natychmiastowa wczesna walidacja danych (fail-fast) przy starcie aplikacji — wyłapywanie błędnych adresów e-mail (`EmailStr`), nieprawidłowych typów czy brakujących danych logowania zanim aplikacja nawiąże połączenie sieciowe.
+  - Zmienne środowiskowe i konteneryzacja (Docker / 12-factor): automatyczne nadpisywanie wartości z pliku YAML zmiennymi środowiskowymi z prefiksem `LIBRUS_` i zagnieżdżonym separatorem `__` (np. `LIBRUS_STORAGE_DIR`, `LIBRUS_MAIL__LOGIN`, `LIBRUS_MAIL__PASSWORD`).
+  - Bezpieczeństwo sekretów w logach: hasła przechowywane jako `SecretStr` (automatyczne maskowanie `**********` w logach i repr), z zachowaniem pełnej kompatybilności słownikowej przy wywołaniach sieciowych.
+  - Bezproblemowa obsługa aliasów historycznych konwencji nazewniczych kluczy (`work-in-loop` / `work_in_loop`, `dry-parse` / `dry_parse` / `do_not_send_first_parse`, `user_delay_s` / `delay_between_users_s`).
+  - Zachowanie 100% kompatybilności wstecznej (interfejs `MutableMapping` / dostęp słownikowy `.get()`, `[]`, `to_dict()`) ze wszystkimi istniejącymi skryptami, szablonami Jinja2 oraz zestawem testów jednostkowych.
 - **Obsługa Google OAuth2 dla Gmail (`oauth2_file`)**:
   - Dodano alternatywną metodę uwierzytelniania konta pocztowego Gmail z użyciem pliku autoryzacyjnego OAuth2 (`client_secret.json` / plik tokenów autoryzacyjnych), zgodnie ze zgłoszeniem w Issue #5.
   - Wybór metody uwierzytelniania w kreatorze `/setup` oraz w zakładce `/ustawienia` (*Hasło do aplikacji (zalecane)* vs *Google OAuth2 (.json)*).

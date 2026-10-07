@@ -213,7 +213,7 @@
                 </div>
             </div>
 
-            {% set non_gmail = mail.get('non_gmail_settings', {}) %}
+            {% set non_gmail = mail.get('non_gmail_settings') or {} %}
             <div id="smtp-settings-settings-box" class="{% if is_gmail %}hidden{% endif %} mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
@@ -255,9 +255,9 @@
                 </p>
             </div>
 
-            {% set sched = config.get('schedule', {}) %}
-            {% set col = sched.get('collection', {}) %}
-            {% set rep = sched.get('reports', {}) %}
+            {% set sched = config.get('schedule') or {} %}
+            {% set col = sched.get('collection') or {} %}
+            {% set rep = sched.get('reports') or {} %}
             {% set col_mode = col.get('mode', 'daily') %}
 
             <!-- 1. SPRAWDZANIE OCEN I WIADOMOŚCI -->

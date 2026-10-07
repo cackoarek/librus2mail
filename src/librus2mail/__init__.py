@@ -4,7 +4,7 @@ import logging
 
 from .base_logger import logger, setup_logging
 from .collect_and_notify import run_pipeline
-from .config import read_config
+from .config import AppSettings, LibrusUserConfig, MailConfig, read_config
 from .gmail_sender import GmailSender
 from .librus import Librus, NotLogged
 from .librus_collector import LibrusCollector, configure_mail_provider, run_collector
@@ -32,6 +32,9 @@ __all__ = [
     "logger",
     "setup_logging",
     "read_config",
+    "AppSettings",
+    "LibrusUserConfig",
+    "MailConfig",
     "GmailSender",
     "Librus",
     "NotLogged",

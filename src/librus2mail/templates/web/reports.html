@@ -1,0 +1,149 @@
+{% extends "web/base.html" %}
+
+{% block title %}Raporty i Analizy - {{ student_name }}{% endblock %}
+
+{% block head %}
+<style>
+    @media print {
+        header, footer, nav, .no-print { display: none !important; }
+        body { background: white !important; }
+        main { padding: 0 !important; max-width: 100% !important; margin: 0 !important; }
+        .report-container { box-shadow: none !important; border: none !important; padding: 0 !important; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Nagłówek strony -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-200 no-print">
+    <div>
+        <div class="flex items-center gap-2">
+            <a href="{{ url_for('web.dashboard') }}" class="text-xs font-bold text-indigo-600 hover:text-indigo-800">
+                ← Powrót do pulpitu
+            </a>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1 flex items-center gap-3">
+            <span>📈 Raporty i Analizy: {{ student_name }}</span>
+            {% if '(' ~ active_login ~ ')' not in student_name %}
+            <span class="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full border border-slate-200">
+                {{ active_login }}
+            </span>
+            {% endif %}
+        </h1>
+        <p class="text-xs text-slate-500 mt-1">
+            Zintegrowane analizy postępów edukacyjnych, motywacyjna karta ucznia oraz podgląd codziennych powiadomień.
+        </p>
+    </div>
+
+    <!-- Przyciski akcji -->
+    <div class="flex items-center gap-2">
+        <button onclick="window.print()"
+                class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 shadow-sm transition-all cursor-pointer"
+                title="Wydrukuj raport lub zapisz jako plik PDF">
+            <span>🖨️</span>
+            <span>Drukuj / PDF</span>
+        </button>
+        <a href="{{ url_for('web.actions_view') }}"
+           class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 shadow-sm transition-all"
+           title="Wymuś synchronizację lub wyślij raport na e-mail">
+            <span>⚡ Akcje CLI</span>
+        </a>
+    </div>
+</div>
+
+<!-- Pasek podzakładek i filtrów (Okres & Styl) -->
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mt-6 pb-2 no-print">
+    <!-- Główne podzakładki -->
+    <div class="flex items-center gap-1.5 p-1 bg-slate-200/70 rounded-xl overflow-x-auto scrollbar-none">
+        <a href="{{ url_for('web.reports_view', report_type='postepy', days=days) }}"
+           class="px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'postepy' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
+            📈 Raport postępów
+        </a>
+        <a href="{{ url_for('web.reports_view', report_type='uczen', variant=active_variant, days=days) }}"
+           class="px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'uczen' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
+            🌟 Raport ucznia
+        </a>
+        <a href="{{ url_for('web.reports_view', report_type='podsumowanie') }}"
+           class="px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'podsumowanie' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
+            📬 Podsumowanie dzienne
+        </a>
+    </div>
+
+    <!-- Filtry: Wybór okresu oraz Wariantu stylu -->
+    {% if active_tab in ('postepy', 'uczen') %}
+    <div class="flex flex-wrap items-center gap-2">
+        <!-- Selektor okresu (3, 7, 14, 30 dni) -->
+        <div class="flex items-center gap-1 bg-slate-100 border border-slate-200 p-1 rounded-xl shadow-xs">
+            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-2 flex items-center gap-1">
+                <span>⏱️</span> Okres:
+            </span>
+            {% for d in [3, 7, 14, 30] %}
+            <a href="{{ url_for('web.reports_view', report_type=active_tab, variant=active_variant if active_tab == 'uczen' else None, days=d) }}"
+               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-indigo-600 text-white shadow-sm' if days == d else 'text-slate-600 hover:text-slate-900 hover:bg-white' }}"
+               title="Analiza z ostatnich {{ d }} dni{% if d == 7 %} (domyślnie){% endif %}">
+                {{ d }} dni
+            </a>
+            {% endfor %}
+        </div>
+
+        <!-- Przełącznik stylów raportu ucznia (Kids / Teens / Youth) -->
+        {% if active_tab == 'uczen' %}
+        <div class="flex items-center gap-1 bg-indigo-50/80 border border-indigo-200/80 p-1 rounded-xl shadow-xs">
+            <span class="text-[11px] font-bold text-indigo-900 uppercase tracking-wider px-2">Styl:</span>
+            <a href="{{ url_for('web.reports_view', report_type='uczen', variant='kids', days=days) }}"
+               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-indigo-600 text-white shadow-sm' if active_variant == 'kids' else 'text-indigo-700 hover:bg-indigo-100' }}"
+               title="Wariant dla klas 4–6 szkoły podstawowej (Karta Mocy)">
+                🎈 Kids
+            </a>
+            <a href="{{ url_for('web.reports_view', report_type='uczen', variant='teens', days=days) }}"
+               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-indigo-600 text-white shadow-sm' if active_variant == 'teens' else 'text-indigo-700 hover:bg-indigo-100' }}"
+               title="Wariant dla klas 7–8 szkoły podstawowej (Weekly Briefing)">
+                🚀 Teens
+            </a>
+            <a href="{{ url_for('web.reports_view', report_type='uczen', variant='youth', days=days) }}"
+               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-indigo-600 text-white shadow-sm' if active_variant == 'youth' else 'text-indigo-700 hover:bg-indigo-100' }}"
+               title="Wariant dla liceum i technikum (Student Performance Dashboard)">
+                🎓 Youth
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    {% elif active_tab == 'podsumowanie' %}
+    <!-- Selektor daty dla Podsumowania dziennego -->
+    <div class="flex items-center gap-1.5 bg-slate-100 border border-slate-200 p-1 rounded-xl shadow-xs">
+        <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-2 flex items-center gap-1">
+            <span>📅</span> Dzień:
+        </span>
+        <a href="{{ url_for('web.reports_view', report_type='podsumowanie', date=prev_date_str) }}"
+           class="px-2 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer"
+           title="Poprzedni dzień ({{ prev_date_str }})">
+            ◀
+        </a>
+        <input type="date"
+               id="summary-date-picker"
+               value="{{ selected_date_str }}"
+               onchange="window.location.href='{{ url_for('web.reports_view', report_type='podsumowanie') }}?date=' + this.value"
+               class="bg-white border border-slate-300 text-slate-800 text-xs font-bold rounded-lg px-2.5 py-1 focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
+        <a href="{{ url_for('web.reports_view', report_type='podsumowanie', date=next_date_str) }}"
+           class="px-2 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer"
+           title="Następny dzień ({{ next_date_str }})">
+            ▶
+        </a>
+        {% if selected_date_str != default_date_str %}
+        <a href="{{ url_for('web.reports_view', report_type='podsumowanie', date=default_date_str) }}"
+           class="px-2.5 py-1 rounded-md text-[11px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-all cursor-pointer"
+           title="Wróć do dnia bieżącego ({{ default_date_str }})">
+            Dziś
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- Kontener wygenerowanego raportu HTML -->
+<div class="my-6 flex justify-center">
+    <div class="report-container w-full max-w-4xl bg-white rounded-2xl border border-slate-200 shadow-sm p-3 sm:p-6 overflow-x-auto">
+        {{ report_html | safe }}
+    </div>
+</div>
+{% endblock %}

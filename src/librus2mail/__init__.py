@@ -28,6 +28,7 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 __version__ = "2.0.1"
 
 __all__ = [
+    "__version__",
     "logger",
     "setup_logging",
     "read_config",

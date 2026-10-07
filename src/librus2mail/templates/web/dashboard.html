@@ -24,7 +24,7 @@
         </h1>
         <p class="text-xs text-slate-500 mt-1 flex items-center gap-2">
             <span>🔄 Ostatnia synchronizacja ze szkołą:</span>
-            <strong class="text-slate-700">{{ data.last_sync or 'Brak danych' }}</strong>
+            <strong class="text-slate-700 font-semibold" title="{{ data.last_sync or '' }}">{{ data.last_sync_human or (data.last_sync | human_time if data.last_sync else 'Brak danych') }}</strong>
         </p>
     </div>
 

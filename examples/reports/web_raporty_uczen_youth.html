@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="pl" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raporty i Analizy - Jan Kowalski (Przykładowy Uczeń) (8979296) - Librus2mail</title>
+    <!-- Favicon z logo Librus2mail (gradient indigo-sky + 🏫) -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%25%22%20y1%3D%22100%25%22%20x2%3D%22100%25%22%20y2%3D%220%25%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%234f46e5%22/%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%230ea5e9%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2216%22%20fill%3D%22url%28%23g%29%22/%3E%3Ctext%20x%3D%2232%22%20y%3D%2234%22%20font-size%3D%2234%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%F0%9F%8F%AB%3C/text%3E%3C/svg%3E">
+    <!-- TailwindCSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- HTMX CDN -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+        .htmx-indicator { display: none; }
+        .htmx-request .htmx-indicator { display: inline-flex; }
+        .htmx-request.htmx-indicator { display: inline-flex; }
+    </style>
+    
+<style>
+    @media print {
+        header, footer, nav, .no-print { display: none !important; }
+        body { background: white !important; }
+        main { padding: 0 !important; max-width: 100% !important; margin: 0 !important; }
+        .report-container { box-shadow: none !important; border: none !important; padding: 0 !important; }
+    }
+</style>
+
+</head>
+<body class="h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white">
+
+    <!-- Pasek nawigacyjny -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Lewa strona: Logo + Menu -->
+                <div class="flex items-center gap-8">
+                    <a href="web_dashboard.html" class="flex items-center gap-3 group">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-sky-500 flex items-center justify-center text-white text-xl shadow-md shadow-indigo-100 group-hover:scale-105 transition-transform">
+                            🏫
+                        </div>
+                        <div>
+                            <span class="font-extrabold text-lg text-slate-900 tracking-tight flex items-center gap-1.5">
+                                Librus<span class="text-indigo-600">2mail</span>
+                            </span>
+                            <span class="block text-[10px] uppercase font-bold text-slate-400 tracking-wider">Web Dashboard</span>
+                        </div>
+                    </a>
+
+                    <!-- Nawigacja Desktop -->
+                    
+                    <nav class="hidden md:flex items-center gap-1">
+                        <a href="web_dashboard.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📊 Pulpit
+                        </a>
+                        <a href="web_plan.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📅 Plan lekcji
+                        </a>
+                        <a href="web_oceny.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📝 Oceny
+                        </a>
+                        <a href="web_terminarz.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            🔔 Terminarz
+                        </a>
+                        <a href="web_wiadomosci.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            ✉️ Wiadomości
+                        </a>
+                        <a href="web_raporty_postepy.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors bg-indigo-50 text-indigo-700">
+                            📈 Raporty
+                        </a>
+                        <a href="web_akcje.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            ⚡ Akcje CLI
+                        </a>
+                    </nav>
+                    
+                </div>
+
+                <!-- Prawa strona: Przełącznik ucznia + Auth -->
+                <div class="flex items-center gap-3">
+                    
+                        
+                        <div class="relative inline-block text-left">
+                            <select onchange="window.location.href='/student/' + this.value + '?next=' + encodeURIComponent(window.location.pathname + window.location.search)"
+                                    class="bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold rounded-lg px-3 py-2 pr-8 focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
+                                
+                                <option value="8979295" >
+                                    👤 Ignacy Cacko (8979295)
+                                </option>
+                                
+                                <option value="8979296" selected>
+                                    👤 Jan Kowalski (Przykładowy Uczeń) (8979296)
+                                </option>
+                                
+                            </select>
+                        </div>
+                        
+
+                        
+                        <a href="web_login.html"
+                           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors"
+                           title="Wyloguj rodzica">
+                            🔒 Wyloguj
+                        </a>
+                        
+                    
+
+                    
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobilny pasek skrótów -->
+        
+        <div class="md:hidden border-t border-slate-100 bg-slate-50 px-2 py-1.5 overflow-x-auto flex gap-1 scrollbar-none">
+            <a href="web_dashboard.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📊 Pulpit</a>
+            <a href="web_plan.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📅 Plan</a>
+            <a href="web_oceny.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📝 Oceny</a>
+            <a href="web_terminarz.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">🔔 Terminarz</a>
+            <a href="web_wiadomosci.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">✉️ Wiadomości</a>
+            <a href="web_raporty_postepy.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap bg-indigo-600 text-white">📈 Raporty</a>
+            <a href="web_akcje.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">⚡ Akcje</a>
+        </div>
+        
+    </header>
+
+    <!-- Komunikaty Flash -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 w-full">
+        
+            
+        
+    </div>
+
+    <!-- Główna zawartość -->
+    <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
+        
+<!-- Nagłówek strony -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-200 no-print">
+    <div>
+        <div class="flex items-center gap-2">
+            <a href="web_dashboard.html" class="text-xs font-bold text-indigo-600 hover:text-indigo-800">
+                ← Powrót do pulpitu
+            </a>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1 flex items-center gap-3">
+            <span>📈 Raporty i Analizy: Jan Kowalski (Przykładowy Uczeń) (8979296)</span>
+            
+        </h1>
+        <p class="text-xs text-slate-500 mt-1">
+            Zintegrowane analizy postępów edukacyjnych, motywacyjna karta ucznia oraz podgląd codziennych powiadomień.
+        </p>
+    </div>
+
+    <!-- Przyciski akcji -->
+    <div class="flex items-center gap-2">
+        <button onclick="window.print()"
+                class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 shadow-sm transition-all cursor-pointer"
+                title="Wydrukuj raport lub zapisz jako plik PDF">
+            <span>🖨️</span>
+            <span>Drukuj / PDF</span>
+        </button>
+        <a href="web_akcje.html"
+           class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 shadow-sm transition-all"
+           title="Wymuś synchronizację lub wyślij raport na e-mail">
+            <span>⚡ Akcje CLI</span>
+        </a>
+    </div>
+</div>
+
+<!-- Pasek podzakładek i filtrów (Okres & Styl) -->
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mt-6 pb-2 no-print">
+    <!-- Główne podzakładki -->
+    <div class="flex items-center gap-1.5 p-1 bg-slate-200/70 rounded-xl overflow-x-auto scrollbar-none">
+        <a href="web_raporty_postepy.html"
+           class="px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-slate-600 hover:text-slate-900 hover:bg-white/50">
+            📈 Raport postępów
+        </a>
+        <a href="web_raporty_uczen_youth.html"
+           class="px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap bg-white text-indigo-700 shadow-sm">
+            🌟 Raport ucznia
+        </a>
+        <a href="web_raporty_podsumowanie.html"
+           class="px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-slate-600 hover:text-slate-900 hover:bg-white/50">
+            📬 Podsumowanie dzienne
+        </a>
+    </div>
+
+    <!-- Filtry: Wybór okresu oraz Wariantu stylu -->
+    
+    <div class="flex flex-wrap items-center gap-2">
+        <!-- Selektor okresu (3, 7, 14, 30 dni) -->
+        <div class="flex items-center gap-1 bg-slate-100 border border-slate-200 p-1 rounded-xl shadow-xs">
+            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-2 flex items-center gap-1">
+                <span>⏱️</span> Okres:
+            </span>
+            
+            <a href="web_raporty_uczen_youth.html"
+               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-slate-600 hover:text-slate-900 hover:bg-white"
+               title="Analiza z ostatnich 3 dni">
+                3 dni
+            </a>
+            
+            <a href="web_raporty_uczen_youth.html"
+               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap bg-indigo-600 text-white shadow-sm"
+               title="Analiza z ostatnich 7 dni (domyślnie)">
+                7 dni
+            </a>
+            
+            <a href="web_raporty_uczen_youth.html"
+               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-slate-600 hover:text-slate-900 hover:bg-white"
+               title="Analiza z ostatnich 14 dni">
+                14 dni
+            </a>
+            
+            <a href="web_raporty_uczen_youth.html"
+               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-slate-600 hover:text-slate-900 hover:bg-white"
+               title="Analiza z ostatnich 30 dni">
+                30 dni
+            </a>
+            
+        </div>
+
+        <!-- Przełącznik stylów raportu ucznia (Kids / Teens / Youth) -->
+        
+        <div class="flex items-center gap-1 bg-indigo-50/80 border border-indigo-200/80 p-1 rounded-xl shadow-xs">
+            <span class="text-[11px] font-bold text-indigo-900 uppercase tracking-wider px-2">Styl:</span>
+            <a href="web_raporty_uczen_kids.html"
+               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-indigo-700 hover:bg-indigo-100"
+               title="Wariant dla klas 4–6 szkoły podstawowej (Karta Mocy)">
+                🎈 Kids
+            </a>
+            <a href="web_raporty_uczen_teens.html"
+               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-indigo-700 hover:bg-indigo-100"
+               title="Wariant dla klas 7–8 szkoły podstawowej (Weekly Briefing)">
+                🚀 Teens
+            </a>
+            <a href="web_raporty_uczen_youth.html"
+               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap bg-indigo-600 text-white shadow-sm"
+               title="Wariant dla liceum i technikum (Student Performance Dashboard)">
+                🎓 Youth
+            </a>
+        </div>
+        
+    </div>
+    
+</div>
+
+<!-- Kontener wygenerowanego raportu HTML -->
+<div class="my-6 flex justify-center">
+    <div class="report-container w-full max-w-4xl bg-white rounded-2xl border border-slate-200 shadow-sm p-3 sm:p-6 overflow-x-auto">
+        <div style="width: 100%; max-width: 680px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; line-height: 1.5; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; box-sizing: border-box; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+    <!-- Nagłówek Youth / Liceum -->
+    <div style="background: #0f172a; color: #ffffff; padding: 24px;">
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="border-collapse: collapse;">
+            <tr>
+                <td>
+                    <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: #818cf8; text-transform: uppercase;">
+                        STUDENT PERFORMANCE DASHBOARD
+                    </div>
+                    <h1 style="margin: 4px 0 0 0; font-size: 22px; font-weight: 700; color: #ffffff;">
+                        Jan Kowalski (Przykładowy Uczeń) (8979296)
+                    </h1>
+                    <div style="margin-top: 4px; font-size: 13px; color: #94a3b8;">
+                        Przegląd wskaźników nauki i bilans ocen semestralnych.
+                    </div>
+                    <div style="margin-top: 8px; font-size: 12px; color: #94a3b8;">
+                        🗓️ Okres analizy: <strong style="color: #38bdf8;">11.09.2026</strong> – <strong style="color: #38bdf8;">18.09.2026</strong> (ostatnie 7 dni)
+                    </div>
+                </td>
+                <td align="right" valign="middle" style="text-align: right;">
+                    <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 8px 14px; display: inline-block; text-align: right;">
+                        <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase; font-weight: 600;">Średnia ważona</div>
+                        <div style="font-size: 20px; font-weight: 800; color: #38bdf8;">4.2</div>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Pasek statusu -->
+    <div style="background-color: #f1f5f9; border-bottom: 1px solid #e2e8f0; padding: 12px 24px; font-size: 13px; color: #334155;">
+        <strong>Dynamika ocen:</strong> Równa, stabilna forma. Trzymasz solidne tempo! 🎯
+    </div>
+
+    <div style="padding: 24px;">
+        <!-- Sprint Performance Delta: Porównanie Cyklu -->
+        
+        
+        <div style="margin-bottom: 24px;">
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #10b981; border-radius: 8px; padding: 16px 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                <!-- Nagłówek kafelka -->
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="border-collapse: collapse; margin-bottom: 12px;">
+                    <tr>
+                        <td valign="middle">
+                            <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #475569;">
+                                📊 Zestawienie Cyklu • Sprint Review
+                            </span>
+                            <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
+                                Zakres: <strong>11.09.2026 – 18.09.2026</strong> vs poprzedni: <strong>04.09.2026 – 11.09.2026</strong>
+                            </div>
+                        </td>
+                        
+                        <td align="right" valign="middle" style="text-align: right; white-space: nowrap;">
+                            <span style="display: inline-block; font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 6px; background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0;">
+                                ▲ +0.87 pkt
+                            </span>
+                        </td>
+                        
+                    </tr>
+                </table>
+
+                
+                <!-- Siatka metryk cyklu -->
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="border-collapse: collapse; margin-bottom: 12px; text-align: center;">
+                    <tr>
+                        <td width="32%" style="width: 32%; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 8px;">
+                            <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b;">Obecny cykl</div>
+                            <div style="font-size: 18px; font-weight: 800; color: #0f172a; margin-top: 2px;">4.79</div>
+                            <div style="font-size: 10px; color: #64748b; margin-top: 2px;">16 ocen (13 wyróżn.)</div>
+                        </td>
+                        <td width="2%" style="width: 2%;"></td>
+                        <td width="32%" style="width: 32%; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 8px;">
+                            <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b;">Poprzedni cykl</div>
+                            <div style="font-size: 18px; font-weight: 800; color: #475569; margin-top: 2px;">3.92</div>
+                            <div style="font-size: 10px; color: #64748b; margin-top: 2px;">14 ocen (7 wyróżn.)</div>
+                        </td>
+                        <td width="2%" style="width: 2%;"></td>
+                        <td width="32%" style="width: 32%; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 8px;">
+                            <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b;">Dynamika (Delta)</div>
+                            <div style="font-size: 18px; font-weight: 800; color: #16a34a; margin-top: 2px;">
+                                +0.87
+                            </div>
+                            <div style="font-size: 10px; color: #15803d; margin-top: 2px; font-weight: 600;">
+                                Wzrost formy 🚀
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+                
+
+                <!-- Diagnoza i wnioski taktyczne -->
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; font-size: 12px; color: #334155; line-height: 1.45;">
+                    <strong>Wniosek analityczny:</strong> Wzrost dynamiki formy: średnia ważona wzrosła o +0.87 pkt względem poprzedniego cyklu (4.79 vs 3.92). W bilansie odnotowano 13 ocen wyróżniających.
+                </div>
+            </div>
+        </div>
+        
+
+        <!-- Target: Wyróżnienie / Stypendium -->
+        
+        
+        <div style="margin-bottom: 24px;">
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-left: 4px solid #e11d48; border-radius: 8px; padding: 16px 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                    <tr>
+                        <td valign="middle">
+                            <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #9f1239;">
+                                🎯 Target: Wyróżnienie Semestralne / Stypendium (Próg 4.75)
+                            </span>
+                            <div style="font-size: 13px; font-weight: 700; color: #0f172a; margin-top: 3px;">
+                                🚀 Droga do Czerwonego Paska (85% celu)
+                            </div>
+                        </td>
+                        <td align="right" valign="middle" style="text-align: right; white-space: nowrap;">
+                            <span style="font-size: 12px; font-weight: 800; color: #e11d48; background: #fff1f2; border: 1px solid #fecdd3; padding: 3px 8px; border-radius: 6px;">
+                                Realizacja: 85%
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+
+                <div style="background: #f1f5f9; border-radius: 6px; height: 8px; width: 100%; margin: 10px 0; overflow: hidden; border: 1px solid #e2e8f0;">
+                    <div style="background: #e11d48; width: 85%; height: 100%; border-radius: 6px;"></div>
+                </div>
+
+                <div style="font-size: 12px; color: #475569; line-height: 1.45;">
+                    Twoja obecna średnia to 4.20. Do paska brakuje 0.55 pkt, a Twój najbliższy osiągalny cel to Średnia 4.30 (baza pod pasek) (brakuje tylko 0.10 pkt). Krok po kroku do przodu!
+                </div>
+
+                
+                <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #e2e8f0; font-size: 12px;">
+                    <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b;">
+                        Dźwignie optymalizacji średniej (minimalny nakład do podniesienia oceny):
+                    </span>
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-top: 6px; font-size: 12px;">
+                        
+                        <tr>
+                            <td style="padding: 3px 0; color: #1e293b; font-weight: 600;">• Matematyka</td>
+                            <td style="padding: 3px 0; text-align: center; color: #64748b;">Średnia: 4.62</td>
+                            <td style="padding: 3px 0; text-align: right; color: #0369a1;">Cel: ocena 5.0 (brakuje 0.13 pkt)</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="padding: 3px 0; color: #1e293b; font-weight: 600;">• Język angielski</td>
+                            <td style="padding: 3px 0; text-align: center; color: #64748b;">Średnia: 4.57</td>
+                            <td style="padding: 3px 0; text-align: right; color: #0369a1;">Cel: ocena 5.0 (brakuje 0.18 pkt)</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="padding: 3px 0; color: #1e293b; font-weight: 600;">• Język polski</td>
+                            <td style="padding: 3px 0; text-align: center; color: #64748b;">Średnia: 4.33</td>
+                            <td style="padding: 3px 0; text-align: right; color: #0369a1;">Cel: ocena 5.0 (brakuje 0.42 pkt)</td>
+                        </tr>
+                        
+                    </table>
+                </div>
+                
+            </div>
+        </div>
+        
+
+        <!-- Strategiczne Szanse (Quick Wins) -->
+        
+
+        <!-- Najmocniejsze Przedmioty -->
+        
+        <div style="margin-bottom: 24px;">
+            <div style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #0f172a; border-bottom: 2px solid #10b981; padding-bottom: 6px; margin-bottom: 12px;">
+                📈 Stabilne Filary Wyniku
+            </div>
+            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <thead>
+                    <tr style="color: #64748b; font-size: 11px; text-transform: uppercase;">
+                        <th style="padding: 6px 0; text-align: left;">Przedmiot</th>
+                        <th style="padding: 6px 0; text-align: center;">Średnia</th>
+                        <th style="padding: 6px 0; text-align: right;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 8px 0; font-weight: 600; color: #0f172a;">Muzyka</td>
+                        <td style="padding: 8px 0; text-align: center; font-weight: 700; color: #059669;">6.0</td>
+                        <td style="padding: 8px 0; text-align: right; color: #64748b; font-size: 12px;">Rewelacyjna forma! Ocena celująca lub bardzo dobra w zasięgu ręki.</td>
+                    </tr>
+                    
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 8px 0; font-weight: 600; color: #0f172a;">Chemia</td>
+                        <td style="padding: 8px 0; text-align: center; font-weight: 700; color: #059669;">5.0</td>
+                        <td style="padding: 8px 0; text-align: right; color: #64748b; font-size: 12px;">Rewelacyjna forma! Ocena celująca lub bardzo dobra w zasięgu ręki.</td>
+                    </tr>
+                    
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 8px 0; font-weight: 600; color: #0f172a;">Biologia</td>
+                        <td style="padding: 8px 0; text-align: center; font-weight: 700; color: #059669;">5.0</td>
+                        <td style="padding: 8px 0; text-align: right; color: #64748b; font-size: 12px;">Rewelacyjna forma! Ocena celująca lub bardzo dobra w zasięgu ręki.</td>
+                    </tr>
+                    
+                </tbody>
+            </table>
+        </div>
+        
+
+        <!-- Obszary Ryzyka / Priorytety Powtórkowe -->
+        
+        <div style="margin-bottom: 24px;">
+            <div style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #0f172a; border-bottom: 2px solid #f59e0b; padding-bottom: 6px; margin-bottom: 12px;">
+                ⚠️ Przedmioty Wymagające Uwagi
+            </div>
+            
+            <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 10px 14px; margin-bottom: 8px;">
+                <div style="font-weight: 700; font-size: 13px; color: #92400e;">
+                    Historia • Średnia: 2.78
+                </div>
+                <div style="font-size: 12px; color: #b45309; margin-top: 3px;">
+                    Przyda się spokojna powtórka przed kolejną kartkówką, aby zabezpieczyć stabilną trójkę.
+                </div>
+            </div>
+            
+        </div>
+        
+
+        <!-- Nadchodzący Tydzień / Terminarz (Youth) -->
+        
+        <div style="margin-bottom: 24px;">
+            <div style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #0f172a; border-bottom: 2px solid #6366f1; padding-bottom: 6px; margin-bottom: 12px;">
+                📅 Harmonogram Sprawdzianów i Kartkówek
+            </div>
+            <!-- Immediate -->
+            <div style="background: #fff1f2; border: 1px solid #fecdd3; border-left: 4px solid #e11d48; border-radius: 6px; padding: 12px 14px; margin-bottom: 10px;">
+                <div style="font-size: 12px; font-weight: 800; color: #9f1239; text-transform: uppercase; margin-bottom: 6px;">
+                    ⚠️ Najbliższy dzień nauki (poniedziałek, 21.09)
+                </div>
+                
+                    
+                    
+                    
+                    
+                    
+                    
+                    <div style="font-size: 12px; color: #1e293b; margin-bottom: 5px;">
+                        <span style="background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; font-weight: 800; font-size: 10px; padding: 1px 6px; border-radius: 3px; display: inline-block;">
+                            📙 Kartkówka
+                        </span>
+                        <strong style="margin-left: 4px;">Geografia</strong>
+                        <span style="color: #64748b; font-size: 11px;">(Lekcja 3)</span>
+                        — <span style="font-style: italic; color: #475569;">Stolice i kraje Europy</span>
+                        <span style="color: #94a3b8; font-size: 11px;">[Dorota Opolska]</span>
+                    </div>
+                    
+                
+            </div>
+
+            <!-- Upcoming days -->
+            
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 14px;">
+                
+                <div style="margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px dashed #f1f5f9;">
+                    <div style="font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px;">
+                        📌 Środa, 23.09.2026
+                    </div>
+                    
+                    
+                    
+                    
+                    
+                    
+                    <div style="margin-left: 10px; font-size: 12px; color: #1e293b; margin-bottom: 4px;">
+                        <span style="background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; font-weight: 800; font-size: 10px; padding: 1px 5px; border-radius: 3px; display: inline-block;">
+                            📕 Sprawdzian
+                        </span>
+                        <strong style="margin-left: 4px;">Język niemiecki</strong>
+                        <span style="color: #64748b; font-size: 11px;">(Lekcja 1)</span>
+                        — <span style="font-style: italic; color: #475569;">Kapitel 3</span>
+                        <span style="color: #94a3b8; font-size: 11px;">[Artur Węgiel]</span>
+                    </div>
+                    
+                    
+                    
+                    
+                    
+                    
+                    <div style="margin-left: 10px; font-size: 12px; color: #1e293b; margin-bottom: 4px;">
+                        <span style="background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; font-weight: 800; font-size: 10px; padding: 1px 5px; border-radius: 3px; display: inline-block;">
+                            📙 Kartkówka
+                        </span>
+                        <strong style="margin-left: 4px;">Język angielski</strong>
+                        <span style="color: #64748b; font-size: 11px;">(Lekcja 5)</span>
+                        — <span style="font-style: italic; color: #475569;">słownictwo part - słówka z zeszytu</span>
+                        <span style="color: #94a3b8; font-size: 11px;">[Magdalena Kiljańczyk]</span>
+                    </div>
+                    
+                    
+                    
+                    
+                    
+                    
+                    <div style="margin-left: 10px; font-size: 12px; color: #1e293b; margin-bottom: 4px;">
+                        <span style="background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; font-weight: 800; font-size: 10px; padding: 1px 5px; border-radius: 3px; display: inline-block;">
+                            📙 Kartkówka
+                        </span>
+                        <strong style="margin-left: 4px;">Język angielski</strong>
+                        <span style="color: #64748b; font-size: 11px;">(Lekcja 7)</span>
+                        — <span style="font-style: italic; color: #475569;">słownictwo part - słówka z zeszytu</span>
+                        <span style="color: #94a3b8; font-size: 11px;">[Magdalena Kiljańczyk]</span>
+                    </div>
+                    
+                </div>
+                
+                <div style="margin-bottom: 8px; padding-bottom: 6px; border-bottom: none;">
+                    <div style="font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px;">
+                        📌 Piątek, 25.09.2026
+                    </div>
+                    
+                    
+                    
+                    
+                    
+                    
+                    <div style="margin-left: 10px; font-size: 12px; color: #1e293b; margin-bottom: 4px;">
+                        <span style="background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; font-weight: 800; font-size: 10px; padding: 1px 5px; border-radius: 3px; display: inline-block;">
+                            📕 Sprawdzian
+                        </span>
+                        <strong style="margin-left: 4px;">Matematyka</strong>
+                        <span style="color: #64748b; font-size: 11px;">(Lekcja 3)</span>
+                        — <span style="font-style: italic; color: #475569;">Figury płaskie i wielokąty</span>
+                        <span style="color: #94a3b8; font-size: 11px;">[Michał Maliszewski]</span>
+                    </div>
+                    
+                    
+                    
+                    
+                    
+                    
+                    <div style="margin-left: 10px; font-size: 12px; color: #1e293b; margin-bottom: 4px;">
+                        <span style="background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; font-weight: 800; font-size: 10px; padding: 1px 5px; border-radius: 3px; display: inline-block;">
+                            📙 Kartkówka
+                        </span>
+                        <strong style="margin-left: 4px;">Język francuski</strong>
+                        <span style="color: #64748b; font-size: 11px;">(Lekcja 7)</span>
+                        — <span style="font-style: italic; color: #475569;">Odmiana czasowników être i avoir</span>
+                        <span style="color: #94a3b8; font-size: 11px;">[Renata Skurka]</span>
+                    </div>
+                    
+                </div>
+                
+            </div>
+            
+        </div>
+        
+
+        <!-- Oceny w okresie -->
+        <div>
+            <div style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #0f172a; border-bottom: 1px solid #cbd5e1; padding-bottom: 6px; margin-bottom: 12px;">
+                
+                📋 Oceny zarejestrowane w analizowanym okresie (16)
+                
+            </div>
+            
+            <div style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid #e2e8f0; border-radius: 8px;">
+            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; min-width: 600px; border-collapse: collapse; font-size: 12px;">
+                <thead>
+                    <tr style="color: #64748b; font-size: 11px; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
+                        <th style="padding: 8px 8px; text-align: left; white-space: nowrap;">Przedmiot</th>
+                        <th style="padding: 8px 8px; text-align: center; white-space: nowrap;">Ocena</th>
+                        <th style="padding: 8px 8px; text-align: left; white-space: nowrap;">Kategoria</th>
+                        <th style="padding: 8px 8px; text-align: left; min-width: 150px;">Komentarz nauczyciela</th>
+                        <th style="padding: 8px 8px; text-align: center; white-space: nowrap;">Waga</th>
+                        <th style="padding: 8px 8px; text-align: right; white-space: nowrap;">Data</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 8px; font-weight: 600; color: #0f172a; vertical-align: middle; white-space: nowrap;">Język angielski</td>
+                        <td style="padding: 10px 8px; text-align: center; vertical-align: middle; white-space: nowrap;">
+                            <span style="display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 12px; color: #ffffff; background: #059669;">
+                                5
+                            </span>
+                        </td>
+                        <td style="padding: 10px 8px; color: #475569; vertical-align: middle; white-space: nowrap;">Zadanie domowe</td>
+                        <td style="padding: 10px 8px; font-size: 12px; vertical-align: middle; min-width: 150px;">
+                            
+                            <span style="color: #94a3b8;">—</span>
+                            
+                            
+                            <div style="font-size: 11px; color: #94a3b8; margin-top: 3px;">👤 Magdalena Wiaderko</div>
+                            
+                        </td>
+                        <td style="padding: 10px 8px; color: #64748b; font-size: 11px; text-align: center; vertical-align: middle; white-space: nowrap;">Waga standardowa</td>
+                        <td style="padding: 10px 8px; text-align: right; color: #94a3b8; vertical-align: middle; white-space: nowrap;">18.09.2026</td>
+                    </tr>
+                    
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 8px; font-weight: 600; color: #0f172a; vertical-align: middle; white-space: nowrap;">Matematyka</td>
+                        <td style="padding: 10px 8px; text-align: center; vertical-align: middle; white-space: nowrap;">
+                            <span style="display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 12px; color: #ffffff; background: #059669;">
+                                5
+                            </span>
+                        </td>
+                        <td style="padding: 10px 8px; color: #475569; vertical-align: middle; white-space: nowrap;">Zadanie domowe</td>
+                        <td style="padding: 10px 8px; font-size: 12px; vertical-align: middle; min-width: 150px;">
+                            
+                            <div style="color: #0f172a; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 3px 8px; display: inline-block; line-height: 1.35;">
+                                💬 <strong>Komentarz:</strong> zadanie z gwiazdką wykonane bezbłędnie
+                            </div>
+                            
+                            
+                            <div style="font-size: 11px; color: #94a3b8; margin-top: 3px;">👤 Renata Matyk</div>
+                            
+                        </td>
+                        <td style="padding: 10px 8px; color: #64748b; font-size: 11px; text-align: center; vertical-align: middle; white-space: nowrap;">Waga standardowa</td>
+                        <td style="padding: 10px 8px; text-align: right; color: #94a3b8; vertical-align: middle; white-space: nowrap;">17.09.2026</td>
+                    </tr>
+                    
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 8px; font-weight: 600; color: #0f172a; vertical-align: middle; white-space: nowrap;">Język polski</td>
+                        <td style="padding: 10px 8px; text-align: center; vertical-align: middle; white-space: nowrap;">
+                            <span style="display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 12px; color: #ffffff; background: #059669;">
+                                5
+                            </span>
+                        </td>
+                        <td style="padding: 10px 8px; color: #475569; vertical-align: middle; white-space: nowrap;">Odpowiedź</td>
+                        <td style="padding: 10px 8px; font-size: 12px; vertical-align: middle; min-width: 150px;">
+                            
+                            <span style="color: #94a3b8;">—</span>
+                            
+                            
+                            <div style="font-size: 11px; color: #94a3b8; margin-top: 3px;">👤 Karolina Kurdej</div>
+                            
+                        </td>
+                        <td style="padding: 10px 8px; color: #64748b; font-size: 11px; text-align: center; vertical-align: middle; white-space: nowrap;">Waga standardowa</td>
+                        <td style="padding: 10px 8px; text-align: right; color: #94a3b8; vertical-align: middle; white-space: nowrap;">17.09.2026</td>
+                    </tr>
+                    
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 8px; font-weight: 600; color: #0f172a; vertical-align: middle; white-space: nowrap;">Fizyka</td>
+                        <td style="padding: 10px 8px; text-align: center; vertical-align: middle; white-space: nowrap;">
+                            <span style="display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 12px; color: #ffffff; background: #059669;">
+                                4
+                            </span>
+                        </td>
+                        <td style="padding: 10px 8px; color: #475569; vertical-align: middle; white-space: nowrap;">Sprawdzian</td>
+                        <td style="padding: 10px 8px; font-size: 12px; vertical-align: middle; min-width: 150px;">
+                            
+                            <span style="color: #94a3b8;">—</span>
+                            
+                            
+                            <div style="font-size: 11px; color: #94a3b8; margin-top: 3px;">👤 Marek Jarecki</div>
+                            
+                        </td>
+                        <td style="padding: 10px 8px; color: #64748b; font-size: 11px; text-align: center; vertical-align: middle; white-space: nowrap;">Waga średnia (kartkówka/odpowiedź)</td>
+                        <td style="padding: 10px 8px; text-align: right; color: #94a3b8; vertical-align: middle; white-space: nowrap;">17.09.2026</td>
+                    </tr>
+                    
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 8px; font-weight: 600; color: #0f172a; vertical-align: middle; white-space: nowrap;">Historia</td>
+                        <td style="padding: 10px 8px; text-align: center; vertical-align: middle; white-space: nowrap;">
+                            <span style="display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 12px; color: #ffffff; background: #059669;">
+                                6
+                            </span>
+                        </td>
+                        <td style="padding: 10px 8px; color: #475569; vertical-align: middle; white-space: nowrap;">Kartkówka</td>
+                        <td style="padding: 10px 8px; font-size: 12px; vertical-align: middle; min-width: 150px;">
+                            
+                            <span style="color: #94a3b8;">—</span>
+                            
+                            
+                            <div style="font-size: 11px; color: #94a3b8; margin-top: 3px;">👤 Małgorzata Potopińska</div>
+                            
+                        </td>
+                        <td style="padding: 10px 8px; color: #64748b; font-size: 11px; text-align: center; vertical-align: middle; white-space: nowrap;">Waga standardowa</td>
+                        <td style="padding: 10px 8px; text-align: right; color: #94a3b8; vertical-align: middle; white-space: nowrap;">17.09.2026</td>
+                    </tr>
+                    
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 8px; font-weight: 600; color: #0f172a; vertical-align: middle; white-space: nowrap;">Geografia</td>
+                        <td style="padding: 10px 8px; text-align: center; vertical-align: middle; white-space: nowrap;">
+                            <span style="display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 12px; color: #ffffff; background: #059669;">
+                                5
+                            </span>
+                        </td>
+                        <td style="padding: 10px 8px; color: #475569; vertical-align: middle; white-space: nowrap;">Zadanie domowe</td>
+                        <td style="padding: 10px 8px; font-size: 12px; vertical-align: middle; min-width: 150px;">
+                            
+                            <span style="color: #94a3b8;">—</span>
+                            
+                            
+                            <div style="font-size: 11px; color: #94a3b8; margin-top: 3px;">👤 Piotr Werner</div>
+                            
+                        </td>
+                        <td style="padding: 10px 8px; color: #64748b; font-size: 11px; text-align: center; vertical-align: middle; white-space: nowrap;">Waga standardowa</td>
+                        <td style="padding: 10px 8px; text-align: right; color: #94a3b8; vertical-align: middle; white-space: nowrap;">17.09.2026</td>
+                    </tr>
+                    
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 8px; font-weight: 600; color: #0f172a; vertical-align: middle; white-space: nowrap;">Język angielski</td>
+                        <td style="padding: 10px 8px; text-align: center; vertical-align: middle; white-space: nowrap;">
+                            <span style="display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 12px; color: #ffffff; background: #059669;">
+                                5
+                            </span>
+                        </td>
+                        <td style="padding: 10px 8px; color: #475569; vertical-align: middle; white-space: nowrap;">Sprawdzian</td>
+                        <td style="padding: 10px 8px; font-size: 12px; vertical-align: middle; min-width: 150px;">
+                            
+                            <span style="color: #94a3b8;">—</span>
+                            
+                            
+                            <div style="font-size: 11px; color: #94a3b8; margin-top: 3px;">👤 Magdalena Wiaderko</div>
+                            
+                        </td>
+                        <td style="padding: 10px 8px; color: #64748b; font-size: 11px; text-align: center; vertical-align: middle; white-space: nowrap;">Waga średnia (kartkówka/odpowiedź)</td>
+                        <td style="padding: 10px 8px; text-align: right; color: #94a3b8; vertical-align: middle; white-space: nowrap;">16.09.2026</td>
+                    </tr>
+                    
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 8px; font-weight: 600; color: #0f172a; vertical-align: middle; white-space: nowrap;">Chemia</td>
+                        <td style="padding: 10px 8px; text-align: center; vertical-align: middle; white-space: nowrap;">
+                            <span style="display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 12px; color: #ffffff; background: #059669;">
+                                5
+                            </span>
+                        </td>
+                        <td style="padding: 10px 8px; color: #475569; vertical-align: middle; white-space: nowrap;">Sprawdzian</td>
+                        <td style="padding: 10px 8px; font-size: 12px; vertical-align: middle; min-width: 150px;">
+                            
+                            <span style="color: #94a3b8;">—</span>
+                            
+                            
+                            <div style="font-size: 11px; color: #94a3b8; margin-top: 3px;">👤 Krystyna Nowak</div>
+                            
+                        </td>
+                        <td style="padding: 10px 8px; color: #64748b; font-size: 11px; text-align: center; vertical-align: middle; white-space: nowrap;">Waga średnia (kartkówka/odpowiedź)</td>
+                        <td style="padding: 10px 8px; text-align: right; color: #94a3b8; vertical-align: middle; white-space: nowrap;">16.09.2026</td>
+                    </tr>
+                    
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 8px; font-weight: 600; color: #0f172a; vertical-align: middle; white-space: nowrap;">Matematyka</td>
+                        <td style="padding: 10px 8px; text-align: center; vertical-align: middle; white-space: nowrap;">
+                            <span style="display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 12px; color: #ffffff; background: #059669;">
+                                5
+                            </span>
+                        </td>
+                        <td style="padding: 10px 8px; color: #475569; vertical-align: middle; white-space: nowrap;">Sprawdzian</td>
+                        <td style="padding: 10px 8px; font-size: 12px; vertical-align: middle; min-width: 150px;">
+                            
+                            <span style="color: #94a3b8;">—</span>
+                            
+                            
+                            <div style="font-size: 11px; color: #94a3b8; margin-top: 3px;">👤 Renata Matyk</div>
+                            
+                        </td>
+                        <td style="padding: 10px 8px; color: #64748b; font-size: 11px; text-align: center; vertical-align: middle; white-space: nowrap;">Waga bardzo duża (sprawdzian)</td>
+                        <td style="padding: 10px 8px; text-align: right; color: #94a3b8; vertical-align: middle; white-space: nowrap;">15.09.2026</td>
+                    </tr>
+                    
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 8px; font-weight: 600; color: #0f172a; vertical-align: middle; white-space: nowrap;">Biologia</td>
+                        <td style="padding: 10px 8px; text-align: center; vertical-align: middle; white-space: nowrap;">
+                            <span style="display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 12px; color: #ffffff; background: #059669;">
+                                5
+                            </span>
+                        </td>
+                        <td style="padding: 10px 8px; color: #475569; vertical-align: middle; white-space: nowrap;">Kartkówka</td>
+                        <td style="padding: 10px 8px; font-size: 12px; vertical-align: middle; min-width: 150px;">
+                            
+                            <span style="color: #94a3b8;">—</span>
+                            
+                            
+                            <div style="font-size: 11px; color: #94a3b8; margin-top: 3px;">👤 Joanna Tymonczuk</div>
+                            
+                        </td>
+                        <td style="padding: 10px 8px; color: #64748b; font-size: 11px; text-align: center; vertical-align: middle; white-space: nowrap;">Waga standardowa</td>
+                        <td style="padding: 10px 8px; text-align: right; color: #94a3b8; vertical-align: middle; white-space: nowrap;">15.09.2026</td>
+                    </tr>
+                    
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 8px; font-weight: 600; color: #0f172a; vertical-align: middle; white-space: nowrap;">Geografia</td>
+                        <td style="padding: 10px 8px; text-align: center; vertical-align: middle; white-space: nowrap;">
+                            <span style="display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 12px; color: #ffffff; background: #059669;">
+                                5
+                            </span>
+                        </td>
+                        <td style="padding: 10px 8px; color: #475569; vertical-align: middle; white-space: nowrap;">Sprawdzian</td>
+                        <td style="padding: 10px 8px; font-size: 12px; vertical-align: middle; min-width: 150px;">
+                            
+                            <span style="color: #94a3b8;">—</span>
+                            
+                            
+                            <div style="font-size: 11px; color: #94a3b8; margin-top: 3px;">👤 Piotr Werner</div>
+                            
+                        </td>
+                        <td style="padding: 10px 8px; color: #64748b; font-size: 11px; text-align: center; vertical-align: middle; white-space: nowrap;">Waga bardzo duża (sprawdzian)</td>
+                        <td style="padding: 10px 8px; text-align: right; color: #94a3b8; vertical-align: middle; white-space: nowrap;">15.09.2026</td>
+                    </tr>
+                    
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 8px; font-weight: 600; color: #0f172a; vertical-align: middle; white-space: nowrap;">Wychowanie fizyczne</td>
+                        <td style="padding: 10px 8px; text-align: center; vertical-align: middle; white-space: nowrap;">
+                            <span style="display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 12px; color: #ffffff; background: #059669;">
+                                5
+                            </span>
+                        </td>
+                        <td style="padding: 10px 8px; color: #475569; vertical-align: middle; white-space: nowrap;">Sprawdzian</td>
+                        <td style="padding: 10px 8px; font-size: 12px; vertical-align: middle; min-width: 150px;">
+                            
+                            <span style="color: #94a3b8;">—</span>
+                            
+                            
+                            <div style="font-size: 11px; color: #94a3b8; margin-top: 3px;">👤 Michał Feryc</div>
+                            
+                        </td>
+                        <td style="padding: 10px 8px; color: #64748b; font-size: 11px; text-align: center; vertical-align: middle; white-space: nowrap;">Waga standardowa</td>
+                        <td style="padding: 10px 8px; text-align: right; color: #94a3b8; vertical-align: middle; white-space: nowrap;">15.09.2026</td>
+                    </tr>
+                    
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 8px; font-weight: 600; color: #0f172a; vertical-align: middle; white-space: nowrap;">Język polski</td>
+                        <td style="padding: 10px 8px; text-align: center; vertical-align: middle; white-space: nowrap;">
+                            <span style="display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 12px; color: #ffffff; background: #059669;">
+                                5
+                            </span>
+                        </td>
+                        <td style="padding: 10px 8px; color: #475569; vertical-align: middle; white-space: nowrap;">Sprawdzian</td>
+                        <td style="padding: 10px 8px; font-size: 12px; vertical-align: middle; min-width: 150px;">
+                            
+                            <span style="color: #94a3b8;">—</span>
+                            
+                            
+                            <div style="font-size: 11px; color: #94a3b8; margin-top: 3px;">👤 Karolina Kurdej</div>
+                            
+                        </td>
+                        <td style="padding: 10px 8px; color: #64748b; font-size: 11px; text-align: center; vertical-align: middle; white-space: nowrap;">Waga średnia (kartkówka/odpowiedź)</td>
+                        <td style="padding: 10px 8px; text-align: right; color: #94a3b8; vertical-align: middle; white-space: nowrap;">14.09.2026</td>
+                    </tr>
+                    
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 8px; font-weight: 600; color: #0f172a; vertical-align: middle; white-space: nowrap;">Fizyka</td>
+                        <td style="padding: 10px 8px; text-align: center; vertical-align: middle; white-space: nowrap;">
+                            <span style="display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 12px; color: #ffffff; background: #d97706;">
+                                3
+                            </span>
+                        </td>
+                        <td style="padding: 10px 8px; color: #475569; vertical-align: middle; white-space: nowrap;">Kartkówka</td>
+                        <td style="padding: 10px 8px; font-size: 12px; vertical-align: middle; min-width: 150px;">
+                            
+                            <span style="color: #94a3b8;">—</span>
+                            
+                            
+                            <div style="font-size: 11px; color: #94a3b8; margin-top: 3px;">👤 Marek Jarecki</div>
+                            
+                        </td>
+                        <td style="padding: 10px 8px; color: #64748b; font-size: 11px; text-align: center; vertical-align: middle; white-space: nowrap;">Waga standardowa</td>
+                        <td style="padding: 10px 8px; text-align: right; color: #94a3b8; vertical-align: middle; white-space: nowrap;">14.09.2026</td>
+                    </tr>
+                    
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 8px; font-weight: 600; color: #0f172a; vertical-align: middle; white-space: nowrap;">Historia</td>
+                        <td style="padding: 10px 8px; text-align: center; vertical-align: middle; white-space: nowrap;">
+                            <span style="display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 12px; color: #ffffff; background: #059669;">
+                                5
+                            </span>
+                        </td>
+                        <td style="padding: 10px 8px; color: #475569; vertical-align: middle; white-space: nowrap;">Odpowiedź</td>
+                        <td style="padding: 10px 8px; font-size: 12px; vertical-align: middle; min-width: 150px;">
+                            
+                            <span style="color: #94a3b8;">—</span>
+                            
+                            
+                            <div style="font-size: 11px; color: #94a3b8; margin-top: 3px;">👤 Małgorzata Potopińska</div>
+                            
+                        </td>
+                        <td style="padding: 10px 8px; color: #64748b; font-size: 11px; text-align: center; vertical-align: middle; white-space: nowrap;">Waga standardowa</td>
+                        <td style="padding: 10px 8px; text-align: right; color: #94a3b8; vertical-align: middle; white-space: nowrap;">14.09.2026</td>
+                    </tr>
+                    
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 8px; font-weight: 600; color: #0f172a; vertical-align: middle; white-space: nowrap;">Informatyka</td>
+                        <td style="padding: 10px 8px; text-align: center; vertical-align: middle; white-space: nowrap;">
+                            <span style="display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 12px; color: #ffffff; background: #d97706;">
+                                3
+                            </span>
+                        </td>
+                        <td style="padding: 10px 8px; color: #475569; vertical-align: middle; white-space: nowrap;">Kartkówka</td>
+                        <td style="padding: 10px 8px; font-size: 12px; vertical-align: middle; min-width: 150px;">
+                            
+                            <span style="color: #94a3b8;">—</span>
+                            
+                            
+                            <div style="font-size: 11px; color: #94a3b8; margin-top: 3px;">👤 Janina Dydiel</div>
+                            
+                        </td>
+                        <td style="padding: 10px 8px; color: #64748b; font-size: 11px; text-align: center; vertical-align: middle; white-space: nowrap;">Waga standardowa</td>
+                        <td style="padding: 10px 8px; text-align: right; color: #94a3b8; vertical-align: middle; white-space: nowrap;">14.09.2026</td>
+                    </tr>
+                    
+                </tbody>
+            </table>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- Stopka Youth -->
+    <div style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 14px 24px; text-align: center; font-size: 12px; color: #64748b;">
+        <div>Świadome zarządzanie ocenami to klucz do dobrych wyników na koniec semestru.</div>
+        <div style="margin-top: 4px; font-size: 11px; color: #94a3b8;">Librus2mail • Personal Analytics</div>
+    </div>
+</div>
+    </div>
+</div>
+
+    </main>
+
+    <!-- Stopka -->
+    <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex items-center gap-2 font-medium">
+                <span>🏫 Librus2mail v2.0.1</span>
+                <span>•</span>
+                <span>Prywatny Dashboard Rodzica</span>
+            </div>
+            <div class="text-slate-400 text-[11px]">
+                Bezpieczny odczyt z lokalnej pamięci <code>storage/</code> • Stan na: 18.09.2026 00:00
+            </div>
+        </div>
+    </footer>
+
+    
+</body>
+</html>

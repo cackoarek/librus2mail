@@ -17,7 +17,7 @@
                 <td align="right" valign="middle" style="text-align: right;">
                     <div style="background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 8px; padding: 6px 12px; display: inline-block; text-align: center;">
                         <div style="font-size: 10px; text-transform: uppercase; color: #bfdbfe; font-weight: 600;">Status</div>
-                        <div style="font-size: 12px; font-weight: 700; color: #ffffff;">Nowe wpisy</div>
+                        <div style="font-size: 12px; font-weight: 700; color: #ffffff;">{% if messages or notifications or grades %}Nowe wpisy{% else %}Podsumowanie dnia{% endif %}</div>
                     </div>
                 </td>
             </tr>
@@ -26,6 +26,7 @@
 
     <div style="padding: 20px 24px; box-sizing: border-box;">
         <!-- Kafelki podsumowujące -->
+        {% if messages or notifications or grades %}
         <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; margin-bottom: 24px; border-collapse: separate; border-spacing: 8px;">
             <tr>
                 {% if messages %}
@@ -51,6 +52,11 @@
                 {% endif %}
             </tr>
         </table>
+        {% else %}
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 18px; margin-bottom: 24px; text-align: center; color: #64748b; font-size: 13px;">
+            ✨ W tym dniu nie odnotowano nowych ocen, wiadomości ani ogłoszeń w Librusie.
+        </div>
+        {% endif %}
 
         <!-- Plan lekcji na najbliższy dzień nauki -->
         {% if schedule and schedule.has_any %}
@@ -474,10 +480,7 @@
 
         <!-- Stopka -->
         <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0; text-align: center;">
-            <a href="https://synergia.librus.pl" style="display: inline-block; background-color: #2563eb; color: #ffffff; text-decoration: none; padding: 9px 18px; border-radius: 6px; font-size: 13px; font-weight: 600; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);">
-                Zaloguj się do Librus Synergia &rarr;
-            </a>
-            <div style="font-size: 11px; color: #94a3b8; margin-top: 12px;">
+            <div style="font-size: 11px; color: #94a3b8;">
                 Powiadomienie wygenerowane automatycznie przez usługę <strong>Librus2mail</strong>.
             </div>
         </div>

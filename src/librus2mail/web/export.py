@@ -18,12 +18,21 @@ def make_offline_friendly(html: str) -> str:
         ('href="/oceny"', 'href="web_oceny.html"'),
         ('href="/terminarz"', 'href="web_terminarz.html"'),
         ('href="/wiadomosci"', 'href="web_wiadomosci.html"'),
+        ('href="/raporty/podsumowanie"', 'href="web_raporty_podsumowanie.html"'),
+        ('href="/raporty"', 'href="web_raporty_postepy.html"'),
         ('href="/akcje"', 'href="web_akcje.html"'),
         ('href="/logout"', 'href="web_login.html"'),
         ('href="/login"', 'href="web_login.html"'),
     ]
     for old, new in replacements:
         html = html.replace(old, new)
+
+    # Linki podstron raportów z parametrami (days, variant, date)
+    html = re.sub(r'href="/raporty/postepy(\?[^"]*)?"', 'href="web_raporty_postepy.html"', html)
+    html = re.sub(r'href="/raporty/uczen\?[^"]*variant=kids[^"]*"', 'href="web_raporty_uczen_kids.html"', html)
+    html = re.sub(r'href="/raporty/uczen\?[^"]*variant=youth[^"]*"', 'href="web_raporty_uczen_youth.html"', html)
+    html = re.sub(r'href="/raporty/uczen(\?[^"]*)?"', 'href="web_raporty_uczen_teens.html"', html)
+    html = re.sub(r'href="/raporty/podsumowanie(\?[^"]*)?"', 'href="web_raporty_podsumowanie.html"', html)
 
     # W podglądzie statycznym formularz logowania kieruje od razu na pulpit
     html = re.sub(r'action="/login[^"]*"', 'action="web_dashboard.html" method="GET"', html)
@@ -94,6 +103,11 @@ def export_web_views(
         ('/oceny', 'web_oceny.html', "zestawienie ocen"),
         ('/terminarz', 'web_terminarz.html', "terminarz"),
         ('/wiadomosci', 'web_wiadomosci.html', "wiadomości"),
+        ('/raporty/postepy', 'web_raporty_postepy.html', "raport postępów"),
+        ('/raporty/uczen?variant=kids', 'web_raporty_uczen_kids.html', "raport ucznia (kids)"),
+        ('/raporty/uczen?variant=teens', 'web_raporty_uczen_teens.html', "raport ucznia (teens)"),
+        ('/raporty/uczen?variant=youth', 'web_raporty_uczen_youth.html', "raport ucznia (youth)"),
+        ('/raporty/podsumowanie', 'web_raporty_podsumowanie.html', "podsumowanie powiadomień"),
         ('/akcje', 'web_akcje.html', "centrum akcji"),
     ]
 

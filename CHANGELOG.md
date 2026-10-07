@@ -9,6 +9,36 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ## [Unreleased]
 
+### Dodane
+- **Zakładka „Raporty” w panelu WWW (`/raporty`)**:
+  - Nowa główna sekcja w menu nawigacyjnym z trzema zintegrowanymi podzakładkami analiz:
+    - **Raport postępów** (`/raporty/postepy`): interaktywny raport postępów rodzica z wyborem horyzontu czasowego (3, 7, 14, 30 dni).
+    - **Raport ucznia** (`/raporty/uczen`): karta motywacyjna z przełącznikiem stylu grupy wiekowej (Dzieci / `kids`, Nastolatki / `teens`, Młodzież / `youth`) oraz zakresem dni (3, 7, 14, 30 dni).
+    - **Podsumowanie dzienne** (`/raporty/podsumowanie`): chronologiczne zestawienie powiadomień, ocen i wiadomości z date-pickerem oraz wygodną nawigacją dzień wstecz / dzień w przód (`‹ Poprzedni dzień`, `Następny dzień ›`).
+- **Dynamiczne wersjonowanie panelu WWW (`get_app_version`)**:
+  - Automatyczne pobieranie aktualnego numeru wersji aplikacji z tagów Gita (`git describe --tags --abbrev=0`), metadanych pakietu (`importlib.metadata`) oraz zmiennej `librus2mail.__version__`.
+  - Wersja w stopce interfejsu WWW (`base.html`) automatycznie dopasowuje się do wydania na GitHubie bez ręcznego wpisywania w kodzie.
+- **Czytelny format czasu synchronizacji (`format_human_timestamp`)**:
+  - Konwersja surowego znacznika czasu ISO na naturalne określenia w języku polskim: `dzisiaj o 12:25 (przed chwilą)`, `dzisiaj o 12:25 (45 min temu)`, `dzisiaj o 10:00 (3 godz. temu)`, `wczoraj o 18:45`, `przedwczoraj o 20:10`, `30.09 o 09:15 (7 dni temu)`.
+  - Rejestracja filtra Jinja2 `human_time` dla Flask oraz zachowanie pełnego znacznika ISO w atrybucie `title` (tooltip) na pulpicie.
+- **Eksport raportów WWW do GitHub Pages**:
+  - Rozszerzenie eksportera statycznego HTML (`export_web_views`) oraz skryptu `examples/reports/regenerate_reports.sh` o nowe widoki raportów (`web_raporty_postepy.html`, `web_raporty_uczen_kids.html`, `web_raporty_uczen_teens.html`, `web_raporty_uczen_youth.html`, `web_raporty_podsumowanie.html`).
+  - Dodanie odnośników do raportów w workflow publikacji GitHub Pages (`.github/workflows/release.yml`).
+- **Wektorowy favicon w barwach logo projektu**:
+  - Nowa ikona karty przeglądarki (favicon) bazująca na motywie projektu (gradient indigo-sky + symbol szkoły 🏫).
+  - Wdrożenie jako `data:image/svg+xml` w szablonie bazowym (działa natychmiast w trybie online, offline oraz na GitHub Pages) wraz z dedykowanymi endpointami serwera `/favicon.ico` oraz `/favicon.svg`.
+
+### Zmienione
+- **Refaktoryzacja magazynu danych (`storage.py`) na `pathlib.Path`**:
+  - Zastąpienie wywołań `os.path.join`, `os.path.isfile`, `os.path.isdir` obiektową składnią `pathlib.Path`.
+  - Wprowadzenie bezpiecznych, atomowych operacji na plikach JSON: `read_json_safe` oraz `write_json_atomic`.
+- **Szablony powiadomień e-mail**:
+  - Usunięcie przycisku „Zaloguj się do Librus Synergia” z widoku podsumowania dnia (`summary.html`), zapewniając spójny i czysty wygląd zarówno w wiadomościach pocztowych, jak i w serwisie WWW.
+
+### Naprawione
+- **Uruchamianie `librus_web.py` bezpośrednio ze środowiska venv**:
+  - Dodanie ścieżki pakietu `src/` do `sys.path` w skrypcie `librus_web.py`, co zapobiega błędowi `ModuleNotFoundError: No module named 'librus2mail'` przy wywołaniu ze skopiowanego katalogu na serwerze.
+
 ---
 
 ## [2.0.1] – 2026-10-05

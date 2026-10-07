@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Pulpit Rodzica{% endblock %} - Librus2mail</title>
+    <!-- Favicon z logo Librus2mail (gradient indigo-sky + 🏫) -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%25%22%20y1%3D%22100%25%22%20x2%3D%22100%25%22%20y2%3D%220%25%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%234f46e5%22/%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%230ea5e9%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2216%22%20fill%3D%22url%28%23g%29%22/%3E%3Ctext%20x%3D%2232%22%20y%3D%2234%22%20font-size%3D%2234%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%F0%9F%8F%AB%3C/text%3E%3C/svg%3E">
     <!-- TailwindCSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- HTMX CDN -->
@@ -63,6 +65,10 @@
                            class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors {{ 'bg-indigo-50 text-indigo-700' if request.endpoint == 'web.messages_view' else 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
                             ✉️ Wiadomości
                         </a>
+                        <a href="{{ url_for('web.reports_view') }}"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors {{ 'bg-indigo-50 text-indigo-700' if request.endpoint == 'web.reports_view' else 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                            📈 Raporty
+                        </a>
                         <a href="{{ url_for('web.actions_view') }}"
                            class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors {{ 'bg-indigo-50 text-indigo-700' if request.endpoint == 'web.actions_view' else 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
                             ⚡ Akcje CLI
@@ -76,7 +82,7 @@
                     {% if not is_auth_enabled or is_authenticated %}
                         {% if all_students and all_students|length > 1 %}
                         <div class="relative inline-block text-left">
-                            <select onchange="window.location.href='/student/' + this.value + '?next=' + encodeURIComponent(window.location.pathname)"
+                            <select onchange="window.location.href='/student/' + this.value + '?next=' + encodeURIComponent(window.location.pathname + window.location.search)"
                                     class="bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold rounded-lg px-3 py-2 pr-8 focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
                                 {% for s in all_students %}
                                 <option value="{{ s.login }}" {% if s.login == active_login %}selected{% endif %}>
@@ -122,6 +128,7 @@
             <a href="{{ url_for('web.grades_view') }}" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap {{ 'bg-indigo-600 text-white' if request.endpoint == 'web.grades_view' else 'text-slate-600 bg-white border border-slate-200' }}">📝 Oceny</a>
             <a href="{{ url_for('web.timetable_view') }}" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap {{ 'bg-indigo-600 text-white' if request.endpoint == 'web.timetable_view' else 'text-slate-600 bg-white border border-slate-200' }}">🔔 Terminarz</a>
             <a href="{{ url_for('web.messages_view') }}" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap {{ 'bg-indigo-600 text-white' if request.endpoint == 'web.messages_view' else 'text-slate-600 bg-white border border-slate-200' }}">✉️ Wiadomości</a>
+            <a href="{{ url_for('web.reports_view') }}" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap {{ 'bg-indigo-600 text-white' if request.endpoint == 'web.reports_view' else 'text-slate-600 bg-white border border-slate-200' }}">📈 Raporty</a>
             <a href="{{ url_for('web.actions_view') }}" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap {{ 'bg-indigo-600 text-white' if request.endpoint == 'web.actions_view' else 'text-slate-600 bg-white border border-slate-200' }}">⚡ Akcje</a>
         </div>
         {% endif %}

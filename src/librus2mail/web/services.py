@@ -526,3 +526,67 @@ def build_daily_summary_html(
         schedule=schedule_summary,
     )
 
+
+def test_librus_credentials(login: str, password: str) -> tuple[bool, str]:
+    """Testuje autoryzację do systemu Librus dla podanego loginu i hasła bez pobierania pełnych danych."""
+    clean_login = str(login or '').strip()
+    clean_password = str(password or '').strip()
+    if not clean_login or not clean_password:
+        return False, "Login i hasło do konta Librus są wymagane."
+
+    from librus2mail.librus import Librus, NotLogged
+
+    dummy_cfg = {
+        'librus_login': clean_login,
+        'librus_password': clean_password,
+        'read_messages': False,
+        'read_grades': False,
+        'read_timetable': False,
+        'read_schedule': False,
+    }
+
+    try:
+        client = Librus(dummy_cfg)
+        client.login()
+        if client.logged:
+            return True, f"✅ Logowanie konta {clean_login} powiodło się pomyślnie!"
+        return False, "Nie udało się potwierdzić logowania w portalu Librus."
+    except NotLogged as e:
+        return False, f"Błąd autoryzacji: {e.message}"
+    except Exception as e:
+        logger.warning(f"Błąd podczas testu logowania Librus dla {clean_login}: {e}")
+        return False, f"Błąd połączenia z portalem Librus: {e}"
+
+
+def save_config_yaml(config_dict: dict[str, Any], target_path: str = 'config.yaml') -> str:
+    """Zapisuje słownik konfiguracyjny do pliku YAML z zachowaniem czytelnej struktury."""
+    from pathlib import Path
+
+    import yaml
+
+    target = Path(target_path).resolve()
+    target.parent.mkdir(parents=True, exist_ok=True)
+
+    # Tworzenie kopii zapasowej jeśli plik docelowy już istnieje
+    if target.is_file():
+        backup_path = target.with_suffix('.yaml.bak')
+        try:
+            backup_path.write_bytes(target.read_bytes())
+            logger.info(f"Utworzono kopię zapasową konfiguracji: {backup_path}")
+        except Exception as e:
+            logger.warning(f"Nie udało się utworzyć kopii zapasowej {backup_path}: {e}")
+
+    content = yaml.safe_dump(
+        config_dict,
+        allow_unicode=True,
+        sort_keys=False,
+        default_flow_style=False,
+    )
+
+    temp_path = target.with_suffix('.tmp')
+    temp_path.write_text(content, encoding='utf-8')
+    temp_path.replace(target)
+    logger.info(f"Zapisano nową konfigurację do pliku {target}")
+    return str(target)
+
+

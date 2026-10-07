@@ -3,18 +3,21 @@
 import argparse
 import functools
 import importlib.metadata
+import logging
 import os
 import secrets
 import shutil
 import subprocess
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 from flask import (
     Blueprint,
     Flask,
     Response,
     flash,
+    jsonify,
     redirect,
     render_template,
     request,
@@ -23,7 +26,7 @@ from flask import (
 )
 
 from librus2mail.base_logger import setup_logging
-from librus2mail.config import read_config
+from librus2mail.config import get_reports_schedules, read_config
 from librus2mail.librus_collector import run_collector
 from librus2mail.progress_report import run_progress_reports
 from librus2mail.student_report import run_student_reports
@@ -42,10 +45,13 @@ from .services import (
     get_student_dashboard_bundle,
     list_students,
     resolve_student_name,
+    save_config_yaml,
     simulate_new_grade,
+    test_librus_credentials,
 )
 
 web_bp = Blueprint('web', __name__)
+logger = logging.getLogger(__name__)
 
 
 @functools.lru_cache(maxsize=1)
@@ -484,6 +490,377 @@ def action_student_report():
     return render_template('web/action_result.html', title=msg, success=success, output=output)
 
 
+# ------------------------------------------------------------------------------
+# KREATOR PIERWSZEGO URUCHOMIENIA & PANEL USTAWIEŃ (SETUP & SETTINGS)
+# ------------------------------------------------------------------------------
+
+def _has_valid_config(app_config: dict | None) -> bool:
+    """Sprawdza, czy konfiguracja zawiera co najmniej jedno aktywne konto ucznia."""
+    if not isinstance(app_config, dict):
+        return False
+    users = app_config.get('librus_users', [])
+    return isinstance(users, list) and len(users) > 0 and any(u.get('librus_login') for u in users)
+
+
+def parse_schedule_from_form(form: Any, existing_schedule: dict[str, Any] | None = None) -> tuple[dict[str, Any], int]:
+    """Parsuje harmonogram z formularza WWW i zwraca (schedule_dict, wait_time_s)."""
+    existing_sched = existing_schedule or {}
+    existing_col = existing_sched.get('collection', {})
+
+    col_mode = form.get('collection_mode', existing_col.get('mode', 'daily'))
+    col_time = form.get('collection_time', existing_col.get('time', '16:00')).strip()
+    col_days = form.get('collection_days', existing_col.get('days', 'all')).strip()
+    try:
+        col_interval = int(form.get('collection_interval_hours', existing_col.get('interval_hours', 1)))
+    except (ValueError, TypeError):
+        col_interval = 1
+
+    # Parsowanie wielu harmonogramów raportów postępów
+    report_indices = sorted(list({
+        int(k.split('_')[-1])
+        for k in form.keys()
+        if (k.startswith('report_name_') or k.startswith('report_frequency_') or k.startswith('report_interval_days_') or k.startswith('report_enabled_'))
+        and k.split('_')[-1].isdigit()
+    }))
+
+    reports_list: list[dict[str, Any]] = []
+    for idx in report_indices:
+        r_name = form.get(f'report_name_{idx}', f'Raport #{idx + 1}').strip() or f'Raport #{idx + 1}'
+        r_enabled = f'report_enabled_{idx}' in form
+        r_freq = form.get(f'report_frequency_{idx}', 'weekly').strip()
+        r_weekday = form.get(f'report_weekday_{idx}', 'friday').strip()
+        r_dom_raw = form.get(f'report_day_of_month_{idx}', '1').strip()
+        r_dom = int(r_dom_raw) if r_dom_raw.isdigit() else r_dom_raw
+        r_time = form.get(f'report_time_{idx}', '17:00').strip()
+        try:
+            r_days = int(form.get(f'report_interval_days_{idx}', 7))
+        except (ValueError, TypeError):
+            r_days = 7
+
+        reports_list.append({
+            'name': r_name,
+            'enabled': bool(r_enabled),
+            'frequency': r_freq,
+            'weekday': r_weekday,
+            'day_of_month': r_dom,
+            'time': r_time,
+            'interval_days': r_days,
+        })
+
+    # Kompatybilność wsteczna z pojedynczymi polami legacy
+    if not reports_list and ('reports_enabled' in form or 'reports_weekday' in form or 'reports_time' in form or 'reports_interval_days' in form):
+        r_enabled = 'reports_enabled' in form
+        r_weekday = form.get('reports_weekday', 'friday').strip()
+        r_time = form.get('reports_time', '17:00').strip()
+        try:
+            r_days = int(form.get('reports_interval_days', 7))
+        except (ValueError, TypeError):
+            r_days = 7
+        reports_list.append({
+            'name': 'Raport tygodniowy',
+            'enabled': bool(r_enabled),
+            'frequency': 'weekly',
+            'weekday': r_weekday,
+            'day_of_month': 1,
+            'time': r_time,
+            'interval_days': r_days,
+        })
+
+    # Jeśli nic nie przesłano w formularzu, zachowaj istniejące raporty
+    if not reports_list and existing_sched.get('reports'):
+        reports_list = get_reports_schedules(existing_sched)
+
+    sched_cfg = {
+        'collection': {
+            'mode': col_mode,
+            'time': col_time,
+            'days': col_days,
+            'interval_hours': col_interval,
+        },
+        'reports': reports_list,
+    }
+
+    if col_mode == 'interval':
+        wait_time_s = max(300, col_interval * 3600)
+    else:
+        wait_time_s = 3600
+
+    if 'wait_time_s' in form and 'collection_mode' not in form:
+        try:
+            wait_time_s = max(300, int(form['wait_time_s']))
+        except (ValueError, TypeError):
+            pass
+
+    return sched_cfg, wait_time_s
+
+
+@web_bp.route('/setup')
+def setup_view():
+    """Kreator pierwszego uruchomienia w kolejnych krokach (gdy brak config.yaml)."""
+    config = getattr(request, 'app_config', {})
+    if _has_valid_config(config):
+        # Jeśli konfiguracja już istnieje, przekieruj do edycji ustawień lub pulpitu
+        return redirect(url_for('web.settings_view'))
+    return render_template('web/setup.html')
+
+
+@web_bp.route('/setup', methods=['POST'])
+def setup_submit():
+    """Zapisuje dane zebrane przez kreator do pliku config.yaml i aktywuje system."""
+    form = request.form
+    config_path = request.app_config_path or 'config.yaml'
+
+    # 1. Zbieranie kont uczniów
+    students: list[dict[str, Any]] = []
+    # Wyciągamy indeksy z pól student_login_X
+    indices = sorted(list({
+        int(k.split('_')[-1])
+        for k in form.keys()
+        if k.startswith('student_login_') and k.split('_')[-1].isdigit()
+    }))
+
+    for idx in indices:
+        login = form.get(f'student_login_{idx}', '').strip()
+        pwd = form.get(f'student_password_{idx}', '').strip()
+        name = form.get(f'student_name_{idx}', '').strip() or f"Uczeń {login}"
+        receivers_raw = form.get(f'student_receivers_{idx}', '').strip()
+        receivers = [r.strip() for r in receivers_raw.split(',') if r.strip()]
+
+        if login and pwd:
+            st_cfg: dict[str, Any] = {
+                'librus_login_name': name,
+                'librus_login': login,
+                'librus_password': pwd,
+                'read_messages': f'student_messages_{idx}' in form,
+                'read_grades': f'student_grades_{idx}' in form,
+                'read_timetable': f'student_timetable_{idx}' in form,
+                'read_schedule': f'student_schedule_{idx}' in form,
+                'schedule_retention_days': int(form.get('schedule_retention_days', 30)),
+                'schedule_day_offset': int(form.get('schedule_day_offset', 1)),
+                'one_summary_message': False,
+                'do_not_send_first_parse': 'do_not_send_first_parse' in form,
+                'notification_receivers': receivers or [form.get('mail_login', '').strip()],
+            }
+            students.append(st_cfg)
+
+    if not students:
+        flash("Musisz podać co najmniej jedno konto ucznia w Librusie (login i hasło).", "error")
+        return redirect(url_for('web.setup_view'))
+
+    # 2. Poczta
+    mail_provider = form.get('mail_provider', 'gmail')
+    mail_login = form.get('mail_login', '').strip()
+    mail_pwd = form.get('mail_password', '').strip()
+
+    mail_cfg: dict[str, Any] = {
+        'login': mail_login,
+        'password': mail_pwd,
+        'use_gmail': (mail_provider == 'gmail'),
+    }
+    if mail_provider == 'smtp':
+        mail_cfg['non_gmail_settings'] = {
+            'smtp_host': form.get('smtp_host', 'smtp.example.com').strip(),
+            'port': int(form.get('smtp_port', 587)),
+        }
+
+    # 3. Harmonogram i automatyzacja
+    sched_cfg, wait_time_s = parse_schedule_from_form(form)
+
+    # 4. Parametry ogólne i panel WWW
+    web_password = form.get('web_password', '').strip() or None
+    web_port = int(form.get('web_port', 5000))
+    web_host = form.get('web_host', '127.0.0.1').strip()
+
+    full_config: dict[str, Any] = {
+        'librus_users': students,
+        'delay_between_users_s': int(form.get('delay_between_users_s', 10)),
+        'login_retries': 2,
+        'login_retry_delay_s': 5,
+        'wait_time_s': wait_time_s,
+        'schedule': sched_cfg,
+        'schedule_day_offset': int(form.get('schedule_day_offset', 1)),
+        'schedule_retention_days': int(form.get('schedule_retention_days', 30)),
+        'do_not_send_first_parse': 'do_not_send_first_parse' in form,
+        'work-in-loop': True if 'collection_mode' in form else ('work_in_loop' in form),
+        'storage_dir': getattr(request, 'app_storage_dir', 'storage') or 'storage',
+        'storage_type': 'FILES',
+        'send_error_notifications': 'send_error_notifications' in form,
+        'error_cooldown_s': 3600,
+        'mail': mail_cfg,
+        'web': {
+            'port': web_port,
+            'host': web_host,
+            'password': web_password,
+            'max_login_attempts': 5,
+            'lockout_duration_s': 900,
+        },
+    }
+
+    try:
+        save_config_yaml(full_config, config_path)
+    except Exception as e:
+        logger.error(f"Nie udało się zapisać konfiguracji do {config_path}: {e}")
+        flash(f"Błąd podczas zapisu konfiguracji: {e}", "error")
+        return redirect(url_for('web.setup_view'))
+
+    # Natychmiastowe odświeżenie konfiguracji aplikacji w pamięci procesu
+    try:
+        from flask import current_app
+        current_app.config['APP_CONFIG'] = read_config(config_path)
+        if not current_app.config.get('NO_AUTH'):
+            if web_password:
+                current_app.config['WEB_PASSWORD'] = web_password
+                session['authenticated'] = True  # Automatycznie zaloguj twórcę konfiguracji
+            else:
+                current_app.config['WEB_PASSWORD'] = None
+    except Exception as e:
+        logger.warning(f"Błąd odświeżania konfiguracji po zapisie: {e}")
+
+    flash("Konfiguracja została pomyślnie utworzona i zapisana! Witaj w panelu.", "success")
+    return redirect(url_for('web.dashboard'))
+
+
+@web_bp.route('/ustawienia', methods=['GET', 'POST'])
+@login_required
+def settings_view():
+    """Widok przeglądania i edycji konfiguracji systemu."""
+    config = getattr(request, 'app_config', {})
+    config_path = getattr(request, 'app_config_path', 'config.yaml')
+
+    if request.method == 'POST':
+        form = request.form
+        existing_users = config.get('librus_users', []) if isinstance(config.get('librus_users'), list) else []
+
+        # 1. Zbieranie kont uczniów
+        updated_users: list[dict[str, Any]] = []
+        indices = sorted(list({
+            int(k.split('_')[-1])
+            for k in form.keys()
+            if k.startswith('student_login_') and k.split('_')[-1].isdigit()
+        }))
+
+        for i, idx in enumerate(indices):
+            login = form.get(f'student_login_{idx}', '').strip()
+            new_pwd = form.get(f'student_password_{idx}', '').strip()
+            name = form.get(f'student_name_{idx}', '').strip() or f"Uczeń {login}"
+            receivers_raw = form.get(f'student_receivers_{idx}', '').strip()
+            receivers = [r.strip() for r in receivers_raw.split(',') if r.strip()]
+
+            # Zachowaj dotychczasowe hasło jeśli pole zostało puste
+            old_user = next((u for u in existing_users if str(u.get('librus_login')) == login), None)
+            if not old_user and i < len(existing_users):
+                old_user = existing_users[i]
+            effective_pwd = new_pwd or (old_user.get('librus_password') if old_user else '')
+
+            if login:
+                st_cfg: dict[str, Any] = {
+                    'librus_login_name': name,
+                    'librus_login': login,
+                    'librus_password': effective_pwd,
+                    'read_messages': f'student_messages_{idx}' in form,
+                    'read_grades': f'student_grades_{idx}' in form,
+                    'read_timetable': f'student_timetable_{idx}' in form,
+                    'read_schedule': f'student_schedule_{idx}' in form,
+                    'schedule_retention_days': int(form.get('schedule_retention_days', 30)),
+                    'schedule_day_offset': int(form.get('schedule_day_offset', 1)),
+                    'one_summary_message': False,
+                    'do_not_send_first_parse': 'do_not_send_first_parse' in form,
+                    'notification_receivers': receivers,
+                }
+                if old_user and 'student_report' in old_user:
+                    st_cfg['student_report'] = old_user['student_report']
+                updated_users.append(st_cfg)
+
+        if not updated_users:
+            flash("Lista kont uczniów nie może być pusta.", "error")
+            return redirect(url_for('web.settings_view'))
+
+        # 2. Poczta
+        existing_mail = config.get('mail', {}) if isinstance(config.get('mail'), dict) else {}
+        mail_provider = form.get('mail_provider', 'gmail')
+        mail_login = form.get('mail_login', '').strip() or existing_mail.get('login', '')
+        new_mail_pwd = form.get('mail_password', '').strip()
+        effective_mail_pwd = new_mail_pwd or existing_mail.get('password', '')
+
+        mail_cfg: dict[str, Any] = {
+            'login': mail_login,
+            'password': effective_mail_pwd,
+            'use_gmail': (mail_provider == 'gmail'),
+        }
+        if mail_provider == 'smtp':
+            existing_non_gmail = existing_mail.get('non_gmail_settings', {})
+            mail_cfg['non_gmail_settings'] = {
+                'smtp_host': form.get('smtp_host', '').strip() or existing_non_gmail.get('smtp_host', 'smtp.example.com'),
+                'port': int(form.get('smtp_port') or existing_non_gmail.get('port', 587)),
+            }
+
+        # 3. Harmonogram i automatyzacja
+        existing_sched = config.get('schedule', {}) if isinstance(config.get('schedule'), dict) else {}
+        sched_cfg, wait_time_s = parse_schedule_from_form(form, existing_schedule=existing_sched)
+
+        # 4. Panel WWW i ochrona
+        existing_web = config.get('web', {}) if isinstance(config.get('web'), dict) else {}
+        new_web_pwd = form.get('web_password', '').strip()
+        effective_web_pwd = new_web_pwd if new_web_pwd else existing_web.get('password')
+
+        new_config = dict(config)
+        new_config['librus_users'] = updated_users
+        new_config['delay_between_users_s'] = int(form.get('delay_between_users_s', config.get('delay_between_users_s', 10)))
+        new_config['wait_time_s'] = wait_time_s
+        new_config['schedule'] = sched_cfg
+        new_config['schedule_day_offset'] = int(form.get('schedule_day_offset', config.get('schedule_day_offset', 1)))
+        new_config['schedule_retention_days'] = int(form.get('schedule_retention_days', config.get('schedule_retention_days', 30)))
+        new_config['do_not_send_first_parse'] = 'do_not_send_first_parse' in form
+        new_config['work-in-loop'] = True if 'collection_mode' in form else ('work_in_loop' in form if 'work_in_loop' in form else config.get('work-in-loop', True))
+        new_config['send_error_notifications'] = 'send_error_notifications' in form
+        new_config['mail'] = mail_cfg
+        new_config['web'] = dict(existing_web)
+        new_config['web']['port'] = int(form.get('web_port') or existing_web.get('port', 5000))
+        new_config['web']['host'] = form.get('web_host', '').strip() or existing_web.get('host', '127.0.0.1')
+        new_config['web']['password'] = effective_web_pwd
+
+        try:
+            save_config_yaml(new_config, config_path)
+            from flask import current_app
+            current_app.config['APP_CONFIG'] = read_config(config_path)
+            if not current_app.config.get('NO_AUTH'):
+                if effective_web_pwd:
+                    current_app.config['WEB_PASSWORD'] = str(effective_web_pwd)
+                    session['authenticated'] = True
+                else:
+                    current_app.config['WEB_PASSWORD'] = None
+            flash("Ustawienia zostały pomyślnie zaktualizowane.", "success")
+        except Exception as e:
+            logger.error(f"Błąd zapisu ustawień do {config_path}: {e}")
+            flash(f"Nie udało się zapisać ustawień: {e}", "error")
+
+        return redirect(url_for('web.settings_view'))
+
+    users = config.get('librus_users', []) if isinstance(config.get('librus_users'), list) else []
+    mail = config.get('mail', {}) if isinstance(config.get('mail'), dict) else {}
+    web_cfg = config.get('web', {}) if isinstance(config.get('web'), dict) else {}
+
+    return render_template(
+        'web/settings.html',
+        config=config,
+        users=users,
+        mail=mail,
+        web_cfg=web_cfg,
+        reports_schedules=get_reports_schedules(config),
+        config_path=config_path,
+    )
+
+
+@web_bp.route('/api/test-librus', methods=['POST'])
+def api_test_librus():
+    """Endpoint API do weryfikacji danych logowania Librus w formularzu setup/ustawienia."""
+    login = request.form.get('login', '').strip()
+    password = request.form.get('password', '').strip()
+
+    success, message = test_librus_credentials(login, password)
+    return jsonify({'success': success, 'message': message})
+
+
 def create_app(
     config_path: str = 'config.yaml',
     storage_dir: str | None = None,
@@ -529,6 +906,7 @@ def create_app(
         parsed_date = actual_date
 
     app.config['SECRET_KEY'] = secret_key or web_cfg.get('secret_key') or os.environ.get('LIBRUS_WEB_SECRET_KEY') or secrets.token_hex(32)
+    app.config['NO_AUTH'] = no_auth
     app.config['WEB_PASSWORD'] = effective_pwd
     app.config['APP_CONFIG'] = app_config
     app.config['CONFIG_PATH'] = config_path
@@ -543,6 +921,12 @@ def create_app(
         request.app_config_path = app.config['CONFIG_PATH']
         request.app_storage_dir = app.config['STORAGE_DIR']
         request.app_actual_date = app.config.get('ACTUAL_DATE')
+
+        # Wymuszenie kreatora /setup gdy brak pliku konfiguracji lub brak skonfigurowanych kont
+        if not _has_valid_config(request.app_config):
+            allowed_prefixes = ('/setup', '/static', '/favicon', '/api/test-librus')
+            if not request.path.startswith(allowed_prefixes):
+                return redirect(url_for('web.setup_view'))
 
     @app.template_filter('human_time')
     def human_time_filter(val):

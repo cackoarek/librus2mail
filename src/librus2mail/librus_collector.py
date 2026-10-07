@@ -9,12 +9,12 @@ import argparse
 import logging
 import sys
 import traceback
-from datetime import datetime
+from datetime import datetime, timedelta
 from time import sleep
 from typing import Any
 
 from .base_logger import setup_logging
-from .config import read_config
+from .config import get_reports_schedules, read_config
 from .librus import Librus
 from .mail_sender import MailSender
 from .storage import BaseStorage, create_storage
@@ -243,6 +243,34 @@ class LibrusCollector:
         return collected
 
 
+def calculate_next_wait_seconds(config: dict, now: datetime | None = None) -> int:
+    """Oblicza liczbę sekund do kolejnego cyklu na podstawie harmonogramu (daily lub interval)."""
+    sched = config.get('schedule', {}).get('collection', {})
+    mode = sched.get('mode')
+
+    if mode == 'daily':
+        time_str = sched.get('time', '16:00')
+        days_rule = sched.get('days', 'all')
+        try:
+            th, tm = map(int, time_str.split(':'))
+        except Exception:
+            th, tm = 16, 0
+
+        ref_now = now or datetime.now()
+        target = ref_now.replace(hour=th, minute=tm, second=0, microsecond=0)
+        if ref_now >= target:
+            target += timedelta(days=1)
+        if days_rule == 'workdays':
+            while target.weekday() >= 5:  # 5=sobota, 6=niedziela
+                target += timedelta(days=1)
+        return max(60, int((target - ref_now).total_seconds()))
+
+    if mode == 'interval' and 'interval_hours' in sched:
+        return max(300, int(sched['interval_hours']) * 3600)
+
+    return max(300, int(config.get('wait_time_s', 3600)))
+
+
 def run_collector(
     config_path: str = 'config.yaml',
     storage_dir: str | None = None,
@@ -397,6 +425,72 @@ def run_collector(
                 if user_config.get('dry-parse'):
                     user_config['dry-parse'] = False
 
+        # Opcjonalne wyzwolenie zaplanowanych raportów postępów ucznia
+        reports_schedules = get_reports_schedules(config)
+        if reports_schedules and not offline and not sync_only:
+            ref_now = datetime.now()
+            weekdays_map = {
+                'monday': 0, 'tuesday': 1, 'wednesday': 2, 'thursday': 3,
+                'friday': 4, 'saturday': 5, 'sunday': 6
+            }
+            for rep in reports_schedules:
+                if not rep.get('enabled', True):
+                    continue
+
+                freq = str(rep.get('frequency', 'weekly')).lower()
+                target_time_str = rep.get('time', '17:00')
+                try:
+                    rh, rm = map(int, target_time_str.split(':'))
+                except Exception:
+                    rh, rm = 17, 0
+
+                time_matches = (ref_now.hour > rh or (ref_now.hour == rh and ref_now.minute >= rm))
+                if not time_matches:
+                    continue
+
+                date_matches = False
+                if freq == 'monthly':
+                    dom_rule = str(rep.get('day_of_month', '1')).lower()
+                    if dom_rule == 'last':
+                        date_matches = ((ref_now + timedelta(days=1)).day == 1)
+                    else:
+                        try:
+                            date_matches = (ref_now.day == int(dom_rule))
+                        except Exception:
+                            date_matches = (ref_now.day == 1)
+                else:  # weekly
+                    target_weekday = str(rep.get('weekday', 'friday')).lower()
+                    target_day_num = weekdays_map.get(target_weekday, 4)
+                    date_matches = (ref_now.weekday() == target_day_num)
+
+                if date_matches:
+                    rep_days = int(rep.get('interval_days', 7))
+                    rep_name = rep.get('name') or f"Raport ({rep_days} dni)"
+                    rep_key = f"rep_{freq}_{rep_days}_{target_time_str}"
+
+                    for u in users:
+                        u_login = str(u.get('librus_login'))
+                        last_rep = storage.get_last_progress_report_date(u_login, report_key=rep_key)
+                        already_sent_today = False
+                        if last_rep:
+                            try:
+                                already_sent_today = (datetime.fromisoformat(last_rep).date() == ref_now.date())
+                            except Exception:
+                                pass
+                        if not already_sent_today:
+                            logger.info(f"📅 Wyzwalanie zaplanowanego raportu postępów '{rep_name}' dla {u_login} (za {rep_days} dni)...")
+                            try:
+                                from .progress_report import run_progress_reports
+                                run_progress_reports(
+                                    config_path=config_path,
+                                    storage_dir=effective_storage_dir,
+                                    user_filter=u_login,
+                                    days=rep_days,
+                                    report_key=rep_key,
+                                )
+                            except Exception as rep_err:
+                                logger.error(f"Błąd podczas generowania zaplanowanego raportu postępów '{rep_name}': {rep_err}")
+
         if not effective_work_in_loop:
             if is_simulation:
                 logger.info("Zakończono symulację / pojedynczy przebieg.")
@@ -404,9 +498,10 @@ def run_collector(
                 logger.info("Zakończono pojedynczy przebieg (work-in-loop: false). Koniec pracy.")
             break
 
-        logger.info(f"Czekam przez {config['wait_time_s']} sekund")
+        sleep_s = calculate_next_wait_seconds(config)
+        logger.info(f"Czekam przez {sleep_s} sekund do kolejnego sprawdzenia")
         try:
-            sleep(config['wait_time_s'])
+            sleep(sleep_s)
         except KeyboardInterrupt:
             logger.info("Zatrzymano działanie usługi (Ctrl+C).")
             break

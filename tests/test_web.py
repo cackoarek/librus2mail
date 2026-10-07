@@ -25,6 +25,9 @@ from librus2mail.web.services import (
     resolve_student_name,
     simulate_new_grade,
 )
+from librus2mail.web.services import (
+    test_librus_credentials as check_librus_credentials,
+)
 
 
 class TestWebDashboard(unittest.TestCase):
@@ -507,6 +510,8 @@ class TestWebDashboard(unittest.TestCase):
             'web_raporty_uczen_youth.html',
             'web_raporty_podsumowanie.html',
             'web_akcje.html',
+            'web_setup.html',
+            'web_ustawienia.html',
         }
         self.assertEqual(set(files.keys()), expected_files)
 
@@ -760,6 +765,268 @@ class TestWebDashboard(unittest.TestCase):
         res_home = client.get('/')
         self.assertEqual(res_home.status_code, 200)
         self.assertIn(b'<link rel="icon" type="image/svg+xml"', res_home.data)
+
+    def test_has_valid_config_and_onboarding_redirect(self):
+        """Weryfikuje, że brak kont Librusa w konfiguracji przekierowuje do kreatora /setup."""
+        empty_config_path = os.path.join(self.temp_dir, 'empty_config.yaml')
+        with open(empty_config_path, 'w', encoding='utf-8') as f:
+            f.write("storage_dir: storage\n")
+
+        app = create_app(
+            config_path=empty_config_path,
+            storage_dir=self.storage_dir,
+            no_auth=True,
+        )
+        client = app.test_client()
+
+        # 1. Wejście na stronę główną / przekierowuje do /setup
+        res_root = client.get('/', follow_redirects=False)
+        self.assertEqual(res_root.status_code, 302)
+        self.assertIn('/setup', res_root.headers.get('Location', ''))
+
+        # 2. Wejście na podstronę /plan również przekierowuje do /setup
+        res_plan = client.get('/plan', follow_redirects=False)
+        self.assertEqual(res_plan.status_code, 302)
+        self.assertIn('/setup', res_plan.headers.get('Location', ''))
+
+        # 3. Wejście na /setup jest dozwolone i zwraca formularz kreatora
+        res_setup = client.get('/setup')
+        self.assertEqual(res_setup.status_code, 200)
+        self.assertIn(b'Witaj w Librus2mail!', res_setup.data)
+        self.assertIn(b'Testuj logowanie Librus', res_setup.data)
+        self.assertIn(b'id="gmail-tip-box"', res_setup.data)
+
+    def test_librus_credentials_service_and_api(self):
+        """Testuje sprawdzanie poprawności danych logowania Librusa (funkcję i endpoint API)."""
+        from librus2mail.librus import NotLogged
+
+        # 1. Puste dane
+        ok, msg = check_librus_credentials("", "")
+        self.assertFalse(ok)
+        self.assertIn("są wymagane", msg)
+
+        # 2. Poprawne logowanie z zamockowaną klasą Librus
+        with patch('librus2mail.librus.Librus') as mock_librus_cls:
+            mock_inst = mock_librus_cls.return_value
+            mock_inst.logged = True
+            ok, msg = check_librus_credentials("student1", "secret")
+            self.assertTrue(ok)
+            self.assertIn("powiodło się pomyślnie", msg)
+
+        # 3. Błąd autoryzacji (NotLogged)
+        with patch('librus2mail.librus.Librus') as mock_librus_cls:
+            mock_inst = mock_librus_cls.return_value
+            mock_inst.login.side_effect = NotLogged("Niepoprawne hasło")
+            ok, msg = check_librus_credentials("student1", "wrong_pass")
+            self.assertFalse(ok)
+            self.assertIn("Błąd autoryzacji: Niepoprawne hasło", msg)
+
+        # 4. Inny wyjątek
+        with patch('librus2mail.librus.Librus') as mock_librus_cls:
+            mock_inst = mock_librus_cls.return_value
+            mock_inst.login.side_effect = ConnectionError("Serwer nie odpowiada")
+            ok, msg = check_librus_credentials("student1", "pass")
+            self.assertFalse(ok)
+            self.assertIn("Błąd połączenia z portalem Librus", msg)
+
+        # 5. Test endpointu API /api/test-librus
+        app = create_app(config_path=self.config_path, storage_dir=self.storage_dir, no_auth=True)
+        client = app.test_client()
+
+        with patch('librus2mail.web.app.test_librus_credentials', return_value=(True, "OK!")):
+            res_api = client.post(
+                '/api/test-librus',
+                data={'login': 'test_user', 'password': 'test_password'},
+            )
+            self.assertEqual(res_api.status_code, 200)
+            data = res_api.get_json()
+            self.assertTrue(data.get('success'))
+            self.assertEqual(data.get('message'), "OK!")
+
+    def test_setup_wizard_submit_flow(self):
+        """Weryfikuje wypełnienie kreatora /setup, zapisanie pliku config.yaml i odblokowanie aplikacji."""
+        new_config_path = os.path.join(self.temp_dir, 'fresh_config.yaml')
+        # Plik początkowo nie istnieje
+        app = create_app(config_path=new_config_path, storage_dir=self.storage_dir, no_auth=True)
+        client = app.test_client()
+
+        # Użytkownik przesyła formularz kreatora
+        form_data = {
+            'student_login_0': '987654',
+            'student_name_0': 'Zosia Nowak',
+            'student_password_0': 'haslo_zosia',
+            'student_receivers_0': 'mama@example.com',
+            'student_grades_0': 'on',
+            'student_timetable_0': 'on',
+            'student_schedule_0': 'on',
+            'student_messages_0': 'on',
+            'mail_provider': 'gmail',
+            'mail_login': 'rodzic@gmail.com',
+            'mail_password': 'tajne_haslo_app',
+            'collection_mode': 'daily',
+            'collection_time': '16:00',
+            'collection_days': 'all',
+            'report_name_0': 'Raport tygodniowy',
+            'report_enabled_0': 'on',
+            'report_frequency_0': 'weekly',
+            'report_weekday_0': 'friday',
+            'report_time_0': '17:00',
+            'report_interval_days_0': '7',
+            'report_name_1': 'Raport miesięczny',
+            'report_enabled_1': 'on',
+            'report_frequency_1': 'monthly',
+            'report_day_of_month_1': '1',
+            'report_time_1': '18:00',
+            'report_interval_days_1': '30',
+            'web_password': 'PanelPassword123',
+        }
+        res_post = client.post('/setup', data=form_data, follow_redirects=False)
+        self.assertEqual(res_post.status_code, 302)
+        self.assertEqual(res_post.headers.get('Location'), '/')
+
+        # Sprawdzenie utworzenia pliku konfiguracyjnego
+        self.assertTrue(os.path.isfile(new_config_path))
+        import yaml
+        with open(new_config_path, encoding='utf-8') as f:
+            saved_cfg = yaml.safe_load(f)
+
+        self.assertEqual(len(saved_cfg['librus_users']), 1)
+        self.assertEqual(saved_cfg['librus_users'][0]['librus_login'], '987654')
+        self.assertEqual(saved_cfg['librus_users'][0]['librus_login_name'], 'Zosia Nowak')
+        self.assertEqual(saved_cfg['librus_users'][0]['librus_password'], 'haslo_zosia')
+        self.assertEqual(saved_cfg['mail']['login'], 'rodzic@gmail.com')
+        self.assertTrue(saved_cfg['mail']['use_gmail'])
+        self.assertEqual(saved_cfg['web']['password'], 'PanelPassword123')
+        self.assertEqual(saved_cfg['schedule']['collection']['mode'], 'daily')
+        self.assertEqual(saved_cfg['schedule']['collection']['time'], '16:00')
+        self.assertEqual(len(saved_cfg['schedule']['reports']), 2)
+        self.assertEqual(saved_cfg['schedule']['reports'][0]['name'], 'Raport tygodniowy')
+        self.assertEqual(saved_cfg['schedule']['reports'][0]['weekday'], 'friday')
+        self.assertEqual(saved_cfg['schedule']['reports'][0]['interval_days'], 7)
+        self.assertEqual(saved_cfg['schedule']['reports'][1]['name'], 'Raport miesięczny')
+        self.assertEqual(saved_cfg['schedule']['reports'][1]['frequency'], 'monthly')
+        self.assertEqual(saved_cfg['schedule']['reports'][1]['interval_days'], 30)
+        self.assertTrue(saved_cfg['work-in-loop'])
+
+        # Kolejne zapytanie do / nie jest już przekierowywane do /setup
+        res_after = client.get('/', follow_redirects=False)
+        self.assertEqual(res_after.status_code, 200)
+        self.assertIn(b'Zosia Nowak', res_after.data)
+
+    def test_settings_view_and_save(self):
+        """Weryfikuje widok /ustawienia, zapis zmian oraz zachowanie dotychczasowych haseł."""
+        app = create_app(config_path=self.config_path, storage_dir=self.storage_dir, no_auth=True)
+        client = app.test_client()
+
+        # 1. GET /ustawienia
+        res_get = client.get('/ustawienia')
+        self.assertEqual(res_get.status_code, 200)
+        self.assertIn(b'Ustawienia Systemu', res_get.data)
+        self.assertIn(b'Jan Kowalski', res_get.data)
+
+        # 2. POST /ustawienia z pustym hasłem (powinno zachować stare) i nową nazwą
+        post_data = {
+            'student_login_0': '123456',
+            'student_name_0': 'Janek Kowalski (zaktualizowany)',
+            'student_password_0': '',  # puste hasło -> zachowanie 'secret_pass'
+            'student_receivers_0': 'rodzic@example.com',
+            'mail_provider': 'gmail',
+            'mail_login': 'janek.rodzic@gmail.com',
+            'mail_password': '',  # puste -> brak zmiany
+            'collection_mode': 'interval',
+            'collection_interval_hours': '2',
+            'report_name_0': 'Raport tygodniowy',
+            'report_enabled_0': 'on',
+            'report_frequency_0': 'weekly',
+            'report_weekday_0': 'friday',
+            'report_time_0': '17:00',
+            'report_interval_days_0': '7',
+            'web_password': '',  # puste -> zachowanie starego
+        }
+        res_save = client.post('/ustawienia', data=post_data, follow_redirects=True)
+        self.assertEqual(res_save.status_code, 200)
+        self.assertIn('Ustawienia zostały pomyślnie zaktualizowane'.encode(), res_save.data)
+
+        # Sprawdzenie utworzenia kopii zapasowej .bak
+        bak_path = self.config_path + '.bak'
+        self.assertTrue(os.path.isfile(bak_path))
+
+        # Sprawdzenie zawartości pliku config.yaml
+        import yaml
+        with open(self.config_path, encoding='utf-8') as f:
+            updated_cfg = yaml.safe_load(f)
+
+        self.assertEqual(updated_cfg['librus_users'][0]['librus_login_name'], 'Janek Kowalski (zaktualizowany)')
+        self.assertEqual(updated_cfg['librus_users'][0]['librus_password'], 'secret_pass')
+        self.assertEqual(updated_cfg['schedule']['collection']['mode'], 'interval')
+        self.assertEqual(updated_cfg['schedule']['collection']['interval_hours'], 2)
+        self.assertEqual(updated_cfg['schedule']['reports'][0]['interval_days'], 7)
+        self.assertEqual(updated_cfg['wait_time_s'], 7200)
+        self.assertEqual(updated_cfg['web']['password'], 'SuperParentPassword')
+
+        # 3. Zmiana dostawcy na SMTP ukrywa wskazówkę Gmaila (klasa hidden)
+        post_data_smtp = dict(post_data)
+        post_data_smtp['mail_provider'] = 'smtp'
+        post_data_smtp['smtp_host'] = 'smtp.test.pl'
+        res_smtp = client.post('/ustawienia', data=post_data_smtp, follow_redirects=True)
+        self.assertEqual(res_smtp.status_code, 200)
+        self.assertIn(b'id="gmail-settings-tip-box" class="hidden', res_smtp.data)
+
+    def test_multiple_reports_schedule_configuration_and_storage(self):
+        """Testuje konfigurację wielu zaplanowanych raportów (tygodniowy i miesięczny) oraz izolację w storage."""
+        from librus2mail.config import get_reports_schedules
+        from librus2mail.web.app import parse_schedule_from_form
+
+        # 1. Parsowanie formularza z dwoma raportami (weekly i monthly)
+        form_payload = {
+            'collection_mode': 'daily',
+            'collection_time': '16:00',
+            'collection_days': 'workdays',
+            'report_name_0': 'Podsumowanie tygodnia',
+            'report_enabled_0': 'on',
+            'report_frequency_0': 'weekly',
+            'report_weekday_0': 'friday',
+            'report_time_0': '17:00',
+            'report_interval_days_0': '7',
+            'report_name_1': 'Raport miesięczny',
+            'report_enabled_1': 'on',
+            'report_frequency_1': 'monthly',
+            'report_day_of_month_1': '1',
+            'report_time_1': '18:00',
+            'report_interval_days_1': '30',
+        }
+        sched_cfg, wait_s = parse_schedule_from_form(form_payload)
+        self.assertEqual(sched_cfg['collection']['mode'], 'daily')
+        self.assertEqual(len(sched_cfg['reports']), 2)
+        self.assertEqual(sched_cfg['reports'][0]['name'], 'Podsumowanie tygodnia')
+        self.assertEqual(sched_cfg['reports'][0]['frequency'], 'weekly')
+        self.assertEqual(sched_cfg['reports'][0]['interval_days'], 7)
+        self.assertEqual(sched_cfg['reports'][1]['name'], 'Raport miesięczny')
+        self.assertEqual(sched_cfg['reports'][1]['frequency'], 'monthly')
+        self.assertEqual(sched_cfg['reports'][1]['day_of_month'], 1)
+        self.assertEqual(sched_cfg['reports'][1]['interval_days'], 30)
+
+        # 2. Test get_reports_schedules z różnymi formatami
+        reps = get_reports_schedules({'schedule': sched_cfg})
+        self.assertEqual(len(reps), 2)
+        # Kompatybilność wsteczna z formatem słownika
+        legacy_reps = get_reports_schedules({'schedule': {'reports': {'weekday': 'friday', 'interval_days': 7}}})
+        self.assertEqual(len(legacy_reps), 1)
+        self.assertEqual(legacy_reps[0]['interval_days'], 7)
+        self.assertEqual(legacy_reps[0]['frequency'], 'weekly')
+
+        # 3. Test izolacji znaczników czasu w storage per report_key
+        storage = get_storage(self.mock_config, self.storage_dir)
+        user = '123456'
+        t_weekly = "2026-10-02T17:00:00"
+        t_monthly = "2026-10-01T18:00:00"
+
+        storage.save_last_progress_report_date(user, t_weekly, report_key='rep_weekly_7_17:00')
+        storage.save_last_progress_report_date(user, t_monthly, report_key='rep_monthly_30_18:00')
+
+        self.assertEqual(storage.get_last_progress_report_date(user, report_key='rep_weekly_7_17:00'), t_weekly)
+        self.assertEqual(storage.get_last_progress_report_date(user, report_key='rep_monthly_30_18:00'), t_monthly)
+        self.assertEqual(storage.get_last_progress_report_date(user), t_monthly)
 
 
 if __name__ == '__main__':

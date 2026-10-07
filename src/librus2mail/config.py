@@ -23,3 +23,21 @@ def read_config(config_file='config.yaml'):
 
     return config
 
+
+def get_reports_schedules(config: dict) -> list[dict]:
+    """Zwraca znormalizowaną listę harmonogramów raportów postępów z konfiguracji."""
+    if not isinstance(config, dict):
+        return []
+    sched_reports = config.get('schedule', {}).get('reports')
+    if isinstance(sched_reports, list):
+        return [dict(r) for r in sched_reports if isinstance(r, dict)]
+    if isinstance(sched_reports, dict) and sched_reports:
+        # Kompatybilność wsteczna z formatem pojedynczego słownika
+        single = dict(sched_reports)
+        if 'name' not in single:
+            single['name'] = 'Raport tygodniowy' if single.get('weekday') else 'Raport postępów'
+        if 'frequency' not in single:
+            single['frequency'] = 'weekly'
+        return [single]
+    return []
+

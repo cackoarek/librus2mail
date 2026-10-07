@@ -84,12 +84,12 @@ class BaseStorage(ABC):
         pass
 
     @abstractmethod
-    def get_last_progress_report_date(self, user_login: str) -> str | None:
+    def get_last_progress_report_date(self, user_login: str, report_key: str | None = None) -> str | None:
         """Zwraca datę ostatnio wygenerowanego raportu postępów (ISO format) lub None."""
         pass
 
     @abstractmethod
-    def save_last_progress_report_date(self, user_login: str, date_iso: str) -> None:
+    def save_last_progress_report_date(self, user_login: str, date_iso: str, report_key: str | None = None) -> None:
         """Zapisuje datę wygenerowanego raportu postępów."""
         pass
 
@@ -356,17 +356,28 @@ class FileStorage(BaseStorage):
             return gh
         return []
 
-    def get_last_progress_report_date(self, user_login: str) -> str | None:
+    def get_last_progress_report_date(self, user_login: str, report_key: str | None = None) -> str | None:
         path = self._get_file_path(user_login)
-        return read_json_safe(path).get('last_progress_report_date')
+        data = read_json_safe(path)
+        if report_key:
+            rep_dates = data.get('last_progress_report_dates', {})
+            if isinstance(rep_dates, dict) and report_key in rep_dates:
+                return rep_dates[report_key]
+        return data.get('last_progress_report_date')
 
-    def save_last_progress_report_date(self, user_login: str, date_iso: str) -> None:
+    def save_last_progress_report_date(self, user_login: str, date_iso: str, report_key: str | None = None) -> None:
         path = self._get_file_path(user_login)
         data = read_json_safe(path)
         data['librus_login'] = str(user_login)
         data['last_progress_report_date'] = date_iso
+        if report_key:
+            rep_dates = data.get('last_progress_report_dates')
+            if not isinstance(rep_dates, dict):
+                rep_dates = {}
+            rep_dates[report_key] = date_iso
+            data['last_progress_report_dates'] = rep_dates
         write_json_atomic(path, data)
-        logger.debug(f"Zapisano last_progress_report_date do {path}")
+        logger.debug(f"Zapisano last_progress_report_date ({report_key or 'global'}) do {path}")
 
     def get_last_collect_time(self, user_login: str) -> str | None:
         """Zwraca znacznik czasu (ISO) ostatniej synchronizacji danych z Librusa."""

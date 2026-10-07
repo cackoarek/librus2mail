@@ -9,6 +9,40 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ## [Unreleased]
 
+### Dodane
+- **Kreator pierwszego uruchomienia w panelu WWW (`/setup`)**:
+  - Automatyczne wykrywanie braku pliku `config.yaml` lub braku skonfigurowanych kont uczniów z płynnym przekierowaniem do kreatora onboardingowego.
+  - Wygodny 4-krokowy Stepper UI: Krok 1: Profile uczniów i dzieci (z obsługą rodzeństwa oraz selekcją modułów ocen, terminarza, planu i wiadomości) -> Krok 2: Poczta e-mail (Gmail z hasłem aplikacji lub serwer SMTP) -> Krok 3: Harmonogram i automatyzacja -> Krok 4: Hasło i zabezpieczenia panelu WWW.
+  - Bezpieczny zapis do pliku `config.yaml` oraz natychmiastowe odświeżenie konfiguracji w pamięci aplikacji i automatyczne zalogowanie do pulpitu rodzica.
+- **Elastyczny harmonogram zadań i automatyzacja (`schedule`)**:
+  - Intuicyjny wybór harmonogramu pobierania danych ze szkoły w `/setup` i `/ustawienia`:
+    - Tryb o stałej porze dnia (`daily`): domyślnie codziennie o 16:00 z listą godzin (06:00–22:00 co 30 min) oraz wyborem dni (codziennie vs dni robocze pon.–pt.).
+    - Tryb cykliczny w ciągu dnia (`interval`): odpytywanie co wybraną liczbę godzin (co 1h, 2h, 3h, 4h, 6h, 12h).
+  - Harmonogram automatycznej wysyłki raportów postępów ucznia:
+    - Możliwość skonfigurowania **więcej niż jednego raportu** (np. cotygodniowe podsumowanie w piątki oraz comiesięczny bilans ocen 1. dnia miesiąca).
+    - Obsługa częstotliwości: co tydzień (`weekly` z wyborem dnia tygodnia) oraz co miesiąc (`monthly` z wyborem 1. dnia, 15. dnia lub ostatniego dnia miesiąca).
+    - Elastyczny wybór zakresu dni dla każdego raportu (3, 7, 14, 30, 60 dni) oraz indywidualnej godziny wysyłki.
+    - Przycisk dynamicznego dodawania kolejnych kart raportów („➕ Dodaj kolejny zaplanowany raport”) w formularzu WWW.
+    - Automatyczne wyzwalanie zaplanowanych raportów w pętli `librus_collector.py` z niezależnym śledzeniem dat wysyłki per harmonogram (`report_key`) w pamięci stanu `storage.py`.
+    - Uwzględnienie `schedule.reports` w CLI `librus_progress_report.py` jako domyślnego okresu analizy.
+  - Interaktywny podgląd reguł dla linuksowego harmonogramu Crontab (`crontab -e`) generowany i aktualizowany na żywo w interfejsie WWW dla wszystkich aktywnych raportów.
+- **Interaktywna weryfikacja logowania Librus („Testuj logowanie Librus”)**:
+  - Przycisk sprawdzania poprawności danych logowania ucznia w locie z poziomu formularzy WWW.
+  - Asynchroniczny endpoint API `/api/test-librus` oraz usługa backendowa `test_librus_credentials` wykonująca symulację logowania bez pobierania pełnych danych.
+  - Dynamiczny wskaźnik oczekiwania i natychmiastowa informacja zwrotna o poprawności danych autoryzacyjnych lub przyczynie błędu.
+- **Zakładka „Ustawienia” w panelu WWW (`/ustawienia`)**:
+  - Nowa pozycja `⚙️ Ustawienia` w menu głównym (wersja desktop i mobile).
+  - Wygodna edycja parametrów kont, powiadomień e-mail, harmonogramu odpytywania, raportów i ochrony panelu.
+  - Bezpieczne zachowywanie dotychczasowych haseł (Librus, skrzynka e-mail, panel WWW) przy pozostawieniu pustych pól.
+  - Automatyczne tworzenie kopii zapasowej konfiguracji (`config.yaml.bak`) przed nadpisaniem pliku.
+- **Eksport statyczny nowych widoków**:
+  - Integracja `web_setup.html` oraz `web_ustawienia.html` w silniku eksportu widoków (`export_web_views`) oraz skrypcie `examples/reports/regenerate_reports.sh`.
+
+### Zmienione
+- Usunięto surowy techniczny checkbox „Praca ciągła w nieskończonej pętli demona (systemd / Docker)” na rzecz czytelnych ustawień harmonogramu.
+- Poprawiono etykietę interwału: „Odstęp pomiędzy ściąganiem danych kolejnych dzieci (sekundy)”.
+- Wskazówka dotycząca hasła aplikacji Gmail jest teraz wyświetlana wyłącznie po zaznaczeniu opcji Gmail (dla SMTP pozostaje ukryta).
+
 ---
 
 ## [2.1.0] – 2026-10-07

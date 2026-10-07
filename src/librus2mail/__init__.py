@@ -25,7 +25,7 @@ from .updates_notifier import UpdatesNotifier, run_notifier
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
-__version__ = "2.0.1"
+__version__ = "2.1.0"
 
 __all__ = [
     "__version__",

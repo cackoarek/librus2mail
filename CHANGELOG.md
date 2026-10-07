@@ -9,6 +9,10 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ## [Unreleased]
 
+---
+
+## [2.1.0] – 2026-10-07
+
 ### Dodane
 - **Zakładka „Raporty” w panelu WWW (`/raporty`)**:
   - Nowa główna sekcja w menu nawigacyjnym z trzema zintegrowanymi podzakładkami analiz:
@@ -40,7 +44,6 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
   - Dodanie ścieżki pakietu `src/` do `sys.path` w skrypcie `librus_web.py`, co zapobiega błędowi `ModuleNotFoundError: No module named 'librus2mail'` przy wywołaniu ze skopiowanego katalogu na serwerze.
 
 ---
-
 ## [2.0.1] – 2026-10-05
 
 ### Naprawione
@@ -169,7 +172,8 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ---
 
-[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v2.0.1...HEAD
+[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/cackoarek/librus2mail/compare/v2.0.1...v2.1.0
 [2.0.1]: https://github.com/cackoarek/librus2mail/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/cackoarek/librus2mail/compare/v1.4.0...v2.0.0
 [1.4.0]: https://github.com/cackoarek/librus2mail/compare/v1.3.0...v1.4.0

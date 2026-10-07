@@ -1,13 +1,19 @@
 """Główna aplikacja webowa Flask dla interfejsu Librus2mail."""
 
 import argparse
+import functools
+import importlib.metadata
 import os
 import secrets
-from datetime import datetime
+import shutil
+import subprocess
+from datetime import datetime, timedelta
+from pathlib import Path
 
 from flask import (
     Blueprint,
     Flask,
+    Response,
     flash,
     redirect,
     render_template,
@@ -25,16 +31,77 @@ from librus2mail.updates_notifier import run_notifier
 
 from .auth import LoginRateLimiter, auth_bp, is_auth_enabled, is_authenticated, login_required
 from .services import (
+    build_daily_summary_html,
+    build_progress_report_html,
+    build_student_report_html,
     calculate_subject_averages,
     capture_action_execution,
+    format_human_timestamp,
     get_active_student_login,
     get_storage,
     get_student_dashboard_bundle,
     list_students,
+    resolve_student_name,
     simulate_new_grade,
 )
 
 web_bp = Blueprint('web', __name__)
+
+
+@functools.lru_cache(maxsize=1)
+def get_app_version() -> str:
+    """Pobiera dynamicznie wersję aplikacji (git tag -> package __version__ -> metadata)."""
+    # 1. Próba odczytania najnowszego tagu z repozytorium git (jeśli uruchomiono w repozytorium git)
+    try:
+        repo_dir = Path(__file__).resolve().parents[3]
+        if (repo_dir / ".git").exists() and shutil.which("git"):
+            res = subprocess.run(
+                ["git", "describe", "--tags", "--abbrev=0"],
+                cwd=repo_dir,
+                capture_output=True,
+                text=True,
+                timeout=2,
+                check=False,
+            )
+            if res.returncode == 0 and res.stdout.strip():
+                return res.stdout.strip().lstrip("v")
+    except Exception:
+        pass
+
+    # 2. Odczyt __version__ z librus2mail (aktualizowane automatycznie w CI/CD przez release.yml)
+    try:
+        import librus2mail
+        if hasattr(librus2mail, "__version__") and librus2mail.__version__:
+            return str(librus2mail.__version__).lstrip("v")
+    except Exception:
+        pass
+
+    # 3. Próba odczytania z metadanych zainstalowanego pakietu (pip install / wheel)
+    try:
+        return importlib.metadata.version("librus2mail")
+    except Exception:
+        pass
+
+    return "2.0.1"
+
+
+FAVICON_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<defs>
+  <linearGradient id="g" x1="0%" y1="100%" x2="100%" y2="0%">
+    <stop offset="0%" stop-color="#4f46e5"/>
+    <stop offset="100%" stop-color="#0ea5e9"/>
+  </linearGradient>
+</defs>
+<rect width="64" height="64" rx="16" fill="url(#g)"/>
+<text x="32" y="34" font-size="34" text-anchor="middle" dominant-baseline="middle">🏫</text>
+</svg>"""
+
+
+@web_bp.route('/favicon.ico')
+@web_bp.route('/favicon.svg')
+def favicon_view():
+    """Zwraca wektorowy favicon w barwach projektu Librus2mail."""
+    return Response(FAVICON_SVG, mimetype='image/svg+xml')
 
 
 def inject_common_context():
@@ -62,7 +129,7 @@ def inject_common_context():
         'is_auth_enabled': auth_enabled,
         'is_authenticated': authenticated,
         'now': now,
-        'app_version': "1.4.0",
+        'app_version': get_app_version(),
     }
 
 
@@ -174,6 +241,93 @@ def messages_view():
 
     data = get_student_dashboard_bundle(storage, active_login, config, now=request.app_actual_date)
     return render_template('web/messages.html', data=data)
+
+
+@web_bp.route('/raporty')
+@web_bp.route('/raporty/<report_type>')
+@login_required
+def reports_view(report_type: str = 'postepy'):
+    """Widok analityczny i motywacyjny z raportami postępów, ucznia i podsumowaniem."""
+    config = request.app_config
+    storage = request.app_storage
+    active_login = get_active_student_login(config, storage, session_login=session.get('active_student_login'))
+
+    if report_type not in ('postepy', 'uczen', 'podsumowanie'):
+        report_type = 'postepy'
+
+    variant = request.args.get('variant', 'teens').strip().lower()
+    if variant not in ('kids', 'teens', 'youth'):
+        variant = 'teens'
+
+    days_param = request.args.get('days')
+    if days_param and days_param.isdigit():
+        days = max(1, int(days_param))
+    else:
+        days = 7
+
+    ref_now = request.app_actual_date or datetime.now()
+    default_date = ref_now.date()
+    default_date_str = default_date.strftime("%Y-%m-%d")
+
+    date_param = request.args.get('date')
+    selected_date = default_date
+    if date_param:
+        try:
+            selected_date = datetime.strptime(date_param.strip(), "%Y-%m-%d").date()
+        except ValueError:
+            selected_date = default_date
+
+    selected_date_str = selected_date.strftime("%Y-%m-%d")
+    prev_date_str = (selected_date - timedelta(days=1)).strftime("%Y-%m-%d")
+    next_date_str = (selected_date + timedelta(days=1)).strftime("%Y-%m-%d")
+
+    student_name = resolve_student_name(config, storage, active_login) if active_login else "Uczeń"
+
+    if not active_login:
+        report_html = (
+            '<div class="py-16 text-center bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">'
+            '<h3 class="text-lg font-bold text-slate-800 mb-1">Brak skonfigurowanych uczniów w systemie</h3>'
+            '</div>'
+        )
+    elif report_type == 'postepy':
+        report_html = build_progress_report_html(
+            storage=storage,
+            login=active_login,
+            config=config,
+            days=days,
+            now=ref_now,
+        )
+    elif report_type == 'uczen':
+        report_html = build_student_report_html(
+            storage=storage,
+            login=active_login,
+            config=config,
+            variant=variant,
+            days=days,
+            now=ref_now,
+        )
+    else:  # podsumowanie
+        report_html = build_daily_summary_html(
+            storage=storage,
+            login=active_login,
+            config=config,
+            target_date=selected_date,
+            now=ref_now,
+        )
+
+    return render_template(
+        'web/reports.html',
+        active_tab=report_type,
+        active_variant=variant,
+        days=days,
+        report_html=report_html,
+        student_name=student_name,
+        active_login=active_login,
+        selected_date_str=selected_date_str,
+        default_date_str=default_date_str,
+        prev_date_str=prev_date_str,
+        next_date_str=next_date_str,
+    )
 
 
 @web_bp.route('/akcje')
@@ -389,6 +543,11 @@ def create_app(
         request.app_config_path = app.config['CONFIG_PATH']
         request.app_storage_dir = app.config['STORAGE_DIR']
         request.app_actual_date = app.config.get('ACTUAL_DATE')
+
+    @app.template_filter('human_time')
+    def human_time_filter(val):
+        ref_now = getattr(request, 'app_actual_date', None) or datetime.now()
+        return format_human_timestamp(val, now=ref_now)
 
     app.context_processor(inject_common_context)
     app.register_blueprint(auth_bp)

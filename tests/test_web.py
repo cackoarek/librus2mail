@@ -11,11 +11,16 @@ from unittest.mock import patch
 
 from librus2mail.web import create_app, export_web_views
 from librus2mail.web import main as web_main
+from librus2mail.web.app import get_app_version
 from librus2mail.web.auth import LoginRateLimiter, get_client_ip
 from librus2mail.web.services import (
+    build_daily_summary_html,
+    build_progress_report_html,
+    build_student_report_html,
     calculate_overall_average,
     calculate_subject_averages,
     capture_action_execution,
+    format_human_timestamp,
     get_storage,
     resolve_student_name,
     simulate_new_grade,
@@ -496,6 +501,11 @@ class TestWebDashboard(unittest.TestCase):
             'web_oceny.html',
             'web_terminarz.html',
             'web_wiadomosci.html',
+            'web_raporty_postepy.html',
+            'web_raporty_uczen_kids.html',
+            'web_raporty_uczen_teens.html',
+            'web_raporty_uczen_youth.html',
+            'web_raporty_podsumowanie.html',
             'web_akcje.html',
         }
         self.assertEqual(set(files.keys()), expected_files)
@@ -538,6 +548,103 @@ class TestWebDashboard(unittest.TestCase):
         self.assertTrue(os.path.isfile(os.path.join(export_dir, 'web_dashboard.html')))
         self.assertTrue(os.path.isfile(os.path.join(export_dir, 'web_login.html')))
 
+    def test_reports_views_endpoints(self):
+        """Testuje podstronę /raporty oraz jej podzakładki i przełącznik wariantów stylu."""
+        app = create_app(
+            config_path=self.config_path,
+            storage_dir=self.storage_dir,
+            no_auth=True,
+            actual_date='2026-09-22',
+        )
+        client = app.test_client()
+
+        # 1. Domyślny widok /raporty (kieruje na raport postępów, domyślnie 7 dni)
+        res_default = client.get('/raporty')
+        self.assertEqual(res_default.status_code, 200)
+        self.assertIn('Raport postępów'.encode(), res_default.data)
+        self.assertIn(b'Jan Kowalski', res_default.data)
+        self.assertIn(b'7 dni', res_default.data)
+        self.assertIn(b'14 dni', res_default.data)
+
+        # 2. Zakładka /raporty/postepy z różnymi okresami (3, 14, 30 dni)
+        for d in (3, 14, 30):
+            res_p = client.get(f'/raporty/postepy?days={d}')
+            self.assertEqual(res_p.status_code, 200)
+            self.assertIn(f'{d} dni'.encode(), res_p.data)
+
+        # 3. Zakładka /raporty/uczen z wariantami (kids, teens, youth) i okresami
+        res_kids = client.get('/raporty/uczen?variant=kids&days=3')
+        self.assertEqual(res_kids.status_code, 200)
+        self.assertIn(b'Kids', res_kids.data)
+        self.assertIn(b'3 dni', res_kids.data)
+
+        res_teens = client.get('/raporty/uczen?variant=teens&days=14')
+        self.assertEqual(res_teens.status_code, 200)
+        self.assertIn(b'Teens', res_teens.data)
+        self.assertIn(b'14 dni', res_teens.data)
+
+        res_youth = client.get('/raporty/uczen?variant=youth&days=30')
+        self.assertEqual(res_youth.status_code, 200)
+        self.assertIn(b'Youth', res_youth.data)
+        self.assertIn(b'30 dni', res_youth.data)
+
+        # 4. Zakładka /raporty/podsumowanie z date pickerem
+        res_summary = client.get('/raporty/podsumowanie')
+        self.assertEqual(res_summary.status_code, 200)
+        self.assertIn(b'Podsumowanie dzienne', res_summary.data)
+        self.assertIn(b'type="date"', res_summary.data)
+        self.assertIn(b'value="2026-09-22"', res_summary.data)
+
+        # 5. Zakładka /raporty/podsumowanie z wybraną datą z date pickera
+        res_summary_date = client.get('/raporty/podsumowanie?date=2026-09-20')
+        self.assertEqual(res_summary_date.status_code, 200)
+        self.assertIn(b'value="2026-09-20"', res_summary_date.data)
+
+    def test_reports_builders_unit(self):
+        """Testuje bezpośrednie funkcje generujące treść raportów (services)."""
+        storage = get_storage(self.mock_config, self.storage_dir)
+
+        # Raport postępów
+        html_progress = build_progress_report_html(
+            storage=storage,
+            login='123456',
+            config=self.mock_config,
+            days=7,
+            now=datetime(2026, 9, 22),
+        )
+        self.assertIn('Raport postępów', html_progress)
+        self.assertIn('Jan Kowalski', html_progress)
+
+        # Raport ucznia
+        html_student = build_student_report_html(
+            storage=storage,
+            login='123456',
+            config=self.mock_config,
+            variant='teens',
+            days=7,
+            now=datetime(2026, 9, 22),
+        )
+        self.assertIn('Jan Kowalski', html_student)
+
+        # Podsumowanie powiadomień dla konkretnego dnia (2026-09-20 Jan Kowalski ma ocenę z Matematyki)
+        html_summary = build_daily_summary_html(
+            storage=storage,
+            login='123456',
+            config=self.mock_config,
+            target_date='2026-09-20',
+            now=datetime(2026, 9, 22),
+        )
+        self.assertIn('Jan Kowalski', html_summary)
+        self.assertIn('Matematyka', html_summary)
+
+        # Obsługa nieznanego ucznia bez ocen w bazie
+        html_empty = build_progress_report_html(
+            storage=storage,
+            login='999999',
+            config=self.mock_config,
+        )
+        self.assertIn('Brak zapisanych ocen', html_empty)
+
     def test_capture_action_execution_error_handling(self):
         """Testuje bezpieczne przechwytywanie wyjątków w capture_action_execution."""
         def faulty_action():
@@ -547,6 +654,112 @@ class TestWebDashboard(unittest.TestCase):
         self.assertFalse(success)
         self.assertIn("Testowy błąd operacji", output)
         self.assertIsNone(result)
+
+    def test_get_app_version_and_footer(self):
+        """Weryfikuje dynamiczne pobieranie wersji aplikacji i wyświetlanie jej w stopce."""
+        version = get_app_version()
+        self.assertTrue(isinstance(version, str))
+        self.assertTrue(len(version) > 0)
+        self.assertFalse(version.startswith("v"))
+
+        # Sprawdź czy wersja pojawia się w renderowanym szablonie panelu
+        app = create_app(config_path=self.config_path, storage_dir=self.storage_dir, no_auth=True)
+        client = app.test_client()
+        response = client.get('/')
+        self.assertEqual(response.status_code, 200)
+        expected_footer = f"Librus2mail v{version}".encode()
+        self.assertIn(expected_footer, response.data)
+
+    def test_format_human_timestamp_and_dashboard_display(self):
+        """Testuje konwersję daty na ludzki format w języku polskim oraz wyświetlanie na pulpicie."""
+        now = datetime(2026, 10, 7, 13, 11, 30)
+
+        # 1. Pusty / brak danych
+        self.assertEqual(format_human_timestamp(None, now=now), "Brak danych")
+        self.assertEqual(format_human_timestamp("", now=now), "Brak danych")
+
+        # 2. Dzisiaj przed chwilą (< 1 min)
+        self.assertEqual(
+            format_human_timestamp("2026-10-07T13:11:10", now=now),
+            "dzisiaj o 13:11 (przed chwilą)",
+        )
+
+        # 3. Dzisiaj kilkanaście/kilkadziesiąt minut temu (np. przypadek zgłoszony przez użytkownika)
+        self.assertEqual(
+            format_human_timestamp("2026-10-07T12:25:30.463551", now=now),
+            "dzisiaj o 12:25 (45 min temu)",
+        )
+
+        # 4. Dzisiaj kilka godzin temu
+        self.assertEqual(
+            format_human_timestamp("2026-10-07T10:00:00", now=now),
+            "dzisiaj o 10:00 (3 godz. temu)",
+        )
+
+        # 5. Wczoraj
+        self.assertEqual(
+            format_human_timestamp("2026-10-06T18:45:00", now=now),
+            "wczoraj o 18:45",
+        )
+
+        # 6. Przedwczoraj
+        self.assertEqual(
+            format_human_timestamp("2026-10-05T20:10:00", now=now),
+            "przedwczoraj o 20:10",
+        )
+
+        # 7. Kilka dni temu w bieżącym roku
+        self.assertEqual(
+            format_human_timestamp("2026-09-30T09:15:00", now=now),
+            "30.09 o 09:15 (7 dni temu)",
+        )
+
+        # 8. Inny rok
+        self.assertEqual(
+            format_human_timestamp("2025-10-07T12:00:00", now=now),
+            "07.10.2025 o 12:00",
+        )
+
+        # 9. Test integracyjny z widokiem dashboardu Flask
+        storage = get_storage(self.mock_config, self.storage_dir)
+        iso_sync = "2026-10-07T12:25:30.463551"
+        storage.save_last_collect_time('123456', iso_sync)
+
+        app = create_app(
+            config_path=self.config_path,
+            storage_dir=self.storage_dir,
+            actual_date=now,
+            no_auth=True,
+        )
+        client = app.test_client()
+        res = client.get('/')
+        self.assertEqual(res.status_code, 200)
+
+        # W tekście powinien być ludzki opis, a w atrybucie title pełny znacznik ISO
+        self.assertIn(b"dzisiaj o 12:25 (45 min temu)", res.data)
+        self.assertIn(f'title="{iso_sync}"'.encode(), res.data)
+
+    def test_favicon_endpoints_and_html_link(self):
+        """Weryfikuje serwowanie wektorowego favikona oraz obecność tagu link w HTML."""
+        app = create_app(config_path=self.config_path, storage_dir=self.storage_dir, no_auth=True)
+        client = app.test_client()
+
+        # 1. Endpoint /favicon.ico zwraca 200 oraz mime image/svg+xml
+        res_ico = client.get('/favicon.ico')
+        self.assertEqual(res_ico.status_code, 200)
+        self.assertIn('image/svg+xml', res_ico.content_type)
+        self.assertIn(b'<svg', res_ico.data)
+        self.assertIn(b'#4f46e5', res_ico.data)
+
+        # 2. Endpoint /favicon.svg zwraca to samo
+        res_svg = client.get('/favicon.svg')
+        self.assertEqual(res_svg.status_code, 200)
+        self.assertIn('image/svg+xml', res_svg.content_type)
+
+        # 3. Widok HTML zawiera <link rel="icon" type="image/svg+xml"
+        res_home = client.get('/')
+        self.assertEqual(res_home.status_code, 200)
+        self.assertIn(b'<link rel="icon" type="image/svg+xml"', res_home.data)
 
 
 if __name__ == '__main__':

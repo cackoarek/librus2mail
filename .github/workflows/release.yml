@@ -457,6 +457,11 @@ jobs:
               <p>Podgląd korespondencji ze szkołą oraz oficjalnych komunikatów dyrekcji.</p>
             </a>
 
+            <a class="card" href="web_raporty_postepy.html">
+              <h3>📈 Zakładka: Raporty i Analizy</h3>
+              <p>Interaktywne raporty postępów rodzica, karta motywacyjna ucznia (z wariantami) i podsumowanie.</p>
+            </a>
+
             <a class="card" href="web_akcje.html">
               <h3>⚡ Centrum operacyjne CLI</h3>
               <p>Interaktywny panel wyzwalania operacji synchronizacji i raportowania z podglądem logów.</p>
@@ -547,7 +552,7 @@ jobs:
 
             WEB_LINKS="—"
             if [ -f "pages/${V}/web_dashboard.html" ]; then
-              WEB_LINKS="<a href=\"${V}/web_dashboard.html\">📊 Pulpit</a> &nbsp;|&nbsp; <a href=\"${V}/web_login.html\">🔒 Login</a> &nbsp;|&nbsp; <a href=\"${V}/web_plan.html\">📅 Plan</a> &nbsp;|&nbsp; <a href=\"${V}/web_oceny.html\">📝 Oceny</a>"
+              WEB_LINKS="<a href=\"${V}/web_dashboard.html\">📊 Pulpit</a> &nbsp;|&nbsp; <a href=\"${V}/web_login.html\">🔒 Login</a> &nbsp;|&nbsp; <a href=\"${V}/web_plan.html\">📅 Plan</a> &nbsp;|&nbsp; <a href=\"${V}/web_oceny.html\">📝 Oceny</a> &nbsp;|&nbsp; <a href=\"${V}/web_raporty_postepy.html\">📈 Raporty</a>"
             fi
 
             ROWS="${ROWS}<tr><td><a href=\"${V}/\"><strong>${V}</strong></a></td><td><a href=\"${V}/powiadomienie_collector.html\">📬 Powiadomienie</a></td><td><a href=\"${V}/raport_8979296.html\">📊 Raport postępów</a></td><td>${STUDENT_LINKS}</td><td>${WEB_LINKS}</td></tr>\n"

@@ -660,14 +660,21 @@ def setup_submit():
     # 2. Poczta
     mail_provider = form.get('mail_provider', 'gmail')
     mail_login = form.get('mail_login', '').strip()
+    gmail_auth_mode = form.get('gmail_auth_mode', 'app_password')
+    gmail_oauth2_file = form.get('gmail_oauth2_file', '').strip()
     mail_pwd = form.get('mail_password', '').strip()
 
     mail_cfg: dict[str, Any] = {
         'login': mail_login,
-        'password': mail_pwd,
         'use_gmail': (mail_provider == 'gmail'),
     }
-    if mail_provider == 'smtp':
+    if mail_provider == 'gmail':
+        if gmail_auth_mode == 'oauth2' and gmail_oauth2_file:
+            mail_cfg['oauth2_file'] = gmail_oauth2_file
+        else:
+            mail_cfg['password'] = mail_pwd
+    elif mail_provider == 'smtp':
+        mail_cfg['password'] = mail_pwd
         mail_cfg['non_gmail_settings'] = {
             'smtp_host': form.get('smtp_host', 'smtp.example.com').strip(),
             'port': int(form.get('smtp_port', 587)),
@@ -789,15 +796,22 @@ def settings_view():
         existing_mail = config.get('mail', {}) if isinstance(config.get('mail'), dict) else {}
         mail_provider = form.get('mail_provider', 'gmail')
         mail_login = form.get('mail_login', '').strip() or existing_mail.get('login', '')
+        gmail_auth_mode = form.get('gmail_auth_mode', 'app_password')
+        gmail_oauth2_file = form.get('gmail_oauth2_file', '').strip() or existing_mail.get('oauth2_file', '')
         new_mail_pwd = form.get('mail_password', '').strip()
         effective_mail_pwd = new_mail_pwd or existing_mail.get('password', '')
 
         mail_cfg: dict[str, Any] = {
             'login': mail_login,
-            'password': effective_mail_pwd,
             'use_gmail': (mail_provider == 'gmail'),
         }
-        if mail_provider == 'smtp':
+        if mail_provider == 'gmail':
+            if gmail_auth_mode == 'oauth2':
+                mail_cfg['oauth2_file'] = gmail_oauth2_file
+            else:
+                mail_cfg['password'] = effective_mail_pwd
+        elif mail_provider == 'smtp':
+            mail_cfg['password'] = effective_mail_pwd
             existing_non_gmail = existing_mail.get('non_gmail_settings', {})
             mail_cfg['non_gmail_settings'] = {
                 'smtp_host': form.get('smtp_host', '').strip() or existing_non_gmail.get('smtp_host', 'smtp.example.com'),

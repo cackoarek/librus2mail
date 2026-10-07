@@ -856,12 +856,36 @@ class TestLibrus(unittest.TestCase):
             self.assertTrue(sent)
             mock_yag.return_value.send.assert_called_once()
 
-        # 2. SmtpSender
         with patch('smtplib.SMTP') as mock_smtp:
             smtp = SmtpSender(mail_cfg)
             sent_smtp = smtp.send_progress_report(user_cfg, analysis)
             self.assertTrue(sent_smtp)
             mock_smtp.return_value.sendmail.assert_called_once()
+
+    def test_send_gmail_with_oauth2(self):
+        from librus2mail.gmail_sender import GmailSender
+
+        oauth_cfg = {
+            'login': 'sender@example.com',
+            'oauth2_file': 'my_oauth2.json',
+            'use_gmail': True,
+        }
+        user_cfg = {
+            'librus_login': '999',
+            'librus_login_name': 'Bartek',
+            'notification_receivers': ['parent@example.com']
+        }
+
+        with patch('yagmail.SMTP') as mock_yag:
+            gmail = GmailSender(oauth_cfg)
+            self.assertTrue(gmail.use_oauth2)
+            self.assertEqual(gmail.oauth2_file, 'my_oauth2.json')
+            gmail.send_mail_with_messages(
+                user_cfg,
+                [{'title': 'Wiadomość', 'sender': 'Nauczyciel', 'datetime': 'D', 'content': 'Treść'}]
+            )
+            mock_yag.assert_called_with(user='sender@example.com', oauth2_file='my_oauth2.json')
+            mock_yag.return_value.send.assert_called_once()
 
     def test_progress_report_cli_dry_run(self):
         import os

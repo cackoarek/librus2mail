@@ -1028,6 +1028,55 @@ class TestWebDashboard(unittest.TestCase):
         self.assertEqual(storage.get_last_progress_report_date(user, report_key='rep_monthly_30_18:00'), t_monthly)
         self.assertEqual(storage.get_last_progress_report_date(user), t_monthly)
 
+    def test_setup_and_settings_with_gmail_oauth2(self):
+        """Weryfikuje konfigurację wysyłki Gmail przez OAuth2 w /setup oraz /ustawienia."""
+        import yaml
+        new_config_path = os.path.join(self.temp_dir, 'oauth_config.yaml')
+        app = create_app(config_path=new_config_path, storage_dir=self.storage_dir, no_auth=True)
+        client = app.test_client()
+
+        # 1. Przesłanie formularza kreatora /setup z Gmail OAuth2
+        form_data = {
+            'student_login_0': '111222',
+            'student_name_0': 'Kacper',
+            'student_password_0': 'haslo_kacper',
+            'student_receivers_0': 'rodzic@gmail.com',
+            'mail_provider': 'gmail',
+            'gmail_auth_mode': 'oauth2',
+            'gmail_oauth2_file': 'custom_yagmail_creds.json',
+            'mail_login': 'rodzic@gmail.com',
+            'web_password': 'Haslo',
+        }
+        res = client.post('/setup', data=form_data, follow_redirects=False)
+        self.assertEqual(res.status_code, 302)
+
+        with open(new_config_path, encoding='utf-8') as f:
+            cfg = yaml.safe_load(f)
+
+        self.assertTrue(cfg['mail']['use_gmail'])
+        self.assertEqual(cfg['mail']['login'], 'rodzic@gmail.com')
+        self.assertEqual(cfg['mail']['oauth2_file'], 'custom_yagmail_creds.json')
+        self.assertNotIn('password', cfg['mail'])
+
+        # 2. Aktualizacja w /ustawienia z powrotem na hasło aplikacji
+        res_settings = client.post('/ustawienia', data={
+            'student_login_0': '111222',
+            'student_name_0': 'Kacper',
+            'student_receivers_0': 'rodzic@gmail.com',
+            'mail_provider': 'gmail',
+            'gmail_auth_mode': 'app_password',
+            'mail_login': 'rodzic@gmail.com',
+            'mail_password': 'nowe_haslo_app_123',
+        }, follow_redirects=False)
+        self.assertEqual(res_settings.status_code, 302)
+
+        with open(new_config_path, encoding='utf-8') as f:
+            updated_cfg = yaml.safe_load(f)
+
+        self.assertTrue(updated_cfg['mail']['use_gmail'])
+        self.assertEqual(updated_cfg['mail']['password'], 'nowe_haslo_app_123')
+        self.assertNotIn('oauth2_file', updated_cfg['mail'])
+
 
 if __name__ == '__main__':
     unittest.main()

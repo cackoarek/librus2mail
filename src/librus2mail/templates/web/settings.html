@@ -147,13 +147,13 @@
             </div>
 
             <!-- Wybór dostawcy poczty -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
                 <label class="provider-radio-settings flex items-center gap-3 p-4 border-2 {% if mail.get('use_gmail', True) %}border-indigo-600 bg-indigo-50/40{% else %}border-slate-200 bg-white{% endif %} rounded-2xl cursor-pointer transition">
                     <input type="radio" name="mail_provider" value="gmail" {% if mail.get('use_gmail', True) %}checked{% endif %} onchange="toggleMailProviderSettings()"
                            class="text-indigo-600 focus:ring-indigo-500">
                     <div>
                         <span class="block text-sm font-extrabold text-slate-900">Poczta Gmail</span>
-                        <span class="block text-xs text-slate-500 mt-0.5">Wymaga 16-znakowego Hasła Aplikacji Google</span>
+                        <span class="block text-xs text-slate-500 mt-0.5">Hasło aplikacji lub Google OAuth2</span>
                     </div>
                 </label>
 
@@ -167,6 +167,25 @@
                 </label>
             </div>
 
+            {% set is_gmail = mail.get('use_gmail', True) %}
+            {% set has_oauth2 = True if mail.get('oauth2_file') else False %}
+            <!-- Sekcja wyboru metody autoryzacji dla Gmail -->
+            <div id="gmail-auth-mode-settings-box" class="{% if not is_gmail %}hidden{% endif %} mb-5 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl">
+                <span class="block text-xs font-bold text-slate-700 uppercase mb-2">Metoda logowania do Gmail</span>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <label class="gmail-auth-settings-radio flex items-center gap-2 p-2.5 rounded-xl border {% if not has_oauth2 %}border-indigo-600 bg-white{% else %}border-slate-200 bg-white/70{% endif %} cursor-pointer transition text-xs font-bold text-slate-800">
+                        <input type="radio" name="gmail_auth_mode" value="app_password" {% if not has_oauth2 %}checked{% endif %} onchange="toggleGmailAuthModeSettings()"
+                               class="text-indigo-600 focus:ring-indigo-500">
+                        <span>🔑 Hasło do aplikacji Google (zalecane)</span>
+                    </label>
+                    <label class="gmail-auth-settings-radio flex items-center gap-2 p-2.5 rounded-xl border {% if has_oauth2 %}border-indigo-600 bg-white{% else %}border-slate-200 bg-white/70{% endif %} hover:bg-white cursor-pointer transition text-xs font-semibold text-slate-700">
+                        <input type="radio" name="gmail_auth_mode" value="oauth2" {% if has_oauth2 %}checked{% endif %} onchange="toggleGmailAuthModeSettings()"
+                               class="text-indigo-600 focus:ring-indigo-500">
+                        <span>🛡️ Google OAuth2 (plik credentials .json)</span>
+                    </label>
+                </div>
+            </div>
+
             <!-- Dane konta nadawcy -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -177,17 +196,25 @@
                            class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 </div>
 
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                <div id="mail-password-settings-container" class="{% if is_gmail and has_oauth2 %}hidden{% endif %}">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1" id="mail-password-settings-label">
                         Nowe hasło / Hasło aplikacji (zostaw puste, aby zachować obecne)
                     </label>
                     <input type="password" name="mail_password" placeholder="•••••••••••• (obecne hasło zachowane)"
                            class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 </div>
+
+                <div id="gmail-oauth2-settings-container" class="{% if not (is_gmail and has_oauth2) %}hidden{% endif %}">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                        Ścieżka do pliku OAuth2 JSON
+                    </label>
+                    <input type="text" name="gmail_oauth2_file" value="{{ mail.get('oauth2_file', '') }}" placeholder="np. yagmail_client.json"
+                           class="w-full text-sm font-mono px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
             </div>
 
             {% set non_gmail = mail.get('non_gmail_settings', {}) %}
-            <div id="smtp-settings-settings-box" class="{% if mail.get('use_gmail', True) %}hidden{% endif %} mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div id="smtp-settings-settings-box" class="{% if is_gmail %}hidden{% endif %} mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
                         Host serwera SMTP
@@ -205,10 +232,13 @@
                 </div>
             </div>
 
-            {% set is_gmail = mail.get('use_gmail', True) %}
-            <div id="gmail-settings-tip-box" class="{% if not is_gmail %}hidden{% endif %} mt-4 p-4 bg-sky-50 border border-sky-200 rounded-xl text-xs text-sky-800">
+            <div id="gmail-settings-tip-box" class="{% if not (is_gmail and not has_oauth2) %}hidden{% endif %} mt-4 p-4 bg-sky-50 border border-sky-200 rounded-xl text-xs text-sky-800">
                 💡 <strong>Wskazówka:</strong> Dla konta Gmail włącz weryfikację dwuetapową na koncie Google i wygeneruj specjalne
                 <strong>Hasło do aplikacji</strong> w zakładce Bezpieczeństwo.
+            </div>
+
+            <div id="gmail-oauth-settings-tip-box" class="{% if not (is_gmail and has_oauth2) %}hidden{% endif %} mt-4 p-4 bg-indigo-50 border border-indigo-200 rounded-xl text-xs text-indigo-900">
+                🛡️ <strong>Wskazówka OAuth2:</strong> Wskaż ścieżkę do pliku JSON (np. <code>yagmail_client.json</code>) zawierającego dane dostępowe Google OAuth2 (<code>client_id</code>, <code>client_secret</code>, <code>refresh_token</code>). W tym trybie hasło do konta nie jest wymagane.
             </div>
         </div>
 
@@ -523,10 +553,46 @@
 <script>
 let studentSettingsCount = {{ users|length }};
 
+function toggleGmailAuthModeSettings() {
+    const isGmail = document.querySelector('input[name="mail_provider"]:checked')?.value === 'gmail';
+    if (!isGmail) return;
+
+    const authMode = document.querySelector('input[name="gmail_auth_mode"]:checked')?.value || 'app_password';
+    const pwdContainer = document.getElementById('mail-password-settings-container');
+    const oauthContainer = document.getElementById('gmail-oauth2-settings-container');
+    const gmailTipBox = document.getElementById('gmail-settings-tip-box');
+    const oauthTipBox = document.getElementById('gmail-oauth-settings-tip-box');
+
+    document.querySelectorAll('.gmail-auth-settings-radio').forEach(label => {
+        const radio = label.querySelector('input[type="radio"]');
+        if (radio && radio.checked) {
+            label.className = "gmail-auth-settings-radio flex items-center gap-2 p-2.5 rounded-xl border border-indigo-600 bg-white cursor-pointer transition text-xs font-bold text-slate-800";
+        } else {
+            label.className = "gmail-auth-settings-radio flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-white/70 hover:bg-white cursor-pointer transition text-xs font-semibold text-slate-700";
+        }
+    });
+
+    if (authMode === 'oauth2') {
+        if (pwdContainer) pwdContainer.classList.add('hidden');
+        if (oauthContainer) oauthContainer.classList.remove('hidden');
+        if (gmailTipBox) gmailTipBox.classList.add('hidden');
+        if (oauthTipBox) oauthTipBox.classList.remove('hidden');
+    } else {
+        if (pwdContainer) pwdContainer.classList.remove('hidden');
+        if (oauthContainer) oauthContainer.classList.add('hidden');
+        if (gmailTipBox) gmailTipBox.classList.remove('hidden');
+        if (oauthTipBox) oauthTipBox.classList.add('hidden');
+    }
+}
+
 function toggleMailProviderSettings() {
-    const isGmail = document.querySelector('input[name="mail_provider"]:checked').value === 'gmail';
+    const isGmail = document.querySelector('input[name="mail_provider"]:checked')?.value === 'gmail';
+    const gmailAuthBox = document.getElementById('gmail-auth-mode-settings-box');
     const smtpBox = document.getElementById('smtp-settings-settings-box');
+    const pwdContainer = document.getElementById('mail-password-settings-container');
+    const oauthContainer = document.getElementById('gmail-oauth2-settings-container');
     const tipBox = document.getElementById('gmail-settings-tip-box');
+    const oauthTipBox = document.getElementById('gmail-oauth-settings-tip-box');
 
     document.querySelectorAll('.provider-radio-settings').forEach(label => {
         const radio = label.querySelector('input[type="radio"]');
@@ -537,13 +603,17 @@ function toggleMailProviderSettings() {
         }
     });
 
-    if (smtpBox) {
-        if (isGmail) smtpBox.classList.add('hidden');
-        else smtpBox.classList.remove('hidden');
-    }
-    if (tipBox) {
-        if (isGmail) tipBox.classList.remove('hidden');
-        else tipBox.classList.add('hidden');
+    if (isGmail) {
+        if (gmailAuthBox) gmailAuthBox.classList.remove('hidden');
+        if (smtpBox) smtpBox.classList.add('hidden');
+        toggleGmailAuthModeSettings();
+    } else {
+        if (gmailAuthBox) gmailAuthBox.classList.add('hidden');
+        if (smtpBox) smtpBox.classList.remove('hidden');
+        if (pwdContainer) pwdContainer.classList.remove('hidden');
+        if (oauthContainer) oauthContainer.classList.add('hidden');
+        if (tipBox) tipBox.classList.add('hidden');
+        if (oauthTipBox) oauthTipBox.classList.add('hidden');
     }
 }
 

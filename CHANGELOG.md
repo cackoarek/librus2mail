@@ -9,7 +9,11 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ## [Unreleased]
 
-### Dodane
+- **Obsługa Google OAuth2 dla Gmail (`oauth2_file`)**:
+  - Dodano alternatywną metodę uwierzytelniania konta pocztowego Gmail z użyciem pliku autoryzacyjnego OAuth2 (`client_secret.json` / plik tokenów autoryzacyjnych), zgodnie ze zgłoszeniem w Issue #5.
+  - Wybór metody uwierzytelniania w kreatorze `/setup` oraz w zakładce `/ustawienia` (*Hasło do aplikacji (zalecane)* vs *Google OAuth2 (.json)*).
+  - Wzbogacono klasę `GmailSender` o automatyczne inicjalizowanie klienta `yagmail.SMTP` z parametrem `oauth2_file` przy zachowaniu pełnej kompatybilności wstecznej z hasłami aplikacji.
+  - Zaktualizowano przykładową konfigurację w `config-example.yaml`.
 - **Kreator pierwszego uruchomienia w panelu WWW (`/setup`)**:
   - Automatyczne wykrywanie braku pliku `config.yaml` lub braku skonfigurowanych kont uczniów z płynnym przekierowaniem do kreatora onboardingowego.
   - Wygodny 4-krokowy Stepper UI: Krok 1: Profile uczniów i dzieci (z obsługą rodzeństwa oraz selekcją modułów ocen, terminarza, planu i wiadomości) -> Krok 2: Poczta e-mail (Gmail z hasłem aplikacji lub serwer SMTP) -> Krok 3: Harmonogram i automatyzacja -> Krok 4: Hasło i zabezpieczenia panelu WWW.

@@ -5,6 +5,15 @@ import logging
 from .base_logger import logger, setup_logging
 from .collect_and_notify import run_pipeline
 from .config import AppSettings, LibrusUserConfig, MailConfig, read_config
+from .domain_models import (
+    Announcement,
+    Grade,
+    Message,
+    Notification,
+    ScheduleEntry,
+    ScheduleLesson,
+    TimetableEntry,
+)
 from .gmail_sender import GmailSender
 from .librus import Librus, NotLogged
 from .librus_collector import LibrusCollector, configure_mail_provider, run_collector
@@ -35,6 +44,13 @@ __all__ = [
     "AppSettings",
     "LibrusUserConfig",
     "MailConfig",
+    "Grade",
+    "Message",
+    "Announcement",
+    "Notification",
+    "TimetableEntry",
+    "ScheduleLesson",
+    "ScheduleEntry",
     "GmailSender",
     "Librus",
     "NotLogged",

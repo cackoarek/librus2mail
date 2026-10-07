@@ -9,6 +9,12 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ## [Unreleased]
 
+- **Typowane modele obiektów domenowych (Issue #8 - Etap 2)**:
+  - Wprowadzenie dedykowanych modeli Pydantic v2 dla obiektów domenowych: `Grade` (ocena), `Message` (wiadomość prywatna), `Announcement` / `Notification` (ogłoszenie szkolne), `TimetableEntry` (terminarz) oraz `ScheduleLesson` / `ScheduleEntry` (plan lekcji).
+  - Obiekty domenowe implementują `collections.abc.MutableMapping` zapewniając pełną zgodność z dotychczasowym dostępem słownikowym (`obj['field']`, `obj.get('field')`), rozpakowywaniem `{**obj}` oraz szablonami Jinja2.
+  - Wyliczane właściwości pomocnicze w modelu `Grade`: `numeric_value` (automatyczne parsowanie stopnia na float, np. '5+' -> 5.5) oraz `weight_value` (parsowanie wagi).
+  - Elastyczne aliasy pól w `Message` i `Announcement` (zarówno `date`, jak i `datetime`, oraz `author` i `sender`).
+  - Pełna integracja z silnikami parsowania w `librus.py` oraz pamięcią stanu i historii ocen w `storage.py`.
 - **Wczesna walidacja konfiguracji i typowane modele z Pydantic / pydantic-settings (Issue #8 - Etap 1)**:
   - Zastąpienie surowego, nietypowanego słownika konfiguracji silnie typowanymi modelami Pydantic v2 (`AppSettings`, `LibrusUserConfig`, `MailConfig`, `WebConfig`, `ScheduleConfig`, `NonGmailSettings`).
   - Natychmiastowa wczesna walidacja danych (fail-fast) przy starcie aplikacji — wyłapywanie błędnych adresów e-mail (`EmailStr`), nieprawidłowych typów czy brakujących danych logowania zanim aplikacja nawiąże połączenie sieciowe.

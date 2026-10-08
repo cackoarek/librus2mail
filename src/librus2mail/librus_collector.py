@@ -6,6 +6,7 @@ Odpowiada wyłącznie za autoryzację i pobieranie surowych danych ze szkoły
 """
 
 import argparse
+import collections.abc
 import logging
 import os
 import sys
@@ -250,8 +251,8 @@ def calculate_next_wait_seconds(config: dict, now: datetime | None = None) -> in
     """Oblicza liczbę sekund do kolejnego cyklu na podstawie harmonogramu pobierania (collection)
     oraz zaplanowanych raportów (schedule.reports), wybierając najbliższe nadchodzące zdarzenie."""
     ref_now = now or datetime.now()
-    sched = config.get('schedule', {}) if isinstance(config, dict) else {}
-    collection_sched = sched.get('collection', {}) if isinstance(sched, dict) else {}
+    sched = config.get('schedule', {}) if isinstance(config, (dict, collections.abc.Mapping)) else {}
+    collection_sched = sched.get('collection', {}) if isinstance(sched, (dict, collections.abc.Mapping)) else {}
     mode = collection_sched.get('mode')
 
     candidates: list[datetime] = []
@@ -499,8 +500,8 @@ def run_collector(
         # czy dzisiejsze pobieranie już się odbyło lub czy jeszcze nie nadeszła jego pora.
         should_collect = True
         if effective_work_in_loop and not offline:
-            sched = config.get('schedule', {}) if isinstance(config, dict) else {}
-            col_sched = sched.get('collection', {}) if isinstance(sched, dict) else {}
+            sched = config.get('schedule', {}) if isinstance(config, (dict, collections.abc.Mapping)) else {}
+            col_sched = sched.get('collection', {}) if isinstance(sched, (dict, collections.abc.Mapping)) else {}
             if col_sched.get('mode') == 'daily':
                 time_str = col_sched.get('time', '16:00')
                 try:

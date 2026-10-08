@@ -36,3 +36,19 @@ services:
       - TZ=Europe/Warsaw
     profiles:
       - tools
+
+  # Opcjonalny kontener interaktywnego panelu webowego WWW (Moduł 5)
+  # Uruchomienie: docker-compose --profile web up -d web
+  web:
+    image: librus2mail:latest
+    container_name: librus2mail-web
+    command: ["librus-web", "-b", "0.0.0.0"]
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./config.yaml:/app/config.yaml
+      - ./storage:/app/storage
+    environment:
+      - TZ=Europe/Warsaw
+    profiles:
+      - web

@@ -491,6 +491,21 @@ def run_collector(
                             except Exception as rep_err:
                                 logger.error(f"Błąd podczas generowania zaplanowanego raportu postępów '{rep_name}': {rep_err}")
 
+                            # Opcjonalne wyzwolenie raportu motywacyjnego dla samego dziecka, jeśli włączony w profilu ucznia
+                            st_rep_cfg = u.get('student_report') or {}
+                            if st_rep_cfg and st_rep_cfg.get('enabled', True) and (st_rep_cfg.get('email') or st_rep_cfg.get('receivers')):
+                                logger.info(f"🎓 Wyzwalanie zaplanowanego raportu motywacyjnego dla ucznia {u_login} (za {rep_days} dni)...")
+                                try:
+                                    from .student_report import run_student_reports
+                                    run_student_reports(
+                                        config_path=config_path,
+                                        storage_dir=effective_storage_dir,
+                                        user_filter=u_login,
+                                        days=rep_days,
+                                    )
+                                except Exception as st_err:
+                                    logger.error(f"Błąd podczas generowania zaplanowanego raportu motywacyjnego dla {u_login}: {st_err}")
+
         if not effective_work_in_loop:
             if is_simulation:
                 logger.info("Zakończono symulację / pojedynczy przebieg.")

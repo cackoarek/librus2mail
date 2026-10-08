@@ -7,7 +7,7 @@
 [![CI Status](https://img.shields.io/github/actions/workflow/status/cackoarek/librus2mail/ci.yml?branch=main&label=CI&style=flat-square&logo=githubactions&logoColor=white)](https://github.com/cackoarek/librus2mail/actions/workflows/ci.yml)
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-3776AB.svg?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![Code Style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg?style=flat-square&logo=ruff&logoColor=white)](https://github.com/astral-sh/ruff)
-[![Tests: pytest](https://img.shields.io/badge/tests-pytest%20(135%20passed)-success.svg?style=flat-square&logo=pytest&logoColor=white)](tests/)
+[![Tests: pytest](https://img.shields.io/badge/tests-pytest%20(136%20passed)-success.svg?style=flat-square&logo=pytest&logoColor=white)](tests/)
 [![Packaging: PEP 517/518](https://img.shields.io/badge/packaging-PEP%20517%2F518-00599C.svg?style=flat-square)](pyproject.toml)
 [![Web UI: Flask + Tailwind](https://img.shields.io/badge/web%20ui-Flask%20%2B%20Tailwind-4B8BBE.svg?style=flat-square&logo=flask&logoColor=white)](src/librus2mail/web/)
 [![Docker Ready](https://img.shields.io/badge/docker-ready-2496ED.svg?style=flat-square&logo=docker&logoColor=white)](Dockerfile)
@@ -630,6 +630,9 @@ librus_users:
       email: "janek.kowalski@example.com"  # Adres e-mail dziecka (lub rodzica)
       template: "kids"                     # Wybór szablonu: "kids", "teens" lub "youth"
 ```
+
+> [!TIP]
+> **Automatyczna wysyłka w harmonogramie:** Gdy w konfiguracji włączysz zaplanowany cykliczny raport postępów rodziców (`schedule.reports`, np. w każdy piątek o 17:00), demon `librus_collector` w tym samym momencie automatycznie wysyła raport motywacyjny do każdego dziecka, które ma aktywną opcję `student_report.enabled: true`. Raport można także wywołać niezależnie w dowolnej chwili poleceniem CLI lub z poziomu **Centrum Akcji (`/akcje`)** w panelu WWW.
 
 ### Sposób użycia i parametry CLI:
 

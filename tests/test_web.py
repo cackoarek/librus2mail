@@ -860,6 +860,9 @@ class TestWebDashboard(unittest.TestCase):
             'student_timetable_0': 'on',
             'student_schedule_0': 'on',
             'student_messages_0': 'on',
+            'student_report_enabled_0': 'on',
+            'student_report_email_0': 'zosia.nowak@szkola.edu.pl',
+            'student_report_template_0': 'teens',
             'mail_provider': 'gmail',
             'mail_login': 'rodzic@gmail.com',
             'mail_password': 'tajne_haslo_app',
@@ -894,6 +897,10 @@ class TestWebDashboard(unittest.TestCase):
         self.assertEqual(saved_cfg['librus_users'][0]['librus_login'], '987654')
         self.assertEqual(saved_cfg['librus_users'][0]['librus_login_name'], 'Zosia Nowak')
         self.assertEqual(saved_cfg['librus_users'][0]['librus_password'], 'haslo_zosia')
+        self.assertIn('student_report', saved_cfg['librus_users'][0])
+        self.assertTrue(saved_cfg['librus_users'][0]['student_report']['enabled'])
+        self.assertEqual(saved_cfg['librus_users'][0]['student_report']['email'], 'zosia.nowak@szkola.edu.pl')
+        self.assertEqual(saved_cfg['librus_users'][0]['student_report']['template'], 'teens')
         self.assertEqual(saved_cfg['mail']['login'], 'rodzic@gmail.com')
         self.assertTrue(saved_cfg['mail']['use_gmail'])
         self.assertEqual(saved_cfg['web']['password'], 'PanelPassword123')
@@ -933,6 +940,9 @@ class TestWebDashboard(unittest.TestCase):
             'mail_provider': 'gmail',
             'mail_login': 'janek.rodzic@gmail.com',
             'mail_password': '',  # puste -> brak zmiany
+            'student_report_enabled_0': 'on',
+            'student_report_email_0': 'janek.mlody@szkola.edu.pl',
+            'student_report_template_0': 'youth',
             'collection_mode': 'interval',
             'collection_interval_hours': '2',
             'report_name_0': 'Raport tygodniowy',
@@ -958,6 +968,10 @@ class TestWebDashboard(unittest.TestCase):
 
         self.assertEqual(updated_cfg['librus_users'][0]['librus_login_name'], 'Janek Kowalski (zaktualizowany)')
         self.assertEqual(updated_cfg['librus_users'][0]['librus_password'], 'secret_pass')
+        self.assertIn('student_report', updated_cfg['librus_users'][0])
+        self.assertTrue(updated_cfg['librus_users'][0]['student_report']['enabled'])
+        self.assertEqual(updated_cfg['librus_users'][0]['student_report']['email'], 'janek.mlody@szkola.edu.pl')
+        self.assertEqual(updated_cfg['librus_users'][0]['student_report']['template'], 'youth')
         self.assertEqual(updated_cfg['schedule']['collection']['mode'], 'interval')
         self.assertEqual(updated_cfg['schedule']['collection']['interval_hours'], 2)
         self.assertEqual(updated_cfg['schedule']['reports'][0]['interval_days'], 7)

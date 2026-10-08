@@ -652,6 +652,16 @@ def setup_submit():
                 'do_not_send_first_parse': 'do_not_send_first_parse' in form,
                 'notification_receivers': receivers or [form.get('mail_login', '').strip()],
             }
+            if f'student_report_enabled_{idx}' in form:
+                st_email = form.get(f'student_report_email_{idx}', '').strip()
+                st_template = form.get(f'student_report_template_{idx}', 'kids').strip()
+                if st_template not in ('kids', 'teens', 'youth'):
+                    st_template = 'kids'
+                st_cfg['student_report'] = {
+                    'enabled': True,
+                    'email': st_email or (receivers[0] if receivers else form.get('mail_login', '').strip()),
+                    'template': st_template,
+                }
             students.append(st_cfg)
 
     if not students:
@@ -785,8 +795,16 @@ def settings_view():
                     'do_not_send_first_parse': 'do_not_send_first_parse' in form,
                     'notification_receivers': receivers,
                 }
-                if old_user and 'student_report' in old_user:
-                    st_cfg['student_report'] = old_user['student_report']
+                if f'student_report_enabled_{idx}' in form:
+                    st_email = form.get(f'student_report_email_{idx}', '').strip()
+                    st_template = form.get(f'student_report_template_{idx}', 'kids').strip()
+                    if st_template not in ('kids', 'teens', 'youth'):
+                        st_template = 'kids'
+                    st_cfg['student_report'] = {
+                        'enabled': True,
+                        'email': st_email or (receivers[0] if receivers else ''),
+                        'template': st_template,
+                    }
                 updated_users.append(st_cfg)
 
         if not updated_users:

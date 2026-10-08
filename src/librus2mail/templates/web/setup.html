@@ -150,6 +150,48 @@
                             </div>
                         </div>
 
+                        <!-- Opcjonalny raport motywacyjny dla samego dziecka (student_report) -->
+                        <div class="mt-4 pt-4 border-t border-slate-200/80">
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="inline-flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" name="student_report_enabled_0" id="student_report_enabled_0"
+                                           onchange="toggleStudentReportBox(0)"
+                                           class="rounded text-amber-500 focus:ring-amber-400">
+                                    <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                        <span>🏆</span> Włącz raport motywacyjny dla dziecka (student_report)
+                                    </span>
+                                </label>
+                                <span class="text-[11px] text-slate-400 font-medium">Opcjonalnie</span>
+                            </div>
+
+                            <div id="student-report-box-0" class="hidden mt-3 p-4 bg-amber-50/50 border border-amber-200/80 rounded-2xl space-y-3">
+                                <p class="text-xs text-amber-900 leading-relaxed">
+                                    Dedykowany raport motywacyjny z osiągnięciami, supermocami, odznakami grywalizacyjnymi i wyzwaniami dopasowanymi do wieku ucznia.
+                                </p>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                                            Adres e-mail dziecka (lub rodzica)
+                                        </label>
+                                        <input type="email" name="student_report_email_0" id="student_report_email_0"
+                                               placeholder="np. janek@example.com lub email rodzica"
+                                               class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:outline-none bg-white">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                                            Szablon raportu (dopasowany do wieku)
+                                        </label>
+                                        <select name="student_report_template_0" id="student_report_template_0"
+                                                class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:outline-none bg-white">
+                                            <option value="kids" selected>🎮 Kids (Szkoła podstawowa, klasy 4–6: odznaki, Karta Mocy)</option>
+                                            <option value="teens">⚡ Teens (Starsze klasy podstawówki, klasy 7–8: Quick Wins, egzamin)</option>
+                                            <option value="youth">📊 Youth (Szkoła średnia / liceum / technikum: Dashboard, KPI)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Status testu dla ucznia 0 -->
                         <div id="test-feedback-0" class="hidden mt-3 text-xs p-3 rounded-xl"></div>
                     </div>
@@ -363,6 +405,14 @@
                         <p class="text-xs text-slate-500 mt-0.5">
                             Możesz włączyć kilka niezależnych raportów (np. podsumowanie tygodnia w każdy piątek oraz miesięczny bilans ocen 1. dnia miesiąca).
                         </p>
+                    </div>
+
+                    <div class="mb-4 p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl text-xs text-amber-900 flex items-start gap-2">
+                        <span class="text-base">💡</span>
+                        <div>
+                            <strong>Raport motywacyjny dla samego dziecka (student_report):</strong>
+                            Konfiguruje się go niezależnie dla każdego z dzieci w <strong>Kroku 1</strong> (z wyborem szablonu Kids / Teens / Youth oraz adresu e-mail dziecka).
+                        </div>
                     </div>
 
                     <div id="reports-cards-container" class="space-y-4 mb-4">
@@ -928,10 +978,64 @@ function addStudentCard() {
                 </button>
             </div>
         </div>
+
+        <!-- Opcjonalny raport motywacyjny dla samego dziecka (student_report) -->
+        <div class="mt-4 pt-4 border-t border-slate-200/80">
+            <div class="flex items-center justify-between mb-2">
+                <label class="inline-flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="student_report_enabled_${idx}" id="student_report_enabled_${idx}"
+                           onchange="toggleStudentReportBox(${idx})"
+                           class="rounded text-amber-500 focus:ring-amber-400">
+                    <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                        <span>🏆</span> Włącz raport motywacyjny dla dziecka (student_report)
+                    </span>
+                </label>
+                <span class="text-[11px] text-slate-400 font-medium">Opcjonalnie</span>
+            </div>
+
+            <div id="student-report-box-${idx}" class="hidden mt-3 p-4 bg-amber-50/50 border border-amber-200/80 rounded-2xl space-y-3">
+                <p class="text-xs text-amber-900 leading-relaxed">
+                    Dedykowany raport motywacyjny z osiągnięciami, supermocami, odznakami grywalizacyjnymi i wyzwaniami dopasowanymi do wieku ucznia.
+                </p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                            Adres e-mail dziecka (lub rodzica)
+                        </label>
+                        <input type="email" name="student_report_email_${idx}" id="student_report_email_${idx}"
+                               placeholder="np. dziecko@example.com lub email rodzica"
+                               class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:outline-none bg-white">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                            Szablon raportu (dopasowany do wieku)
+                        </label>
+                        <select name="student_report_template_${idx}" id="student_report_template_${idx}"
+                                class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:outline-none bg-white">
+                            <option value="kids" selected>🎮 Kids (Szkoła podstawowa, klasy 4–6: odznaki, Karta Mocy)</option>
+                            <option value="teens">⚡ Teens (Starsze klasy podstawówki, klasy 7–8: Quick Wins, egzamin)</option>
+                            <option value="youth">📊 Youth (Szkoła średnia / liceum / technikum: Dashboard, KPI)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="test-feedback-${idx}" class="hidden mt-3 text-xs p-3 rounded-xl"></div>
     `;
     container.appendChild(div);
     studentCount++;
+}
+
+function toggleStudentReportBox(idx) {
+    const cb = document.getElementById(`student_report_enabled_${idx}`);
+    const box = document.getElementById(`student-report-box-${idx}`);
+    if (!cb || !box) return;
+    if (cb.checked) {
+        box.classList.remove('hidden');
+    } else {
+        box.classList.add('hidden');
+    }
 }
 
 async function testLibrusAccount(idx) {

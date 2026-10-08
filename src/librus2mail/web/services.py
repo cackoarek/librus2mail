@@ -2,6 +2,7 @@
 
 import io
 import logging
+import os
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from typing import Any
@@ -583,9 +584,15 @@ def save_config_yaml(config_dict: dict[str, Any], target_path: str = 'config.yam
         default_flow_style=False,
     )
 
-    temp_path = target.with_suffix('.tmp')
-    temp_path.write_text(content, encoding='utf-8')
-    temp_path.replace(target)
+    # Zapis bezpośredni in-place, aby zachować numer inode pliku
+    # (niezbędne w środowisku Docker z montowaniem pojedynczego pliku :ro)
+    with open(target, 'w', encoding='utf-8') as f:
+        f.write(content)
+        f.flush()
+        try:
+            os.fsync(f.fileno())
+        except OSError:
+            pass
     logger.info(f"Zapisano nową konfigurację do pliku {target}")
     return str(target)
 

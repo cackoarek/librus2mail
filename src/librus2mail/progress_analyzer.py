@@ -1,5 +1,6 @@
 import math
 import re
+from collections import defaultdict
 from datetime import datetime
 from typing import Any
 
@@ -325,6 +326,7 @@ class ProgressAnalyzer:
         activity_pluses = 0
         activity_minuses = 0
         unprepared_count = 0
+        unprepared_by_subject: dict[str, int] = defaultdict(int)
 
         for g in all_grades_parsed:
             nv = g.get('numeric_val')
@@ -338,6 +340,8 @@ class ProgressAnalyzer:
                 activity_minuses += 1
             elif raw.lower() in ('np', 'niepr', 'bz'):
                 unprepared_count += 1
+                subj = g.get('subject') or 'Inne'
+                unprepared_by_subject[subj] += 1
 
         for g in period_grades:
             nv = g.get('numeric_val')
@@ -627,8 +631,8 @@ class ProgressAnalyzer:
             strengths.append(f"Bardzo dobre oceny ze sprawdzianów w tym okresie: {high_desc}.")
 
         if borderline_opportunities:
-            top_opp = borderline_opportunities[0]
-            strengths.append(f"🎯 <strong>Szansa na wyższą ocenę</strong>: {top_opp['advice']}")
+            for top_opp in borderline_opportunities[:2]:
+                strengths.append(f"🎯 <strong>Szansa na wyższą ocenę</strong> z przedmiotu <strong>{top_opp['subject']}</strong>: {top_opp['advice']}")
 
         if stable_subjects:
             st_names = ", ".join([s['subject'] for s in stable_subjects[:3]])
@@ -646,8 +650,8 @@ class ProgressAnalyzer:
             warnings.append(f"Niska średnia (< 3.0) z przedmiotów: {names}.")
 
         if borderline_risks:
-            risk = borderline_risks[0]
-            warnings.append(f"⚖️ <strong>Ryzyko spadku oceny</strong>: {risk['warning']}")
+            for risk in borderline_risks[:2]:
+                warnings.append(f"⚖️ <strong>Ryzyko spadku oceny</strong> z przedmiotu <strong>{risk['subject']}</strong>: {risk['warning']}")
 
         low_period_heavy = [g for g in period_grades if g.get('numeric_val') and g['numeric_val'] <= 2.0 and g.get('parsed_weight', 1.0) >= 2.0]
         if low_period_heavy:
@@ -667,7 +671,15 @@ class ProgressAnalyzer:
                 warnings.append(f"⏱️ <strong>Brak ocen od ponad miesiąca</strong> z przedmiotów: {d_names}. Uwaga na możliwą kumulację testów pod koniec semestru.")
 
         if unprepared_count > 0:
-            warnings.append(f"Odnotowano {unprepared_count} nieprzygotowań / braków zadania domowego (np/bz).")
+            if unprepared_by_subject:
+                subj_parts = [
+                    f"<strong>{subj}</strong> ({cnt})" if cnt > 1 else f"<strong>{subj}</strong>"
+                    for subj, cnt in sorted(unprepared_by_subject.items(), key=lambda x: -x[1])
+                ]
+                subj_text = ", ".join(subj_parts)
+                warnings.append(f"Odnotowano {unprepared_count} nieprzygotowań / braków zadania domowego (np/bz) z: {subj_text}.")
+            else:
+                warnings.append(f"Odnotowano {unprepared_count} nieprzygotowań / braków zadania domowego (np/bz).")
 
         # 13. Przewodnik rodzica (Legenda interpretacji wskaźników)
         legend = {
@@ -885,4 +897,5 @@ class ProgressAnalyzer:
             'activity_pluses': activity_pluses,
             'activity_minuses': activity_minuses,
             'unprepared_count': unprepared_count,
+            'unprepared_by_subject': dict(unprepared_by_subject),
         }

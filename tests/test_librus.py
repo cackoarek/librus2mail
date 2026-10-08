@@ -733,10 +733,12 @@ class TestLibrus(unittest.TestCase):
         self.assertEqual(pol['period_avg'], 2.0)
         self.assertEqual(pol['trend'], 'down')
 
-        # Sprawdzenie wygenerowanych ostrzeżeń (niska ocena z dużą wagą w okresie)
+        # Sprawdzenie wygenerowanych ostrzeżeń (niska ocena z dużą wagą w okresie oraz nieprzygotowanie z przedmiotem)
         warnings_text = " ".join(analysis['insights_warnings'])
         self.assertIn('Język polski', warnings_text)
         self.assertIn('nieprzygotowań', warnings_text)
+        self.assertIn('Historia', warnings_text)
+        self.assertEqual(analysis.get('unprepared_by_subject'), {'Historia': 1})
 
     def test_storage_grades_history_and_report_date(self):
         import shutil
@@ -966,6 +968,12 @@ class TestLibrus(unittest.TestCase):
         # 1. Analiza na krawędzi (Borderline)
         self.assertTrue(any(o['subject'] == 'Matematyka' for o in analysis['borderline_opportunities']))
         self.assertTrue(any(r['subject'] == 'Historia' for r in analysis['borderline_risks']))
+        warnings_str = " ".join(analysis['insights_warnings'])
+        self.assertIn('Ryzyko spadku oceny', warnings_str)
+        self.assertIn('Historia', warnings_str)
+        strengths_str = " ".join(analysis['insights_strengths'])
+        self.assertIn('Szansa na wyższą ocenę', strengths_str)
+        self.assertIn('Matematyka', strengths_str)
 
         # 2. Ciche przedmioty
         self.assertTrue(any(d['subject'] == 'Informatyka' for d in analysis['dormant_subjects']))

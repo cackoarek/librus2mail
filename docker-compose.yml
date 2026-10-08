@@ -42,7 +42,7 @@ services:
   web:
     image: librus2mail:latest
     container_name: librus2mail-web
-    command: ["librus-web", "-b", "0.0.0.0"]
+    command: ["librus-web", "-b", "0.0.0.0", "--no-collector"]
     ports:
       - "5000:5000"
     volumes:

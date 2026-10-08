@@ -55,6 +55,10 @@
 <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mt-6 pb-2 no-print">
     <!-- Główne podzakładki -->
     <div class="flex items-center gap-1.5 p-1 bg-slate-200/70 rounded-xl overflow-x-auto scrollbar-none">
+        <a href="{{ url_for('web.reports_view', report_type='podsumowanie') }}"
+           class="px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'podsumowanie' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
+            📬 Podsumowanie dzienne
+        </a>
         <a href="{{ url_for('web.reports_view', report_type='postepy', days=days) }}"
            class="px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'postepy' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
             📈 Raport postępów
@@ -62,10 +66,6 @@
         <a href="{{ url_for('web.reports_view', report_type='uczen', variant=active_variant, days=days) }}"
            class="px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'uczen' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
             🌟 Raport ucznia
-        </a>
-        <a href="{{ url_for('web.reports_view', report_type='podsumowanie') }}"
-           class="px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'podsumowanie' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
-            📬 Podsumowanie dzienne
         </a>
     </div>
 

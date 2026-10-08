@@ -9,6 +9,8 @@ import os
 import secrets
 import shutil
 import subprocess
+import threading
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -253,14 +255,14 @@ def messages_view():
 @web_bp.route('/raporty')
 @web_bp.route('/raporty/<report_type>')
 @login_required
-def reports_view(report_type: str = 'postepy'):
+def reports_view(report_type: str = 'podsumowanie'):
     """Widok analityczny i motywacyjny z raportami postępów, ucznia i podsumowaniem."""
     config = request.app_config
     storage = request.app_storage
     active_login = get_active_student_login(config, storage, session_login=session.get('active_student_login'))
 
-    if report_type not in ('postepy', 'uczen', 'podsumowanie'):
-        report_type = 'postepy'
+    if report_type not in ('podsumowanie', 'postepy', 'uczen'):
+        report_type = 'podsumowanie'
 
     variant = request.args.get('variant', 'teens').strip().lower()
     if variant not in ('kids', 'teens', 'youth'):
@@ -296,6 +298,14 @@ def reports_view(report_type: str = 'postepy'):
             '<h3 class="text-lg font-bold text-slate-800 mb-1">Brak skonfigurowanych uczniów w systemie</h3>'
             '</div>'
         )
+    elif report_type == 'podsumowanie':
+        report_html = build_daily_summary_html(
+            storage=storage,
+            login=active_login,
+            config=config,
+            target_date=selected_date,
+            now=ref_now,
+        )
     elif report_type == 'postepy':
         report_html = build_progress_report_html(
             storage=storage,
@@ -304,21 +314,13 @@ def reports_view(report_type: str = 'postepy'):
             days=days,
             now=ref_now,
         )
-    elif report_type == 'uczen':
+    else:  # uczen
         report_html = build_student_report_html(
             storage=storage,
             login=active_login,
             config=config,
             variant=variant,
             days=days,
-            now=ref_now,
-        )
-    else:  # podsumowanie
-        report_html = build_daily_summary_html(
-            storage=storage,
-            login=active_login,
-            config=config,
-            target_date=selected_date,
             now=ref_now,
         )
 
@@ -904,6 +906,67 @@ def api_test_librus():
     return jsonify({'success': success, 'message': message})
 
 
+_collector_thread: threading.Thread | None = None
+_collector_lock = threading.Lock()
+
+
+def start_background_collector(
+    config_path: str = 'config.yaml',
+    storage_dir: str | None = None,
+) -> threading.Thread | None:
+    """Uruchamia wątek demona kolektora i harmonogramu w tle."""
+    global _collector_thread
+    with _collector_lock:
+        if _collector_thread is not None and _collector_thread.is_alive():
+            logger.info("⏰ Wątek harmonogramu w tle już działa.")
+            return _collector_thread
+
+        def _worker() -> None:
+            logger.info("⏰ [BackgroundCollector] Wątek harmonogramu w tle został uruchomiony.")
+            while True:
+                try:
+                    if not os.path.exists(config_path):
+                        time.sleep(5)
+                        continue
+
+                    try:
+                        cfg = read_config(config_path)
+                    except Exception as cfg_err:
+                        logger.warning(
+                            f"⏰ [BackgroundCollector] Błąd odczytu konfiguracji '{config_path}': {cfg_err}. Ponowna próba za 15s..."
+                        )
+                        time.sleep(15)
+                        continue
+
+                    users = cfg.get('librus_users', [])
+                    if not users or not any(u.get('librus_login') for u in users):
+                        time.sleep(5)
+                        continue
+
+                    logger.info("⏰ [BackgroundCollector] Rozpoczynam główną pętlę pobierania (run_collector w pętli)...")
+                    run_collector(
+                        config_path=config_path,
+                        storage_dir=storage_dir,
+                        work_in_loop=True,
+                    )
+                    time.sleep(5)
+                except Exception as loop_err:
+                    logger.error(
+                        f"⏰ [BackgroundCollector] Wystąpił błąd w pętli zbierania: {loop_err}. Wznowienie za 30s...",
+                        exc_info=True,
+                    )
+                    time.sleep(30)
+
+        thread = threading.Thread(
+            target=_worker,
+            name="LibrusCollectorThread",
+            daemon=True,
+        )
+        thread.start()
+        _collector_thread = thread
+        return thread
+
+
 def create_app(
     config_path: str = 'config.yaml',
     storage_dir: str | None = None,
@@ -913,6 +976,7 @@ def create_app(
     max_login_attempts: int | None = None,
     lockout_duration_s: int | None = None,
     actual_date: datetime | str | None = None,
+    run_collector_thread: bool = False,
 ) -> Flask:
     """Fabryka aplikacji webowej Flask dla Librus2mail."""
     templates_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'templates')
@@ -980,6 +1044,9 @@ def create_app(
     app.register_blueprint(auth_bp)
     app.register_blueprint(web_bp)
 
+    if run_collector_thread:
+        start_background_collector(config_path=config_path, storage_dir=effective_storage)
+
     return app
 
 
@@ -999,6 +1066,7 @@ def main():
     parser.add_argument('--lockout-duration', type=int, default=None, help="Czas blokady IP w sekundach (domyślnie: 900 = 15 min)")
     parser.add_argument('--actual-date', default=None, help="Referencyjna data symulacji (RRRR-MM-DD) do testów i raportów")
     parser.add_argument('--export-html', default=None, metavar='DIR', help="Eksportuje przykładowe statyczne widoki HTML (login, pulpit, zakładki) do wskazanego katalogu i kończy działanie")
+    parser.add_argument('--no-collector', action='store_true', help="Wyłącz automatyczny wątek harmonogramu/kolektora w tle (użyj np. gdy collector działa w osobnym kontenerze)")
     parser.add_argument('--debug', action='store_true', help="Uruchom serwer w trybie debugowania")
 
     args = parser.parse_args()
@@ -1018,6 +1086,10 @@ def main():
             print(f"  - {name} ({path})")
         return
 
+    no_collector = args.no_collector or os.environ.get("LIBRUS_NO_COLLECTOR", "").lower() in ("1", "true", "yes")
+    is_reloader_child = os.environ.get("WERKZEUG_RUN_MAIN") == "true"
+    run_scheduler = not no_collector and (not args.debug or is_reloader_child)
+
     app = create_app(
         config_path=args.config,
         storage_dir=args.storage_dir,
@@ -1026,9 +1098,11 @@ def main():
         max_login_attempts=args.max_attempts,
         lockout_duration_s=args.lockout_duration,
         actual_date=args.actual_date,
+        run_collector_thread=run_scheduler,
     )
 
     auth_status = "WYŁĄCZONA (--no-auth)" if args.no_auth or not app.config.get('WEB_PASSWORD') else "WŁĄCZONA (wymagane hasło rodzica)"
+    scheduler_status = "AKTYWNY (wątek w tle)" if run_scheduler else "WYŁĄCZONY (--no-collector)"
     limiter: LoginRateLimiter = app.config['LOGIN_RATE_LIMITER']
     print("\n" + "=" * 65)
     print("🏫 Librus2mail Web Dashboard uruchomiony pomyślnie!")
@@ -1036,6 +1110,7 @@ def main():
     print(f"🔒 Ochrona hasłem:  {auth_status}")
     print(f"🛡️  Ochrona IP:     Max {limiter.max_attempts} prób, blokada {limiter.lockout_duration_s}s")
     print(f"📂 Baza storage:    {app.config['STORAGE_DIR']}")
+    print(f"⏰ Harmonogram:     {scheduler_status}")
     print("=" * 65 + "\n")
 
     app.run(host=args.host, port=args.port, debug=args.debug)

@@ -19,7 +19,7 @@ def make_offline_friendly(html: str) -> str:
         ('href="/terminarz"', 'href="web_terminarz.html"'),
         ('href="/wiadomosci"', 'href="web_wiadomosci.html"'),
         ('href="/raporty/podsumowanie"', 'href="web_raporty_podsumowanie.html"'),
-        ('href="/raporty"', 'href="web_raporty_postepy.html"'),
+        ('href="/raporty"', 'href="web_raporty_podsumowanie.html"'),
         ('href="/akcje"', 'href="web_akcje.html"'),
         ('href="/ustawienia"', 'href="web_ustawienia.html"'),
         ('href="/setup"', 'href="web_setup.html"'),

@@ -563,13 +563,12 @@ class TestWebDashboard(unittest.TestCase):
         )
         client = app.test_client()
 
-        # 1. Domyślny widok /raporty (kieruje na raport postępów, domyślnie 7 dni)
+        # 1. Domyślny widok /raporty (kieruje na podsumowanie dzienne)
         res_default = client.get('/raporty')
         self.assertEqual(res_default.status_code, 200)
-        self.assertIn('Raport postępów'.encode(), res_default.data)
-        self.assertIn(b'Jan Kowalski', res_default.data)
-        self.assertIn(b'7 dni', res_default.data)
-        self.assertIn(b'14 dni', res_default.data)
+        self.assertIn(b'Podsumowanie dzienne', res_default.data)
+        self.assertIn(b'type="date"', res_default.data)
+        self.assertIn(b'value="2026-09-22"', res_default.data)
 
         # 2. Zakładka /raporty/postepy z różnymi okresami (3, 14, 30 dni)
         for d in (3, 14, 30):
@@ -1090,6 +1089,46 @@ class TestWebDashboard(unittest.TestCase):
         self.assertTrue(updated_cfg['mail']['use_gmail'])
         self.assertEqual(updated_cfg['mail']['password'], 'nowe_haslo_app_123')
         self.assertNotIn('oauth2_file', updated_cfg['mail'])
+
+    def test_background_collector_lifecycle(self):
+        """Testuje uruchamianie wątku harmonogramu w tle w module webowym."""
+        import threading
+        from unittest.mock import patch
+
+        from librus2mail.web.app import create_app, start_background_collector
+
+        with patch('librus2mail.web.app.run_collector') as mock_run:
+            mock_run.side_effect = Exception("Stop loop for test")
+            with patch('threading.Thread.start') as mock_start, patch.object(threading.Thread, 'is_alive', return_value=True):
+                thread = start_background_collector(
+                    config_path=self.config_path,
+                    storage_dir=self.storage_dir,
+                )
+                self.assertIsNotNone(thread)
+                self.assertEqual(thread.name, "LibrusCollectorThread")
+                self.assertTrue(thread.daemon)
+                mock_start.assert_called_once()
+
+                # Ponowne wywołanie powinno zwrócić ten sam wątek (singleton)
+                thread2 = start_background_collector(
+                    config_path=self.config_path,
+                    storage_dir=self.storage_dir,
+                )
+                self.assertEqual(thread, thread2)
+
+        # Test wywołania create_app z flagą run_collector_thread
+        with patch('librus2mail.web.app.start_background_collector') as mock_start_bg:
+            app = create_app(
+                config_path=self.config_path,
+                storage_dir=self.storage_dir,
+                no_auth=True,
+                run_collector_thread=True,
+            )
+            self.assertIsNotNone(app)
+            mock_start_bg.assert_called_once_with(
+                config_path=self.config_path,
+                storage_dir=self.storage_dir,
+            )
 
 
 if __name__ == '__main__':

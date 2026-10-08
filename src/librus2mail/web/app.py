@@ -943,11 +943,20 @@ def start_background_collector(
                         time.sleep(5)
                         continue
 
-                    logger.info("⏰ [BackgroundCollector] Rozpoczynam główną pętlę pobierania (run_collector w pętli)...")
+                    work_in_loop_val = cfg.get('work-in-loop', cfg.get('work_in_loop', True))
+                    if not work_in_loop_val:
+                        logger.info(
+                            "⏰ [BackgroundCollector] Harmonogram w tle jest wyłączony w konfiguracji (work-in-loop: false). "
+                            "Wątek czuwa i oczekuje na ewentualną zmianę konfiguracji w panelu WWW..."
+                        )
+                        from librus2mail.librus_collector import sleep_with_config_watch
+                        sleep_with_config_watch(30, config_path=config_path)
+                        continue
+
+                    logger.info("⏰ [BackgroundCollector] Rozpoczynam główną pętlę pobierania (run_collector)...")
                     run_collector(
                         config_path=config_path,
                         storage_dir=storage_dir,
-                        work_in_loop=True,
                     )
                     time.sleep(5)
                 except Exception as loop_err:
@@ -1058,8 +1067,8 @@ def main():
     parser.add_argument('-c', '--config', default='config.yaml', help="Ścieżka do pliku konfiguracyjnego YAML")
     parser.add_argument('-s', '--storage-dir', default=None, help="Katalog pamięci stanu storage/")
     parser.add_argument('-u', '--user', default=None, help="Filtr / domyślny login ucznia do wyświetlenia")
-    parser.add_argument('-p', '--port', type=int, default=5000, help="Port serwera HTTP (domyślnie: 5000)")
-    parser.add_argument('-b', '--bind', '--host', dest='host', default='127.0.0.1', help="Adres nasłuchu (domyślnie: 127.0.0.1; użyj 0.0.0.0 dla sieci lokalnej)")
+    parser.add_argument('-p', '--port', type=int, default=None, help="Port serwera HTTP (domyślnie z config.yaml lub 5000)")
+    parser.add_argument('-b', '--bind', '--host', dest='host', default=None, help="Adres nasłuchu (domyślnie z config.yaml lub 0.0.0.0 dla serwera)")
     parser.add_argument('--password', default=None, help="Hasło rodzica zabezpieczające dostęp do panelu")
     parser.add_argument('--no-auth', action='store_true', help="Wyłącz wymaganie hasła (tylko zaufane środowiska)")
     parser.add_argument('--max-attempts', type=int, default=None, help="Maksymalna liczba prób logowania przed blokadą IP (domyślnie: 5)")
@@ -1101,19 +1110,32 @@ def main():
         run_collector_thread=run_scheduler,
     )
 
+    cfg_app = app.config.get('APP_CONFIG', {}) if isinstance(app.config.get('APP_CONFIG'), (dict, collections.abc.Mapping)) else {}
+    cfg_web = cfg_app.get('web', {}) if isinstance(cfg_app.get('web'), (dict, collections.abc.Mapping)) else {}
+    effective_host = args.host or cfg_web.get('host') or '0.0.0.0'
+    effective_port = args.port or int(cfg_web.get('port', 5000))
+
+    is_loop_enabled = cfg_app.get('work-in-loop', cfg_app.get('work_in_loop', True)) if isinstance(cfg_app, (dict, collections.abc.Mapping)) else True
+
     auth_status = "WYŁĄCZONA (--no-auth)" if args.no_auth or not app.config.get('WEB_PASSWORD') else "WŁĄCZONA (wymagane hasło rodzica)"
-    scheduler_status = "AKTYWNY (wątek w tle)" if run_scheduler else "WYŁĄCZONY (--no-collector)"
+    if not run_scheduler:
+        scheduler_status = "WYŁĄCZONY (--no-collector)"
+    elif not is_loop_enabled:
+        scheduler_status = "WYŁĄCZONY (work-in-loop: false w config.yaml)"
+    else:
+        scheduler_status = "AKTYWNY (wątek w tle)"
+
     limiter: LoginRateLimiter = app.config['LOGIN_RATE_LIMITER']
     print("\n" + "=" * 65)
     print("🏫 Librus2mail Web Dashboard uruchomiony pomyślnie!")
-    print(f"🌐 Adres URL:       http://{args.host}:{args.port}")
+    print(f"🌐 Adres URL:       http://{effective_host}:{effective_port}")
     print(f"🔒 Ochrona hasłem:  {auth_status}")
     print(f"🛡️  Ochrona IP:     Max {limiter.max_attempts} prób, blokada {limiter.lockout_duration_s}s")
     print(f"📂 Baza storage:    {app.config['STORAGE_DIR']}")
     print(f"⏰ Harmonogram:     {scheduler_status}")
     print("=" * 65 + "\n")
 
-    app.run(host=args.host, port=args.port, debug=args.debug)
+    app.run(host=effective_host, port=effective_port, debug=args.debug)
 
 
 if __name__ == '__main__':

@@ -494,42 +494,94 @@ def run_collector(
     while True:
         collected_data = {}
 
-        # 1. Pobieranie danych (chyba że tryb offline)
-        if not offline:
-            collected_data = collector.collect_all(users)
-        else:
-            logger.info(f"Tryb OFFLINE: pomijam połączenie z Librusem, odczytuję dane ze storage ({effective_storage_dir})...")
+        # Sprawdzenie czy pobieranie danych ze szkoły powinno nastąpić w tym cyklu:
+        # W trybie 'daily' o stałej porze (np. 16:00/22:00) przy starcie sprawdzamy,
+        # czy dzisiejsze pobieranie już się odbyło lub czy jeszcze nie nadeszła jego pora.
+        should_collect = True
+        if effective_work_in_loop and not offline:
+            sched = config.get('schedule', {}) if isinstance(config, dict) else {}
+            col_sched = sched.get('collection', {}) if isinstance(sched, dict) else {}
+            if col_sched.get('mode') == 'daily':
+                time_str = col_sched.get('time', '16:00')
+                try:
+                    th, tm = map(int, time_str.split(':'))
+                except Exception:
+                    th, tm = 16, 0
+                now_dt = datetime.now()
+                is_after_time = (now_dt.hour > th or (now_dt.hour == th and now_dt.minute >= tm))
 
-        # 2. Powiadomienia (chyba że sync_only)
-        if not sync_only:
-            for user_config in users:
-                login = str(user_config.get('librus_login', ''))
-                c_item = collected_data.get(login, {})
-                if not offline and c_item.get('success') is False:
-                    logger.warning(
-                        f"{user_config.get('librus_login_name', login)} ({login}): "
-                        "Pominięto generowanie powiadomień o nowościach, ponieważ pobieranie danych ze szkoły zakończyło się błędem."
+                all_collected_today = True
+                all_have_data = True
+                for u in users:
+                    u_login = str(u.get('librus_login', ''))
+                    if not storage.has_existing_data(u_login):
+                        all_have_data = False
+                        all_collected_today = False
+                        break
+                    last_col = storage.get_last_collect_time(u_login)
+                    if not last_col:
+                        all_collected_today = False
+                    else:
+                        try:
+                            last_col_dt = datetime.fromisoformat(last_col)
+                            if last_col_dt.date() != now_dt.date() or not (
+                                last_col_dt.hour > th or (last_col_dt.hour == th and last_col_dt.minute >= tm)
+                            ):
+                                all_collected_today = False
+                        except Exception:
+                            all_collected_today = False
+
+                if all_have_data:
+                    if not is_after_time:
+                        logger.info(
+                            f"⏰ Harmonogram 'daily': zaplanowana godzina to {time_str} (aktualna: {now_dt.strftime('%H:%M')}). "
+                            "Pomijam natychmiastowe pobieranie przy starcie, czekam do wyznaczonej pory."
+                        )
+                        should_collect = False
+                    elif all_collected_today:
+                        logger.info(
+                            f"⏰ Harmonogram 'daily': dzisiejsze pobieranie o {time_str} zostało już zrealizowane. "
+                            "Pomijam powtórne pobieranie przy starcie, czekam do kolejnego terminu."
+                        )
+                        should_collect = False
+
+        # 1. Pobieranie danych (chyba że tryb offline lub pominięto z uwagi na harmonogram)
+        if should_collect:
+            if not offline:
+                collected_data = collector.collect_all(users)
+            else:
+                logger.info(f"Tryb OFFLINE: pomijam połączenie z Librusem, odczytuję dane ze storage ({effective_storage_dir})...")
+
+            # 2. Powiadomienia (chyba że sync_only)
+            if not sync_only:
+                for user_config in users:
+                    login = str(user_config.get('librus_login', ''))
+                    c_item = collected_data.get(login, {})
+                    if not offline and c_item.get('success') is False:
+                        logger.warning(
+                            f"{user_config.get('librus_login_name', login)} ({login}): "
+                            "Pominięto generowanie powiadomień o nowościach, ponieważ pobieranie danych ze szkoły zakończyło się błędem."
+                        )
+                        continue
+
+                    notifier.process_user_notifications(
+                        user_config=user_config,
+                        all_messages=c_item.get('messages'),
+                        all_notifications=c_item.get('notifications'),
+                        all_grades=c_item.get('grades'),
+                        new_messages=c_item.get('new_messages'),
+                        new_notifications=c_item.get('new_notifications'),
+                        new_grades=c_item.get('new_grades'),
+                        days=days,
+                        hours=hours,
+                        dry_run=dry_run,
+                        output_html=output_html,
+                        total_users=len(users),
+                        summary=summary,
+                        schedule_day_offset=schedule_day_offset,
                     )
-                    continue
-
-                notifier.process_user_notifications(
-                    user_config=user_config,
-                    all_messages=c_item.get('messages'),
-                    all_notifications=c_item.get('notifications'),
-                    all_grades=c_item.get('grades'),
-                    new_messages=c_item.get('new_messages'),
-                    new_notifications=c_item.get('new_notifications'),
-                    new_grades=c_item.get('new_grades'),
-                    days=days,
-                    hours=hours,
-                    dry_run=dry_run,
-                    output_html=output_html,
-                    total_users=len(users),
-                    summary=summary,
-                    schedule_day_offset=schedule_day_offset,
-                )
-                if user_config.get('dry-parse'):
-                    user_config['dry-parse'] = False
+                    if user_config.get('dry-parse'):
+                        user_config['dry-parse'] = False
 
         # Opcjonalne wyzwolenie zaplanowanych raportów postępów ucznia
         reports_schedules = get_reports_schedules(config)

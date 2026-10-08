@@ -7,6 +7,7 @@ Odpowiada wyłącznie za autoryzację i pobieranie surowych danych ze szkoły
 
 import argparse
 import logging
+import os
 import sys
 import traceback
 from datetime import datetime, timedelta
@@ -33,12 +34,14 @@ print_collector_cli_summary = print_cli_summary
 
 __all__ = [
     "LibrusCollector",
+    "calculate_next_wait_seconds",
     "configure_mail_provider",
     "main",
     "parse_item_datetime",
     "print_collector_cli_summary",
     "run_collector",
     "run_notifier",
+    "sleep_with_config_watch",
 ]
 
 
@@ -244,31 +247,134 @@ class LibrusCollector:
 
 
 def calculate_next_wait_seconds(config: dict, now: datetime | None = None) -> int:
-    """Oblicza liczbę sekund do kolejnego cyklu na podstawie harmonogramu (daily lub interval)."""
-    sched = config.get('schedule', {}).get('collection', {})
-    mode = sched.get('mode')
+    """Oblicza liczbę sekund do kolejnego cyklu na podstawie harmonogramu pobierania (collection)
+    oraz zaplanowanych raportów (schedule.reports), wybierając najbliższe nadchodzące zdarzenie."""
+    ref_now = now or datetime.now()
+    sched = config.get('schedule', {}) if isinstance(config, dict) else {}
+    collection_sched = sched.get('collection', {}) if isinstance(sched, dict) else {}
+    mode = collection_sched.get('mode')
 
+    candidates: list[datetime] = []
+
+    # 1. Najbliższy termin pobierania danych ze szkoły (collection)
     if mode == 'daily':
-        time_str = sched.get('time', '16:00')
-        days_rule = sched.get('days', 'all')
+        time_str = collection_sched.get('time', '16:00')
+        days_rule = collection_sched.get('days', 'all')
         try:
             th, tm = map(int, time_str.split(':'))
         except Exception:
             th, tm = 16, 0
 
-        ref_now = now or datetime.now()
         target = ref_now.replace(hour=th, minute=tm, second=0, microsecond=0)
         if ref_now >= target:
             target += timedelta(days=1)
         if days_rule == 'workdays':
             while target.weekday() >= 5:  # 5=sobota, 6=niedziela
                 target += timedelta(days=1)
-        return max(60, int((target - ref_now).total_seconds()))
+        candidates.append(target)
+    elif mode == 'interval' and 'interval_hours' in collection_sched:
+        wait_s = max(300, int(collection_sched['interval_hours']) * 3600)
+        candidates.append(ref_now + timedelta(seconds=wait_s))
+    else:
+        wait_s = max(300, int(config.get('wait_time_s', 3600)))
+        candidates.append(ref_now + timedelta(seconds=wait_s))
 
-    if mode == 'interval' and 'interval_hours' in sched:
-        return max(300, int(sched['interval_hours']) * 3600)
+    # 2. Najbliższy termin każdego włączonego raportu postępów / motywacyjnego (schedule.reports)
+    reports_schedules = get_reports_schedules(config)
+    weekdays_map = {
+        'monday': 0, 'tuesday': 1, 'wednesday': 2, 'thursday': 3,
+        'friday': 4, 'saturday': 5, 'sunday': 6
+    }
+    for rep in reports_schedules:
+        if not rep.get('enabled', True):
+            continue
 
-    return max(300, int(config.get('wait_time_s', 3600)))
+        freq = str(rep.get('frequency', 'weekly')).lower()
+        target_time_str = rep.get('time', '17:00')
+        try:
+            rh, rm = map(int, target_time_str.split(':'))
+        except Exception:
+            rh, rm = 17, 0
+
+        if freq == 'monthly':
+            dom_rule = str(rep.get('day_of_month', '1')).lower()
+            for offset in range(32):
+                test_date = (ref_now + timedelta(days=offset)).date()
+                matches_dom = False
+                if dom_rule == 'last':
+                    matches_dom = ((test_date + timedelta(days=1)).day == 1)
+                else:
+                    try:
+                        matches_dom = (test_date.day == int(dom_rule))
+                    except Exception:
+                        matches_dom = (test_date.day == 1)
+
+                if matches_dom:
+                    test_dt = datetime.combine(test_date, datetime.min.time()).replace(
+                        hour=rh, minute=rm, second=0, microsecond=0
+                    )
+                    if test_dt > ref_now:
+                        candidates.append(test_dt)
+                        break
+        else:  # weekly
+            target_weekday = str(rep.get('weekday', 'friday')).lower()
+            target_day_num = weekdays_map.get(target_weekday, 4)
+            for offset in range(8):
+                test_date = (ref_now + timedelta(days=offset)).date()
+                if test_date.weekday() == target_day_num:
+                    test_dt = datetime.combine(test_date, datetime.min.time()).replace(
+                        hour=rh, minute=rm, second=0, microsecond=0
+                    )
+                    if test_dt > ref_now:
+                        candidates.append(test_dt)
+                        break
+
+    if not candidates:
+        return max(300, int(config.get('wait_time_s', 3600)))
+
+    earliest_target = min(candidates)
+    return max(60, int((earliest_target - ref_now).total_seconds()))
+
+
+def sleep_with_config_watch(
+    seconds: int,
+    config_path: str | None = None,
+    poll_interval: float = 5.0,
+) -> bool:
+    """Śpi przez zadany czas (w sekundach), monitorując czy plik konfiguracji uległ zmianie.
+
+    Zwraca True, jeśli plik został zmodyfikowany (co pozwala natychmiast przeładować ustawienia),
+    lub False, jeśli upłynął cały zadany czas oczekiwania.
+    """
+    if seconds <= 0:
+        return False
+
+    if not config_path or not os.path.isfile(config_path):
+        sleep(seconds)
+        return False
+
+    try:
+        initial_mtime = os.path.getmtime(config_path)
+    except OSError:
+        initial_mtime = None
+
+    remaining = float(seconds)
+    step = min(float(poll_interval), remaining) if poll_interval > 0 else remaining
+
+    while remaining > 0:
+        chunk = min(step, remaining)
+        sleep(chunk)
+        remaining -= chunk
+
+        if initial_mtime is not None:
+            try:
+                curr_mtime = os.path.getmtime(config_path)
+                if curr_mtime != initial_mtime:
+                    return True
+            except OSError:
+                pass
+
+    return False
 
 
 def run_collector(
@@ -516,7 +622,27 @@ def run_collector(
         sleep_s = calculate_next_wait_seconds(config)
         logger.info(f"Czekam przez {sleep_s} sekund do kolejnego sprawdzenia")
         try:
-            sleep(sleep_s)
+            config_changed = sleep_with_config_watch(sleep_s, config_path=config_path)
+            if config_changed:
+                logger.info(
+                    f"Wykryto zmianę pliku konfiguracji '{config_path}'. "
+                    "Przeładowuję konfigurację i odświeżam harmonogram..."
+                )
+                try:
+                    config = read_config(config_path)
+                    new_users = config.get('librus_users', [])
+                    for idx, user in enumerate(new_users):
+                        user['id'] = idx
+                        if storage.has_existing_data(str(user.get('librus_login'))):
+                            user['dry-parse'] = False
+                        else:
+                            user['dry-parse'] = user.get('do_not_send_first_parse', True)
+                    users = new_users
+                    collector.config = config
+                    notifier.config = config
+                except Exception as reload_err:
+                    logger.warning(f"Błąd podczas przeładowywania pliku konfiguracji '{config_path}': {reload_err}")
+                continue
         except KeyboardInterrupt:
             logger.info("Zatrzymano działanie usługi (Ctrl+C).")
             break

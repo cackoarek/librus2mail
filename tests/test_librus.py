@@ -2558,6 +2558,88 @@ class TestLibrus(unittest.TestCase):
         title = MailSender._create_summary_title(user_cfg, schedule=summary)
         self.assertIn('zmiany w planie', title)
 
+    def test_calculate_next_wait_seconds_with_scheduled_reports(self):
+        """Weryfikuje, że kalkulator wybudzeń wybiera najbliższy punkt w czasie spośród collection i reports."""
+        from librus2mail.librus_collector import calculate_next_wait_seconds
+
+        config = {
+            'schedule': {
+                'collection': {
+                    'mode': 'daily',
+                    'time': '16:00',
+                    'days': 'all',
+                },
+                'reports': [
+                    {
+                        'name': 'Raport tygodniowy',
+                        'enabled': True,
+                        'frequency': 'weekly',
+                        'weekday': 'thursday',
+                        'time': '15:00',
+                        'interval_days': 7,
+                    },
+                    {
+                        'name': 'Raport miesięczny',
+                        'enabled': True,
+                        'frequency': 'monthly',
+                        'day_of_month': '1',
+                        'time': '17:00',
+                        'interval_days': 30,
+                    },
+                ],
+            },
+        }
+
+        # Czwartek (np. 2026-10-08), godzina 14:00:
+        # Najbliższy jest raport tygodniowy o 15:00 (za 3600s), a nie ściąganie o 16:00 (za 7200s)!
+        now_1400 = datetime(2026, 10, 8, 14, 0, 0)
+        wait_s = calculate_next_wait_seconds(config, now=now_1400)
+        self.assertEqual(wait_s, 3600)
+
+        # Czwartek, godzina 15:05 (po wysłaniu raportu):
+        # Najbliższe jest ściąganie o 16:00 (za 55 minut = 3300s)!
+        now_1505 = datetime(2026, 10, 8, 15, 5, 0)
+        wait_s = calculate_next_wait_seconds(config, now=now_1505)
+        self.assertEqual(wait_s, 55 * 60)
+
+        # 1. dzień miesiąca (np. 2026-11-01 to niedziela), godzina 16:05:
+        # Ściąganie o 16:00 już minęło. Najbliższy jest raport miesięczny o 17:00 (za 55 min = 3300s)!
+        now_dom1_1605 = datetime(2026, 11, 1, 16, 5, 0)
+        wait_s = calculate_next_wait_seconds(config, now=now_dom1_1605)
+        self.assertEqual(wait_s, 55 * 60)
+
+    def test_sleep_with_config_watch_detects_modification(self):
+        """Weryfikuje, że sleep_with_config_watch wykrywa zmianę pliku konfiguracyjnego."""
+        import tempfile
+        import time
+
+        from librus2mail.librus_collector import sleep_with_config_watch
+
+        with tempfile.NamedTemporaryFile('w', delete=False) as tf:
+            tf.write("initial: true\n")
+            cfg_file = tf.name
+
+        try:
+            # 1. Brak modyfikacji pliku -> zwraca False
+            with patch('librus2mail.librus_collector.sleep') as mock_sleep:
+                changed = sleep_with_config_watch(10, config_path=cfg_file, poll_interval=5.0)
+                self.assertFalse(changed)
+                self.assertEqual(mock_sleep.call_count, 2)
+
+            # 2. Modyfikacja pliku -> zwraca True
+            def modify_file_on_sleep(duration):
+                # Symulujemy zmianę mtime pliku w trakcie pierwszego sleepa
+                time.sleep(0.01)
+                with open(cfg_file, 'a') as f:
+                    f.write("updated: true\n")
+
+            with patch('librus2mail.librus_collector.sleep', side_effect=modify_file_on_sleep):
+                changed = sleep_with_config_watch(60, config_path=cfg_file, poll_interval=1.0)
+                self.assertTrue(changed)
+        finally:
+            if os.path.exists(cfg_file):
+                os.remove(cfg_file)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -226,6 +226,9 @@ class TestWebDashboard(unittest.TestCase):
         self.assertEqual(res_dash.status_code, 200)
         self.assertIn(b'Jan Kowalski', res_dash.data)
         self.assertIn('Średnia ocen'.encode(), res_dash.data)
+        self.assertIn(b'href="/oceny"', res_dash.data)
+        self.assertIn(b'href="/plan', res_dash.data)
+        self.assertIn(b'href="/terminarz"', res_dash.data)
 
         # 2. Widok planu lekcji
         res_plan = client.get('/plan')

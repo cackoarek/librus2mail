@@ -1528,14 +1528,14 @@ class TestLibrus(unittest.TestCase):
             notifier.process_user_notifications(user_cfg, dry_run=False)
             first_notify_time = storage.get_last_notify_time(login)
             self.assertIsNotNone(first_notify_time)
-            self.assertEqual(mock_mail_sender.send_mail_with_messages.call_count, 1)
+            self.assertEqual(mock_mail_sender.send_mail_with_summary.call_count, 1)
 
             # 3. Subsequent run without new items: should find 0 new items because cutoff is after the old items
             mock_mail_sender.reset_mock()
             res_next = notifier.process_user_notifications(user_cfg, dry_run=False)
             self.assertEqual(len(res_next['messages']), 0)
             self.assertEqual(len(res_next['grades']), 0)
-            mock_mail_sender.send_mail_with_messages.assert_not_called()
+            mock_mail_sender.send_mail_with_summary.assert_not_called()
 
     def test_no_new_items_logs_skip_notification(self):
         import tempfile

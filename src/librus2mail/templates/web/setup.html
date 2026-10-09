@@ -139,6 +139,11 @@
                                     <input type="checkbox" name="student_messages_0" checked class="rounded text-indigo-600 focus:ring-indigo-500">
                                     <span>Wiadomości</span>
                                 </label>
+                                <label class="inline-flex items-center gap-1.5 cursor-pointer" title="Konsoliduje oceny, wiadomości, ogłoszenia i terminarz w jeden wspólny e-mail (one_summary_message)">
+                                    <input type="hidden" name="student_one_summary_present_0" value="1">
+                                    <input type="checkbox" name="student_one_summary_0" id="student_one_summary_0" checked class="student-summary-checkbox rounded text-indigo-600 focus:ring-indigo-500">
+                                    <span class="font-semibold text-indigo-900">📦 Zbiorczy e-mail (wszystko w jednym)</span>
+                                </label>
                             </div>
 
                             <!-- Przycisk testu połączenia Librus -->
@@ -309,6 +314,32 @@
 
                 <div id="gmail-oauth-tip-box" class="hidden mt-4 p-4 bg-indigo-50 border border-indigo-200 rounded-xl text-xs text-indigo-900">
                     🛡️ <strong>Wskazówka OAuth2:</strong> Wskaż ścieżkę do pliku JSON (np. <code>yagmail_client.json</code>) zawierającego wygenerowane dane dostępowe Google OAuth2 (<code>client_id</code>, <code>client_secret</code>, <code>refresh_token</code>). W tym trybie hasło do konta nie jest wymagane.
+                </div>
+
+                <!-- Format powiadomień e-mail (wszystko w jednym vs osobne) -->
+                <div class="mt-6 pt-5 border-t border-slate-100">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-2">
+                        Format i organizacja powiadomień e-mail (one_summary_message)
+                    </label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <label class="summary-mode-radio flex items-start gap-3 p-4 border-2 border-indigo-600 bg-indigo-50/40 rounded-2xl cursor-pointer transition">
+                            <input type="radio" name="one_summary_message" value="1" checked onchange="toggleSummaryMode()"
+                                   class="mt-1 text-indigo-600 focus:ring-indigo-500">
+                            <div>
+                                <span class="block text-sm font-extrabold text-slate-900">📦 Wszystko w jednym e-mailu (zalecane)</span>
+                                <span class="block text-xs text-slate-600 mt-0.5">Wysyła jedno zbiorcze powiadomienie łączące nowe oceny, wiadomości i ogłoszenia ze szkoły.</span>
+                            </div>
+                        </label>
+
+                        <label class="summary-mode-radio flex items-start gap-3 p-4 border-2 border-slate-200 bg-white rounded-2xl cursor-pointer transition">
+                            <input type="radio" name="one_summary_message" value="0" onchange="toggleSummaryMode()"
+                                   class="mt-1 text-indigo-600 focus:ring-indigo-500">
+                            <div>
+                                <span class="block text-sm font-extrabold text-slate-900">📨 Osobne e-maile dla każdej kategorii</span>
+                                <span class="block text-xs text-slate-600 mt-0.5">Wysyła osobny e-mail o nowych ocenach, osobny o wiadomościach i osobny o ogłoszeniach.</span>
+                            </div>
+                        </label>
+                    </div>
                 </div>
             </div>
 
@@ -906,6 +937,22 @@ function toggleMailProvider() {
     }
 }
 
+function toggleSummaryMode() {
+    const isOneSummary = document.querySelector('input[name="one_summary_message"]:checked')?.value === '1';
+    document.querySelectorAll('.summary-mode-radio').forEach(label => {
+        const radio = label.querySelector('input[type="radio"]');
+        if (radio && radio.checked) {
+            label.className = "summary-mode-radio flex items-start gap-3 p-4 border-2 border-indigo-600 bg-indigo-50/40 rounded-2xl cursor-pointer transition";
+        } else {
+            label.className = "summary-mode-radio flex items-start gap-3 p-4 border-2 border-slate-200 bg-white rounded-2xl cursor-pointer transition";
+        }
+    });
+    // Synchronizuj checkboxy na kartach uczniów
+    document.querySelectorAll('.student-summary-checkbox').forEach(cb => {
+        cb.checked = isOneSummary;
+    });
+}
+
 function addStudentCard() {
     const idx = studentCount;
     const container = document.getElementById('students-container');
@@ -969,6 +1016,11 @@ function addStudentCard() {
                 <label class="inline-flex items-center gap-1.5 cursor-pointer">
                     <input type="checkbox" name="student_messages_${idx}" checked class="rounded text-indigo-600 focus:ring-indigo-500">
                     <span>Wiadomości</span>
+                </label>
+                <label class="inline-flex items-center gap-1.5 cursor-pointer" title="Konsoliduje oceny, wiadomości, ogłoszenia i terminarz w jeden wspólny e-mail (one_summary_message)">
+                    <input type="hidden" name="student_one_summary_present_${idx}" value="1">
+                    <input type="checkbox" name="student_one_summary_${idx}" id="student_one_summary_${idx}" checked class="student-summary-checkbox rounded text-indigo-600 focus:ring-indigo-500">
+                    <span class="font-semibold text-indigo-900">📦 Zbiorczy e-mail (wszystko w jednym)</span>
                 </label>
             </div>
             <div>

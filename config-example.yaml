@@ -46,9 +46,9 @@ librus_users:
     schedule_day_offset: 1
 
     # Format wysyłki powiadomień e-mail:
-    # - false: wysyła osobne e-maile dla nowych ocen, wiadomości i ogłoszeń (domyślnie).
-    # - true: konsoliduje wszystkie nowości w jeden zbiorczy, estetyczny e-mail.
-    one_summary_message: false
+    # - true: konsoliduje wszystkie nowości w jeden zbiorczy, estetyczny e-mail (domyślnie).
+    # - false: wysyła osobne e-maile dla nowych ocen, wiadomości i ogłoszeń.
+    one_summary_message: true
 
     # Tryb pierwszego uruchomienia (domyślnie: true).
     # Przy pierwszym starcie zapisuje aktualny stan jako bazę i NIE wysyła powiadomień

@@ -916,6 +916,8 @@ class TestWebDashboard(unittest.TestCase):
         self.assertEqual(saved_cfg['schedule']['reports'][1]['frequency'], 'monthly')
         self.assertEqual(saved_cfg['schedule']['reports'][1]['interval_days'], 30)
         self.assertTrue(saved_cfg['work-in-loop'])
+        self.assertTrue(saved_cfg.get('one_summary_message'))
+        self.assertTrue(saved_cfg['librus_users'][0].get('one_summary_message'))
 
         # Kolejne zapytanie do / nie jest już przekierowywane do /setup
         res_after = client.get('/', follow_redirects=False)
@@ -979,6 +981,8 @@ class TestWebDashboard(unittest.TestCase):
         self.assertEqual(updated_cfg['schedule']['reports'][0]['interval_days'], 7)
         self.assertEqual(updated_cfg['wait_time_s'], 7200)
         self.assertEqual(updated_cfg['web']['password'], 'SuperParentPassword')
+        self.assertTrue(updated_cfg.get('one_summary_message'))
+        self.assertTrue(updated_cfg['librus_users'][0].get('one_summary_message'))
 
         # 3. Zmiana dostawcy na SMTP ukrywa wskazówkę Gmaila (klasa hidden)
         post_data_smtp = dict(post_data)
@@ -987,6 +991,16 @@ class TestWebDashboard(unittest.TestCase):
         res_smtp = client.post('/ustawienia', data=post_data_smtp, follow_redirects=True)
         self.assertEqual(res_smtp.status_code, 200)
         self.assertIn(b'id="gmail-settings-tip-box" class="hidden', res_smtp.data)
+
+        # 4. Wyłączenie zbiorczego podsumowania (przełączenie na osobne maile)
+        post_data_sep = dict(post_data)
+        post_data_sep['one_summary_message'] = '0'
+        res_sep = client.post('/ustawienia', data=post_data_sep, follow_redirects=True)
+        self.assertEqual(res_sep.status_code, 200)
+        with open(self.config_path, encoding='utf-8') as f:
+            sep_cfg = yaml.safe_load(f)
+        self.assertFalse(sep_cfg.get('one_summary_message'))
+        self.assertFalse(sep_cfg['librus_users'][0].get('one_summary_message'))
 
     def test_multiple_reports_schedule_configuration_and_storage(self):
         """Testuje konfigurację wielu zaplanowanych raportów (tygodniowy i miesięczny) oraz izolację w storage."""

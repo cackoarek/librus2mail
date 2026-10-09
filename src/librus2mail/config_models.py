@@ -169,7 +169,7 @@ class LibrusUserConfig(BaseConfigModel):
     read_schedule: bool = True
     schedule_retention_days: int = 30
     schedule_day_offset: int = 1
-    one_summary_message: bool = False
+    one_summary_message: bool = True
     do_not_send_first_parse: bool = Field(
         default=True,
         validation_alias=AliasChoices('do_not_send_first_parse', 'dry_parse', 'dry-parse'),
@@ -281,6 +281,7 @@ class AppSettings(BaseSettings, collections.abc.MutableMapping):
     error_cooldown_s: int = 3600
     schedule_day_offset: int = 1
     schedule_retention_days: int = 30
+    one_summary_message: bool = True
     read_schedule: bool = True
     read_timetable: bool = True
     read_messages: bool = True

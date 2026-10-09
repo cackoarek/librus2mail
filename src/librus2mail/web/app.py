@@ -649,6 +649,14 @@ def setup_submit():
         receivers = [r.strip() for r in receivers_raw.split(',') if r.strip()]
 
         if login and pwd:
+            global_one_summary = (form.get('one_summary_message', '1') == '1')
+            if f'student_one_summary_present_{idx}' in form:
+                is_one_summary = (f'student_one_summary_{idx}' in form)
+            elif f'student_one_summary_{idx}' in form:
+                is_one_summary = True
+            else:
+                is_one_summary = global_one_summary
+
             st_cfg: dict[str, Any] = {
                 'librus_login_name': name,
                 'librus_login': login,
@@ -659,7 +667,7 @@ def setup_submit():
                 'read_schedule': f'student_schedule_{idx}' in form,
                 'schedule_retention_days': int(form.get('schedule_retention_days', 30)),
                 'schedule_day_offset': int(form.get('schedule_day_offset', 1)),
-                'one_summary_message': False,
+                'one_summary_message': is_one_summary,
                 'do_not_send_first_parse': 'do_not_send_first_parse' in form,
                 'notification_receivers': receivers or [form.get('mail_login', '').strip()],
             }
@@ -719,6 +727,7 @@ def setup_submit():
         'schedule': sched_cfg,
         'schedule_day_offset': int(form.get('schedule_day_offset', 1)),
         'schedule_retention_days': int(form.get('schedule_retention_days', 30)),
+        'one_summary_message': (form.get('one_summary_message', '1') == '1'),
         'do_not_send_first_parse': 'do_not_send_first_parse' in form,
         'work-in-loop': True if 'collection_mode' in form else ('work_in_loop' in form),
         'storage_dir': getattr(request, 'app_storage_dir', 'storage') or 'storage',
@@ -792,6 +801,14 @@ def settings_view():
             effective_pwd = new_pwd or (old_user.get('librus_password') if old_user else '')
 
             if login:
+                global_one_summary = (form.get('one_summary_message', '1') == '1')
+                if f'student_one_summary_present_{idx}' in form:
+                    is_one_summary = (f'student_one_summary_{idx}' in form)
+                elif f'student_one_summary_{idx}' in form:
+                    is_one_summary = True
+                else:
+                    is_one_summary = global_one_summary
+
                 st_cfg: dict[str, Any] = {
                     'librus_login_name': name,
                     'librus_login': login,
@@ -802,7 +819,7 @@ def settings_view():
                     'read_schedule': f'student_schedule_{idx}' in form,
                     'schedule_retention_days': int(form.get('schedule_retention_days', 30)),
                     'schedule_day_offset': int(form.get('schedule_day_offset', 1)),
-                    'one_summary_message': False,
+                    'one_summary_message': is_one_summary,
                     'do_not_send_first_parse': 'do_not_send_first_parse' in form,
                     'notification_receivers': receivers,
                 }
@@ -864,6 +881,7 @@ def settings_view():
         new_config['schedule'] = sched_cfg
         new_config['schedule_day_offset'] = int(form.get('schedule_day_offset', config.get('schedule_day_offset', 1)))
         new_config['schedule_retention_days'] = int(form.get('schedule_retention_days', config.get('schedule_retention_days', 30)))
+        new_config['one_summary_message'] = (form.get('one_summary_message', '1') == '1')
         new_config['do_not_send_first_parse'] = 'do_not_send_first_parse' in form
         new_config['work-in-loop'] = True if 'collection_mode' in form else ('work_in_loop' in form if 'work_in_loop' in form else config.get('work-in-loop', True))
         new_config['send_error_notifications'] = 'send_error_notifications' in form

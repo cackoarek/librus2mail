@@ -923,32 +923,48 @@ class Librus:
 
         logger.info("Pobieram plan lekcji")
         target_dt = date or datetime.now()
-        if target_dt.weekday() == 4 and target_dt.hour >= 15:
-            target_dt = target_dt + timedelta(days=3)
-        elif target_dt.weekday() == 5:
-            target_dt = target_dt + timedelta(days=2)
-        elif target_dt.weekday() == 6:
-            target_dt = target_dt + timedelta(days=1)
+        base_monday = (target_dt - timedelta(days=target_dt.weekday())).date()
 
-        monday = target_dt - timedelta(days=target_dt.weekday())
-        sunday = monday + timedelta(days=6)
-        week_str = f"{monday.strftime('%Y-%m-%d')}_{sunday.strftime('%Y-%m-%d')}"
+        # Pobieramy bieżący tydzień oraz kolejny tydzień w przód (a od piątku również 2 tygodnie w przód)
+        weeks_to_fetch = [base_monday, base_monday + timedelta(days=7)]
+        if target_dt.weekday() in (4, 5, 6):
+            weeks_to_fetch.append(base_monday + timedelta(days=14))
 
         headers = {**self.__headers, 'Referer': PLAN_LEKCJI_URL}
-        entries = []
-        try:
-            res = self.__session.post(PLAN_LEKCJI_URL, data={'tydzien': week_str}, headers=headers)
-            if res.status_code == 200:
-                soup = BeautifulSoup(res.content, 'html.parser')
-                entries = self._parse_schedule_soup(soup)
-        except Exception as e:
-            logger.warning(f"POST do planu lekcji ({week_str}) nie powiódł się ({e}), próbuję GET...")
+        entries_by_id: dict[str, dict[str, Any]] = {}
 
-        if not entries:
+        for w_idx, monday in enumerate(weeks_to_fetch):
+            sunday = monday + timedelta(days=6)
+            week_str = f"{monday.strftime('%Y-%m-%d')}_{sunday.strftime('%Y-%m-%d')}"
+            try:
+                if w_idx > 0:
+                    sleep(1)
+                res = self.__session.post(PLAN_LEKCJI_URL, data={'tydzien': week_str}, headers=headers)
+                if res.status_code == 200:
+                    soup = BeautifulSoup(res.content, 'html.parser')
+                    w_entries = self._parse_schedule_soup(soup)
+                    for item in w_entries:
+                        eid = item.get('id') or f"{item.get('date')}_{item.get('lesson_no')}"
+                        entries_by_id[eid] = item
+            except Exception as e:
+                logger.warning(f"POST do planu lekcji ({week_str}) nie powiódł się ({e})")
+
+        if not entries_by_id:
             soup = self.parse_page(PLAN_LEKCJI_URL)
-            entries = self._parse_schedule_soup(soup)
+            w_entries = self._parse_schedule_soup(soup)
+            for item in w_entries:
+                eid = item.get('id') or f"{item.get('date')}_{item.get('lesson_no')}"
+                entries_by_id[eid] = item
 
-        logger.info(f"Pobrano {len(entries)} lekcji z planu lekcji")
+        entries = sorted(
+            entries_by_id.values(),
+            key=lambda x: (
+                x.get('date', ''),
+                int(x.get('lesson_no', 0)) if str(x.get('lesson_no', '')).isdigit() else 99,
+            ),
+        )
+
+        logger.info(f"Pobrano {len(entries)} lekcji z planu lekcji (zakres: {len(weeks_to_fetch)} tyg.)")
         self.schedule = entries
         self.save_state()
         return entries

@@ -98,6 +98,7 @@ class TestWebDashboard(unittest.TestCase):
             ],
             'schedule_history': [
                 {
+                    'id': 'sch_1',
                     'date': '2026-09-23',
                     'lesson_no': 1,
                     'time_from': '08:00',
@@ -109,6 +110,7 @@ class TestWebDashboard(unittest.TestCase):
                     'is_cancelled': False,
                 },
                 {
+                    'id': 'sch_2',
                     'date': '2026-09-23',
                     'lesson_no': 2,
                     'time_from': '08:55',
@@ -121,6 +123,7 @@ class TestWebDashboard(unittest.TestCase):
                     'substitution_info': 'Zastępstwo za J. Kowal',
                 },
                 {
+                    'id': 'sch_3',
                     'date': '2026-09-23',
                     'lesson_no': 3,
                     'time_from': '09:50',
@@ -1089,6 +1092,63 @@ class TestWebDashboard(unittest.TestCase):
         self.assertTrue(updated_cfg['mail']['use_gmail'])
         self.assertEqual(updated_cfg['mail']['password'], 'nowe_haslo_app_123')
         self.assertNotIn('oauth2_file', updated_cfg['mail'])
+
+    def test_schedule_view_day_selection(self):
+        """Weryfikuje inteligentny wybór dnia w /plan (trwające lekcje vs nadchodzący dzień nauki)."""
+        storage = get_storage(self.mock_config, self.storage_dir)
+        # Dodaj lekcje na 2026-09-24
+        storage.save_schedule_entries('123456', [
+            {
+                'id': 'l_next_1',
+                'date': '2026-09-24',
+                'lesson_no': 1,
+                'time_from': '08:00',
+                'time_to': '08:45',
+                'subject': 'Biologia',
+                'teacher': 'E. Nowak',
+                'classroom': '5',
+                'is_substitution': False,
+                'is_cancelled': False,
+            }
+        ])
+
+        # 1. Podczas trwania lekcji w bieżącym dniu (2026-09-23 09:15) -> domyślnie dzień bieżący
+        app_ongoing = create_app(
+            config_path=self.config_path,
+            storage_dir=self.storage_dir,
+            no_auth=True,
+            actual_date=datetime(2026, 9, 23, 9, 15, 0),
+        )
+        client_ongoing = app_ongoing.test_client()
+        res_ongoing = client_ongoing.get('/plan')
+        self.assertEqual(res_ongoing.status_code, 200)
+        self.assertIn(b'2026-09-23', res_ongoing.data)
+        self.assertIn('Dzisiaj (lekcje w toku)', res_ongoing.data.decode('utf-8'))
+
+        # 2. Po zakończeniu lekcji w bieżącym dniu (2026-09-23 12:00) -> domyślnie kolejny dzień nauki (2026-09-24)
+        app_finished = create_app(
+            config_path=self.config_path,
+            storage_dir=self.storage_dir,
+            no_auth=True,
+            actual_date=datetime(2026, 9, 23, 12, 0, 0),
+        )
+        client_finished = app_finished.test_client()
+        res_finished = client_finished.get('/plan')
+        self.assertEqual(res_finished.status_code, 200)
+        self.assertIn(b'2026-09-24', res_finished.data)
+        self.assertIn('Nadchodzący dzień nauki', res_finished.data.decode('utf-8'))
+
+        # 3. Jawne podanie daty w query param ?date=2026-09-23
+        res_param = client_finished.get('/plan?date=2026-09-23')
+        self.assertEqual(res_param.status_code, 200)
+        self.assertIn(b'Matematyka', res_param.data)
+        self.assertIn(b'Geografia', res_param.data)
+
+        # 4. Widok wszystkich dni (?view=all)
+        res_all = client_finished.get('/plan?view=all')
+        self.assertEqual(res_all.status_code, 200)
+        self.assertIn(b'Biologia', res_all.data)
+        self.assertIn(b'Matematyka', res_all.data)
 
     def test_background_collector_lifecycle(self):
         """Testuje uruchamianie wątku harmonogramu w tle w module webowym."""

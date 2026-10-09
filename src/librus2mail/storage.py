@@ -572,11 +572,18 @@ class FileStorage(BaseStorage):
         path = self._get_file_path(user_login)
         data = read_json_safe(path)
         data['librus_login'] = str(user_login)
-        existing = {e.get('id'): e for e in data.get('schedule_history', []) if e.get('id')}
+        existing = {}
+        for e in data.get('schedule_history', []):
+            eid = e.get('id') or f"{e.get('date')}_{e.get('lesson_no')}_{e.get('subject')}"
+            if eid:
+                e['id'] = eid
+                existing[eid] = e
+
         now_iso = datetime.now().isoformat()
         for e in entries or []:
-            eid = e.get('id')
+            eid = e.get('id') or f"{e.get('date')}_{e.get('lesson_no')}_{e.get('subject')}"
             if eid:
+                e['id'] = eid
                 if eid in existing:
                     existing[eid].update({k: v for k, v in e.items() if v is not None})
                     existing[eid]['updated_at'] = now_iso

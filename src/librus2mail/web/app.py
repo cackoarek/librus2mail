@@ -171,13 +171,21 @@ def dashboard():
 @web_bp.route('/plan')
 @login_required
 def schedule_view():
-    """Widok pełnego tygodniowego planu lekcji."""
+    """Widok planu lekcji z inteligentnym wyborem bieżącego/najbliższego dnia nauki."""
     config = request.app_config
     storage = request.app_storage
     active_login = get_active_student_login(config, storage, session_login=session.get('active_student_login'))
 
     data = get_student_dashboard_bundle(storage, active_login, config, now=request.app_actual_date)
     all_lessons = data.get('all_schedule', [])
+    timetable_entries = data.get('all_timetable', [])
+
+    # Dopasowanie sprawdzianów z terminarza do lekcji danego dnia
+    tests_by_date: dict[str, list] = {}
+    for t in timetable_entries:
+        t_d = t.get('date')
+        if t_d and t.get('type') == 'test':
+            tests_by_date.setdefault(t_d, []).append(t)
 
     # Grupowanie lekcji po dacie
     by_date: dict[str, list] = {}
@@ -186,31 +194,125 @@ def schedule_view():
         if d:
             if d not in by_date:
                 by_date[d] = []
-            by_date[d].append(entry)
+            e_copy = dict(entry)
+            if not e_copy.get('test') and d in tests_by_date:
+                e_sub = str(e_copy.get('subject', '')).strip().lower()
+                for test_item in tests_by_date[d]:
+                    test_sub = str(test_item.get('subject', '')).strip().lower()
+                    if test_sub and (test_sub in e_sub or e_sub in test_sub):
+                        e_copy['test'] = test_item
+                        break
+            by_date[d].append(e_copy)
 
     # Sortowanie lekcji chronologicznie w danym dniu
     for d, l_list in by_date.items():
         l_list.sort(key=lambda x: (int(x.get('lesson_no', 0)) if str(x.get('lesson_no', '')).isdigit() else 99, x.get('time_from', '')))
 
+    # Określenie bieżącego czasu i aktywnego dnia
+    ref_now = request.app_actual_date or datetime.now()
+    today_str = ref_now.strftime('%Y-%m-%d')
+    current_time_str = ref_now.strftime('%H:%M')
+
+    # Sprawdzenie czy dzisiejsze lekcje jeszcze trwają
+    today_lessons = by_date.get(today_str, [])
+    active_today_lessons = [les for les in today_lessons if not les.get('is_cancelled')]
+    lessons_ongoing = False
+    if today_lessons:
+        last_lesson = max(active_today_lessons or today_lessons, key=lambda x: x.get('time_to', ''))
+        last_time_to = last_lesson.get('time_to', '')
+        if last_time_to:
+            lessons_ongoing = (current_time_str <= last_time_to)
+        else:
+            lessons_ongoing = (ref_now.hour < 15)
+
+    sorted_dates = sorted(by_date.keys())
+    future_dates = [d for d in sorted_dates if d > today_str]
+
+    # Ustalenie domyślnej daty:
+    # 1. Jeśli dzisiaj są lekcje i jeszcze trwają -> dzisiaj
+    # 2. Jeśli dzisiejsze lekcje minęły (lub dzisiaj jest weekend / brak lekcji) -> najbliższy przyszły dzień szkolny
+    # 3. Jeśli brak przyszłych dni -> dzisiejszy lub najświeższy dostępny
+    if lessons_ongoing and today_str in by_date:
+        default_target_date = today_str
+        target_reason = 'today_ongoing'
+    elif future_dates:
+        default_target_date = future_dates[0]
+        target_reason = 'next_school_day'
+    elif today_str in by_date:
+        default_target_date = today_str
+        target_reason = 'today_finished'
+    elif sorted_dates:
+        default_target_date = sorted_dates[-1]
+        target_reason = 'latest_available'
+    else:
+        default_target_date = today_str
+        target_reason = 'empty'
+
+    requested_date = request.args.get('date', '').strip()
+    selected_date = requested_date if requested_date in by_date else default_target_date
+    view_mode = request.args.get('view', 'day').strip()
+    if view_mode not in ('day', 'all'):
+        view_mode = 'day'
+
+    prev_date = None
+    next_date = None
+    if selected_date in sorted_dates:
+        idx = sorted_dates.index(selected_date)
+        if idx > 0:
+            prev_date = sorted_dates[idx - 1]
+        if idx < len(sorted_dates) - 1:
+            next_date = sorted_dates[idx + 1]
+
     weekdays_pl = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela"]
+    weekdays_short_pl = ["Pon", "Wt", "Śr", "Czw", "Pt", "Sob", "Ndz"]
     days_data = []
-    for d_str in sorted(by_date.keys()):
+    selected_day_data = None
+
+    for d_str in sorted_dates:
         try:
             clean_date = d_str.split()[0] if ' ' in d_str else d_str
             d_obj = datetime.strptime(clean_date, "%Y-%m-%d").date()
             w_name = weekdays_pl[d_obj.weekday()]
+            w_short = weekdays_short_pl[d_obj.weekday()]
+            f_date = d_obj.strftime("%d.%m")
         except Exception:
             w_name = ""
-        days_data.append({
+            w_short = ""
+            f_date = d_str
+
+        day_dict = {
             'date': d_str,
             'weekday_name': w_name,
+            'weekday_short': w_short,
+            'formatted_date': f_date,
+            'is_today': (d_str == today_str),
+            'is_selected': (d_str == selected_date),
+            'is_past': (d_str < today_str),
+            'is_future': (d_str > today_str),
             'lessons': by_date[d_str],
             'total_count': len(by_date[d_str]),
             'cancelled_count': sum(1 for x in by_date[d_str] if x.get('is_cancelled')),
             'substitution_count': sum(1 for x in by_date[d_str] if x.get('is_substitution')),
-        })
+            'tests_count': sum(1 for x in by_date[d_str] if x.get('test')),
+        }
+        days_data.append(day_dict)
+        if d_str == selected_date:
+            selected_day_data = day_dict
 
-    return render_template('web/schedule.html', data=data, days_data=days_data)
+    return render_template(
+        'web/schedule.html',
+        data=data,
+        days_data=days_data,
+        selected_day=selected_day_data,
+        selected_date=selected_date,
+        default_target_date=default_target_date,
+        today_date=today_str,
+        lessons_ongoing=lessons_ongoing,
+        target_reason=target_reason,
+        prev_date=prev_date,
+        next_date=next_date,
+        view_mode=view_mode,
+    )
 
 
 @web_bp.route('/oceny')

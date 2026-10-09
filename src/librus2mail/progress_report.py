@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from time import sleep
 
 from .base_logger import setup_logging
-from .config import read_config
+from .config import get_reports_schedules, read_config
 from .librus import Librus
 from .librus_collector import configure_mail_provider
 from .mail_sender import (
@@ -228,6 +228,7 @@ def run_progress_reports(
     fetch_live: bool = False,
     force: bool = False,
     actual_date: datetime | None = None,
+    report_key: str | None = None,
 ):
     if (
         config_path is None
@@ -391,18 +392,29 @@ def run_progress_reports(
             period_start = now - timedelta(days=days)
             logger.info(f"Zakres raportu: ostatnie {days} dni (od {period_start.strftime('%Y-%m-%d %H:%M')})")
         else:
-            last_report_iso = storage.get_last_progress_report_date(login)
-            if last_report_iso:
-                try:
-                    period_start = datetime.fromisoformat(last_report_iso)
-                    logger.info(f"Zakres raportu: od ostatniego wygenerowania ({period_start.strftime('%Y-%m-%d %H:%M')})")
-                except Exception as e:
-                    logger.warning(f"Nie udało się sparsować daty ostatniego raportu ({last_report_iso}): {e}")
+            sched_list = get_reports_schedules(config)
+            active_list = [r for r in sched_list if r.get('enabled', True) and r.get('interval_days')]
+            if active_list:
+                eff_days = int(active_list[0]['interval_days'])
+                period_start = now - timedelta(days=eff_days)
+                logger.info(f"Zakres raportu z harmonogramu: ostatnie {eff_days} dni (od {period_start.strftime('%Y-%m-%d %H:%M')})")
+            elif sched_list and sched_list[0].get('interval_days'):
+                eff_days = int(sched_list[0]['interval_days'])
+                period_start = now - timedelta(days=eff_days)
+                logger.info(f"Zakres raportu z harmonogramu: ostatnie {eff_days} dni (od {period_start.strftime('%Y-%m-%d %H:%M')})")
+            else:
+                last_report_iso = storage.get_last_progress_report_date(login)
+                if last_report_iso:
+                    try:
+                        period_start = datetime.fromisoformat(last_report_iso)
+                        logger.info(f"Zakres raportu: od ostatniego wygenerowania ({period_start.strftime('%Y-%m-%d %H:%M')})")
+                    except Exception as e:
+                        logger.warning(f"Nie udało się sparsować daty ostatniego raportu ({last_report_iso}): {e}")
 
-            if period_start is None:
-                days_back = report_cfg.get('days_back', 7)
-                period_start = now - timedelta(days=days_back)
-                logger.info(f"Brak wcześniejszego raportu w bazie. Używam domyślnego okresu wstecz: {days_back} dni (od {period_start.strftime('%Y-%m-%d %H:%M')})")
+                if period_start is None:
+                    days_back = report_cfg.get('days_back', 7)
+                    period_start = now - timedelta(days=days_back)
+                    logger.info(f"Brak wcześniejszego raportu w bazie. Używam domyślnego okresu wstecz: {days_back} dni (od {period_start.strftime('%Y-%m-%d %H:%M')})")
 
         # 4. Uruchomienie analizy (ProgressAnalyzer)
         analysis = ProgressAnalyzer.analyze(
@@ -447,7 +459,7 @@ def run_progress_reports(
             logger.info(f"Wysyłam raport postępów dla ucznia {name} ({login})...")
             sent = mail_sender.send_progress_report(user_config, analysis, timetable=timetable_summary)
             if sent:
-                storage.save_last_progress_report_date(login, now.isoformat())
+                storage.save_last_progress_report_date(login, now.isoformat(), report_key=report_key)
                 logger.info(f"Raport postępów dla {name} ({login}) został pomyślnie wysłany!")
             else:
                 logger.error(f"Wysyłka raportu postępów dla {name} ({login}) nie powiodła się.")

@@ -1,0 +1,1574 @@
+<!DOCTYPE html>
+<html lang="pl" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kreator Konfiguracji - Librus2mail - Librus2mail</title>
+    <!-- Favicon z logo Librus2mail (gradient indigo-sky + 🏫) -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%25%22%20y1%3D%22100%25%22%20x2%3D%22100%25%22%20y2%3D%220%25%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%234f46e5%22/%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%230ea5e9%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2216%22%20fill%3D%22url%28%23g%29%22/%3E%3Ctext%20x%3D%2232%22%20y%3D%2234%22%20font-size%3D%2234%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%F0%9F%8F%AB%3C/text%3E%3C/svg%3E">
+    <!-- TailwindCSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- HTMX CDN -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+        .htmx-indicator { display: none; }
+        .htmx-request .htmx-indicator { display: inline-flex; }
+        .htmx-request.htmx-indicator { display: inline-flex; }
+    </style>
+    
+</head>
+<body class="h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white">
+
+    <!-- Pasek nawigacyjny -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Lewa strona: Logo + Menu -->
+                <div class="flex items-center gap-8">
+                    <a href="web_dashboard.html" class="flex items-center gap-3 group">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-sky-500 flex items-center justify-center text-white text-xl shadow-md shadow-indigo-100 group-hover:scale-105 transition-transform">
+                            🏫
+                        </div>
+                        <div>
+                            <span class="font-extrabold text-lg text-slate-900 tracking-tight flex items-center gap-1.5">
+                                Librus<span class="text-indigo-600">2mail</span>
+                            </span>
+                            <span class="block text-[10px] uppercase font-bold text-slate-400 tracking-wider">Web Dashboard</span>
+                        </div>
+                    </a>
+
+                    <!-- Nawigacja Desktop -->
+                    
+                    <nav class="hidden md:flex items-center gap-1">
+                        <a href="web_dashboard.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📊 Pulpit
+                        </a>
+                        <a href="web_plan.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📅 Plan lekcji
+                        </a>
+                        <a href="web_oceny.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📝 Oceny
+                        </a>
+                        <a href="web_terminarz.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            🔔 Terminarz
+                        </a>
+                        <a href="web_wiadomosci.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            ✉️ Wiadomości
+                        </a>
+                        <a href="web_raporty_postepy.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📈 Raporty
+                        </a>
+                        <a href="web_akcje.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            ⚡ Akcje CLI
+                        </a>
+                        <a href="web_ustawienia.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            ⚙️ Ustawienia
+                        </a>
+                    </nav>
+                    
+                </div>
+
+                <!-- Prawa strona: Przełącznik ucznia + Auth -->
+                <div class="flex items-center gap-3">
+                    
+                        
+                        <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-lg text-xs font-semibold text-slate-700 border border-slate-200">
+                            <span>👤</span>
+                            <span>Jan Kowalski (Przykładowy Uczeń) (8979296)</span>
+                        </div>
+                        
+
+                        
+                    
+
+                    
+                    <span class="hidden lg:inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md" title="Dostęp bez hasła (lokalny)">
+                        🔓 Tryb otwarty
+                    </span>
+                    
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobilny pasek skrótów -->
+        
+        <div class="md:hidden border-t border-slate-100 bg-slate-50 px-2 py-1.5 overflow-x-auto flex gap-1 scrollbar-none">
+            <a href="web_dashboard.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📊 Pulpit</a>
+            <a href="web_plan.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📅 Plan</a>
+            <a href="web_oceny.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📝 Oceny</a>
+            <a href="web_terminarz.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">🔔 Terminarz</a>
+            <a href="web_wiadomosci.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">✉️ Wiadomości</a>
+            <a href="web_raporty_postepy.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📈 Raporty</a>
+            <a href="web_akcje.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">⚡ Akcje</a>
+            <a href="web_ustawienia.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">⚙️ Ustawienia</a>
+        </div>
+        
+    </header>
+
+    <!-- Komunikaty Flash -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 w-full">
+        
+            
+        
+    </div>
+
+    <!-- Główna zawartość -->
+    <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
+        
+<div class="max-w-4xl mx-auto py-4 sm:py-8">
+    <!-- Nagłówek powitalny -->
+    <div class="text-center mb-8">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 to-sky-500 text-white text-3xl shadow-lg shadow-indigo-100 mb-3">
+            🚀
+        </div>
+        <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">
+            Witaj w Librus2mail!
+        </h1>
+        <p class="text-sm text-slate-500 mt-2 max-w-lg mx-auto">
+            Nie wykryto jeszcze aktywnej konfiguracji systemu. Skonfigurujmy powiadomienia i panel rodzica w 4 prostych krokach.
+        </p>
+    </div>
+
+    <!-- Pasek Postępu Kroków (Stepper) -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between relative max-w-2xl mx-auto px-4">
+            <!-- Linia łącząca kroki w tle -->
+            <div class="absolute top-1/2 left-8 right-8 -translate-y-1/2 h-1 bg-slate-200 z-0"></div>
+            <div id="stepper-progress" class="absolute top-1/2 left-8 -translate-y-1/2 h-1 bg-indigo-600 transition-all duration-300 z-0" style="width: 0%;"></div>
+
+            <!-- Krok 1 -->
+            <button type="button" onclick="goToStep(1)" id="step-btn-1" class="step-btn relative z-10 flex flex-col items-center group cursor-pointer focus:outline-none">
+                <div id="step-badge-1" class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-indigo-600 text-white shadow-md shadow-indigo-200 ring-4 ring-white">
+                    1
+                </div>
+                <span id="step-label-1" class="text-xs font-bold text-indigo-600 mt-2">Dzieci</span>
+            </button>
+
+            <!-- Krok 2 -->
+            <button type="button" onclick="goToStep(2)" id="step-btn-2" class="step-btn relative z-10 flex flex-col items-center group cursor-pointer focus:outline-none">
+                <div id="step-badge-2" class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-white text-slate-500 border-2 border-slate-300 shadow-sm ring-4 ring-white">
+                    2
+                </div>
+                <span id="step-label-2" class="text-xs font-semibold text-slate-500 mt-2">Poczta e-mail</span>
+            </button>
+
+            <!-- Krok 3 -->
+            <button type="button" onclick="goToStep(3)" id="step-btn-3" class="step-btn relative z-10 flex flex-col items-center group cursor-pointer focus:outline-none">
+                <div id="step-badge-3" class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-white text-slate-500 border-2 border-slate-300 shadow-sm ring-4 ring-white">
+                    3
+                </div>
+                <span id="step-label-3" class="text-xs font-semibold text-slate-500 mt-2">Harmonogram</span>
+            </button>
+
+            <!-- Krok 4 -->
+            <button type="button" onclick="goToStep(4)" id="step-btn-4" class="step-btn relative z-10 flex flex-col items-center group cursor-pointer focus:outline-none">
+                <div id="step-badge-4" class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-white text-slate-500 border-2 border-slate-300 shadow-sm ring-4 ring-white">
+                    4
+                </div>
+                <span id="step-label-4" class="text-xs font-semibold text-slate-500 mt-2">Panel WWW</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Główny Formularz Konfiguratora -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
+        <form id="wizard-form" method="POST" action="/setup" class="space-y-6" novalidate>
+
+            <!-- ================================================================= -->
+            <!-- KROK 1: KONTA DZIECI W LIBRUSIE -->
+            <!-- ================================================================= -->
+            <div id="step-section-1" class="step-section">
+                <div class="border-b border-slate-100 pb-4 mb-6">
+                    <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                        <span>👨‍👩‍👧‍👦</span> Krok 1: Konta uczniów w Librus Synergia
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-1">
+                        Dodaj co najmniej jedno konto dziecka w systemie Librus. Możesz dodać rodzeństwo klikając przycisk poniżej.
+                    </p>
+                </div>
+
+                <div id="students-container" class="space-y-6">
+                    <!-- Karta Pierwszego Ucznia (Index 0) -->
+                    <div class="student-card p-5 rounded-2xl border-2 border-slate-200 bg-slate-50/60 relative" data-index="0">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-xs font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-lg">
+                                Profil Ucznia #1
+                            </span>
+                            <span class="text-xs text-slate-400 font-medium">Główne konto</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                                    Imię / Etykieta wyświetlana *
+                                </label>
+                                <input type="text" name="student_name_0" required placeholder="np. Jan Kowalski (5A)"
+                                       value="Jan Kowalski"
+                                       class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                                    Adresy e-mail powiadomień (oddzielone przecinkami) *
+                                </label>
+                                <input type="text" name="student_receivers_0" required placeholder="np. mama@example.com, tata@example.com"
+                                       class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                                    Login do portalu Librus *
+                                </label>
+                                <input type="text" id="librus_login_0" name="student_login_0" required placeholder="np. 8912345"
+                                       class="w-full text-sm font-mono px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                                    Hasło do portalu Librus *
+                                </label>
+                                <input type="password" id="librus_password_0" name="student_password_0" required placeholder="Hasło rodzica w Librusie"
+                                       class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <!-- Opcje monitorowania i test połączenia -->
+                        <div class="mt-4 pt-4 border-t border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div class="flex flex-wrap items-center gap-4 text-xs font-medium text-slate-700">
+                                <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                                    <input type="checkbox" name="student_grades_0" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                                    <span>Monitoruj oceny</span>
+                                </label>
+                                <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                                    <input type="checkbox" name="student_timetable_0" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                                    <span>Terminarz</span>
+                                </label>
+                                <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                                    <input type="checkbox" name="student_schedule_0" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                                    <span>Plan lekcji</span>
+                                </label>
+                                <label class="inline-flex items-center gap-1.5 cursor-pointer" title="Wiadomości w Librusie zostaną oznaczone jako przeczytane">
+                                    <input type="checkbox" name="student_messages_0" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                                    <span>Wiadomości</span>
+                                </label>
+                            </div>
+
+                            <!-- Przycisk testu połączenia Librus -->
+                            <div>
+                                <button type="button" onclick="testLibrusAccount(0)"
+                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-indigo-700 bg-white border border-indigo-300 hover:bg-indigo-50 rounded-xl transition shadow-xs cursor-pointer">
+                                    <span>🔍 Testuj logowanie Librus</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Opcjonalny raport motywacyjny dla samego dziecka (student_report) -->
+                        <div class="mt-4 pt-4 border-t border-slate-200/80">
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="inline-flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" name="student_report_enabled_0" id="student_report_enabled_0"
+                                           onchange="toggleStudentReportBox(0)"
+                                           class="rounded text-amber-500 focus:ring-amber-400">
+                                    <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                        <span>🏆</span> Włącz raport motywacyjny dla dziecka (student_report)
+                                    </span>
+                                </label>
+                                <span class="text-[11px] text-slate-400 font-medium">Opcjonalnie</span>
+                            </div>
+
+                            <div id="student-report-box-0" class="hidden mt-3 p-4 bg-amber-50/50 border border-amber-200/80 rounded-2xl space-y-3">
+                                <p class="text-xs text-amber-900 leading-relaxed">
+                                    Dedykowany raport motywacyjny z osiągnięciami, supermocami, odznakami grywalizacyjnymi i wyzwaniami dopasowanymi do wieku ucznia.
+                                </p>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                                            Adres e-mail dziecka (lub rodzica)
+                                        </label>
+                                        <input type="email" name="student_report_email_0" id="student_report_email_0"
+                                               placeholder="np. janek@example.com lub email rodzica"
+                                               class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:outline-none bg-white">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                                            Szablon raportu (dopasowany do wieku)
+                                        </label>
+                                        <select name="student_report_template_0" id="student_report_template_0"
+                                                class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:outline-none bg-white">
+                                            <option value="kids" selected>🎮 Kids (Szkoła podstawowa, klasy 4–6: odznaki, Karta Mocy)</option>
+                                            <option value="teens">⚡ Teens (Starsze klasy podstawówki, klasy 7–8: Quick Wins, egzamin)</option>
+                                            <option value="youth">📊 Youth (Szkoła średnia / liceum / technikum: Dashboard, KPI)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Status testu dla ucznia 0 -->
+                        <div id="test-feedback-0" class="hidden mt-3 text-xs p-3 rounded-xl"></div>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <button type="button" onclick="addStudentCard()"
+                            class="inline-flex items-center gap-2 text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50/70 border border-indigo-200 px-4 py-2.5 rounded-xl transition">
+                        <span>➕ Dodaj kolejne dziecko (rodzeństwo)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ================================================================= -->
+            <!-- KROK 2: KONFIGURACJA POCZTY E-MAIL -->
+            <!-- ================================================================= -->
+            <div id="step-section-2" class="step-section hidden">
+                <div class="border-b border-slate-100 pb-4 mb-6">
+                    <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                        <span>📬</span> Krok 2: Wysyłka powiadomień e-mail
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-1">
+                        Wybierz skrzynkę pocztową, z której Librus2mail będzie wysyłać powiadomienia o ocenach i wiadomościach.
+                    </p>
+                </div>
+
+                <!-- Wybór dostawcy poczty -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+                    <label class="provider-radio flex items-center gap-3 p-4 border-2 border-indigo-600 bg-indigo-50/40 rounded-2xl cursor-pointer transition">
+                        <input type="radio" name="mail_provider" value="gmail" checked onchange="toggleMailProvider()"
+                               class="text-indigo-600 focus:ring-indigo-500">
+                        <div>
+                            <span class="block text-sm font-extrabold text-slate-900">Poczta Gmail</span>
+                            <span class="block text-xs text-slate-500 mt-0.5">Hasło aplikacji lub Google OAuth2</span>
+                        </div>
+                    </label>
+
+                    <label class="provider-radio flex items-center gap-3 p-4 border-2 border-slate-200 bg-white rounded-2xl cursor-pointer transition">
+                        <input type="radio" name="mail_provider" value="smtp" onchange="toggleMailProvider()"
+                               class="text-indigo-600 focus:ring-indigo-500">
+                        <div>
+                            <span class="block text-sm font-extrabold text-slate-900">Własny serwer SMTP</span>
+                            <span class="block text-xs text-slate-500 mt-0.5">WP, Onet, Interia, OVH, własna domena (STARTTLS)</span>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- Sekcja wyboru metody autoryzacji dla Gmail -->
+                <div id="gmail-auth-mode-box" class="mb-5 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl">
+                    <span class="block text-xs font-bold text-slate-700 uppercase mb-2">Metoda logowania do Gmail</span>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <label class="gmail-auth-radio flex items-center gap-2 p-2.5 rounded-xl border border-indigo-600 bg-white cursor-pointer transition text-xs font-bold text-slate-800">
+                            <input type="radio" name="gmail_auth_mode" value="app_password" checked onchange="toggleGmailAuthMode()"
+                                   class="text-indigo-600 focus:ring-indigo-500">
+                            <span>🔑 Hasło do aplikacji Google (zalecane)</span>
+                        </label>
+                        <label class="gmail-auth-radio flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-white/70 hover:bg-white cursor-pointer transition text-xs font-semibold text-slate-700">
+                            <input type="radio" name="gmail_auth_mode" value="oauth2" onchange="toggleGmailAuthMode()"
+                                   class="text-indigo-600 focus:ring-indigo-500">
+                            <span>🛡️ Google OAuth2 (plik credentials .json)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Dane konta nadawcy -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1" id="mail-login-label">
+                            Adres e-mail nadawcy (konto Gmail) *
+                        </label>
+                        <input type="email" id="mail_login" name="mail_login" required placeholder="np. twoje.powiadomienia@gmail.com"
+                               class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+
+                    <div id="mail-password-container">
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1" id="mail-password-label">
+                            Hasło aplikacji Gmail (16 znaków) *
+                        </label>
+                        <input type="password" id="mail_password" name="mail_password" required placeholder="abcd efgh ijkl mnop"
+                               class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+
+                    <div id="gmail-oauth2-container" class="hidden">
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                            Ścieżka do pliku OAuth2 JSON *
+                        </label>
+                        <input type="text" id="gmail_oauth2_file" name="gmail_oauth2_file" placeholder="np. yagmail_client.json"
+                               class="w-full text-sm font-mono px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <!-- Pola specyficzne dla własnego SMTP -->
+                <div id="smtp-settings-box" class="hidden mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                            Host serwera SMTP *
+                        </label>
+                        <input type="text" id="smtp_host" name="smtp_host" placeholder="np. smtp.twojadomena.pl"
+                               class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                            Port SMTP (zwykle 587 dla STARTTLS)
+                        </label>
+                        <input type="number" name="smtp_port" value="587"
+                               class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div id="gmail-tip-box" class="mt-4 p-4 bg-sky-50 border border-sky-200 rounded-xl text-xs text-sky-800">
+                    💡 <strong>Wskazówka:</strong> Dla konta Gmail włącz weryfikację dwuetapową na koncie Google i wygeneruj specjalne
+                    <strong>Hasło do aplikacji</strong> w zakładce Bezpieczeństwo.
+                </div>
+
+                <div id="gmail-oauth-tip-box" class="hidden mt-4 p-4 bg-indigo-50 border border-indigo-200 rounded-xl text-xs text-indigo-900">
+                    🛡️ <strong>Wskazówka OAuth2:</strong> Wskaż ścieżkę do pliku JSON (np. <code>yagmail_client.json</code>) zawierającego wygenerowane dane dostępowe Google OAuth2 (<code>client_id</code>, <code>client_secret</code>, <code>refresh_token</code>). W tym trybie hasło do konta nie jest wymagane.
+                </div>
+            </div>
+
+            <!-- ================================================================= -->
+            <!-- KROK 3: HARMONOGRAM I AUTOMATYZACJA -->
+            <!-- ================================================================= -->
+            <div id="step-section-3" class="step-section hidden">
+                <div class="border-b border-slate-100 pb-4 mb-6">
+                    <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                        <span>📅</span> Krok 3: Harmonogram i automatyzacja
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-1">
+                        Skonfiguruj, kiedy usługa ma sprawdzać nowe oceny ze szkoły oraz kiedy generować podsumowania postępów.
+                    </p>
+                </div>
+
+                <!-- 1. SPRAWDZANIE OCEN I WIADOMOŚCI -->
+                <div class="mb-6 pb-6 border-b border-slate-100">
+                    <div class="mb-3">
+                        <h3 class="text-sm font-extrabold text-slate-800 flex items-center gap-2">
+                            <span>🔔</span> 1. Sprawdzanie ocen i wiadomości (librus_collect_and_notify)
+                        </h3>
+                        <p class="text-xs text-slate-500 mt-0.5">
+                            Wybierz, jak często usługa ma łączyć się ze szkołą i wysyłać powiadomienia e-mail o nowościach.
+                        </p>
+                    </div>
+
+                    <!-- Karty wyboru trybu -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                        <label class="collection-mode-radio flex items-start gap-3 p-4 border-2 border-indigo-600 bg-indigo-50/40 rounded-2xl cursor-pointer transition">
+                            <input type="radio" name="collection_mode" value="daily" checked onchange="toggleCollectionMode()"
+                                   class="mt-1 text-indigo-600 focus:ring-indigo-500">
+                            <div>
+                                <span class="block text-sm font-bold text-slate-900">O stałej porze dnia</span>
+                                <span class="block text-xs text-slate-500 mt-0.5">Jedno sprawdzenie dziennie (np. po powrocie ze szkoły)</span>
+                            </div>
+                        </label>
+
+                        <label class="collection-mode-radio flex items-start gap-3 p-4 border-2 border-slate-200 bg-white rounded-2xl cursor-pointer transition">
+                            <input type="radio" name="collection_mode" value="interval" onchange="toggleCollectionMode()"
+                                   class="mt-1 text-indigo-600 focus:ring-indigo-500">
+                            <div>
+                                <span class="block text-sm font-bold text-slate-900">Cyklicznie w ciągu dnia</span>
+                                <span class="block text-xs text-slate-500 mt-0.5">Regularne odpytywanie co określoną liczbę godzin</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- Pola dla trybu daily -->
+                    <div id="collection-daily-box" class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                                Godzina sprawdzania
+                            </label>
+                            <select name="collection_time" id="collection_time" onchange="updateCronPreview()" class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+                                
+                                <option value="06:00" >06:00 </option>
+                                
+                                <option value="06:30" >06:30 </option>
+                                
+                                <option value="07:00" >07:00 </option>
+                                
+                                <option value="07:30" >07:30 </option>
+                                
+                                <option value="08:00" >08:00 </option>
+                                
+                                <option value="08:30" >08:30 </option>
+                                
+                                <option value="09:00" >09:00 </option>
+                                
+                                <option value="09:30" >09:30 </option>
+                                
+                                <option value="10:00" >10:00 </option>
+                                
+                                <option value="10:30" >10:30 </option>
+                                
+                                <option value="11:00" >11:00 </option>
+                                
+                                <option value="11:30" >11:30 </option>
+                                
+                                <option value="12:00" >12:00 </option>
+                                
+                                <option value="12:30" >12:30 </option>
+                                
+                                <option value="13:00" >13:00 </option>
+                                
+                                <option value="13:30" >13:30 </option>
+                                
+                                <option value="14:00" >14:00 </option>
+                                
+                                <option value="14:30" >14:30 </option>
+                                
+                                <option value="15:00" >15:00 </option>
+                                
+                                <option value="15:30" >15:30 </option>
+                                
+                                <option value="16:00" selected>16:00 (zalecane)</option>
+                                
+                                <option value="16:30" >16:30 </option>
+                                
+                                <option value="17:00" >17:00 </option>
+                                
+                                <option value="17:30" >17:30 </option>
+                                
+                                <option value="18:00" >18:00 </option>
+                                
+                                <option value="18:30" >18:30 </option>
+                                
+                                <option value="19:00" >19:00 </option>
+                                
+                                <option value="19:30" >19:30 </option>
+                                
+                                <option value="20:00" >20:00 </option>
+                                
+                                <option value="20:30" >20:30 </option>
+                                
+                                <option value="21:00" >21:00 </option>
+                                
+                                <option value="21:30" >21:30 </option>
+                                
+                                <option value="22:00" >22:00 </option>
+                                
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                                Dni sprawdzania
+                            </label>
+                            <select name="collection_days" id="collection_days" onchange="updateCronPreview()" class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+                                <option value="all" selected>Codziennie (poniedziałek – niedziela)</option>
+                                <option value="workdays">Tylko w dni robocze (poniedziałek – piątek)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Pola dla trybu interval -->
+                    <div id="collection-interval-box" class="hidden bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                            Częstotliwość odpytywania
+                        </label>
+                        <select name="collection_interval_hours" id="collection_interval_hours" onchange="updateCronPreview()" class="w-full sm:w-1/2 text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+                            <option value="1" selected>Co 1 godzinę (zalecane)</option>
+                            <option value="2">Co 2 godziny</option>
+                            <option value="3">Co 3 godziny</option>
+                            <option value="4">Co 4 godziny</option>
+                            <option value="6">Co 6 godzin</option>
+                            <option value="12">Co 12 godzin</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 2. CYKLICZNY RAPORT POSTĘPÓW -->
+                <div class="mb-6 pb-6 border-b border-slate-100">
+                    <div class="mb-3">
+                        <h3 class="text-sm font-extrabold text-slate-800 flex items-center gap-2">
+                            <span>📊</span> 2. Cykliczne raporty postępów ucznia (librus_progress_report)
+                        </h3>
+                        <p class="text-xs text-slate-500 mt-0.5">
+                            Możesz włączyć kilka niezależnych raportów (np. podsumowanie tygodnia w każdy piątek oraz miesięczny bilans ocen 1. dnia miesiąca).
+                        </p>
+                    </div>
+
+                    <div class="mb-4 p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl text-xs text-amber-900 flex items-start gap-2">
+                        <span class="text-base">💡</span>
+                        <div>
+                            <strong>Raport motywacyjny dla samego dziecka (student_report):</strong>
+                            Konfiguruje się go niezależnie dla każdego z dzieci w <strong>Kroku 1</strong> (z wyborem szablonu Kids / Teens / Youth oraz adresu e-mail dziecka).
+                        </div>
+                    </div>
+
+                    <div id="reports-cards-container" class="space-y-4 mb-4">
+                        <!-- Karta 0: Raport tygodniowy -->
+                        <div class="report-card p-4 rounded-2xl border-2 border-slate-200 bg-slate-50/70 relative" data-index="0">
+                            <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-200/60">
+                                <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800">
+                                    <input type="checkbox" name="report_enabled_0" checked onchange="updateCronPreview()"
+                                           class="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+                                    <span>Włącz raport</span>
+                                </label>
+                                <div class="flex items-center gap-2">
+                                    <input type="text" name="report_name_0" value="Raport tygodniowy" placeholder="Nazwa raportu"
+                                           class="text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg px-2.5 py-1 focus:ring-1 focus:ring-indigo-500 focus:outline-none">
+                                    <button type="button" onclick="this.closest('.report-card').remove(); updateCronPreview();"
+                                            class="text-xs font-bold text-rose-600 hover:text-rose-800 bg-rose-50 border border-rose-200 px-2 py-1 rounded-lg cursor-pointer">
+                                        ✕ Usuń
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Częstotliwość</label>
+                                    <select name="report_frequency_0" onchange="toggleReportFrequency(0); updateCronPreview()"
+                                            class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                        <option value="weekly" selected>Co tydzień</option>
+                                        <option value="monthly">Co miesiąc</option>
+                                    </select>
+                                </div>
+
+                                <div id="report-weekly-col-0">
+                                    <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Dzień tygodnia</label>
+                                    <select name="report_weekday_0" onchange="updateCronPreview()"
+                                            class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                        <option value="friday" selected>Piątek (podsumowanie tygodnia)</option>
+                                        <option value="saturday">Sobota</option>
+                                        <option value="sunday">Niedziela</option>
+                                        <option value="monday">Poniedziałek</option>
+                                        <option value="tuesday">Wtorek</option>
+                                        <option value="wednesday">Środa</option>
+                                        <option value="thursday">Czwartek</option>
+                                    </select>
+                                </div>
+
+                                <div id="report-monthly-col-0" class="hidden">
+                                    <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Dzień miesiąca</label>
+                                    <select name="report_day_of_month_0" onchange="updateCronPreview()"
+                                            class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                        <option value="1" selected>1. dzień miesiąca</option>
+                                        <option value="last">Ostatni dzień miesiąca</option>
+                                        <option value="15">15. dzień miesiąca</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Godzina wysyłki</label>
+                                    <select name="report_time_0" onchange="updateCronPreview()"
+                                            class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                        
+                                        <option value="15:00" >15:00 </option>
+                                        
+                                        <option value="15:30" >15:30 </option>
+                                        
+                                        <option value="16:00" >16:00 </option>
+                                        
+                                        <option value="16:30" >16:30 </option>
+                                        
+                                        <option value="17:00" selected>17:00 (zalecane)</option>
+                                        
+                                        <option value="17:30" >17:30 </option>
+                                        
+                                        <option value="18:00" >18:00 </option>
+                                        
+                                        <option value="18:30" >18:30 </option>
+                                        
+                                        <option value="19:00" >19:00 </option>
+                                        
+                                        <option value="19:30" >19:30 </option>
+                                        
+                                        <option value="20:00" >20:00 </option>
+                                        
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Okres raportu</label>
+                                    <select name="report_interval_days_0" onchange="updateCronPreview()"
+                                            class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                        <option value="7" selected>Ostatnie 7 dni (--days 7)</option>
+                                        <option value="14">Ostatnie 14 dni (--days 14)</option>
+                                        <option value="30">Ostatnie 30 dni (--days 30)</option>
+                                        <option value="3">Ostatnie 3 dni (--days 3)</option>
+                                        <option value="60">Ostatnie 60 dni (--days 60)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Karta 1: Raport miesięczny -->
+                        <div class="report-card p-4 rounded-2xl border-2 border-slate-200 bg-slate-50/70 relative" data-index="1">
+                            <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-200/60">
+                                <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800">
+                                    <input type="checkbox" name="report_enabled_1" onchange="updateCronPreview()"
+                                           class="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+                                    <span>Włącz raport</span>
+                                </label>
+                                <div class="flex items-center gap-2">
+                                    <input type="text" name="report_name_1" value="Raport miesięczny" placeholder="Nazwa raportu"
+                                           class="text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg px-2.5 py-1 focus:ring-1 focus:ring-indigo-500 focus:outline-none">
+                                    <button type="button" onclick="this.closest('.report-card').remove(); updateCronPreview();"
+                                            class="text-xs font-bold text-rose-600 hover:text-rose-800 bg-rose-50 border border-rose-200 px-2 py-1 rounded-lg cursor-pointer">
+                                        ✕ Usuń
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Częstotliwość</label>
+                                    <select name="report_frequency_1" onchange="toggleReportFrequency(1); updateCronPreview()"
+                                            class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                        <option value="weekly">Co tydzień</option>
+                                        <option value="monthly" selected>Co miesiąc</option>
+                                    </select>
+                                </div>
+
+                                <div id="report-weekly-col-1" class="hidden">
+                                    <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Dzień tygodnia</label>
+                                    <select name="report_weekday_1" onchange="updateCronPreview()"
+                                            class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                        <option value="friday">Piątek (podsumowanie tygodnia)</option>
+                                        <option value="saturday">Sobota</option>
+                                        <option value="sunday">Niedziela</option>
+                                        <option value="monday">Poniedziałek</option>
+                                        <option value="tuesday">Wtorek</option>
+                                        <option value="wednesday">Środa</option>
+                                        <option value="thursday">Czwartek</option>
+                                    </select>
+                                </div>
+
+                                <div id="report-monthly-col-1">
+                                    <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Dzień miesiąca</label>
+                                    <select name="report_day_of_month_1" onchange="updateCronPreview()"
+                                            class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                        <option value="1" selected>1. dzień miesiąca</option>
+                                        <option value="last">Ostatni dzień miesiąca</option>
+                                        <option value="15">15. dzień miesiąca</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Godzina wysyłki</label>
+                                    <select name="report_time_1" onchange="updateCronPreview()"
+                                            class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                        
+                                        <option value="15:00" >15:00 </option>
+                                        
+                                        <option value="15:30" >15:30 </option>
+                                        
+                                        <option value="16:00" >16:00 </option>
+                                        
+                                        <option value="16:30" >16:30 </option>
+                                        
+                                        <option value="17:00" selected>17:00 (zalecane)</option>
+                                        
+                                        <option value="17:30" >17:30 </option>
+                                        
+                                        <option value="18:00" >18:00 </option>
+                                        
+                                        <option value="18:30" >18:30 </option>
+                                        
+                                        <option value="19:00" >19:00 </option>
+                                        
+                                        <option value="19:30" >19:30 </option>
+                                        
+                                        <option value="20:00" >20:00 </option>
+                                        
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Okres raportu</label>
+                                    <select name="report_interval_days_1" onchange="updateCronPreview()"
+                                            class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                        <option value="7">Ostatnie 7 dni (--days 7)</option>
+                                        <option value="14">Ostatnie 14 dni (--days 14)</option>
+                                        <option value="30" selected>Ostatnie 30 dni (--days 30)</option>
+                                        <option value="3">Ostatnie 3 dni (--days 3)</option>
+                                        <option value="60">Ostatnie 60 dni (--days 60)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <button type="button" onclick="addReportCard()"
+                                class="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl transition cursor-pointer">
+                            <span>➕ Dodaj kolejny zaplanowany raport</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 3. DODATKOWE PARAMETRY TECHNICZNE -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-6">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                            Odstęp pomiędzy ściąganiem danych kolejnych dzieci (sekundy)
+                        </label>
+                        <input type="number" name="delay_between_users_s" value="10" min="5"
+                               class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <span class="text-[11px] text-slate-400 mt-1 block">Zabezpiecza przed blokadą IP ze strony Librusa.</span>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                            Przesunięcie dnia planu lekcji
+                        </label>
+                        <select name="schedule_day_offset" class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="1" selected>Kolejny dzień szkolny (+1 dzień roboczy)</option>
+                            <option value="0">Bieżący dzień (dzisiejszy plan)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                            Retencja planu lekcji (dni)
+                        </label>
+                        <input type="number" name="schedule_retention_days" value="30" min="7"
+                               class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-4 border-t border-slate-100 flex flex-wrap gap-6 text-xs font-medium text-slate-700 mb-6">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="do_not_send_first_parse" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                        <span><strong>Tryb pierwszego startu:</strong> Ustal aktualny stan jako bazę i nie wysyłaj maili o historii</span>
+                    </label>
+
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="send_error_notifications" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                        <span>Wysyłaj e-mail z alertem w razie awarii połączenia ze szkołą</span>
+                    </label>
+                </div>
+
+                <!-- 4. PODGLĄD REGUŁ CRON -->
+                <div class="p-4 bg-slate-900 text-slate-200 rounded-2xl text-xs font-mono">
+                    <div class="flex items-center justify-between text-slate-400 text-[11px] pb-2 border-b border-slate-800 mb-2">
+                        <span>💡 PODGLĄD HARMONOGRAMU DLA LINUX CRONTAB GDYBYŚ WOLAŁ SAM URUCHAMIAĆ</span>
+                        <span class="text-indigo-400">Aktualizuje się automatycznie</span>
+                    </div>
+                    <div id="cron-preview-lines" class="space-y-1">
+                        <!-- Generowane przez JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================================================================= -->
+            <!-- KROK 4: PANEL WEBOWY I ZAPIS -->
+            <!-- ================================================================= -->
+            <div id="step-section-4" class="step-section hidden">
+                <div class="border-b border-slate-100 pb-4 mb-6">
+                    <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                        <span>🔒</span> Krok 4: Zabezpieczenie panelu WWW
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-1">
+                        Zabezpiecz dostęp do panelu ocen i terminarza hasłem rodzica przed uruchomieniem.
+                    </p>
+                </div>
+
+                <div class="max-w-md space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                            Hasło rodzica chroniące panel WWW *
+                        </label>
+                        <input type="password" id="web_password" name="web_password" required placeholder="Wpisz nowe hasło dostępu..."
+                               class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <span class="text-[11px] text-slate-500 mt-1 block">Będziesz podawać to hasło logując się do panelu WWW.</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                                Port serwera WWW
+                            </label>
+                            <input type="number" name="web_port" value="5000"
+                                   class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                                Host nasłuchu
+                            </label>
+                            <input type="text" name="web_host" value="127.0.0.1"
+                                   class="w-full text-sm font-mono px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 p-5 bg-emerald-50 border border-emerald-200 rounded-2xl">
+                    <div class="flex items-start gap-3">
+                        <span class="text-2xl">🎉</span>
+                        <div>
+                            <h4 class="font-bold text-sm text-emerald-900">Wszystko gotowe do wygenerowania konfiguracji!</h4>
+                            <p class="text-xs text-emerald-700 mt-1 leading-relaxed">
+                                Po kliknięciu poniższego przycisku aplikacja utworzy właściwy plik <code>config.yaml</code>,
+                                aktywuje nowe profile uczniów i natychmiast przeniesie Cię do pełnego panelu rodzica.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pasek Przycisków Nawigacyjnych Kreatora -->
+            <div class="flex items-center justify-between pt-6 border-t border-slate-100">
+                <button type="button" id="prev-btn" onclick="prevStep()" disabled
+                        class="px-5 py-2.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition disabled:opacity-40 disabled:cursor-not-allowed">
+                    ← Poprzedni krok
+                </button>
+
+                <div class="flex items-center gap-3">
+                    <button type="button" id="next-btn" onclick="nextStep()"
+                            class="px-6 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md shadow-indigo-100 transition cursor-pointer">
+                        Kolejny krok →
+                    </button>
+
+                    <button type="submit" id="submit-btn" class="hidden px-7 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-md shadow-emerald-100 transition cursor-pointer">
+                        💾 Zapisz konfigurację i uruchom system
+                    </button>
+                </div>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<script>
+let currentStep = 1;
+const totalSteps = 4;
+let studentCount = 1;
+
+function updateStepperUI() {
+    for (let i = 1; i <= totalSteps; i++) {
+        const section = document.getElementById(`step-section-${i}`);
+        const badge = document.getElementById(`step-badge-${i}`);
+        const label = document.getElementById(`step-label-${i}`);
+
+        if (i === currentStep) {
+            section.classList.remove('hidden');
+            badge.className = "w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-indigo-600 text-white shadow-md shadow-indigo-200 ring-4 ring-white";
+            label.className = "text-xs font-bold text-indigo-600 mt-2";
+        } else if (i < currentStep) {
+            section.classList.add('hidden');
+            badge.className = "w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-emerald-600 text-white shadow-sm ring-4 ring-white";
+            badge.innerHTML = "✓";
+            label.className = "text-xs font-semibold text-slate-700 mt-2";
+        } else {
+            section.classList.add('hidden');
+            badge.className = "w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-white text-slate-500 border-2 border-slate-300 shadow-sm ring-4 ring-white";
+            badge.innerHTML = i.toString();
+            label.className = "text-xs font-semibold text-slate-500 mt-2";
+        }
+    }
+
+    // Pasek postępu
+    const progressPercent = ((currentStep - 1) / (totalSteps - 1)) * 100;
+    document.getElementById('stepper-progress').style.width = `${progressPercent}%`;
+
+    // Przyciski wstecz / dalej / zapisz
+    document.getElementById('prev-btn').disabled = (currentStep === 1);
+    if (currentStep === totalSteps) {
+        document.getElementById('next-btn').classList.add('hidden');
+        document.getElementById('submit-btn').classList.remove('hidden');
+    } else {
+        document.getElementById('next-btn').classList.remove('hidden');
+        document.getElementById('submit-btn').classList.add('hidden');
+    }
+}
+
+function validateStep(stepNum) {
+    const section = document.getElementById(`step-section-${stepNum}`);
+    if (!section) return true;
+
+    const elements = section.querySelectorAll('input, select, textarea');
+    for (const el of elements) {
+        // Ignoruj elementy w podkontenerach ukrytych wewnątrz sekcji (np. smtp-settings-box gdy wybrano Gmail)
+        const closestHidden = el.closest('.hidden');
+        if (closestHidden && closestHidden !== section) {
+            continue;
+        }
+
+        if (!el.checkValidity()) {
+            el.focus();
+            el.reportValidity();
+            return false;
+        }
+    }
+    return true;
+}
+
+function nextStep() {
+    if (!validateStep(currentStep)) {
+        return;
+    }
+    if (currentStep < totalSteps) {
+        currentStep++;
+        updateStepperUI();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+}
+
+function prevStep() {
+    if (currentStep > 1) {
+        currentStep--;
+        updateStepperUI();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+}
+
+function goToStep(step) {
+    if (step > currentStep) {
+        for (let s = currentStep; s < step; s++) {
+            if (!validateStep(s)) {
+                if (currentStep !== s) {
+                    currentStep = s;
+                    updateStepperUI();
+                }
+                return;
+            }
+        }
+    }
+    if (step >= 1 && step <= totalSteps) {
+        currentStep = step;
+        updateStepperUI();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+}
+
+function toggleGmailAuthMode() {
+    const isGmail = document.querySelector('input[name="mail_provider"]:checked')?.value === 'gmail';
+    if (!isGmail) return;
+
+    const authMode = document.querySelector('input[name="gmail_auth_mode"]:checked')?.value || 'app_password';
+    const pwdContainer = document.getElementById('mail-password-container');
+    const pwdInput = document.getElementById('mail_password');
+    const oauthContainer = document.getElementById('gmail-oauth2-container');
+    const oauthInput = document.getElementById('gmail_oauth2_file');
+    const gmailTipBox = document.getElementById('gmail-tip-box');
+    const oauthTipBox = document.getElementById('gmail-oauth-tip-box');
+
+    document.querySelectorAll('.gmail-auth-radio').forEach(label => {
+        const radio = label.querySelector('input[type="radio"]');
+        if (radio && radio.checked) {
+            label.className = "gmail-auth-radio flex items-center gap-2 p-2.5 rounded-xl border border-indigo-600 bg-white cursor-pointer transition text-xs font-bold text-slate-800";
+        } else {
+            label.className = "gmail-auth-radio flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-white/70 hover:bg-white cursor-pointer transition text-xs font-semibold text-slate-700";
+        }
+    });
+
+    if (authMode === 'oauth2') {
+        if (pwdContainer) pwdContainer.classList.add('hidden');
+        if (pwdInput) pwdInput.removeAttribute('required');
+        if (oauthContainer) oauthContainer.classList.remove('hidden');
+        if (oauthInput) oauthInput.setAttribute('required', 'required');
+        if (gmailTipBox) gmailTipBox.classList.add('hidden');
+        if (oauthTipBox) oauthTipBox.classList.remove('hidden');
+    } else {
+        if (pwdContainer) pwdContainer.classList.remove('hidden');
+        if (pwdInput) pwdInput.setAttribute('required', 'required');
+        if (oauthContainer) oauthContainer.classList.add('hidden');
+        if (oauthInput) oauthInput.removeAttribute('required');
+        if (gmailTipBox) gmailTipBox.classList.remove('hidden');
+        if (oauthTipBox) oauthTipBox.classList.add('hidden');
+    }
+}
+
+function toggleMailProvider() {
+    const isGmail = document.querySelector('input[name="mail_provider"]:checked')?.value === 'gmail';
+    const gmailAuthBox = document.getElementById('gmail-auth-mode-box');
+    const smtpBox = document.getElementById('smtp-settings-box');
+    const tipBox = document.getElementById('gmail-tip-box');
+    const oauthTipBox = document.getElementById('gmail-oauth-tip-box');
+    const pwdLabel = document.getElementById('mail-password-label');
+    const pwdInput = document.getElementById('mail_password');
+    const pwdContainer = document.getElementById('mail-password-container');
+    const oauthContainer = document.getElementById('gmail-oauth2-container');
+    const oauthInput = document.getElementById('gmail_oauth2_file');
+    const loginLabel = document.getElementById('mail-login-label');
+    const loginInput = document.getElementById('mail_login');
+    const smtpHostInput = document.getElementById('smtp_host');
+
+    document.querySelectorAll('.provider-radio').forEach(label => {
+        const radio = label.querySelector('input[type="radio"]');
+        if (radio && radio.checked) {
+            label.className = "provider-radio flex items-center gap-3 p-4 border-2 border-indigo-600 bg-indigo-50/40 rounded-2xl cursor-pointer transition";
+        } else {
+            label.className = "provider-radio flex items-center gap-3 p-4 border-2 border-slate-200 bg-white rounded-2xl cursor-pointer transition";
+        }
+    });
+
+    if (isGmail) {
+        if (gmailAuthBox) gmailAuthBox.classList.remove('hidden');
+        if (smtpBox) smtpBox.classList.add('hidden');
+        if (smtpHostInput) smtpHostInput.removeAttribute('required');
+        if (loginLabel) loginLabel.innerText = "Adres e-mail nadawcy (konto Gmail) *";
+        if (loginInput) {
+            loginInput.type = "email";
+            loginInput.placeholder = "np. twoje.powiadomienia@gmail.com";
+        }
+        if (pwdLabel) pwdLabel.innerText = "Hasło aplikacji Gmail (16 znaków) *";
+        if (pwdInput) pwdInput.placeholder = "abcd efgh ijkl mnop";
+        toggleGmailAuthMode();
+    } else {
+        if (gmailAuthBox) gmailAuthBox.classList.add('hidden');
+        if (smtpBox) smtpBox.classList.remove('hidden');
+        if (tipBox) tipBox.classList.add('hidden');
+        if (oauthTipBox) oauthTipBox.classList.add('hidden');
+        if (oauthContainer) oauthContainer.classList.add('hidden');
+        if (oauthInput) oauthInput.removeAttribute('required');
+        if (pwdContainer) pwdContainer.classList.remove('hidden');
+        if (pwdInput) pwdInput.setAttribute('required', 'required');
+        if (loginLabel) loginLabel.innerText = "Login / Adres e-mail konta SMTP *";
+        if (loginInput) {
+            loginInput.type = "text";
+            loginInput.placeholder = "np. powiadomienia@twojadomena.pl lub login";
+        }
+        if (pwdLabel) pwdLabel.innerText = "Hasło do skrzynki SMTP *";
+        if (pwdInput) pwdInput.placeholder = "Hasło do Twojego konta pocztowego";
+        if (smtpHostInput) smtpHostInput.setAttribute('required', 'required');
+    }
+}
+
+function addStudentCard() {
+    const idx = studentCount;
+    const container = document.getElementById('students-container');
+    const div = document.createElement('div');
+    div.className = "student-card p-5 rounded-2xl border-2 border-slate-200 bg-slate-50/60 relative";
+    div.setAttribute('data-index', idx);
+    div.innerHTML = `
+        <div class="flex items-center justify-between mb-4">
+            <span class="text-xs font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-lg">
+                Profil Ucznia #${idx + 1}
+            </span>
+            <button type="button" onclick="this.closest('.student-card').remove()"
+                    class="text-xs font-bold text-rose-600 hover:text-rose-800 bg-rose-50 border border-rose-200 px-2.5 py-1 rounded-lg">
+                ✕ Usuń
+            </button>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Imię / Etykieta wyświetlana *
+                </label>
+                <input type="text" name="student_name_${idx}" required placeholder="np. Anna Kowalska"
+                       class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Adresy e-mail powiadomień *
+                </label>
+                <input type="text" name="student_receivers_${idx}" required placeholder="mama@example.com, tata@example.com"
+                       class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Login do portalu Librus *
+                </label>
+                <input type="text" id="librus_login_${idx}" name="student_login_${idx}" required placeholder="np. 8976543"
+                       class="w-full text-sm font-mono px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Hasło do portalu Librus *
+                </label>
+                <input type="password" id="librus_password_${idx}" name="student_password_${idx}" required placeholder="Hasło ucznia w Librusie"
+                       class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+        </div>
+        <div class="mt-4 pt-4 border-t border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-4 text-xs font-medium text-slate-700">
+                <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" name="student_grades_${idx}" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                    <span>Monitoruj oceny</span>
+                </label>
+                <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" name="student_timetable_${idx}" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                    <span>Terminarz</span>
+                </label>
+                <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" name="student_schedule_${idx}" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                    <span>Plan lekcji</span>
+                </label>
+                <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" name="student_messages_${idx}" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                    <span>Wiadomości</span>
+                </label>
+            </div>
+            <div>
+                <button type="button" onclick="testLibrusAccount(${idx})"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-indigo-700 bg-white border border-indigo-300 hover:bg-indigo-50 rounded-xl transition shadow-xs cursor-pointer">
+                    <span>🔍 Testuj logowanie Librus</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Opcjonalny raport motywacyjny dla samego dziecka (student_report) -->
+        <div class="mt-4 pt-4 border-t border-slate-200/80">
+            <div class="flex items-center justify-between mb-2">
+                <label class="inline-flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="student_report_enabled_${idx}" id="student_report_enabled_${idx}"
+                           onchange="toggleStudentReportBox(${idx})"
+                           class="rounded text-amber-500 focus:ring-amber-400">
+                    <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                        <span>🏆</span> Włącz raport motywacyjny dla dziecka (student_report)
+                    </span>
+                </label>
+                <span class="text-[11px] text-slate-400 font-medium">Opcjonalnie</span>
+            </div>
+
+            <div id="student-report-box-${idx}" class="hidden mt-3 p-4 bg-amber-50/50 border border-amber-200/80 rounded-2xl space-y-3">
+                <p class="text-xs text-amber-900 leading-relaxed">
+                    Dedykowany raport motywacyjny z osiągnięciami, supermocami, odznakami grywalizacyjnymi i wyzwaniami dopasowanymi do wieku ucznia.
+                </p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                            Adres e-mail dziecka (lub rodzica)
+                        </label>
+                        <input type="email" name="student_report_email_${idx}" id="student_report_email_${idx}"
+                               placeholder="np. dziecko@example.com lub email rodzica"
+                               class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:outline-none bg-white">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                            Szablon raportu (dopasowany do wieku)
+                        </label>
+                        <select name="student_report_template_${idx}" id="student_report_template_${idx}"
+                                class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:outline-none bg-white">
+                            <option value="kids" selected>🎮 Kids (Szkoła podstawowa, klasy 4–6: odznaki, Karta Mocy)</option>
+                            <option value="teens">⚡ Teens (Starsze klasy podstawówki, klasy 7–8: Quick Wins, egzamin)</option>
+                            <option value="youth">📊 Youth (Szkoła średnia / liceum / technikum: Dashboard, KPI)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="test-feedback-${idx}" class="hidden mt-3 text-xs p-3 rounded-xl"></div>
+    `;
+    container.appendChild(div);
+    studentCount++;
+}
+
+function toggleStudentReportBox(idx) {
+    const cb = document.getElementById(`student_report_enabled_${idx}`);
+    const box = document.getElementById(`student-report-box-${idx}`);
+    if (!cb || !box) return;
+    if (cb.checked) {
+        box.classList.remove('hidden');
+    } else {
+        box.classList.add('hidden');
+    }
+}
+
+async function testLibrusAccount(idx) {
+    const loginInput = document.getElementById(`librus_login_${idx}`);
+    const passInput = document.getElementById(`librus_password_${idx}`);
+    const feedback = document.getElementById(`test-feedback-${idx}`);
+
+    const login = loginInput ? loginInput.value.trim() : '';
+    const pass = passInput ? passInput.value.trim() : '';
+
+    if (!login || !pass) {
+        feedback.className = "mt-3 text-xs p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 block";
+        feedback.innerText = "⚠️ Najpierw wpisz login oraz hasło do konta Librus.";
+        return;
+    }
+
+    feedback.className = "mt-3 text-xs p-3 rounded-xl bg-sky-50 border border-sky-200 text-sky-800 flex items-center gap-2 block";
+    feedback.innerHTML = "<span>⏳ Trwa sprawdzanie autoryzacji w portalu Librus Synergia... Proszę czekać.</span>";
+
+    try {
+        const formData = new FormData();
+        formData.append('login', login);
+        formData.append('password', pass);
+
+        const res = await fetch("/api/test-librus", {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            feedback.className = "mt-3 text-xs p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 block";
+            feedback.innerHTML = `<strong>Sukces!</strong> ${data.message}`;
+        } else {
+            feedback.className = "mt-3 text-xs p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 block";
+            feedback.innerHTML = `<strong>Błąd autoryzacji:</strong> ${data.message}`;
+        }
+    } catch (err) {
+        feedback.className = "mt-3 text-xs p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 block";
+        feedback.innerHTML = `<strong>Błąd połączenia z serwerem lokalnym:</strong> ${err.message}`;
+    }
+}
+
+function toggleCollectionMode() {
+    const mode = document.querySelector('input[name="collection_mode"]:checked')?.value || 'daily';
+    const dailyBox = document.getElementById('collection-daily-box');
+    const intervalBox = document.getElementById('collection-interval-box');
+
+    document.querySelectorAll('.collection-mode-radio').forEach(label => {
+        const radio = label.querySelector('input[type="radio"]');
+        if (radio && radio.checked) {
+            label.className = "collection-mode-radio flex items-start gap-3 p-4 border-2 border-indigo-600 bg-indigo-50/40 rounded-2xl cursor-pointer transition";
+        } else {
+            label.className = "collection-mode-radio flex items-start gap-3 p-4 border-2 border-slate-200 bg-white rounded-2xl cursor-pointer transition";
+        }
+    });
+
+    if (mode === 'daily') {
+        if (dailyBox) dailyBox.classList.remove('hidden');
+        if (intervalBox) intervalBox.classList.add('hidden');
+    } else {
+        if (dailyBox) dailyBox.classList.add('hidden');
+        if (intervalBox) intervalBox.classList.remove('hidden');
+    }
+    updateCronPreview();
+}
+
+let reportCardCount = 2;
+
+function toggleReportFrequency(idx) {
+    const freq = document.querySelector(`select[name="report_frequency_${idx}"]`)?.value || 'weekly';
+    const weeklyCol = document.getElementById(`report-weekly-col-${idx}`);
+    const monthlyCol = document.getElementById(`report-monthly-col-${idx}`);
+    if (weeklyCol && monthlyCol) {
+        if (freq === 'monthly') {
+            weeklyCol.classList.add('hidden');
+            monthlyCol.classList.remove('hidden');
+        } else {
+            weeklyCol.classList.remove('hidden');
+            monthlyCol.classList.add('hidden');
+        }
+    }
+}
+
+function addReportCard() {
+    const idx = reportCardCount;
+    const container = document.getElementById('reports-cards-container');
+    const div = document.createElement('div');
+    div.className = "report-card p-4 rounded-2xl border-2 border-slate-200 bg-slate-50/70 relative";
+    div.setAttribute('data-index', idx);
+    div.innerHTML = `
+        <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-200/60">
+            <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800">
+                <input type="checkbox" name="report_enabled_${idx}" checked onchange="updateCronPreview()"
+                       class="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+                <span>Włącz raport</span>
+            </label>
+            <div class="flex items-center gap-2">
+                <input type="text" name="report_name_${idx}" value="Nowy raport postępów" placeholder="Nazwa raportu"
+                       class="text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg px-2.5 py-1 focus:ring-1 focus:ring-indigo-500 focus:outline-none">
+                <button type="button" onclick="this.closest('.report-card').remove(); updateCronPreview();"
+                        class="text-xs font-bold text-rose-600 hover:text-rose-800 bg-rose-50 border border-rose-200 px-2 py-1 rounded-lg cursor-pointer">
+                    ✕ Usuń
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div>
+                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Częstotliwość</label>
+                <select name="report_frequency_${idx}" onchange="toggleReportFrequency(${idx}); updateCronPreview()"
+                        class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <option value="weekly">Co tydzień</option>
+                    <option value="monthly">Co miesiąc</option>
+                </select>
+            </div>
+
+            <div id="report-weekly-col-${idx}">
+                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Dzień tygodnia</label>
+                <select name="report_weekday_${idx}" onchange="updateCronPreview()"
+                        class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <option value="friday">Piątek (podsumowanie tygodnia)</option>
+                    <option value="saturday">Sobota</option>
+                    <option value="sunday">Niedziela</option>
+                    <option value="monday">Poniedziałek</option>
+                    <option value="tuesday">Wtorek</option>
+                    <option value="wednesday">Środa</option>
+                    <option value="thursday">Czwartek</option>
+                </select>
+            </div>
+
+            <div id="report-monthly-col-${idx}" class="hidden">
+                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Dzień miesiąca</label>
+                <select name="report_day_of_month_${idx}" onchange="updateCronPreview()"
+                        class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <option value="1">1. dzień miesiąca</option>
+                    <option value="last">Ostatni dzień miesiąca</option>
+                    <option value="15">15. dzień miesiąca</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Godzina wysyłki</label>
+                <select name="report_time_${idx}" onchange="updateCronPreview()"
+                        class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <option value="17:00">17:00 (zalecane)</option>
+                    <option value="15:00">15:00</option>
+                    <option value="16:00">16:00</option>
+                    <option value="18:00">18:00</option>
+                    <option value="19:00">19:00</option>
+                    <option value="20:00">20:00</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Okres raportu</label>
+                <select name="report_interval_days_${idx}" onchange="updateCronPreview()"
+                        class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <option value="7">Ostatnie 7 dni (--days 7)</option>
+                    <option value="14">Ostatnie 14 dni (--days 14)</option>
+                    <option value="30">Ostatnie 30 dni (--days 30)</option>
+                    <option value="3">Ostatnie 3 dni (--days 3)</option>
+                    <option value="60">Ostatnie 60 dni (--days 60)</option>
+                </select>
+            </div>
+        </div>
+    `;
+    container.appendChild(div);
+    reportCardCount++;
+    updateCronPreview();
+}
+
+function updateCronPreview() {
+    const preview = document.getElementById('cron-preview-lines');
+    if (!preview) return;
+
+    const mode = document.querySelector('input[name="collection_mode"]:checked')?.value || 'daily';
+    let collectCron = "";
+
+    if (mode === 'daily') {
+        const timeVal = document.getElementById('collection_time')?.value || "16:00";
+        const parts = timeVal.split(':');
+        const h = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        const daysVal = document.getElementById('collection_days')?.value || "all";
+        const dayPart = (daysVal === 'workdays') ? "1-5" : "*";
+        collectCron = `${m} ${h} * * ${dayPart} python librus_collect_and_notify.py --once`;
+    } else {
+        const intHours = document.getElementById('collection_interval_hours')?.value || "1";
+        if (intHours === "1") {
+            collectCron = `0 * * * * python librus_collect_and_notify.py --once`;
+        } else {
+            collectCron = `0 */${intHours} * * * python librus_collect_and_notify.py --once`;
+        }
+    }
+
+    const reportCards = document.querySelectorAll('.report-card');
+    const weekdayMap = {
+        'monday': 1, 'tuesday': 2, 'wednesday': 3, 'thursday': 4,
+        'friday': 5, 'saturday': 6, 'sunday': 0
+    };
+    const reportCronLines = [];
+
+    reportCards.forEach(card => {
+        const enabledChk = card.querySelector('input[type="checkbox"][name^="report_enabled_"]');
+        if (!enabledChk || !enabledChk.checked) return;
+
+        const nameInput = card.querySelector('input[name^="report_name_"]');
+        const rName = nameInput ? nameInput.value.trim() : 'Raport postępów';
+
+        const freqSelect = card.querySelector('select[name^="report_frequency_"]');
+        const freq = freqSelect ? freqSelect.value : 'weekly';
+
+        const timeSelect = card.querySelector('select[name^="report_time_"]');
+        const rTime = timeSelect ? timeSelect.value : "17:00";
+        const parts = rTime.split(':');
+        const rh = parseInt(parts[0], 10);
+        const rm = parseInt(parts[1], 10);
+
+        const daysSelect = card.querySelector('select[name^="report_interval_days_"]');
+        const rDays = daysSelect ? daysSelect.value : "7";
+
+        if (freq === 'monthly') {
+            const domSelect = card.querySelector('select[name^="report_day_of_month_"]');
+            const dom = domSelect ? domSelect.value : "1";
+            if (dom === 'last') {
+                reportCronLines.push(`${rm} ${rh} 28-31 * * [ $(date -d tomorrow +\\%d) -eq 1 ] && python librus_progress_report.py --days ${rDays} # ${rName}`);
+            } else {
+                reportCronLines.push(`${rm} ${rh} ${dom} * * python librus_progress_report.py --days ${rDays} # ${rName}`);
+            }
+        } else {
+            const weekdaySelect = card.querySelector('select[name^="report_weekday_"]');
+            const rWeekday = weekdaySelect ? weekdaySelect.value : "friday";
+            const dayNum = weekdayMap[rWeekday] ?? 5;
+            reportCronLines.push(`${rm} ${rh} * * ${dayNum} python librus_progress_report.py --days ${rDays} # ${rName}`);
+        }
+    });
+
+    let html = `<div class="text-slate-400"># 1. Pobieranie ocen i wiadomości ze szkoły:</div>`;
+    html += `<div class="text-emerald-400 select-all font-mono">${collectCron}</div>`;
+    if (reportCronLines.length > 0) {
+        html += `<div class="text-slate-400 mt-2"># 2. Zaplanowane raporty postępów ucznia:</div>`;
+        reportCronLines.forEach(line => {
+            html += `<div class="text-sky-400 select-all font-mono">${line}</div>`;
+        });
+    }
+    preview.innerHTML = html;
+}
+
+// Obsługa zatwierdzenia formularza z automatycznym przejściem do kroku z błędem
+const wizardForm = document.getElementById('wizard-form');
+if (wizardForm) {
+    wizardForm.addEventListener('submit', function(e) {
+        for (let s = 1; s <= totalSteps; s++) {
+            const section = document.getElementById(`step-section-${s}`);
+            if (!section) continue;
+
+            const elements = section.querySelectorAll('input, select, textarea');
+            for (const el of elements) {
+                const closestHidden = el.closest('.hidden');
+                if (closestHidden && closestHidden !== section) {
+                    continue;
+                }
+
+                if (!el.checkValidity()) {
+                    e.preventDefault();
+                    currentStep = s;
+                    updateStepperUI();
+                    window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 100, behavior: 'smooth' });
+                    setTimeout(() => {
+                        el.focus();
+                        el.reportValidity();
+                    }, 50);
+                    return;
+                }
+            }
+        }
+    });
+}
+
+// Inicjalizacja podglądu crona i dostawcy poczty
+document.addEventListener('DOMContentLoaded', () => {
+    toggleMailProvider();
+    toggleCollectionMode();
+    updateCronPreview();
+});
+</script>
+
+    </main>
+
+    <!-- Stopka -->
+    <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex items-center gap-2 font-medium">
+                <span>🏫 Librus2mail v2.1.0</span>
+                <span>•</span>
+                <span>Prywatny Dashboard Rodzica</span>
+            </div>
+            <div class="text-slate-400 text-[11px]">
+                Bezpieczny odczyt z lokalnej pamięci <code>storage/</code> • Stan na: 08.10.2026 07:44
+            </div>
+        </div>
+    </footer>
+
+    
+</body>
+</html>

@@ -1,5 +1,7 @@
+import collections.abc
 import json
 import logging
+import re
 from abc import ABC, abstractmethod
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -38,6 +40,71 @@ def write_json_atomic(path: Path | str, data: Any) -> None:
                 temp_path.unlink()
             except OSError:
                 pass
+
+
+def parse_date_sort_key(val: Any) -> datetime:
+    """Parsuje ciąg daty lub datę/czas do obiektu datetime w celu precyzyjnego sortowania."""
+    if not val:
+        return datetime.min
+    if isinstance(val, datetime):
+        return val
+    if isinstance(val, date):
+        return datetime.combine(val, datetime.min.time())
+
+    val_str = str(val).strip()
+    if not val_str:
+        return datetime.min
+
+    for fmt in (
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M",
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%dT%H:%M:%S.%f",
+        "%Y-%m-%d",
+        "%d.%m.%Y %H:%M:%S",
+        "%d.%m.%Y %H:%M",
+        "%d.%m.%Y",
+        "%d-%m-%Y %H:%M:%S",
+        "%d-%m-%Y",
+    ):
+        try:
+            return datetime.strptime(val_str, fmt)
+        except ValueError:
+            pass
+
+    m = re.search(r'(\d{4}-\d{2}-\d{2})(?:[T\s](\d{2}:\d{2}(?::\d{2})?))?', val_str)
+    if m:
+        d_part = m.group(1)
+        t_part = m.group(2) or "00:00:00"
+        if len(t_part) == 5:
+            t_part += ":00"
+        try:
+            return datetime.strptime(f"{d_part} {t_part}", "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            pass
+
+    return datetime.min
+
+
+def sort_items_descending(items: list[Any]) -> list[Any]:
+    """Sortuje listę wiadomości lub ogłoszeń od najnowszych do najstarszych (malejąco po dacie)."""
+    if not items:
+        return []
+
+    def _extract_val(item: Any, key: str) -> Any:
+        if isinstance(item, collections.abc.Mapping):
+            return item.get(key)
+        return getattr(item, key, None)
+
+    return sorted(
+        items,
+        key=lambda x: (
+            parse_date_sort_key(_extract_val(x, 'datetime') or _extract_val(x, 'date')),
+            parse_date_sort_key(_extract_val(x, 'added_at')),
+            str(_extract_val(x, 'id') or ''),
+        ),
+        reverse=True,
+    )
 
 
 class BaseStorage(ABC):
@@ -84,12 +151,12 @@ class BaseStorage(ABC):
         pass
 
     @abstractmethod
-    def get_last_progress_report_date(self, user_login: str) -> str | None:
+    def get_last_progress_report_date(self, user_login: str, report_key: str | None = None) -> str | None:
         """Zwraca datę ostatnio wygenerowanego raportu postępów (ISO format) lub None."""
         pass
 
     @abstractmethod
-    def save_last_progress_report_date(self, user_login: str, date_iso: str) -> None:
+    def save_last_progress_report_date(self, user_login: str, date_iso: str, report_key: str | None = None) -> None:
         """Zapisuje datę wygenerowanego raportu postępów."""
         pass
 
@@ -322,7 +389,7 @@ class FileStorage(BaseStorage):
                     m_copy = dict(m)
                     m_copy['added_at'] = m_copy.get('added_at') or now_iso
                     existing[mid] = m_copy
-        data['messages_history'] = list(existing.values())
+        data['messages_history'] = sort_items_descending(list(existing.values()))
         write_json_atomic(path, data)
 
     def save_notifications_details(self, user_login: str, notifications: list[dict]) -> None:
@@ -343,7 +410,7 @@ class FileStorage(BaseStorage):
                     n_copy = dict(n)
                     n_copy['added_at'] = n_copy.get('added_at') or now_iso
                     existing[nid] = n_copy
-        data['notifications_history'] = list(existing.values())
+        data['notifications_history'] = sort_items_descending(list(existing.values()))
         write_json_atomic(path, data)
 
     def get_grades_history(self, user_login: str) -> list[dict]:
@@ -356,17 +423,28 @@ class FileStorage(BaseStorage):
             return gh
         return []
 
-    def get_last_progress_report_date(self, user_login: str) -> str | None:
+    def get_last_progress_report_date(self, user_login: str, report_key: str | None = None) -> str | None:
         path = self._get_file_path(user_login)
-        return read_json_safe(path).get('last_progress_report_date')
+        data = read_json_safe(path)
+        if report_key:
+            rep_dates = data.get('last_progress_report_dates', {})
+            if isinstance(rep_dates, dict) and report_key in rep_dates:
+                return rep_dates[report_key]
+        return data.get('last_progress_report_date')
 
-    def save_last_progress_report_date(self, user_login: str, date_iso: str) -> None:
+    def save_last_progress_report_date(self, user_login: str, date_iso: str, report_key: str | None = None) -> None:
         path = self._get_file_path(user_login)
         data = read_json_safe(path)
         data['librus_login'] = str(user_login)
         data['last_progress_report_date'] = date_iso
+        if report_key:
+            rep_dates = data.get('last_progress_report_dates')
+            if not isinstance(rep_dates, dict):
+                rep_dates = {}
+            rep_dates[report_key] = date_iso
+            data['last_progress_report_dates'] = rep_dates
         write_json_atomic(path, data)
-        logger.debug(f"Zapisano last_progress_report_date do {path}")
+        logger.debug(f"Zapisano last_progress_report_date ({report_key or 'global'}) do {path}")
 
     def get_last_collect_time(self, user_login: str) -> str | None:
         """Zwraca znacznik czasu (ISO) ostatniej synchronizacji danych z Librusa."""
@@ -437,9 +515,8 @@ class FileStorage(BaseStorage):
         path = self._get_file_path(user_login)
         data = read_json_safe(path)
         if 'messages_history' in data and isinstance(data['messages_history'], list):
-            return data['messages_history']
+            return sort_items_descending(data['messages_history'])
         messages = []
-        import re
         for item in data.get('known_messages', []):
             s = str(item).strip()
             m = re.search(r'(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})', s)
@@ -458,16 +535,15 @@ class FileStorage(BaseStorage):
                 'datetime': dt,
                 'body': '',
             })
-        return messages
+        return sort_items_descending(messages)
 
     def get_stored_notifications(self, user_login: str) -> list[dict]:
         """Zwraca listę ogłoszeń zapisanych w storage."""
         path = self._get_file_path(user_login)
         data = read_json_safe(path)
         if 'notifications_history' in data and isinstance(data['notifications_history'], list):
-            return data['notifications_history']
+            return sort_items_descending(data['notifications_history'])
         notifications = []
-        import re
         for item in data.get('known_notifications', []):
             s = str(item).strip()
             m = re.search(r'(\d{4}-\d{2}-\d{2})$', s)
@@ -484,7 +560,7 @@ class FileStorage(BaseStorage):
                 'datetime': dt,
                 'body': '',
             })
-        return notifications
+        return sort_items_descending(notifications)
 
     def save_timetable_entries(self, user_login: str, entries: list[dict]) -> None:
         """Zapisuje listę wpisów z terminarza (sprawdziany, kartkówki, nieobecności) w storage."""
@@ -561,11 +637,18 @@ class FileStorage(BaseStorage):
         path = self._get_file_path(user_login)
         data = read_json_safe(path)
         data['librus_login'] = str(user_login)
-        existing = {e.get('id'): e for e in data.get('schedule_history', []) if e.get('id')}
+        existing = {}
+        for e in data.get('schedule_history', []):
+            eid = e.get('id') or f"{e.get('date')}_{e.get('lesson_no')}_{e.get('subject')}"
+            if eid:
+                e['id'] = eid
+                existing[eid] = e
+
         now_iso = datetime.now().isoformat()
         for e in entries or []:
-            eid = e.get('id')
+            eid = e.get('id') or f"{e.get('date')}_{e.get('lesson_no')}_{e.get('subject')}"
             if eid:
+                e['id'] = eid
                 if eid in existing:
                     existing[eid].update({k: v for k, v in e.items() if v is not None})
                     existing[eid]['updated_at'] = now_iso

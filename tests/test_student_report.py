@@ -758,6 +758,69 @@ librus_users:
         with patch.object(sys, "argv", test_args):
             student_report_main()
 
+    def test_collector_scheduled_reports_triggers_student_report(self):
+        """Weryfikuje, że pętla demona kolektora wyzwala także student_report w zaplanowanym terminie."""
+        from datetime import datetime
+
+        import yaml
+
+        from librus2mail.librus_collector import run_collector
+
+        sched_config = {
+            "librus_users": [
+                {
+                    "librus_login": "123456",
+                    "librus_login_name": "Tymon Test",
+                    "librus_password": "pass",
+                    "student_report": {
+                        "enabled": True,
+                        "email": "tymon@example.com",
+                        "template": "kids",
+                    },
+                }
+            ],
+            "schedule": {
+                "reports": [
+                    {
+                        "name": "Raport piątkowy",
+                        "enabled": True,
+                        "frequency": "weekly",
+                        "weekday": "friday",
+                        "time": "10:00",
+                        "interval_days": 7,
+                    }
+                ]
+            },
+            "work-in-loop": False,
+        }
+        cfg_path = os.path.join(self.temp_dir.name, "sched_collector_cfg.yaml")
+        with open(cfg_path, "w", encoding="utf-8") as f:
+            yaml.safe_dump(sched_config, f)
+
+        with patch("librus2mail.librus_collector.datetime") as mock_dt, \
+             patch("librus2mail.progress_report.run_progress_reports") as mock_progress_reports, \
+             patch("librus2mail.student_report.run_student_reports") as mock_student_reports, \
+             patch("librus2mail.librus.Librus.login", return_value=True):
+
+            # Ustawiamy czas na piątek 10:05 (2026-09-18 to piątek)
+            mock_dt.now.return_value = datetime(2026, 9, 18, 10, 5)
+            mock_dt.fromisoformat = datetime.fromisoformat
+
+            run_collector(
+                config_path=cfg_path,
+                storage_dir=self.storage_dir,
+                offline=False,
+                once=True,
+            )
+
+            mock_progress_reports.assert_called_once()
+            mock_student_reports.assert_called_once_with(
+                config_path=cfg_path,
+                storage_dir=self.storage_dir,
+                user_filter="123456",
+                days=7,
+            )
+
 
 if __name__ == "__main__":
     import sys

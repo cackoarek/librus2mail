@@ -1,20 +1,26 @@
 """Główna aplikacja webowa Flask dla interfejsu Librus2mail."""
 
 import argparse
+import collections.abc
 import functools
 import importlib.metadata
+import logging
 import os
 import secrets
 import shutil
 import subprocess
+import threading
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 from flask import (
     Blueprint,
     Flask,
     Response,
     flash,
+    jsonify,
     redirect,
     render_template,
     request,
@@ -23,7 +29,7 @@ from flask import (
 )
 
 from librus2mail.base_logger import setup_logging
-from librus2mail.config import read_config
+from librus2mail.config import get_reports_schedules, read_config
 from librus2mail.librus_collector import run_collector
 from librus2mail.progress_report import run_progress_reports
 from librus2mail.student_report import run_student_reports
@@ -33,6 +39,7 @@ from .auth import LoginRateLimiter, auth_bp, is_auth_enabled, is_authenticated, 
 from .services import (
     build_daily_summary_html,
     build_progress_report_html,
+    build_schedule_day_context,
     build_student_report_html,
     calculate_subject_averages,
     capture_action_execution,
@@ -42,10 +49,13 @@ from .services import (
     get_student_dashboard_bundle,
     list_students,
     resolve_student_name,
+    save_config_yaml,
     simulate_new_grade,
+    test_librus_credentials,
 )
 
 web_bp = Blueprint('web', __name__)
+logger = logging.getLogger(__name__)
 
 
 @functools.lru_cache(maxsize=1)
@@ -155,53 +165,61 @@ def dashboard():
     if not active_login:
         return render_template('web/dashboard.html', error="Brak skonfigurowanych uczniów w systemie.")
 
-    data = get_student_dashboard_bundle(storage, active_login, config, now=request.app_actual_date)
-    return render_template('web/dashboard.html', data=data)
+    ref_now = request.app_actual_date or datetime.now()
+    data = get_student_dashboard_bundle(storage, active_login, config, now=ref_now)
+
+    requested_date = request.args.get('date', '').strip()
+    sched_ctx = build_schedule_day_context(
+        all_lessons=data.get('all_schedule', []),
+        timetable_entries=data.get('all_timetable', []),
+        ref_now=ref_now,
+        requested_date=requested_date,
+    )
+
+    if sched_ctx['selected_day']:
+        data['schedule_summary'] = sched_ctx['selected_day']
+
+    return render_template('web/dashboard.html', data=data, sched_ctx=sched_ctx)
 
 
 @web_bp.route('/plan')
 @login_required
 def schedule_view():
-    """Widok pełnego tygodniowego planu lekcji."""
+    """Widok planu lekcji z inteligentnym wyborem bieżącego/najbliższego dnia nauki."""
     config = request.app_config
     storage = request.app_storage
     active_login = get_active_student_login(config, storage, session_login=session.get('active_student_login'))
 
-    data = get_student_dashboard_bundle(storage, active_login, config, now=request.app_actual_date)
-    all_lessons = data.get('all_schedule', [])
+    ref_now = request.app_actual_date or datetime.now()
+    data = get_student_dashboard_bundle(storage, active_login, config, now=ref_now)
 
-    # Grupowanie lekcji po dacie
-    by_date: dict[str, list] = {}
-    for entry in all_lessons:
-        d = entry.get('date')
-        if d:
-            if d not in by_date:
-                by_date[d] = []
-            by_date[d].append(entry)
+    requested_date = request.args.get('date', '').strip()
+    sched_ctx = build_schedule_day_context(
+        all_lessons=data.get('all_schedule', []),
+        timetable_entries=data.get('all_timetable', []),
+        ref_now=ref_now,
+        requested_date=requested_date,
+    )
 
-    # Sortowanie lekcji chronologicznie w danym dniu
-    for d, l_list in by_date.items():
-        l_list.sort(key=lambda x: (int(x.get('lesson_no', 0)) if str(x.get('lesson_no', '')).isdigit() else 99, x.get('time_from', '')))
+    view_mode = request.args.get('view', 'day').strip()
+    if view_mode not in ('day', 'all'):
+        view_mode = 'day'
 
-    weekdays_pl = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela"]
-    days_data = []
-    for d_str in sorted(by_date.keys()):
-        try:
-            clean_date = d_str.split()[0] if ' ' in d_str else d_str
-            d_obj = datetime.strptime(clean_date, "%Y-%m-%d").date()
-            w_name = weekdays_pl[d_obj.weekday()]
-        except Exception:
-            w_name = ""
-        days_data.append({
-            'date': d_str,
-            'weekday_name': w_name,
-            'lessons': by_date[d_str],
-            'total_count': len(by_date[d_str]),
-            'cancelled_count': sum(1 for x in by_date[d_str] if x.get('is_cancelled')),
-            'substitution_count': sum(1 for x in by_date[d_str] if x.get('is_substitution')),
-        })
-
-    return render_template('web/schedule.html', data=data, days_data=days_data)
+    return render_template(
+        'web/schedule.html',
+        data=data,
+        days_data=sched_ctx['days_data'],
+        selected_day=sched_ctx['selected_day'],
+        selected_date=sched_ctx['selected_date'],
+        default_target_date=sched_ctx['default_target_date'],
+        today_date=sched_ctx['today_date'],
+        lessons_ongoing=sched_ctx['lessons_ongoing'],
+        target_reason=sched_ctx['target_reason'],
+        prev_date=sched_ctx['prev_date'],
+        next_date=sched_ctx['next_date'],
+        view_mode=view_mode,
+        sched_ctx=sched_ctx,
+    )
 
 
 @web_bp.route('/oceny')
@@ -246,14 +264,14 @@ def messages_view():
 @web_bp.route('/raporty')
 @web_bp.route('/raporty/<report_type>')
 @login_required
-def reports_view(report_type: str = 'postepy'):
+def reports_view(report_type: str = 'podsumowanie'):
     """Widok analityczny i motywacyjny z raportami postępów, ucznia i podsumowaniem."""
     config = request.app_config
     storage = request.app_storage
     active_login = get_active_student_login(config, storage, session_login=session.get('active_student_login'))
 
-    if report_type not in ('postepy', 'uczen', 'podsumowanie'):
-        report_type = 'postepy'
+    if report_type not in ('podsumowanie', 'postepy', 'uczen'):
+        report_type = 'podsumowanie'
 
     variant = request.args.get('variant', 'teens').strip().lower()
     if variant not in ('kids', 'teens', 'youth'):
@@ -289,6 +307,14 @@ def reports_view(report_type: str = 'postepy'):
             '<h3 class="text-lg font-bold text-slate-800 mb-1">Brak skonfigurowanych uczniów w systemie</h3>'
             '</div>'
         )
+    elif report_type == 'podsumowanie':
+        report_html = build_daily_summary_html(
+            storage=storage,
+            login=active_login,
+            config=config,
+            target_date=selected_date,
+            now=ref_now,
+        )
     elif report_type == 'postepy':
         report_html = build_progress_report_html(
             storage=storage,
@@ -297,21 +323,13 @@ def reports_view(report_type: str = 'postepy'):
             days=days,
             now=ref_now,
         )
-    elif report_type == 'uczen':
+    else:  # uczen
         report_html = build_student_report_html(
             storage=storage,
             login=active_login,
             config=config,
             variant=variant,
             days=days,
-            now=ref_now,
-        )
-    else:  # podsumowanie
-        report_html = build_daily_summary_html(
-            storage=storage,
-            login=active_login,
-            config=config,
-            target_date=selected_date,
             now=ref_now,
         )
 
@@ -484,6 +502,507 @@ def action_student_report():
     return render_template('web/action_result.html', title=msg, success=success, output=output)
 
 
+# ------------------------------------------------------------------------------
+# KREATOR PIERWSZEGO URUCHOMIENIA & PANEL USTAWIEŃ (SETUP & SETTINGS)
+# ------------------------------------------------------------------------------
+
+def _has_valid_config(app_config: Any) -> bool:
+    """Sprawdza, czy konfiguracja zawiera co najmniej jedno aktywne konto ucznia."""
+    if not isinstance(app_config, (dict, collections.abc.Mapping)):
+        return False
+    users = app_config.get('librus_users', [])
+    return isinstance(users, list) and len(users) > 0 and any(u.get('librus_login') for u in users)
+
+
+def parse_schedule_from_form(form: Any, existing_schedule: dict[str, Any] | None = None) -> tuple[dict[str, Any], int]:
+    """Parsuje harmonogram z formularza WWW i zwraca (schedule_dict, wait_time_s)."""
+    existing_sched = existing_schedule or {}
+    existing_col = existing_sched.get('collection', {})
+
+    col_mode = form.get('collection_mode', existing_col.get('mode', 'daily'))
+    col_time = form.get('collection_time', existing_col.get('time', '16:00')).strip()
+    col_days = form.get('collection_days', existing_col.get('days', 'all')).strip()
+    try:
+        col_interval = int(form.get('collection_interval_hours', existing_col.get('interval_hours', 1)))
+    except (ValueError, TypeError):
+        col_interval = 1
+
+    # Parsowanie wielu harmonogramów raportów postępów
+    report_indices = sorted(list({
+        int(k.split('_')[-1])
+        for k in form.keys()
+        if (k.startswith('report_name_') or k.startswith('report_frequency_') or k.startswith('report_interval_days_') or k.startswith('report_enabled_'))
+        and k.split('_')[-1].isdigit()
+    }))
+
+    reports_list: list[dict[str, Any]] = []
+    for idx in report_indices:
+        r_name = form.get(f'report_name_{idx}', f'Raport #{idx + 1}').strip() or f'Raport #{idx + 1}'
+        r_enabled = f'report_enabled_{idx}' in form
+        r_freq = form.get(f'report_frequency_{idx}', 'weekly').strip()
+        r_weekday = form.get(f'report_weekday_{idx}', 'friday').strip()
+        r_dom_raw = form.get(f'report_day_of_month_{idx}', '1').strip()
+        r_dom = int(r_dom_raw) if r_dom_raw.isdigit() else r_dom_raw
+        r_time = form.get(f'report_time_{idx}', '17:00').strip()
+        try:
+            r_days = int(form.get(f'report_interval_days_{idx}', 7))
+        except (ValueError, TypeError):
+            r_days = 7
+
+        rep_entry = {
+            'name': r_name,
+            'enabled': bool(r_enabled),
+            'frequency': r_freq,
+            'time': r_time,
+            'interval_days': r_days,
+        }
+        if r_freq == 'monthly':
+            rep_entry['day_of_month'] = r_dom
+        else:
+            rep_entry['weekday'] = r_weekday
+        reports_list.append(rep_entry)
+
+    # Kompatybilność wsteczna z pojedynczymi polami legacy
+    if not reports_list and ('reports_enabled' in form or 'reports_weekday' in form or 'reports_time' in form or 'reports_interval_days' in form):
+        r_enabled = 'reports_enabled' in form
+        r_weekday = form.get('reports_weekday', 'friday').strip()
+        r_time = form.get('reports_time', '17:00').strip()
+        try:
+            r_days = int(form.get('reports_interval_days', 7))
+        except (ValueError, TypeError):
+            r_days = 7
+        reports_list.append({
+            'name': 'Raport tygodniowy',
+            'enabled': bool(r_enabled),
+            'frequency': 'weekly',
+            'weekday': r_weekday,
+            'day_of_month': 1,
+            'time': r_time,
+            'interval_days': r_days,
+        })
+
+    # Jeśli nic nie przesłano w formularzu, zachowaj istniejące raporty
+    if not reports_list and existing_sched.get('reports'):
+        reports_list = get_reports_schedules(existing_sched)
+
+    if col_mode == 'interval':
+        col_cfg = {
+            'mode': 'interval',
+            'interval_hours': col_interval,
+        }
+    else:
+        col_cfg = {
+            'mode': 'daily',
+            'time': col_time,
+            'days': col_days,
+        }
+
+    sched_cfg = {
+        'collection': col_cfg,
+        'reports': reports_list,
+    }
+
+    if col_mode == 'interval':
+        wait_time_s = max(300, col_interval * 3600)
+    else:
+        wait_time_s = 3600
+
+    if 'wait_time_s' in form and 'collection_mode' not in form:
+        try:
+            wait_time_s = max(300, int(form['wait_time_s']))
+        except (ValueError, TypeError):
+            pass
+
+    return sched_cfg, wait_time_s
+
+
+@web_bp.route('/setup')
+def setup_view():
+    """Kreator pierwszego uruchomienia w kolejnych krokach (gdy brak config.yaml)."""
+    config = getattr(request, 'app_config', {})
+    if _has_valid_config(config):
+        # Jeśli konfiguracja już istnieje, przekieruj do edycji ustawień lub pulpitu
+        return redirect(url_for('web.settings_view'))
+    return render_template('web/setup.html')
+
+
+@web_bp.route('/setup', methods=['POST'])
+def setup_submit():
+    """Zapisuje dane zebrane przez kreator do pliku config.yaml i aktywuje system."""
+    form = request.form
+    config_path = request.app_config_path or 'config.yaml'
+
+    # 1. Zbieranie kont uczniów
+    students: list[dict[str, Any]] = []
+    # Wyciągamy indeksy z pól student_login_X
+    indices = sorted(list({
+        int(k.split('_')[-1])
+        for k in form.keys()
+        if k.startswith('student_login_') and k.split('_')[-1].isdigit()
+    }))
+
+    for idx in indices:
+        login = form.get(f'student_login_{idx}', '').strip()
+        pwd = form.get(f'student_password_{idx}', '').strip()
+        name = form.get(f'student_name_{idx}', '').strip() or f"Uczeń {login}"
+        receivers_raw = form.get(f'student_receivers_{idx}', '').strip()
+        receivers = [r.strip() for r in receivers_raw.split(',') if r.strip()]
+
+        if login and pwd:
+            global_one_summary = (form.get('one_summary_message', '1') == '1')
+            if f'student_one_summary_present_{idx}' in form:
+                is_one_summary = (f'student_one_summary_{idx}' in form)
+            elif f'student_one_summary_{idx}' in form:
+                is_one_summary = True
+            else:
+                is_one_summary = global_one_summary
+
+            st_cfg: dict[str, Any] = {
+                'librus_login_name': name,
+                'librus_login': login,
+                'librus_password': pwd,
+                'read_messages': f'student_messages_{idx}' in form,
+                'read_grades': f'student_grades_{idx}' in form,
+                'read_timetable': f'student_timetable_{idx}' in form,
+                'read_schedule': f'student_schedule_{idx}' in form,
+                'schedule_retention_days': int(form.get('schedule_retention_days', 30)),
+                'schedule_day_offset': int(form.get('schedule_day_offset', 1)),
+                'one_summary_message': is_one_summary,
+                'do_not_send_first_parse': 'do_not_send_first_parse' in form,
+                'notification_receivers': receivers or [form.get('mail_login', '').strip()],
+            }
+            if f'student_report_enabled_{idx}' in form:
+                st_email = form.get(f'student_report_email_{idx}', '').strip()
+                st_template = form.get(f'student_report_template_{idx}', 'kids').strip()
+                if st_template not in ('kids', 'teens', 'youth'):
+                    st_template = 'kids'
+                st_cfg['student_report'] = {
+                    'enabled': True,
+                    'email': st_email or (receivers[0] if receivers else form.get('mail_login', '').strip()),
+                    'template': st_template,
+                }
+            students.append(st_cfg)
+
+    if not students:
+        flash("Musisz podać co najmniej jedno konto ucznia w Librusie (login i hasło).", "error")
+        return redirect(url_for('web.setup_view'))
+
+    # 2. Poczta
+    mail_provider = form.get('mail_provider', 'gmail')
+    mail_login = form.get('mail_login', '').strip()
+    gmail_auth_mode = form.get('gmail_auth_mode', 'app_password')
+    gmail_oauth2_file = form.get('gmail_oauth2_file', '').strip()
+    mail_pwd = form.get('mail_password', '').strip()
+
+    mail_cfg: dict[str, Any] = {
+        'login': mail_login,
+        'use_gmail': (mail_provider == 'gmail'),
+    }
+    if mail_provider == 'gmail':
+        if gmail_auth_mode == 'oauth2' and gmail_oauth2_file:
+            mail_cfg['oauth2_file'] = gmail_oauth2_file
+        else:
+            mail_cfg['password'] = mail_pwd
+    elif mail_provider == 'smtp':
+        mail_cfg['password'] = mail_pwd
+        mail_cfg['non_gmail_settings'] = {
+            'smtp_host': form.get('smtp_host', 'smtp.example.com').strip(),
+            'port': int(form.get('smtp_port', 587)),
+        }
+
+    # 3. Harmonogram i automatyzacja
+    sched_cfg, wait_time_s = parse_schedule_from_form(form)
+
+    # 4. Parametry ogólne i panel WWW
+    web_password = form.get('web_password', '').strip() or None
+    web_port = int(form.get('web_port', 5000))
+    web_host = form.get('web_host', '127.0.0.1').strip()
+
+    full_config: dict[str, Any] = {
+        'librus_users': students,
+        'delay_between_users_s': int(form.get('delay_between_users_s', 10)),
+        'login_retries': 2,
+        'login_retry_delay_s': 5,
+        'wait_time_s': wait_time_s,
+        'schedule': sched_cfg,
+        'schedule_day_offset': int(form.get('schedule_day_offset', 1)),
+        'schedule_retention_days': int(form.get('schedule_retention_days', 30)),
+        'one_summary_message': (form.get('one_summary_message', '1') == '1'),
+        'do_not_send_first_parse': 'do_not_send_first_parse' in form,
+        'work-in-loop': True if 'collection_mode' in form else ('work_in_loop' in form),
+        'storage_dir': getattr(request, 'app_storage_dir', 'storage') or 'storage',
+        'storage_type': 'FILES',
+        'send_error_notifications': 'send_error_notifications' in form,
+        'error_cooldown_s': 3600,
+        'mail': mail_cfg,
+        'web': {
+            'port': web_port,
+            'host': web_host,
+            'password': web_password,
+            'max_login_attempts': 5,
+            'lockout_duration_s': 900,
+        },
+    }
+
+    try:
+        save_config_yaml(full_config, config_path)
+    except Exception as e:
+        logger.error(f"Nie udało się zapisać konfiguracji do {config_path}: {e}")
+        flash(f"Błąd podczas zapisu konfiguracji: {e}", "error")
+        return redirect(url_for('web.setup_view'))
+
+    # Natychmiastowe odświeżenie konfiguracji aplikacji w pamięci procesu
+    try:
+        from flask import current_app
+        current_app.config['APP_CONFIG'] = read_config(config_path)
+        if not current_app.config.get('NO_AUTH'):
+            if web_password:
+                current_app.config['WEB_PASSWORD'] = web_password
+                session['authenticated'] = True  # Automatycznie zaloguj twórcę konfiguracji
+            else:
+                current_app.config['WEB_PASSWORD'] = None
+    except Exception as e:
+        logger.warning(f"Błąd odświeżania konfiguracji po zapisie: {e}")
+
+    flash("Konfiguracja została pomyślnie utworzona i zapisana! Witaj w panelu.", "success")
+    return redirect(url_for('web.dashboard'))
+
+
+@web_bp.route('/ustawienia', methods=['GET', 'POST'])
+@login_required
+def settings_view():
+    """Widok przeglądania i edycji konfiguracji systemu."""
+    config = getattr(request, 'app_config', {})
+    config_path = getattr(request, 'app_config_path', 'config.yaml')
+
+    if request.method == 'POST':
+        form = request.form
+        existing_users = config.get('librus_users', []) if isinstance(config.get('librus_users'), list) else []
+
+        # 1. Zbieranie kont uczniów
+        updated_users: list[dict[str, Any]] = []
+        indices = sorted(list({
+            int(k.split('_')[-1])
+            for k in form.keys()
+            if k.startswith('student_login_') and k.split('_')[-1].isdigit()
+        }))
+
+        for i, idx in enumerate(indices):
+            login = form.get(f'student_login_{idx}', '').strip()
+            new_pwd = form.get(f'student_password_{idx}', '').strip()
+            name = form.get(f'student_name_{idx}', '').strip() or f"Uczeń {login}"
+            receivers_raw = form.get(f'student_receivers_{idx}', '').strip()
+            receivers = [r.strip() for r in receivers_raw.split(',') if r.strip()]
+
+            # Zachowaj dotychczasowe hasło jeśli pole zostało puste
+            old_user = next((u for u in existing_users if str(u.get('librus_login')) == login), None)
+            if not old_user and i < len(existing_users):
+                old_user = existing_users[i]
+            effective_pwd = new_pwd or (old_user.get('librus_password') if old_user else '')
+
+            if login:
+                global_one_summary = (form.get('one_summary_message', '1') == '1')
+                if f'student_one_summary_present_{idx}' in form:
+                    is_one_summary = (f'student_one_summary_{idx}' in form)
+                elif f'student_one_summary_{idx}' in form:
+                    is_one_summary = True
+                else:
+                    is_one_summary = global_one_summary
+
+                st_cfg: dict[str, Any] = {
+                    'librus_login_name': name,
+                    'librus_login': login,
+                    'librus_password': effective_pwd,
+                    'read_messages': f'student_messages_{idx}' in form,
+                    'read_grades': f'student_grades_{idx}' in form,
+                    'read_timetable': f'student_timetable_{idx}' in form,
+                    'read_schedule': f'student_schedule_{idx}' in form,
+                    'schedule_retention_days': int(form.get('schedule_retention_days', 30)),
+                    'schedule_day_offset': int(form.get('schedule_day_offset', 1)),
+                    'one_summary_message': is_one_summary,
+                    'do_not_send_first_parse': 'do_not_send_first_parse' in form,
+                    'notification_receivers': receivers,
+                }
+                if f'student_report_enabled_{idx}' in form:
+                    st_email = form.get(f'student_report_email_{idx}', '').strip()
+                    st_template = form.get(f'student_report_template_{idx}', 'kids').strip()
+                    if st_template not in ('kids', 'teens', 'youth'):
+                        st_template = 'kids'
+                    st_cfg['student_report'] = {
+                        'enabled': True,
+                        'email': st_email or (receivers[0] if receivers else ''),
+                        'template': st_template,
+                    }
+                updated_users.append(st_cfg)
+
+        if not updated_users:
+            flash("Lista kont uczniów nie może być pusta.", "error")
+            return redirect(url_for('web.settings_view'))
+
+        # 2. Poczta
+        existing_mail = config.get('mail', {}) if isinstance(config.get('mail'), (dict, collections.abc.Mapping)) else {}
+        mail_provider = form.get('mail_provider', 'gmail')
+        mail_login = form.get('mail_login', '').strip() or existing_mail.get('login', '')
+        gmail_auth_mode = form.get('gmail_auth_mode', 'app_password')
+        gmail_oauth2_file = form.get('gmail_oauth2_file', '').strip() or existing_mail.get('oauth2_file', '')
+        new_mail_pwd = form.get('mail_password', '').strip()
+        effective_mail_pwd = new_mail_pwd or existing_mail.get('password', '')
+
+        mail_cfg: dict[str, Any] = {
+            'login': mail_login,
+            'use_gmail': (mail_provider == 'gmail'),
+        }
+        if mail_provider == 'gmail':
+            if gmail_auth_mode == 'oauth2':
+                mail_cfg['oauth2_file'] = gmail_oauth2_file
+            else:
+                mail_cfg['password'] = effective_mail_pwd
+        elif mail_provider == 'smtp':
+            mail_cfg['password'] = effective_mail_pwd
+            existing_non_gmail = existing_mail.get('non_gmail_settings', {})
+            mail_cfg['non_gmail_settings'] = {
+                'smtp_host': form.get('smtp_host', '').strip() or existing_non_gmail.get('smtp_host', 'smtp.example.com'),
+                'port': int(form.get('smtp_port') or existing_non_gmail.get('port', 587)),
+            }
+
+        # 3. Harmonogram i automatyzacja
+        existing_sched = config.get('schedule', {}) if isinstance(config.get('schedule'), (dict, collections.abc.Mapping)) else {}
+        sched_cfg, wait_time_s = parse_schedule_from_form(form, existing_schedule=existing_sched)
+
+        # 4. Panel WWW i ochrona
+        existing_web = config.get('web', {}) if isinstance(config.get('web'), (dict, collections.abc.Mapping)) else {}
+        new_web_pwd = form.get('web_password', '').strip()
+        effective_web_pwd = new_web_pwd if new_web_pwd else existing_web.get('password')
+
+        new_config = dict(config)
+        new_config['librus_users'] = updated_users
+        new_config['delay_between_users_s'] = int(form.get('delay_between_users_s', config.get('delay_between_users_s', 10)))
+        new_config['wait_time_s'] = wait_time_s
+        new_config['schedule'] = sched_cfg
+        new_config['schedule_day_offset'] = int(form.get('schedule_day_offset', config.get('schedule_day_offset', 1)))
+        new_config['schedule_retention_days'] = int(form.get('schedule_retention_days', config.get('schedule_retention_days', 30)))
+        new_config['one_summary_message'] = (form.get('one_summary_message', '1') == '1')
+        new_config['do_not_send_first_parse'] = 'do_not_send_first_parse' in form
+        new_config['work-in-loop'] = True if 'collection_mode' in form else ('work_in_loop' in form if 'work_in_loop' in form else config.get('work-in-loop', True))
+        new_config['send_error_notifications'] = 'send_error_notifications' in form
+        new_config['mail'] = mail_cfg
+        new_config['web'] = dict(existing_web)
+        new_config['web']['port'] = int(form.get('web_port') or existing_web.get('port', 5000))
+        new_config['web']['host'] = form.get('web_host', '').strip() or existing_web.get('host', '127.0.0.1')
+        new_config['web']['password'] = effective_web_pwd
+
+        try:
+            save_config_yaml(new_config, config_path)
+            from flask import current_app
+            current_app.config['APP_CONFIG'] = read_config(config_path)
+            if not current_app.config.get('NO_AUTH'):
+                if effective_web_pwd:
+                    current_app.config['WEB_PASSWORD'] = str(effective_web_pwd)
+                    session['authenticated'] = True
+                else:
+                    current_app.config['WEB_PASSWORD'] = None
+            flash("Ustawienia zostały pomyślnie zaktualizowane.", "success")
+        except Exception as e:
+            logger.error(f"Błąd zapisu ustawień do {config_path}: {e}")
+            flash(f"Nie udało się zapisać ustawień: {e}", "error")
+
+        return redirect(url_for('web.settings_view'))
+
+    users = config.get('librus_users', []) if isinstance(config.get('librus_users'), list) else []
+    mail = config.get('mail', {}) if isinstance(config.get('mail'), (dict, collections.abc.Mapping)) else {}
+    web_cfg = config.get('web', {}) if isinstance(config.get('web'), (dict, collections.abc.Mapping)) else {}
+
+    return render_template(
+        'web/settings.html',
+        config=config,
+        users=users,
+        mail=mail,
+        web_cfg=web_cfg,
+        reports_schedules=get_reports_schedules(config),
+        config_path=config_path,
+    )
+
+
+@web_bp.route('/api/test-librus', methods=['POST'])
+def api_test_librus():
+    """Endpoint API do weryfikacji danych logowania Librus w formularzu setup/ustawienia."""
+    login = request.form.get('login', '').strip()
+    password = request.form.get('password', '').strip()
+
+    success, message = test_librus_credentials(login, password)
+    return jsonify({'success': success, 'message': message})
+
+
+_collector_thread: threading.Thread | None = None
+_collector_lock = threading.Lock()
+
+
+def start_background_collector(
+    config_path: str = 'config.yaml',
+    storage_dir: str | None = None,
+) -> threading.Thread | None:
+    """Uruchamia wątek demona kolektora i harmonogramu w tle."""
+    global _collector_thread
+    with _collector_lock:
+        if _collector_thread is not None and _collector_thread.is_alive():
+            logger.info("⏰ Wątek harmonogramu w tle już działa.")
+            return _collector_thread
+
+        def _worker() -> None:
+            logger.info("⏰ [BackgroundCollector] Wątek harmonogramu w tle został uruchomiony.")
+            while True:
+                try:
+                    if not os.path.exists(config_path):
+                        time.sleep(5)
+                        continue
+
+                    try:
+                        cfg = read_config(config_path)
+                    except Exception as cfg_err:
+                        logger.warning(
+                            f"⏰ [BackgroundCollector] Błąd odczytu konfiguracji '{config_path}': {cfg_err}. Ponowna próba za 15s..."
+                        )
+                        time.sleep(15)
+                        continue
+
+                    users = cfg.get('librus_users', [])
+                    if not users or not any(u.get('librus_login') for u in users):
+                        time.sleep(5)
+                        continue
+
+                    work_in_loop_val = cfg.get('work-in-loop', cfg.get('work_in_loop', True))
+                    if not work_in_loop_val:
+                        logger.info(
+                            "⏰ [BackgroundCollector] Harmonogram w tle jest wyłączony w konfiguracji (work-in-loop: false). "
+                            "Wątek czuwa i oczekuje na ewentualną zmianę konfiguracji w panelu WWW..."
+                        )
+                        from librus2mail.librus_collector import sleep_with_config_watch
+                        sleep_with_config_watch(30, config_path=config_path)
+                        continue
+
+                    logger.info("⏰ [BackgroundCollector] Rozpoczynam główną pętlę pobierania (run_collector)...")
+                    run_collector(
+                        config_path=config_path,
+                        storage_dir=storage_dir,
+                    )
+                    time.sleep(5)
+                except Exception as loop_err:
+                    logger.error(
+                        f"⏰ [BackgroundCollector] Wystąpił błąd w pętli zbierania: {loop_err}. Wznowienie za 30s...",
+                        exc_info=True,
+                    )
+                    time.sleep(30)
+
+        thread = threading.Thread(
+            target=_worker,
+            name="LibrusCollectorThread",
+            daemon=True,
+        )
+        thread.start()
+        _collector_thread = thread
+        return thread
+
+
 def create_app(
     config_path: str = 'config.yaml',
     storage_dir: str | None = None,
@@ -493,6 +1012,7 @@ def create_app(
     max_login_attempts: int | None = None,
     lockout_duration_s: int | None = None,
     actual_date: datetime | str | None = None,
+    run_collector_thread: bool = False,
 ) -> Flask:
     """Fabryka aplikacji webowej Flask dla Librus2mail."""
     templates_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'templates')
@@ -504,7 +1024,7 @@ def create_app(
     storage = get_storage(app_config, effective_storage)
 
     # Konfiguracja hasła i sesji
-    web_cfg = app_config.get('web', {}) if isinstance(app_config.get('web'), dict) else {}
+    web_cfg = app_config.get('web', {}) if isinstance(app_config.get('web'), (dict, collections.abc.Mapping)) else {}
     configured_pwd = web_password or os.environ.get('LIBRUS_WEB_PASSWORD') or web_cfg.get('password')
 
     if no_auth:
@@ -529,6 +1049,7 @@ def create_app(
         parsed_date = actual_date
 
     app.config['SECRET_KEY'] = secret_key or web_cfg.get('secret_key') or os.environ.get('LIBRUS_WEB_SECRET_KEY') or secrets.token_hex(32)
+    app.config['NO_AUTH'] = no_auth
     app.config['WEB_PASSWORD'] = effective_pwd
     app.config['APP_CONFIG'] = app_config
     app.config['CONFIG_PATH'] = config_path
@@ -544,6 +1065,12 @@ def create_app(
         request.app_storage_dir = app.config['STORAGE_DIR']
         request.app_actual_date = app.config.get('ACTUAL_DATE')
 
+        # Wymuszenie kreatora /setup gdy brak pliku konfiguracji lub brak skonfigurowanych kont
+        if not _has_valid_config(request.app_config):
+            allowed_prefixes = ('/setup', '/static', '/favicon', '/api/test-librus')
+            if not request.path.startswith(allowed_prefixes):
+                return redirect(url_for('web.setup_view'))
+
     @app.template_filter('human_time')
     def human_time_filter(val):
         ref_now = getattr(request, 'app_actual_date', None) or datetime.now()
@@ -552,6 +1079,9 @@ def create_app(
     app.context_processor(inject_common_context)
     app.register_blueprint(auth_bp)
     app.register_blueprint(web_bp)
+
+    if run_collector_thread:
+        start_background_collector(config_path=config_path, storage_dir=effective_storage)
 
     return app
 
@@ -564,14 +1094,15 @@ def main():
     parser.add_argument('-c', '--config', default='config.yaml', help="Ścieżka do pliku konfiguracyjnego YAML")
     parser.add_argument('-s', '--storage-dir', default=None, help="Katalog pamięci stanu storage/")
     parser.add_argument('-u', '--user', default=None, help="Filtr / domyślny login ucznia do wyświetlenia")
-    parser.add_argument('-p', '--port', type=int, default=5000, help="Port serwera HTTP (domyślnie: 5000)")
-    parser.add_argument('-b', '--bind', '--host', dest='host', default='127.0.0.1', help="Adres nasłuchu (domyślnie: 127.0.0.1; użyj 0.0.0.0 dla sieci lokalnej)")
+    parser.add_argument('-p', '--port', type=int, default=None, help="Port serwera HTTP (domyślnie z config.yaml lub 5000)")
+    parser.add_argument('-b', '--bind', '--host', dest='host', default=None, help="Adres nasłuchu (domyślnie z config.yaml lub 0.0.0.0 dla serwera)")
     parser.add_argument('--password', default=None, help="Hasło rodzica zabezpieczające dostęp do panelu")
     parser.add_argument('--no-auth', action='store_true', help="Wyłącz wymaganie hasła (tylko zaufane środowiska)")
     parser.add_argument('--max-attempts', type=int, default=None, help="Maksymalna liczba prób logowania przed blokadą IP (domyślnie: 5)")
     parser.add_argument('--lockout-duration', type=int, default=None, help="Czas blokady IP w sekundach (domyślnie: 900 = 15 min)")
     parser.add_argument('--actual-date', default=None, help="Referencyjna data symulacji (RRRR-MM-DD) do testów i raportów")
     parser.add_argument('--export-html', default=None, metavar='DIR', help="Eksportuje przykładowe statyczne widoki HTML (login, pulpit, zakładki) do wskazanego katalogu i kończy działanie")
+    parser.add_argument('--no-collector', action='store_true', help="Wyłącz automatyczny wątek harmonogramu/kolektora w tle (użyj np. gdy collector działa w osobnym kontenerze)")
     parser.add_argument('--debug', action='store_true', help="Uruchom serwer w trybie debugowania")
 
     args = parser.parse_args()
@@ -591,6 +1122,10 @@ def main():
             print(f"  - {name} ({path})")
         return
 
+    no_collector = args.no_collector or os.environ.get("LIBRUS_NO_COLLECTOR", "").lower() in ("1", "true", "yes")
+    is_reloader_child = os.environ.get("WERKZEUG_RUN_MAIN") == "true"
+    run_scheduler = not no_collector and (not args.debug or is_reloader_child)
+
     app = create_app(
         config_path=args.config,
         storage_dir=args.storage_dir,
@@ -599,19 +1134,35 @@ def main():
         max_login_attempts=args.max_attempts,
         lockout_duration_s=args.lockout_duration,
         actual_date=args.actual_date,
+        run_collector_thread=run_scheduler,
     )
 
+    cfg_app = app.config.get('APP_CONFIG', {}) if isinstance(app.config.get('APP_CONFIG'), (dict, collections.abc.Mapping)) else {}
+    cfg_web = cfg_app.get('web', {}) if isinstance(cfg_app.get('web'), (dict, collections.abc.Mapping)) else {}
+    effective_host = args.host or cfg_web.get('host') or '0.0.0.0'
+    effective_port = args.port or int(cfg_web.get('port', 5000))
+
+    is_loop_enabled = cfg_app.get('work-in-loop', cfg_app.get('work_in_loop', True)) if isinstance(cfg_app, (dict, collections.abc.Mapping)) else True
+
     auth_status = "WYŁĄCZONA (--no-auth)" if args.no_auth or not app.config.get('WEB_PASSWORD') else "WŁĄCZONA (wymagane hasło rodzica)"
+    if not run_scheduler:
+        scheduler_status = "WYŁĄCZONY (--no-collector)"
+    elif not is_loop_enabled:
+        scheduler_status = "WYŁĄCZONY (work-in-loop: false w config.yaml)"
+    else:
+        scheduler_status = "AKTYWNY (wątek w tle)"
+
     limiter: LoginRateLimiter = app.config['LOGIN_RATE_LIMITER']
     print("\n" + "=" * 65)
     print("🏫 Librus2mail Web Dashboard uruchomiony pomyślnie!")
-    print(f"🌐 Adres URL:       http://{args.host}:{args.port}")
+    print(f"🌐 Adres URL:       http://{effective_host}:{effective_port}")
     print(f"🔒 Ochrona hasłem:  {auth_status}")
     print(f"🛡️  Ochrona IP:     Max {limiter.max_attempts} prób, blokada {limiter.lockout_duration_s}s")
     print(f"📂 Baza storage:    {app.config['STORAGE_DIR']}")
+    print(f"⏰ Harmonogram:     {scheduler_status}")
     print("=" * 65 + "\n")
 
-    app.run(host=args.host, port=args.port, debug=args.debug)
+    app.run(host=effective_host, port=effective_port, debug=args.debug)
 
 
 if __name__ == '__main__':

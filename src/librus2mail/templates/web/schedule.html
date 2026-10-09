@@ -49,36 +49,131 @@
 </div>
 {% else %}
 
-<!-- Szybka nawigacja po dniach tygodnia -->
-<div class="flex items-center gap-2 overflow-x-auto py-4 scrollbar-none">
+<!-- Pasek wyboru dni (Interactive Day Tabs) -->
+<div class="flex items-center gap-2 overflow-x-auto py-3 scrollbar-none border-b border-slate-100 mb-4">
     {% for day in days_data %}
-    <a href="#day-{{ day.date }}"
-       class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-white border border-slate-200 hover:border-indigo-400 hover:text-indigo-600 shadow-sm transition-all whitespace-nowrap">
-        <span>{{ day.weekday_name }}</span>
-        <span class="text-slate-400 font-normal">{{ day.date[5:] }}</span>
+    <a href="{{ url_for('web.schedule_view', date=day.date, view=view_mode) }}"
+       class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs transition-all whitespace-nowrap
+              {% if day.is_selected %} bg-indigo-600 text-white font-extrabold shadow-sm ring-2 ring-indigo-500
+              {% else %} bg-white border border-slate-200 text-slate-700 hover:border-indigo-400 hover:text-indigo-600 shadow-sm {% if day.is_past %}opacity-80{% endif %} {% endif %}">
+        <span>{{ day.weekday_short }}</span>
+        <span class="{% if day.is_selected %}text-indigo-100{% else %}text-slate-400{% endif %} font-normal">{{ day.formatted_date }}</span>
+        {% if day.is_today %}
+        <span class="text-[9px] uppercase px-1 py-0.5 rounded {% if day.is_selected %}bg-white/20 text-white{% else %}bg-emerald-100 text-emerald-800{% endif %} font-black">Dziś</span>
+        {% endif %}
         {% if day.cancelled_count > 0 %}
         <span class="w-2 h-2 rounded-full bg-rose-500" title="Odwołane lekcje"></span>
         {% elif day.substitution_count > 0 %}
         <span class="w-2 h-2 rounded-full bg-amber-500" title="Zastępstwa"></span>
+        {% elif day.tests_count > 0 %}
+        <span class="w-2 h-2 rounded-full bg-indigo-400" title="Zapowiedziany sprawdzian"></span>
         {% endif %}
     </a>
     {% endfor %}
 </div>
 
-<!-- Karty poszczególnych dni -->
-<div class="space-y-6 mt-2">
-    {% for day in days_data %}
-    <div id="day-{{ day.date }}" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden scroll-mt-20">
+<!-- Pasek nawigacyjny i kontrolki widoku -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm mb-5">
+    <div class="flex items-center gap-2 flex-wrap">
+        <!-- Przycisk poprzedni dzień -->
+        {% if prev_date %}
+        <a href="{{ url_for('web.schedule_view', date=prev_date, view=view_mode) }}"
+           class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition">
+            ← Poprzedni dzień
+        </a>
+        {% else %}
+        <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-300 bg-slate-50 cursor-not-allowed">
+            ← Poprzedni dzień
+        </span>
+        {% endif %}
+
+        <!-- Etykieta statusu wybranego dnia -->
+        {% if selected_day %}
+            {% if selected_day.is_today and lessons_ongoing %}
+            <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-bold flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Dzisiaj (lekcje w toku)</span>
+            </span>
+            {% elif selected_day.is_today and not lessons_ongoing %}
+            <span class="px-2.5 py-1 bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-bold">
+                Dzisiaj (lekcje zakończone)
+            </span>
+            {% elif selected_day.is_future %}
+            <span class="px-2.5 py-1 bg-sky-50 text-sky-800 border border-sky-200 rounded-lg text-xs font-bold flex items-center gap-1">
+                <span>🚀</span> Nadchodzący dzień nauki
+            </span>
+            {% else %}
+            <span class="px-2.5 py-1 bg-slate-50 text-slate-500 border border-slate-200 rounded-lg text-xs font-medium">
+                Archiwum (dzień miniony)
+            </span>
+            {% endif %}
+        {% endif %}
+
+        <!-- Przycisk następny dzień -->
+        {% if next_date %}
+        <a href="{{ url_for('web.schedule_view', date=next_date, view=view_mode) }}"
+           class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition">
+            Następny dzień →
+        </a>
+        {% else %}
+        <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-300 bg-slate-50 cursor-not-allowed">
+            Następny dzień →
+        </span>
+        {% endif %}
+    </div>
+
+    <!-- Prawa strona: Skocz do bieżącego dnia oraz przełącznik widoku (dzień vs wszystkie) -->
+    <div class="flex items-center gap-2 flex-wrap">
+        {% if today_date in days_data | map(attribute='date') | list and selected_date != today_date %}
+        <a href="{{ url_for('web.schedule_view', date=today_date, view=view_mode) }}"
+           class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition">
+            <span>🎯 Dzisiaj</span>
+        </a>
+        {% endif %}
+        {% if selected_date != default_target_date and default_target_date != today_date %}
+        <a href="{{ url_for('web.schedule_view', date=default_target_date, view=view_mode) }}"
+           class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition">
+            <span>🎯 Najbliższy dzień</span>
+        </a>
+        {% endif %}
+
+        <div class="inline-flex p-0.5 rounded-xl bg-slate-100 border border-slate-200 text-xs font-bold">
+            <a href="{{ url_for('web.schedule_view', date=selected_date, view='day') }}"
+               class="px-2.5 py-1 rounded-lg transition {% if view_mode != 'all' %}bg-white text-indigo-700 shadow-xs{% else %}text-slate-600 hover:text-slate-900{% endif %}">
+                Widok dzienny
+            </a>
+            <a href="{{ url_for('web.schedule_view', date=selected_date, view='all') }}"
+               class="px-2.5 py-1 rounded-lg transition {% if view_mode == 'all' %}bg-white text-indigo-700 shadow-xs{% else %}text-slate-600 hover:text-slate-900{% endif %}">
+                Wszystkie dni
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Zawartość planu lekcji -->
+{% set render_days = days_data if view_mode == 'all' else ([selected_day] if selected_day else []) %}
+
+<div class="space-y-6">
+    {% for day in render_days %}
+    <div id="day-{{ day.date }}"
+         class="bg-white rounded-2xl border transition-all overflow-hidden scroll-mt-20
+                {% if day.is_selected and view_mode == 'all' %} border-indigo-500 ring-2 ring-indigo-200 shadow-md
+                {% else %} border-slate-200 shadow-sm {% endif %}">
         <!-- Nagłówek Dnia -->
         <div class="p-4 sm:p-5 border-b border-slate-100 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-base shadow-sm">
+                <div class="w-10 h-10 rounded-xl {% if day.is_today %}bg-indigo-600 text-white{% else %}bg-indigo-100 text-indigo-700{% endif %} flex items-center justify-center font-bold text-base shadow-sm">
                     {{ day.weekday_name[:2] }}
                 </div>
                 <div>
                     <h2 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
                         <span>{{ day.weekday_name }}</span>
                         <span class="text-xs font-normal text-slate-500">({{ day.date }})</span>
+                        {% if day.is_today %}
+                        <span class="px-2 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-800 font-bold border border-emerald-200">
+                            Dzisiaj
+                        </span>
+                        {% endif %}
                     </h2>
                     <div class="text-xs text-slate-500 font-medium">
                         Liczba lekcji: <strong>{{ day.total_count }}</strong>
@@ -88,6 +183,11 @@
 
             <!-- Podsumowanie zmian w danym dniu -->
             <div class="flex items-center gap-2 flex-wrap text-xs">
+                {% if day.tests_count > 0 %}
+                <span class="px-2.5 py-1 bg-indigo-50 text-indigo-800 font-bold rounded-lg border border-indigo-200">
+                    📝 {{ day.tests_count }} {% if day.tests_count == 1 %}sprawdzian{% else %}sprawdziany{% endif %}
+                </span>
+                {% endif %}
                 {% if day.substitution_count > 0 %}
                 <span class="px-2.5 py-1 bg-amber-100 text-amber-800 font-bold rounded-lg border border-amber-200">
                     🔄 {{ day.substitution_count }} {% if day.substitution_count == 1 %}zastępstwo{% else %}zastępstwa{% endif %}
@@ -98,7 +198,7 @@
                     ❌ {{ day.cancelled_count }} {% if day.cancelled_count == 1 %}odwołana{% else %}odwołane{% endif %}
                 </span>
                 {% endif %}
-                {% if day.substitution_count == 0 and day.cancelled_count == 0 %}
+                {% if day.substitution_count == 0 and day.cancelled_count == 0 and day.total_count > 0 %}
                 <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 font-semibold rounded-lg border border-emerald-200">
                     ✅ Plan bez zmian
                 </span>
@@ -107,6 +207,11 @@
         </div>
 
         <!-- Tabela / Lista lekcji -->
+        {% if day.total_count == 0 %}
+        <div class="p-8 text-center text-slate-400 text-xs">
+            Brak lekcji w planie dla tego dnia.
+        </div>
+        {% else %}
         <div class="divide-y divide-slate-100">
             {% for l in day.lessons %}
             <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors
@@ -148,7 +253,7 @@
 
                             {% if l.test %}
                             <span class="px-2 py-0.5 bg-indigo-100 text-indigo-800 text-[10px] font-extrabold rounded border border-indigo-200">
-                                📝 {{ l.test.category }}: {{ l.test.description or l.test.subject }}
+                                📝 {{ l.test.category or 'Sprawdzian' }}: {{ l.test.description or l.test.subject }}
                             </span>
                             {% endif %}
                         </div>
@@ -201,6 +306,7 @@
             </div>
             {% endfor %}
         </div>
+        {% endif %}
     </div>
     {% endfor %}
 </div>

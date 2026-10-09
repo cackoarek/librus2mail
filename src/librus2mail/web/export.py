@@ -19,8 +19,10 @@ def make_offline_friendly(html: str) -> str:
         ('href="/terminarz"', 'href="web_terminarz.html"'),
         ('href="/wiadomosci"', 'href="web_wiadomosci.html"'),
         ('href="/raporty/podsumowanie"', 'href="web_raporty_podsumowanie.html"'),
-        ('href="/raporty"', 'href="web_raporty_postepy.html"'),
+        ('href="/raporty"', 'href="web_raporty_podsumowanie.html"'),
         ('href="/akcje"', 'href="web_akcje.html"'),
+        ('href="/ustawienia"', 'href="web_ustawienia.html"'),
+        ('href="/setup"', 'href="web_setup.html"'),
         ('href="/logout"', 'href="web_login.html"'),
         ('href="/login"', 'href="web_login.html"'),
     ]
@@ -28,6 +30,8 @@ def make_offline_friendly(html: str) -> str:
         html = html.replace(old, new)
 
     # Linki podstron raportów z parametrami (days, variant, date)
+    html = re.sub(r'href="/\?date=[^"]*"', 'href="web_dashboard.html"', html)
+    html = re.sub(r'href="/plan\?[^"]*"', 'href="web_plan.html"', html)
     html = re.sub(r'href="/raporty/postepy(\?[^"]*)?"', 'href="web_raporty_postepy.html"', html)
     html = re.sub(r'href="/raporty/uczen\?[^"]*variant=kids[^"]*"', 'href="web_raporty_uczen_kids.html"', html)
     html = re.sub(r'href="/raporty/uczen\?[^"]*variant=youth[^"]*"', 'href="web_raporty_uczen_youth.html"', html)
@@ -82,6 +86,24 @@ def export_web_views(
     generated_files['web_login.html'] = login_path
     logger.info(f"Wygenerowano widok logowania: {login_path}")
 
+    # 1b. Widok kreatora konfiguracji setup (dla demonstracji / dokumentacji)
+    app_empty = create_app(
+        config_path='non_existent_config.yaml',
+        storage_dir=storage_dir,
+        no_auth=True,
+    )
+    client_empty = app_empty.test_client()
+    setup_res = client_empty.get('/setup')
+    if setup_res.status_code == 200:
+        setup_html = setup_res.data.decode('utf-8')
+        if make_links_relative:
+            setup_html = make_offline_friendly(setup_html)
+        setup_path = os.path.join(output_dir, 'web_setup.html')
+        with open(setup_path, 'w', encoding='utf-8') as f:
+            f.write(setup_html)
+        generated_files['web_setup.html'] = setup_path
+        logger.info(f"Wygenerowano widok kreatora konfiguracji: {setup_path}")
+
     # 2. Widoki po zalogowaniu (autoryzowana sesja użytkownika)
     app_auth = create_app(
         config_path=config_path,
@@ -109,6 +131,7 @@ def export_web_views(
         ('/raporty/uczen?variant=youth', 'web_raporty_uczen_youth.html', "raport ucznia (youth)"),
         ('/raporty/podsumowanie', 'web_raporty_podsumowanie.html', "podsumowanie powiadomień"),
         ('/akcje', 'web_akcje.html', "centrum akcji"),
+        ('/ustawienia', 'web_ustawienia.html', "ustawienia systemu"),
     ]
 
     for route, filename, label in views_to_export:

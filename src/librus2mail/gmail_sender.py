@@ -9,6 +9,23 @@ logger = logging.getLogger(__name__)
 
 class GmailSender(MailSender):
 
+    def __init__(self, mail_config: dict):
+        super().__init__(mail_config)
+        self.oauth2_file = mail_config.get('oauth2_file')
+        if not self.oauth2_file and 'gmail_settings' in mail_config:
+            self.oauth2_file = mail_config['gmail_settings'].get('client_json_path')
+        self.use_oauth2 = bool(mail_config.get('use_oauth2') or self.oauth2_file)
+
+    def _get_smtp_client(self, mail_user=None, mail_password=None) -> yagmail.SMTP:
+        """Fabryka klienta yagmail zależnie od wybranego trybu autoryzacji (OAuth2 lub Hasło)."""
+        user = mail_user or self.sender_email
+        if self.use_oauth2 and self.oauth2_file:
+            logger.debug(f"Łączenie z Gmail przez OAuth2 (plik: {self.oauth2_file})")
+            return yagmail.SMTP(user=user, oauth2_file=str(self.oauth2_file))
+        pwd = mail_password or self.password
+        logger.debug("Łączenie z Gmail przez hasło aplikacji")
+        return yagmail.SMTP(user=user, password=pwd)
+
     def send_mail_with_messages(self, user_config, messages):
         mail_content = self.create_mail_content_for_messages(user_config, messages)
         title = f"{user_config['librus_login_name']} ma nową wiadomość w Librusie (konto {user_config['librus_login']})"
@@ -95,10 +112,9 @@ class GmailSender(MailSender):
             logger.error(f"Nie udało się wysłać raportu dla ucznia przez Gmail: {e}")
             return False
 
-    @staticmethod
-    def __send_gmail(config, title, contents, mail_user, mail_password):
+    def __send_gmail(self, config, title, contents, mail_user=None, mail_password=None):
         logger.info("Wysyłam wiadomość e-mail")
-        yag = yagmail.SMTP(mail_user, mail_password)
+        yag = self._get_smtp_client(mail_user, mail_password)
         contents = contents.replace("\n", "")
         yag.send(config['notification_receivers'],
                  title,

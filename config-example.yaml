@@ -46,9 +46,9 @@ librus_users:
     schedule_day_offset: 1
 
     # Format wysyłki powiadomień e-mail:
-    # - false: wysyła osobne e-maile dla nowych ocen, wiadomości i ogłoszeń (domyślnie).
-    # - true: konsoliduje wszystkie nowości w jeden zbiorczy, estetyczny e-mail.
-    one_summary_message: false
+    # - true: konsoliduje wszystkie nowości w jeden zbiorczy, estetyczny e-mail (domyślnie).
+    # - false: wysyła osobne e-maile dla nowych ocen, wiadomości i ogłoszeń.
+    one_summary_message: true
 
     # Tryb pierwszego uruchomienia (domyślnie: true).
     # Przy pierwszym starcie zapisuje aktualny stan jako bazę i NIE wysyła powiadomień
@@ -136,15 +136,20 @@ mail:
   # Adres e-mail konta wysyłającego powiadomienia:
   login: "twoje.powiadomienia@gmail.com"
 
-  # Hasło do skrzynki nadawcy:
-  # W przypadku konta Gmail: wygenerowane 16-znakowe Hasło Aplikacji Google (App Password),
-  # np. "abcd efgh ijkl mnop" (bez spacji).
-  password: "twoje_haslo_aplikacji_lub_poczty"
-
   # Wybór protokołu wysyłki:
   # - true: wysyłka przez Gmail za pomocą biblioteki yagmail (zalecane dla Gmaila).
   # - false: wysyłka przez standardowy serwer SMTP z szyfrowaniem STARTTLS (np. WP, Onet, OVH, własna domena).
   use_gmail: true
+
+  # Wariant A (Gmail - Hasło aplikacji Google lub SMTP):
+  # W przypadku konta Gmail: wygenerowane 16-znakowe Hasło Aplikacji Google (App Password),
+  # np. "abcd efgh ijkl mnop" (bez spacji).
+  password: "twoje_haslo_aplikacji_lub_poczty"
+
+  # Wariant B (Gmail - Alternatywna autoryzacja Google OAuth2 bez podawania hasła):
+  # Ścieżka do pliku JSON z tokenami dostępowymi wygenerowanymi przez Google OAuth2 (np. "yagmail_client.json"):
+  # Jeśli podasz 'oauth2_file', biblioteka yagmail użyje OAuth2 zamiast 'password':
+  # oauth2_file: "yagmail_client.json"
 
   # Ustawienia dla use_gmail: false (ignorowane, gdy use_gmail: true):
   non_gmail_settings:

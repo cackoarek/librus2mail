@@ -73,6 +73,10 @@
                            class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors {{ 'bg-indigo-50 text-indigo-700' if request.endpoint == 'web.actions_view' else 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
                             ⚡ Akcje CLI
                         </a>
+                        <a href="{{ url_for('web.settings_view') }}"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors {{ 'bg-indigo-50 text-indigo-700' if request.endpoint == 'web.settings_view' else 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                            ⚙️ Ustawienia
+                        </a>
                     </nav>
                     {% endif %}
                 </div>
@@ -130,6 +134,7 @@
             <a href="{{ url_for('web.messages_view') }}" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap {{ 'bg-indigo-600 text-white' if request.endpoint == 'web.messages_view' else 'text-slate-600 bg-white border border-slate-200' }}">✉️ Wiadomości</a>
             <a href="{{ url_for('web.reports_view') }}" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap {{ 'bg-indigo-600 text-white' if request.endpoint == 'web.reports_view' else 'text-slate-600 bg-white border border-slate-200' }}">📈 Raporty</a>
             <a href="{{ url_for('web.actions_view') }}" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap {{ 'bg-indigo-600 text-white' if request.endpoint == 'web.actions_view' else 'text-slate-600 bg-white border border-slate-200' }}">⚡ Akcje</a>
+            <a href="{{ url_for('web.settings_view') }}" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap {{ 'bg-indigo-600 text-white' if request.endpoint == 'web.settings_view' else 'text-slate-600 bg-white border border-slate-200' }}">⚙️ Ustawienia</a>
         </div>
         {% endif %}
     </header>

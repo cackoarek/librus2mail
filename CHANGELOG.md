@@ -9,6 +9,64 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ## [Unreleased]
 
+- **Typowane modele obiektów domenowych (Issue #8 - Etap 2)**:
+  - Wprowadzenie dedykowanych modeli Pydantic v2 dla obiektów domenowych: `Grade` (ocena), `Message` (wiadomość prywatna), `Announcement` / `Notification` (ogłoszenie szkolne), `TimetableEntry` (terminarz) oraz `ScheduleLesson` / `ScheduleEntry` (plan lekcji).
+  - Obiekty domenowe implementują `collections.abc.MutableMapping` zapewniając pełną zgodność z dotychczasowym dostępem słownikowym (`obj['field']`, `obj.get('field')`), rozpakowywaniem `{**obj}` oraz szablonami Jinja2.
+  - Wyliczane właściwości pomocnicze w modelu `Grade`: `numeric_value` (automatyczne parsowanie stopnia na float, np. '5+' -> 5.5) oraz `weight_value` (parsowanie wagi).
+  - Elastyczne aliasy pól w `Message` i `Announcement` (zarówno `date`, jak i `datetime`, oraz `author` i `sender`).
+  - Pełna integracja z silnikami parsowania w `librus.py` oraz pamięcią stanu i historii ocen w `storage.py`.
+- **Wczesna walidacja konfiguracji i typowane modele z Pydantic / pydantic-settings (Issue #8 - Etap 1)**:
+  - Zastąpienie surowego, nietypowanego słownika konfiguracji silnie typowanymi modelami Pydantic v2 (`AppSettings`, `LibrusUserConfig`, `MailConfig`, `WebConfig`, `ScheduleConfig`, `NonGmailSettings`).
+  - Natychmiastowa wczesna walidacja danych (fail-fast) przy starcie aplikacji — wyłapywanie błędnych adresów e-mail (`EmailStr`), nieprawidłowych typów czy brakujących danych logowania zanim aplikacja nawiąże połączenie sieciowe.
+  - Zmienne środowiskowe i konteneryzacja (Docker / 12-factor): automatyczne nadpisywanie wartości z pliku YAML zmiennymi środowiskowymi z prefiksem `LIBRUS_` i zagnieżdżonym separatorem `__` (np. `LIBRUS_STORAGE_DIR`, `LIBRUS_MAIL__LOGIN`, `LIBRUS_MAIL__PASSWORD`).
+  - Bezpieczeństwo sekretów w logach: hasła przechowywane jako `SecretStr` (automatyczne maskowanie `**********` w logach i repr), z zachowaniem pełnej kompatybilności słownikowej przy wywołaniach sieciowych.
+  - Bezproblemowa obsługa aliasów historycznych konwencji nazewniczych kluczy (`work-in-loop` / `work_in_loop`, `dry-parse` / `dry_parse` / `do_not_send_first_parse`, `user_delay_s` / `delay_between_users_s`).
+  - Zachowanie 100% kompatybilności wstecznej (interfejs `MutableMapping` / dostęp słownikowy `.get()`, `[]`, `to_dict()`) ze wszystkimi istniejącymi skryptami, szablonami Jinja2 oraz zestawem testów jednostkowych.
+- **Obsługa Google OAuth2 dla Gmail (`oauth2_file`)**:
+  - Dodano alternatywną metodę uwierzytelniania konta pocztowego Gmail z użyciem pliku autoryzacyjnego OAuth2 (`client_secret.json` / plik tokenów autoryzacyjnych), zgodnie ze zgłoszeniem w Issue #5.
+  - Wybór metody uwierzytelniania w kreatorze `/setup` oraz w zakładce `/ustawienia` (*Hasło do aplikacji (zalecane)* vs *Google OAuth2 (.json)*).
+  - Wzbogacono klasę `GmailSender` o automatyczne inicjalizowanie klienta `yagmail.SMTP` z parametrem `oauth2_file` przy zachowaniu pełnej kompatybilności wstecznej z hasłami aplikacji.
+  - Zaktualizowano przykładową konfigurację w `config-example.yaml`.
+- **Kreator pierwszego uruchomienia w panelu WWW (`/setup`)**:
+  - Automatyczne wykrywanie braku pliku `config.yaml` lub braku skonfigurowanych kont uczniów z płynnym przekierowaniem do kreatora onboardingowego.
+  - Wygodny 4-krokowy Stepper UI: Krok 1: Profile uczniów i dzieci (z obsługą rodzeństwa oraz selekcją modułów ocen, terminarza, planu i wiadomości) -> Krok 2: Poczta e-mail (Gmail z hasłem aplikacji lub serwer SMTP) -> Krok 3: Harmonogram i automatyzacja -> Krok 4: Hasło i zabezpieczenia panelu WWW.
+  - Bezpieczny zapis do pliku `config.yaml` oraz natychmiastowe odświeżenie konfiguracji w pamięci aplikacji i automatyczne zalogowanie do pulpitu rodzica.
+- **Elastyczny harmonogram zadań i automatyzacja (`schedule`)**:
+  - Intuicyjny wybór harmonogramu pobierania danych ze szkoły w `/setup` i `/ustawienia`:
+    - Tryb o stałej porze dnia (`daily`): domyślnie codziennie o 16:00 z listą godzin (06:00–22:00 co 30 min) oraz wyborem dni (codziennie vs dni robocze pon.–pt.).
+    - Tryb cykliczny w ciągu dnia (`interval`): odpytywanie co wybraną liczbę godzin (co 1h, 2h, 3h, 4h, 6h, 12h).
+  - Harmonogram automatycznej wysyłki raportów postępów ucznia:
+    - Możliwość skonfigurowania **więcej niż jednego raportu** (np. cotygodniowe podsumowanie w piątki oraz comiesięczny bilans ocen 1. dnia miesiąca).
+    - Obsługa częstotliwości: co tydzień (`weekly` z wyborem dnia tygodnia) oraz co miesiąc (`monthly` z wyborem 1. dnia, 15. dnia lub ostatniego dnia miesiąca).
+    - Elastyczny wybór zakresu dni dla każdego raportu (3, 7, 14, 30, 60 dni) oraz indywidualnej godziny wysyłki.
+    - Przycisk dynamicznego dodawania kolejnych kart raportów („➕ Dodaj kolejny zaplanowany raport”) w formularzu WWW.
+    - Automatyczne wyzwalanie zaplanowanych raportów w pętli `librus_collector.py` z niezależnym śledzeniem dat wysyłki per harmonogram (`report_key`) w pamięci stanu `storage.py`.
+    - Uwzględnienie `schedule.reports` w CLI `librus_progress_report.py` jako domyślnego okresu analizy.
+  - Interaktywny podgląd reguł dla linuksowego harmonogramu Crontab (`crontab -e`) generowany i aktualizowany na żywo w interfejsie WWW dla wszystkich aktywnych raportów.
+- **Interaktywna weryfikacja logowania Librus („Testuj logowanie Librus”)**:
+  - Przycisk sprawdzania poprawności danych logowania ucznia w locie z poziomu formularzy WWW.
+  - Asynchroniczny endpoint API `/api/test-librus` oraz usługa backendowa `test_librus_credentials` wykonująca symulację logowania bez pobierania pełnych danych.
+  - Dynamiczny wskaźnik oczekiwania i natychmiastowa informacja zwrotna o poprawności danych autoryzacyjnych lub przyczynie błędu.
+- **Zakładka „Ustawienia” w panelu WWW (`/ustawienia`)**:
+  - Nowa pozycja `⚙️ Ustawienia` w menu głównym (wersja desktop i mobile).
+  - Wygodna edycja parametrów kont, powiadomień e-mail, harmonogramu odpytywania, raportów i ochrony panelu.
+  - Bezpieczne zachowywanie dotychczasowych haseł (Librus, skrzynka e-mail, panel WWW) przy pozostawieniu pustych pól.
+  - Automatyczne tworzenie kopii zapasowej konfiguracji (`config.yaml.bak`) przed nadpisaniem pliku.
+- **Eksport statyczny nowych widoków**:
+  - Integracja `web_setup.html` oraz `web_ustawienia.html` w silniku eksportu widoków (`export_web_views`) oraz skrypcie `examples/reports/regenerate_reports.sh`.
+
+### Zmienione
+- Usunięto surowy techniczny checkbox „Praca ciągła w nieskończonej pętli demona (systemd / Docker)” na rzecz czytelnych ustawień harmonogramu.
+- Poprawiono etykietę interwału: „Odstęp pomiędzy ściąganiem danych kolejnych dzieci (sekundy)”.
+- Wskazówka dotycząca hasła aplikacji Gmail jest teraz wyświetlana wyłącznie po zaznaczeniu opcji Gmail (dla SMTP pozostaje ukryta).
+
+### Poprawione
+- **Walidacja formularza kreatora konfiguracji (`/setup`)**:
+  - Wyeliminowano błąd przeglądarki `An invalid form control with name='mail_login' is not focusable.` przy próbie zapisu konfiguracji na ostatnim kroku kreatora.
+  - Wprowadzono atrybut `novalidate` na formularzu kreatora w połączeniu z automatyczną, sekwencyjną walidacją każdego kroku (krok po kroku i przy przeskakiwaniu kroków).
+  - W przypadku jakichkolwiek brakujących lub błędnych danych w poprzednich krokach kreator automatycznie cofa widok do właściwego kroku, przewija ekran i podświetla pole z komunikatem pomocy.
+  - Dostosowano typ pola loginu (`type="email"` dla Gmail, `type="text"` dla własnego serwera SMTP).
+
 ---
 
 ## [2.1.0] – 2026-10-07

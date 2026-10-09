@@ -733,10 +733,12 @@ class TestLibrus(unittest.TestCase):
         self.assertEqual(pol['period_avg'], 2.0)
         self.assertEqual(pol['trend'], 'down')
 
-        # Sprawdzenie wygenerowanych ostrzeżeń (niska ocena z dużą wagą w okresie)
+        # Sprawdzenie wygenerowanych ostrzeżeń (niska ocena z dużą wagą w okresie oraz nieprzygotowanie z przedmiotem)
         warnings_text = " ".join(analysis['insights_warnings'])
         self.assertIn('Język polski', warnings_text)
         self.assertIn('nieprzygotowań', warnings_text)
+        self.assertIn('Historia', warnings_text)
+        self.assertEqual(analysis.get('unprepared_by_subject'), {'Historia': 1})
 
     def test_storage_grades_history_and_report_date(self):
         import shutil
@@ -856,12 +858,36 @@ class TestLibrus(unittest.TestCase):
             self.assertTrue(sent)
             mock_yag.return_value.send.assert_called_once()
 
-        # 2. SmtpSender
         with patch('smtplib.SMTP') as mock_smtp:
             smtp = SmtpSender(mail_cfg)
             sent_smtp = smtp.send_progress_report(user_cfg, analysis)
             self.assertTrue(sent_smtp)
             mock_smtp.return_value.sendmail.assert_called_once()
+
+    def test_send_gmail_with_oauth2(self):
+        from librus2mail.gmail_sender import GmailSender
+
+        oauth_cfg = {
+            'login': 'sender@example.com',
+            'oauth2_file': 'my_oauth2.json',
+            'use_gmail': True,
+        }
+        user_cfg = {
+            'librus_login': '999',
+            'librus_login_name': 'Bartek',
+            'notification_receivers': ['parent@example.com']
+        }
+
+        with patch('yagmail.SMTP') as mock_yag:
+            gmail = GmailSender(oauth_cfg)
+            self.assertTrue(gmail.use_oauth2)
+            self.assertEqual(gmail.oauth2_file, 'my_oauth2.json')
+            gmail.send_mail_with_messages(
+                user_cfg,
+                [{'title': 'Wiadomość', 'sender': 'Nauczyciel', 'datetime': 'D', 'content': 'Treść'}]
+            )
+            mock_yag.assert_called_with(user='sender@example.com', oauth2_file='my_oauth2.json')
+            mock_yag.return_value.send.assert_called_once()
 
     def test_progress_report_cli_dry_run(self):
         import os
@@ -942,6 +968,12 @@ class TestLibrus(unittest.TestCase):
         # 1. Analiza na krawędzi (Borderline)
         self.assertTrue(any(o['subject'] == 'Matematyka' for o in analysis['borderline_opportunities']))
         self.assertTrue(any(r['subject'] == 'Historia' for r in analysis['borderline_risks']))
+        warnings_str = " ".join(analysis['insights_warnings'])
+        self.assertIn('Ryzyko spadku oceny', warnings_str)
+        self.assertIn('Historia', warnings_str)
+        strengths_str = " ".join(analysis['insights_strengths'])
+        self.assertIn('Szansa na wyższą ocenę', strengths_str)
+        self.assertIn('Matematyka', strengths_str)
 
         # 2. Ciche przedmioty
         self.assertTrue(any(d['subject'] == 'Informatyka' for d in analysis['dormant_subjects']))
@@ -1496,14 +1528,14 @@ class TestLibrus(unittest.TestCase):
             notifier.process_user_notifications(user_cfg, dry_run=False)
             first_notify_time = storage.get_last_notify_time(login)
             self.assertIsNotNone(first_notify_time)
-            self.assertEqual(mock_mail_sender.send_mail_with_messages.call_count, 1)
+            self.assertEqual(mock_mail_sender.send_mail_with_summary.call_count, 1)
 
             # 3. Subsequent run without new items: should find 0 new items because cutoff is after the old items
             mock_mail_sender.reset_mock()
             res_next = notifier.process_user_notifications(user_cfg, dry_run=False)
             self.assertEqual(len(res_next['messages']), 0)
             self.assertEqual(len(res_next['grades']), 0)
-            mock_mail_sender.send_mail_with_messages.assert_not_called()
+            mock_mail_sender.send_mail_with_summary.assert_not_called()
 
     def test_no_new_items_logs_skip_notification(self):
         import tempfile
@@ -2533,6 +2565,88 @@ class TestLibrus(unittest.TestCase):
         # Test tytułu maila uwzględniającego zmiany w planie
         title = MailSender._create_summary_title(user_cfg, schedule=summary)
         self.assertIn('zmiany w planie', title)
+
+    def test_calculate_next_wait_seconds_with_scheduled_reports(self):
+        """Weryfikuje, że kalkulator wybudzeń wybiera najbliższy punkt w czasie spośród collection i reports."""
+        from librus2mail.librus_collector import calculate_next_wait_seconds
+
+        config = {
+            'schedule': {
+                'collection': {
+                    'mode': 'daily',
+                    'time': '16:00',
+                    'days': 'all',
+                },
+                'reports': [
+                    {
+                        'name': 'Raport tygodniowy',
+                        'enabled': True,
+                        'frequency': 'weekly',
+                        'weekday': 'thursday',
+                        'time': '15:00',
+                        'interval_days': 7,
+                    },
+                    {
+                        'name': 'Raport miesięczny',
+                        'enabled': True,
+                        'frequency': 'monthly',
+                        'day_of_month': '1',
+                        'time': '17:00',
+                        'interval_days': 30,
+                    },
+                ],
+            },
+        }
+
+        # Czwartek (np. 2026-10-08), godzina 14:00:
+        # Najbliższy jest raport tygodniowy o 15:00 (za 3600s), a nie ściąganie o 16:00 (za 7200s)!
+        now_1400 = datetime(2026, 10, 8, 14, 0, 0)
+        wait_s = calculate_next_wait_seconds(config, now=now_1400)
+        self.assertEqual(wait_s, 3600)
+
+        # Czwartek, godzina 15:05 (po wysłaniu raportu):
+        # Najbliższe jest ściąganie o 16:00 (za 55 minut = 3300s)!
+        now_1505 = datetime(2026, 10, 8, 15, 5, 0)
+        wait_s = calculate_next_wait_seconds(config, now=now_1505)
+        self.assertEqual(wait_s, 55 * 60)
+
+        # 1. dzień miesiąca (np. 2026-11-01 to niedziela), godzina 16:05:
+        # Ściąganie o 16:00 już minęło. Najbliższy jest raport miesięczny o 17:00 (za 55 min = 3300s)!
+        now_dom1_1605 = datetime(2026, 11, 1, 16, 5, 0)
+        wait_s = calculate_next_wait_seconds(config, now=now_dom1_1605)
+        self.assertEqual(wait_s, 55 * 60)
+
+    def test_sleep_with_config_watch_detects_modification(self):
+        """Weryfikuje, że sleep_with_config_watch wykrywa zmianę pliku konfiguracyjnego."""
+        import tempfile
+        import time
+
+        from librus2mail.librus_collector import sleep_with_config_watch
+
+        with tempfile.NamedTemporaryFile('w', delete=False) as tf:
+            tf.write("initial: true\n")
+            cfg_file = tf.name
+
+        try:
+            # 1. Brak modyfikacji pliku -> zwraca False
+            with patch('librus2mail.librus_collector.sleep') as mock_sleep:
+                changed = sleep_with_config_watch(10, config_path=cfg_file, poll_interval=5.0)
+                self.assertFalse(changed)
+                self.assertEqual(mock_sleep.call_count, 2)
+
+            # 2. Modyfikacja pliku -> zwraca True
+            def modify_file_on_sleep(duration):
+                # Symulujemy zmianę mtime pliku w trakcie pierwszego sleepa
+                time.sleep(0.01)
+                with open(cfg_file, 'a') as f:
+                    f.write("updated: true\n")
+
+            with patch('librus2mail.librus_collector.sleep', side_effect=modify_file_on_sleep):
+                changed = sleep_with_config_watch(60, config_path=cfg_file, poll_interval=1.0)
+                self.assertTrue(changed)
+        finally:
+            if os.path.exists(cfg_file):
+                os.remove(cfg_file)
 
 
 if __name__ == '__main__':

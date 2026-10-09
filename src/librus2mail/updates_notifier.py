@@ -669,7 +669,7 @@ class UpdatesNotifier:
                 sender = self.get_or_create_mail_sender()
                 one_summary = summary if summary is not None else user_config.get(
                     'one_summary_message',
-                    self.config.get('one_summary_message', False)
+                    self.config.get('one_summary_message', True)
                 )
                 if one_summary or (should_send_timetable and not has_new_items):
                     if should_send_timetable and not has_new_items:
@@ -752,7 +752,7 @@ def run_notifier(
             if storage.has_existing_data(user_filter) or storage.get_grades_history(user_filter):
                 first_user = users[0] if users else {}
                 default_receivers = first_user.get('notification_receivers', [])
-                default_one_summary = first_user.get('one_summary_message', config.get('one_summary_message', False))
+                default_one_summary = first_user.get('one_summary_message', config.get('one_summary_message', True))
                 default_read_grades = first_user.get('read_grades', config.get('read_grades', True))
                 default_read_messages = first_user.get('read_messages', config.get('read_messages', True))
                 default_read_timetable = first_user.get('read_timetable', config.get('read_timetable', True))
@@ -782,7 +782,7 @@ def run_notifier(
         if not has_overlap and stored_logins:
             first_user = users[0] if users else {}
             default_receivers = first_user.get('notification_receivers', [])
-            default_one_summary = first_user.get('one_summary_message', config.get('one_summary_message', False))
+            default_one_summary = first_user.get('one_summary_message', config.get('one_summary_message', True))
             default_read_grades = first_user.get('read_grades', config.get('read_grades', True))
             default_read_messages = first_user.get('read_messages', config.get('read_messages', True))
             default_read_timetable = first_user.get('read_timetable', config.get('read_timetable', True))

@@ -10,6 +10,8 @@ from typing import Any
 import requests
 from bs4 import BeautifulSoup
 
+from .domain_models import Announcement, Grade, Message, ScheduleLesson, TimetableEntry
+
 logger = logging.getLogger(__name__)
 
 # URLe
@@ -66,7 +68,12 @@ class Librus:
         except (ValueError, TypeError):
             self.__schedule_retention_days = 30
         self.__librus_login = config.get('librus_login')
-        self.__librus_password = config.get('librus_password')
+        raw_password = config.get('librus_password')
+        self.__librus_password = (
+            raw_password.get_secret_value()
+            if hasattr(raw_password, 'get_secret_value')
+            else raw_password
+        )
 
         if self.__storage:
             known = self.__storage.load_known_items(str(self.__librus_login))
@@ -319,22 +326,22 @@ class Librus:
             sender = correct_sender(tds[2].get_text())
             dt = tds[4].get_text().strip()
 
-            message = {
+            message = Message.model_validate({
                 'title': title,
                 'sender': sender,
                 'is_unread': False,
                 'datetime': dt,
                 'link': link,
                 'has_attachment': has_attachment,
-                'id': title + dt + tds[2].get_text().strip()
-            }
+                'id': title + dt + tds[2].get_text().strip(),
+            })
 
-            if message['id'] not in self.__known_messages:
-                message['is_unread'] = True
+            if message.id not in self.__known_messages:
+                message.is_unread = True
                 if self.__do_read_messages and link:
-                    message['body'] = self.__get_message_body(link)
+                    message.body = self.__get_message_body(link)
                 if style := tds[2].attrs.get('style'):
-                    message['is_unread'] = 'bold' in style
+                    message.is_unread = 'bold' in style
 
             messages.append(message)
 
@@ -419,17 +426,17 @@ class Librus:
             dt = tds[2].get_text().strip()
             body = tds[3].get_text().strip()
 
-            notification = {
+            notification = Announcement.model_validate({
                 'title': title,
                 'sender': sender,
                 'datetime': dt,
                 'is_unread': False,
                 'body': body,
                 'id': title + sender + dt,
-            }
+            })
 
-            if notification['id'] not in self.__known_notifications:
-                notification['is_unread'] = True
+            if notification.id not in self.__known_notifications:
+                notification.is_unread = True
 
             notifications.append(notification)
 
@@ -524,7 +531,7 @@ class Librus:
                     elif part.startswith('Komentarz:'):
                         comment = part.replace('Komentarz:', '').strip()
 
-                raw_grades.append({
+                raw_grades.append(Grade.model_validate({
                     'id': grade_id,
                     'subject': subject or "Inny przedmiot",
                     'grade': val,
@@ -533,8 +540,8 @@ class Librus:
                     'teacher': teacher or "-",
                     'weight': weight or "-",
                     'comment': comment or "-",
-                    'href': href
-                })
+                    'href': href,
+                }))
 
         # Deduplikacja po ID
         unique_grades = {}
@@ -605,7 +612,7 @@ class Librus:
                         else:
                             teacher = t_part.strip()
 
-                    entries.append({
+                    entries.append(TimetableEntry.model_validate({
                         'id': entry_id,
                         'date': date_str,
                         'type': 'absence',
@@ -613,7 +620,7 @@ class Librus:
                         'teacher': teacher,
                         'time': hours,
                         'raw_text': text,
-                    })
+                    }))
 
                 elif 'szczegoly' in onclick:
                     m_id = re.search(r'/(\d+)', onclick)
@@ -653,7 +660,7 @@ class Librus:
 
                     entry_type = 'test' if any(cat in category for cat in ['Sprawdzian', 'Kartkówka', 'Praca klasowa']) else 'event'
 
-                    entries.append({
+                    entries.append(TimetableEntry.model_validate({
                         'id': entry_id,
                         'date': date_str,
                         'type': entry_type,
@@ -663,7 +670,7 @@ class Librus:
                         'teacher': teacher,
                         'description': description,
                         'add_date': add_date,
-                    })
+                    }))
 
         return entries
 
@@ -884,7 +891,7 @@ class Librus:
                         is_moved = True
 
                     entry_id = f"sched_{date_str}_{lesson_no}_{subject}_{b_idx}"
-                    entries.append({
+                    entries.append(ScheduleLesson.model_validate({
                         'id': entry_id,
                         'date': date_str,
                         'lesson_no': lesson_no,
@@ -900,7 +907,7 @@ class Librus:
                         'substitution_info': substitution_info,
                         'info': info_text,
                         'raw_text': block_text,
-                    })
+                    }))
 
         entries.sort(key=lambda x: (x.get('date', ''), x.get('lesson_no', 0)))
         return entries
@@ -916,32 +923,48 @@ class Librus:
 
         logger.info("Pobieram plan lekcji")
         target_dt = date or datetime.now()
-        if target_dt.weekday() == 4 and target_dt.hour >= 15:
-            target_dt = target_dt + timedelta(days=3)
-        elif target_dt.weekday() == 5:
-            target_dt = target_dt + timedelta(days=2)
-        elif target_dt.weekday() == 6:
-            target_dt = target_dt + timedelta(days=1)
+        base_monday = (target_dt - timedelta(days=target_dt.weekday())).date()
 
-        monday = target_dt - timedelta(days=target_dt.weekday())
-        sunday = monday + timedelta(days=6)
-        week_str = f"{monday.strftime('%Y-%m-%d')}_{sunday.strftime('%Y-%m-%d')}"
+        # Pobieramy bieżący tydzień oraz kolejny tydzień w przód (a od piątku również 2 tygodnie w przód)
+        weeks_to_fetch = [base_monday, base_monday + timedelta(days=7)]
+        if target_dt.weekday() in (4, 5, 6):
+            weeks_to_fetch.append(base_monday + timedelta(days=14))
 
         headers = {**self.__headers, 'Referer': PLAN_LEKCJI_URL}
-        entries = []
-        try:
-            res = self.__session.post(PLAN_LEKCJI_URL, data={'tydzien': week_str}, headers=headers)
-            if res.status_code == 200:
-                soup = BeautifulSoup(res.content, 'html.parser')
-                entries = self._parse_schedule_soup(soup)
-        except Exception as e:
-            logger.warning(f"POST do planu lekcji ({week_str}) nie powiódł się ({e}), próbuję GET...")
+        entries_by_id: dict[str, dict[str, Any]] = {}
 
-        if not entries:
+        for w_idx, monday in enumerate(weeks_to_fetch):
+            sunday = monday + timedelta(days=6)
+            week_str = f"{monday.strftime('%Y-%m-%d')}_{sunday.strftime('%Y-%m-%d')}"
+            try:
+                if w_idx > 0:
+                    sleep(1)
+                res = self.__session.post(PLAN_LEKCJI_URL, data={'tydzien': week_str}, headers=headers)
+                if res.status_code == 200:
+                    soup = BeautifulSoup(res.content, 'html.parser')
+                    w_entries = self._parse_schedule_soup(soup)
+                    for item in w_entries:
+                        eid = item.get('id') or f"{item.get('date')}_{item.get('lesson_no')}"
+                        entries_by_id[eid] = item
+            except Exception as e:
+                logger.warning(f"POST do planu lekcji ({week_str}) nie powiódł się ({e})")
+
+        if not entries_by_id:
             soup = self.parse_page(PLAN_LEKCJI_URL)
-            entries = self._parse_schedule_soup(soup)
+            w_entries = self._parse_schedule_soup(soup)
+            for item in w_entries:
+                eid = item.get('id') or f"{item.get('date')}_{item.get('lesson_no')}"
+                entries_by_id[eid] = item
 
-        logger.info(f"Pobrano {len(entries)} lekcji z planu lekcji")
+        entries = sorted(
+            entries_by_id.values(),
+            key=lambda x: (
+                x.get('date', ''),
+                int(x.get('lesson_no', 0)) if str(x.get('lesson_no', '')).isdigit() else 99,
+            ),
+        )
+
+        logger.info(f"Pobrano {len(entries)} lekcji z planu lekcji (zakres: {len(weeks_to_fetch)} tyg.)")
         self.schedule = entries
         self.save_state()
         return entries

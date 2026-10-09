@@ -74,8 +74,10 @@ def render_standalone_html(title: str, body_html: str) -> str:
 
 class MailSender:
     def __init__(self, mail_config):
-        self.sender_email = mail_config['login']
-        self.password = mail_config['password']
+        self.sender_email = mail_config.get('login')
+        raw_pwd = mail_config.get('password')
+        self.password = raw_pwd.get_secret_value() if hasattr(raw_pwd, 'get_secret_value') else raw_pwd
+        self.oauth2_file = mail_config.get('oauth2_file')
 
     @staticmethod
     def _format_grade_badge(val: str) -> Markup:

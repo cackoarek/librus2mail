@@ -30,6 +30,8 @@ def make_offline_friendly(html: str) -> str:
         html = html.replace(old, new)
 
     # Linki podstron raportów z parametrami (days, variant, date)
+    html = re.sub(r'href="/\?date=[^"]*"', 'href="web_dashboard.html"', html)
+    html = re.sub(r'href="/plan\?[^"]*"', 'href="web_plan.html"', html)
     html = re.sub(r'href="/raporty/postepy(\?[^"]*)?"', 'href="web_raporty_postepy.html"', html)
     html = re.sub(r'href="/raporty/uczen\?[^"]*variant=kids[^"]*"', 'href="web_raporty_uczen_kids.html"', html)
     html = re.sub(r'href="/raporty/uczen\?[^"]*variant=youth[^"]*"', 'href="web_raporty_uczen_youth.html"', html)

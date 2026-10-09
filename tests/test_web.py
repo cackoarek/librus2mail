@@ -1150,6 +1150,24 @@ class TestWebDashboard(unittest.TestCase):
         self.assertIn(b'Biologia', res_all.data)
         self.assertIn(b'Matematyka', res_all.data)
 
+        # 5. Weryfikacja spójności dla pulpitu głównego (/) - trwające lekcje
+        res_dash_ongoing = client_ongoing.get('/')
+        self.assertEqual(res_dash_ongoing.status_code, 200)
+        self.assertIn('Dzisiaj (lekcje w toku)', res_dash_ongoing.data.decode('utf-8'))
+        self.assertIn('Matematyka', res_dash_ongoing.data.decode('utf-8'))
+
+        # 6. Weryfikacja dla pulpitu głównego (/) - po zakończeniu lekcji
+        res_dash_finished = client_finished.get('/')
+        self.assertEqual(res_dash_finished.status_code, 200)
+        self.assertIn('Nadchodzący dzień nauki', res_dash_finished.data.decode('utf-8'))
+        self.assertIn('Biologia', res_dash_finished.data.decode('utf-8'))
+        self.assertIn('Poprzedni dzień', res_dash_finished.data.decode('utf-8'))
+
+        # 7. Nawigacja parametrem ?date= na pulpicie
+        res_dash_param = client_finished.get('/?date=2026-09-23')
+        self.assertEqual(res_dash_param.status_code, 200)
+        self.assertIn('Matematyka', res_dash_param.data.decode('utf-8'))
+
     def test_background_collector_lifecycle(self):
         """Testuje uruchamianie wątku harmonogramu w tle w module webowym."""
         import threading

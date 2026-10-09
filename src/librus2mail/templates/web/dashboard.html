@@ -75,10 +75,18 @@
         </div>
     </div>
 
-    <!-- Karta 3: Najbliższy dzień nauki -->
+    <!-- Karta 3: Najbliższy dzień nauki / Dziś -->
     <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
         <div class="flex items-center justify-between">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Najbliższy dzień</span>
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">
+                {% if sched_ctx and sched_ctx.selected_day and sched_ctx.selected_day.is_today %}
+                Plan na dziś
+                {% elif sched_ctx and sched_ctx.selected_day and sched_ctx.selected_day.is_future %}
+                Najbliższy dzień
+                {% else %}
+                Plan lekcji
+                {% endif %}
+            </span>
             <span class="p-2 rounded-xl bg-sky-50 text-sky-600 text-sm">🏫</span>
         </div>
         <div class="mt-3">
@@ -114,21 +122,96 @@
     <!-- Lewa Kolumna (2/3): Plan lekcji + Ostatnie oceny -->
     <div class="lg:col-span-2 space-y-6">
 
-        <!-- Moduł: Plan Lekcji na Najbliższy Dzień -->
+        <!-- Moduł: Plan Lekcji na Wybrany Dzień -->
         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/50">
                 <div class="flex items-center gap-2">
                     <span class="text-lg">🏫</span>
                     <h2 class="text-base font-bold text-slate-900">
                         {{ data.schedule_summary.label or 'Plan lekcji' }}
                     </h2>
                 </div>
-                {% if data.schedule_summary.time_span %}
-                <span class="px-3 py-1 bg-indigo-50 text-indigo-700 font-extrabold text-xs rounded-full border border-indigo-100">
-                    ⏰ {{ data.schedule_summary.time_span }}
-                </span>
-                {% endif %}
+                <div class="flex items-center gap-2 flex-wrap">
+                    {% if data.schedule_summary.time_span %}
+                    <span class="px-3 py-1 bg-indigo-50 text-indigo-700 font-extrabold text-xs rounded-full border border-indigo-100">
+                        ⏰ {{ data.schedule_summary.time_span }}
+                    </span>
+                    {% endif %}
+                    <a href="{{ url_for('web.schedule_view', date=(sched_ctx.selected_date if sched_ctx else '')) }}"
+                       class="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition">
+                        Pełny plan →
+                    </a>
+                </div>
             </div>
+
+            {% if sched_ctx and sched_ctx.days_data %}
+            <!-- Pasek nawigacyjny dni (Poprzedni dzień, status, Dzisiaj, Następny dzień) -->
+            <div class="px-4 py-3 border-b border-slate-100 bg-white flex items-center justify-between gap-2 flex-wrap">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <!-- Poprzedni dzień -->
+                    {% if sched_ctx.prev_date %}
+                    <a href="{{ url_for('web.dashboard', date=sched_ctx.prev_date) }}"
+                       class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition">
+                        ← Poprzedni dzień
+                    </a>
+                    {% else %}
+                    <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-300 bg-slate-50 cursor-not-allowed">
+                        ← Poprzedni dzień
+                    </span>
+                    {% endif %}
+
+                    <!-- Etykieta statusu wybranego dnia -->
+                    {% if sched_ctx.selected_day %}
+                        {% if sched_ctx.selected_day.is_today and sched_ctx.lessons_ongoing %}
+                        <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-bold flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span>Dzisiaj (lekcje w toku)</span>
+                        </span>
+                        {% elif sched_ctx.selected_day.is_today and not sched_ctx.lessons_ongoing %}
+                        <span class="px-2.5 py-1 bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-bold">
+                            Dzisiaj (lekcje zakończone)
+                        </span>
+                        {% elif sched_ctx.selected_day.is_future %}
+                        <span class="px-2.5 py-1 bg-sky-50 text-sky-800 border border-sky-200 rounded-lg text-xs font-bold flex items-center gap-1">
+                            <span>🚀</span> Nadchodzący dzień nauki
+                        </span>
+                        {% else %}
+                        <span class="px-2.5 py-1 bg-slate-50 text-slate-500 border border-slate-200 rounded-lg text-xs font-medium">
+                            Archiwum (dzień miniony)
+                        </span>
+                        {% endif %}
+                    {% endif %}
+
+                    <!-- Następny dzień -->
+                    {% if sched_ctx.next_date %}
+                    <a href="{{ url_for('web.dashboard', date=sched_ctx.next_date) }}"
+                       class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition">
+                        Następny dzień →
+                    </a>
+                    {% else %}
+                    <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-300 bg-slate-50 cursor-not-allowed">
+                        Następny dzień →
+                    </span>
+                    {% endif %}
+                </div>
+
+                <!-- Przyciski powrotu: Dzisiaj / Najbliższy dzień -->
+                <div class="flex items-center gap-1.5">
+                    {% if sched_ctx.today_date in sched_ctx.sorted_dates and sched_ctx.selected_date != sched_ctx.today_date %}
+                    <a href="{{ url_for('web.dashboard', date=sched_ctx.today_date) }}"
+                       class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition">
+                        <span>🎯 Dzisiaj</span>
+                    </a>
+                    {% endif %}
+                    {% if sched_ctx.selected_date != sched_ctx.default_target_date and sched_ctx.default_target_date != sched_ctx.today_date %}
+                    <a href="{{ url_for('web.dashboard', date=sched_ctx.default_target_date) }}"
+                       class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition">
+                        <span>🎯 Najbliższy dzień</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
 
             {% if data.schedule_summary.has_any and data.schedule_summary.lessons %}
                 <!-- Alerty o zmianach w planie -->

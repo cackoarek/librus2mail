@@ -265,6 +265,182 @@ def simulate_new_grade(
     }
 
 
+def build_schedule_day_context(
+    all_lessons: list[dict[str, Any]],
+    timetable_entries: list[dict[str, Any]] | None = None,
+    ref_now: datetime | None = None,
+    requested_date: str | None = None,
+) -> dict[str, Any]:
+    """Przygotowuje spójny kontekst wyboru i nawigacji dnia dla planu lekcji (pulpit oraz /plan):
+
+    - Koreluje sprawdziany/kartkówki z lekcjami.
+    - Określa, czy lekcje w bieżącym dniu trwają (na podstawie godziny zakończenia ostatniej aktywnej lekcji).
+    - Domyślnie wybiera dzień bieżący (gdy trwają lekcje) lub najbliższy przyszły dzień nauki (gdy lekcje minęły / dzień wolny).
+    - Wyznacza poprzedni i kolejny dzień w sekwencji dla przycisków nawigacji.
+    """
+    now = ref_now or datetime.now()
+    tests_by_date: dict[str, list] = {}
+    for t in timetable_entries or []:
+        t_d = t.get('date')
+        if t_d and t.get('type') == 'test':
+            tests_by_date.setdefault(t_d, []).append(t)
+
+    by_date: dict[str, list] = {}
+    for entry in all_lessons or []:
+        d = entry.get('date')
+        if d:
+            clean_d = d.split()[0] if ' ' in d else d
+            if clean_d not in by_date:
+                by_date[clean_d] = []
+            e_copy = dict(entry)
+            if not e_copy.get('test') and clean_d in tests_by_date:
+                e_sub = str(e_copy.get('subject', '')).strip().lower()
+                for test_item in tests_by_date[clean_d]:
+                    test_sub = str(test_item.get('subject', '')).strip().lower()
+                    if test_sub and (test_sub in e_sub or e_sub in test_sub):
+                        e_copy['test'] = test_item
+                        break
+            by_date[clean_d].append(e_copy)
+
+    for d, l_list in by_date.items():
+        l_list.sort(key=lambda x: (int(x.get('lesson_no', 0)) if str(x.get('lesson_no', '')).isdigit() else 99, x.get('time_from', '')))
+
+    today_str = now.strftime('%Y-%m-%d')
+    current_time_str = now.strftime('%H:%M')
+
+    today_lessons = by_date.get(today_str, [])
+    active_today_lessons = [les for les in today_lessons if not les.get('is_cancelled')]
+    lessons_ongoing = False
+    if today_lessons:
+        last_lesson = max(active_today_lessons or today_lessons, key=lambda x: x.get('time_to', ''))
+        last_time_to = last_lesson.get('time_to', '')
+        if last_time_to:
+            lessons_ongoing = (current_time_str <= last_time_to)
+        else:
+            lessons_ongoing = (now.hour < 15)
+
+    sorted_dates = sorted(by_date.keys())
+    future_dates = [d for d in sorted_dates if d > today_str]
+
+    if lessons_ongoing and today_str in by_date:
+        default_target_date = today_str
+        target_reason = 'today_ongoing'
+    elif future_dates:
+        default_target_date = future_dates[0]
+        target_reason = 'next_school_day'
+    elif today_str in by_date:
+        default_target_date = today_str
+        target_reason = 'today_finished'
+    elif sorted_dates:
+        default_target_date = sorted_dates[-1]
+        target_reason = 'latest_available'
+    else:
+        default_target_date = today_str
+        target_reason = 'empty'
+
+    req_clean = (requested_date or '').strip()
+    selected_date = req_clean if req_clean in by_date else default_target_date
+
+    prev_date = None
+    next_date = None
+    if selected_date in sorted_dates:
+        idx = sorted_dates.index(selected_date)
+        if idx > 0:
+            prev_date = sorted_dates[idx - 1]
+        if idx < len(sorted_dates) - 1:
+            next_date = sorted_dates[idx + 1]
+
+    weekdays_pl = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela"]
+    weekdays_short_pl = ["Pon", "Wt", "Śr", "Czw", "Pt", "Sob", "Ndz"]
+    days_data = []
+    selected_day_data = None
+
+    tomorrow_str = (now.date() + timedelta(days=1)).strftime('%Y-%m-%d')
+
+    for d_str in sorted_dates:
+        try:
+            d_obj = datetime.strptime(d_str, "%Y-%m-%d").date()
+            w_name = weekdays_pl[d_obj.weekday()]
+            w_short = weekdays_short_pl[d_obj.weekday()]
+            f_date = d_obj.strftime("%d.%m")
+        except Exception:
+            w_name = ""
+            w_short = ""
+            f_date = d_str
+
+        day_lessons = by_date[d_str]
+        active_day_lessons = [les for les in day_lessons if not les.get('is_cancelled')]
+        cancelled_count = sum(1 for x in day_lessons if x.get('is_cancelled'))
+        substitution_count = sum(1 for x in day_lessons if x.get('is_substitution'))
+        tests_count = sum(1 for x in day_lessons if x.get('test'))
+
+        start_time = active_day_lessons[0].get('time_from') if active_day_lessons else (day_lessons[0].get('time_from') if day_lessons else '')
+        end_time = active_day_lessons[-1].get('time_to') if active_day_lessons else (day_lessons[-1].get('time_to') if day_lessons else '')
+        time_span = f"{start_time} – {end_time}" if start_time and end_time else ""
+
+        if d_str == today_str:
+            label = f"Dzisiaj ({w_name.lower()}, {f_date})"
+        elif d_str == tomorrow_str:
+            label = f"Jutro ({w_name.lower()}, {f_date})"
+        else:
+            label = f"Plan lekcji ({w_name.lower()}, {f_date})"
+
+        day_dict = {
+            'date': d_str,
+            'label': label,
+            'weekday_name': w_name,
+            'weekday_short': w_short,
+            'formatted_date': f_date,
+            'is_today': (d_str == today_str),
+            'is_selected': (d_str == selected_date),
+            'is_past': (d_str < today_str),
+            'is_future': (d_str > today_str),
+            'lessons': day_lessons,
+            'total_count': len(day_lessons),
+            'active_count': len(active_day_lessons),
+            'cancelled_count': cancelled_count,
+            'substitution_count': substitution_count,
+            'tests_count': tests_count,
+            'time_span': time_span,
+            'has_any': len(day_lessons) > 0,
+        }
+        days_data.append(day_dict)
+        if d_str == selected_date:
+            selected_day_data = day_dict
+
+    empty_summary = {
+        'has_any': False,
+        'lessons': [],
+        'label': 'Brak lekcji w planie',
+        'total_count': 0,
+        'active_count': 0,
+        'cancelled_count': 0,
+        'substitution_count': 0,
+        'tests_count': 0,
+        'time_span': '',
+        'date': today_str,
+        'is_today': True,
+        'is_past': False,
+        'is_future': False,
+    }
+
+    return {
+        'by_date': by_date,
+        'sorted_dates': sorted_dates,
+        'today_str': today_str,
+        'today_date': today_str,
+        'lessons_ongoing': lessons_ongoing,
+        'default_target_date': default_target_date,
+        'target_reason': target_reason,
+        'selected_date': selected_date,
+        'prev_date': prev_date,
+        'next_date': next_date,
+        'selected_day': selected_day_data,
+        'selected_summary': selected_day_data or empty_summary,
+        'days_data': days_data,
+    }
+
+
 def get_student_dashboard_bundle(
     storage: BaseStorage,
     login: str,
@@ -292,8 +468,8 @@ def get_student_dashboard_bundle(
 
     # Terminarz i plan lekcji
     timetable_summary = prepare_timetable_summary(timetable, reference_date=ref_now.date())
-    day_offset = int(config.get('schedule_day_offset', 1))
-    schedule_summary = prepare_schedule_summary(schedule, timetable_entries=timetable, now=ref_now, day_offset=day_offset)
+    sched_ctx = build_schedule_day_context(schedule, timetable_entries=timetable, ref_now=ref_now)
+    schedule_summary = sched_ctx['selected_summary']
     today_schedule_summary = prepare_schedule_summary(schedule, timetable_entries=timetable, now=ref_now, day_offset=0)
 
     # Liczba nadchodzących sprawdzianów w horyzoncie

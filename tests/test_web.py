@@ -1222,6 +1222,60 @@ class TestWebDashboard(unittest.TestCase):
                 storage_dir=self.storage_dir,
             )
 
+    def test_messages_and_announcements_sorted_by_date_descending(self):
+        """Weryfikuje, że w dziale Wiadomości zarówno wiadomości, jak i ogłoszenia są sortowane od najnowszych."""
+        storage = get_storage(self.mock_config, self.storage_dir)
+
+        # Zapisujemy wiadomości w kolejności niechronologicznej (stara, najnowsza, średnia)
+        raw_msgs = [
+            {'id': 'msg_old', 'title': 'Wiadomość Wrzesień', 'sender': 'Nauczyciel A', 'datetime': '2026-09-05 10:00:00'},
+            {'id': 'msg_newest', 'title': 'Wiadomość Dzisiaj', 'sender': 'Nauczyciel B', 'datetime': '2026-10-09 18:30:00'},
+            {'id': 'msg_mid', 'title': 'Wiadomość Koniec Września', 'sender': 'Nauczyciel C', 'datetime': '2026-09-28 12:15:00'},
+        ]
+        storage.save_messages_details('123456', raw_msgs)
+
+        # Zapisujemy ogłoszenia w kolejności niechronologicznej
+        raw_notifs = [
+            {'id': 'notif_old', 'title': 'Ogłoszenie Rozpoczęcie', 'sender': 'Dyrekcja', 'datetime': '2026-09-01'},
+            {'id': 'notif_newest', 'title': 'Ogłoszenie Październikowe', 'sender': 'Dyrekcja', 'datetime': '2026-10-08'},
+            {'id': 'notif_mid', 'title': 'Ogłoszenie Wycieczka', 'sender': 'Wychowawca', 'datetime': '2026-09-20'},
+        ]
+        storage.save_notifications_details('123456', raw_notifs)
+
+        # 1. Test na poziomie storage
+        sorted_msgs = storage.get_stored_messages('123456')
+        self.assertEqual(len(sorted_msgs), 3)
+        self.assertEqual(sorted_msgs[0]['id'], 'msg_newest')
+        self.assertEqual(sorted_msgs[1]['id'], 'msg_mid')
+        self.assertEqual(sorted_msgs[2]['id'], 'msg_old')
+
+        sorted_notifs = storage.get_stored_notifications('123456')
+        self.assertEqual(len(sorted_notifs), 3)
+        self.assertEqual(sorted_notifs[0]['id'], 'notif_newest')
+        self.assertEqual(sorted_notifs[1]['id'], 'notif_mid')
+        self.assertEqual(sorted_notifs[2]['id'], 'notif_old')
+
+        # 2. Test integracyjny widoku /wiadomosci (kolejność w HTML)
+        app = create_app(config_path=self.config_path, storage_dir=self.storage_dir, no_auth=True)
+        client = app.test_client()
+        res = client.get('/wiadomosci')
+        self.assertEqual(res.status_code, 200)
+
+        html = res.data.decode('utf-8')
+        pos_msg_new = html.find('Wiadomość Dzisiaj')
+        pos_msg_mid = html.find('Wiadomość Koniec Września')
+        pos_msg_old = html.find('Wiadomość Wrzesień')
+        self.assertTrue(pos_msg_new != -1 and pos_msg_mid != -1 and pos_msg_old != -1)
+        self.assertLess(pos_msg_new, pos_msg_mid, "Najnowsza wiadomość powinna pojawić się przed średnią")
+        self.assertLess(pos_msg_mid, pos_msg_old, "Średnia wiadomość powinna pojawić się przed najstarszą")
+
+        pos_notif_new = html.find('Ogłoszenie Październikowe')
+        pos_notif_mid = html.find('Ogłoszenie Wycieczka')
+        pos_notif_old = html.find('Ogłoszenie Rozpoczęcie')
+        self.assertTrue(pos_notif_new != -1 and pos_notif_mid != -1 and pos_notif_old != -1)
+        self.assertLess(pos_notif_new, pos_notif_mid, "Najnowsze ogłoszenie powinno pojawić się przed średnim")
+        self.assertLess(pos_notif_mid, pos_notif_old, "Średnie ogłoszenie powinno pojawić się przed najstarszym")
+
 
 if __name__ == '__main__':
     unittest.main()

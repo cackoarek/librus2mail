@@ -13,7 +13,7 @@ from librus2mail.progress_analyzer import (
     parse_numeric_grade,
     parse_weight,
 )
-from librus2mail.storage import BaseStorage, create_storage
+from librus2mail.storage import BaseStorage, create_storage, sort_items_descending
 from librus2mail.student_analyzer import StudentAnalyzer
 from librus2mail.updates_notifier import (
     parse_item_datetime,
@@ -454,8 +454,10 @@ def get_student_dashboard_bundle(
     grades = storage.get_grades_history(login) if hasattr(storage, 'get_grades_history') else []
     timetable = storage.get_timetable_history(login) if hasattr(storage, 'get_timetable_history') else []
     schedule = storage.get_schedule_history(login) if hasattr(storage, 'get_schedule_history') else []
-    messages = storage.get_stored_messages(login) if hasattr(storage, 'get_stored_messages') else []
-    notifications = storage.get_stored_notifications(login) if hasattr(storage, 'get_stored_notifications') else []
+    raw_messages = storage.get_stored_messages(login) if hasattr(storage, 'get_stored_messages') else []
+    raw_notifications = storage.get_stored_notifications(login) if hasattr(storage, 'get_stored_notifications') else []
+    messages = sort_items_descending(raw_messages)
+    notifications = sort_items_descending(raw_notifications)
     last_sync = storage.get_last_collect_time(login) if hasattr(storage, 'get_last_collect_time') else None
     last_sync_human = format_human_timestamp(last_sync, now=ref_now)
 
@@ -649,10 +651,11 @@ def build_daily_summary_html(
     target_date: date | str | None = None,
     now: datetime | None = None,
 ) -> str:
-    """Generuje gotowy HTML codziennego podsumowania (notyfikacje, terminarz, plan) dla wskazanego dnia."""
     grades = storage.get_grades_history(login) if hasattr(storage, 'get_grades_history') else []
-    messages = storage.get_stored_messages(login) if hasattr(storage, 'get_stored_messages') else []
-    notifications = storage.get_stored_notifications(login) if hasattr(storage, 'get_stored_notifications') else []
+    raw_messages = storage.get_stored_messages(login) if hasattr(storage, 'get_stored_messages') else []
+    raw_notifications = storage.get_stored_notifications(login) if hasattr(storage, 'get_stored_notifications') else []
+    messages = sort_items_descending(raw_messages)
+    notifications = sort_items_descending(raw_notifications)
     timetable = storage.get_timetable_history(login) if hasattr(storage, 'get_timetable_history') else []
     schedule = storage.get_schedule_history(login) if hasattr(storage, 'get_schedule_history') else []
 

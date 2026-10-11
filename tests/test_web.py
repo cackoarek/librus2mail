@@ -245,6 +245,8 @@ class TestWebDashboard(unittest.TestCase):
         self.assertIn('Oceny i Średnie'.encode(), res_oceny.data)
         self.assertIn(b'Aktualne oceny', res_oceny.data)
         self.assertIn('Świadectwo'.encode(), res_oceny.data)
+        self.assertIn('Pasek z wyróżnieniem'.encode(), res_oceny.data)
+        self.assertIn(b"switchGradesTab('swiadectwo')", res_oceny.data)
         self.assertIn(b'Symulator nowej oceny', res_oceny.data)
         self.assertIn(b'Symulator Nowej Oceny', res_oceny.data)
         self.assertIn(b'Matematyka', res_oceny.data)

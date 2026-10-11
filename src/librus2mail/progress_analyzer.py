@@ -471,33 +471,46 @@ class ProgressAnalyzer:
 
         # 8. Analiza dodatkowa 3: Symulator "Czerwonego Paska" (Świadectwo z wyróżnieniem)
         subjects_with_avg = [s for s in analyzed_subjects if s['overall_avg'] is not None]
+        predicted_grade_nums = [
+            get_predicted_grade_tuple(s['overall_avg'])[0]
+            for s in subjects_with_avg
+            if s['overall_avg'] is not None and get_predicted_grade_tuple(s['overall_avg'])[0] > 0
+        ]
+        certificate_student_avg = (
+            round(sum(predicted_grade_nums) / len(predicted_grade_nums), 2)
+            if predicted_grade_nums
+            else overall_student_avg
+        )
+
         honor_roll = {
             'qualified': False,
             'status': 'target',
-            'current_avg': overall_student_avg,
+            'current_avg': certificate_student_avg,
+            'certificate_avg': certificate_student_avg,
+            'weighted_overall_avg': overall_student_avg,
             'target_avg': 4.75,
             'gap': 0.0,
             'message': '',
             'key_opportunities': []
         }
 
-        if subjects_with_avg and overall_student_avg is not None:
-            has_failing = any(s['overall_avg'] < 1.75 for s in subjects_with_avg)
-            if overall_student_avg >= 4.75 and not has_failing:
+        if subjects_with_avg and certificate_student_avg is not None:
+            has_failing = any(get_predicted_grade_tuple(s['overall_avg'])[0] == 1 for s in subjects_with_avg)
+            if certificate_student_avg >= 4.75 and not has_failing:
                 honor_roll['qualified'] = True
                 honor_roll['status'] = 'achieved'
                 honor_roll['message'] = (
-                    f"Aktualna średnia ({overall_student_avg:.2f}) kwalifikuje ucznia do świadectwa z wyróżnieniem! "
+                    f"Aktualna średnia ze świadectwa ({certificate_student_avg:.2f}) kwalifikuje ucznia do świadectwa z wyróżnieniem! "
                     "Brak ocen niedostatecznych. Gratulacje!"
                 )
             else:
-                gap = round(4.75 - overall_student_avg, 2)
-                honor_roll['gap'] = max(0.0, gap)
+                gap = round(max(0.0, 4.75 - certificate_student_avg), 2)
+                honor_roll['gap'] = gap
                 candidates = []
                 for s in subjects_with_avg:
                     avg = s['overall_avg']
                     curr_n, _ = get_predicted_grade_tuple(avg)
-                    if curr_n < 5:  # Można podciągnąć na 5 lub 6
+                    if curr_n < 6:  # Można podciągnąć na wyższą ocenę (do 6)
                         next_thresh = [t[0] for t in GRADE_THRESHOLDS if t[1] == curr_n + 1][0]
                         dist = round(next_thresh - avg, 2)
                         candidates.append({
@@ -515,7 +528,7 @@ class ProgressAnalyzer:
                     opp_text = f" Najszybsza droga do paska to podniesienie ocen z: {items_str}."
 
                 honor_roll['message'] = (
-                    f"Do czerwonego paska (średnia 4.75) brakuje {gap:.2f} pkt średniej.{opp_text}"
+                    f"Do czerwonego paska (średnia ze świadectwa 4.75) brakuje {gap:.2f} pkt średniej.{opp_text}"
                 )
 
         # 9. Analiza dodatkowa 4: "Ciche przedmioty" (brak ocen od >= 30 dni)
@@ -618,7 +631,7 @@ class ProgressAnalyzer:
 
         # Sukcesy
         if honor_roll['qualified']:
-            strengths.append(f"🏅 <strong>Świadectwo z wyróżnieniem</strong>: aktualna średnia ucznia wynosi {overall_student_avg:.2f} (próg: 4.75)!")
+            strengths.append(f"🏅 <strong>Świadectwo z wyróżnieniem</strong>: aktualna średnia ze świadectwa wynosi {certificate_student_avg:.2f} (próg: 4.75)!")
         else:
             top_subjects = [s for s in analyzed_subjects if s['overall_avg'] and s['overall_avg'] >= 4.75]
             if top_subjects:

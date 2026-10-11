@@ -17,6 +17,7 @@ from librus2mail.web.services import (
     build_daily_summary_html,
     build_progress_report_html,
     build_student_report_html,
+    calculate_certificate_summary,
     calculate_overall_average,
     calculate_subject_averages,
     capture_action_execution,
@@ -242,8 +243,23 @@ class TestWebDashboard(unittest.TestCase):
         res_oceny = client.get('/oceny')
         self.assertEqual(res_oceny.status_code, 200)
         self.assertIn('Oceny i Średnie'.encode(), res_oceny.data)
+        self.assertIn(b'Aktualne oceny', res_oceny.data)
+        self.assertIn('Świadectwo'.encode(), res_oceny.data)
+        self.assertIn(b'Symulator nowej oceny', res_oceny.data)
         self.assertIn(b'Symulator Nowej Oceny', res_oceny.data)
         self.assertIn(b'Matematyka', res_oceny.data)
+
+        res_oceny_swiad = client.get('/oceny?tab=swiadectwo')
+        self.assertEqual(res_oceny_swiad.status_code, 200)
+        self.assertIn(b'grades-pane-swiadectwo', res_oceny_swiad.data)
+        self.assertIn('Średnia za całe świadectwo'.encode(), res_oceny_swiad.data)
+        self.assertIn(b'Proponowana', res_oceny_swiad.data)
+        self.assertIn(b'Ocena', res_oceny_swiad.data)
+        self.assertIn('Słownie'.encode(), res_oceny_swiad.data)
+
+        res_oceny_sym = client.get('/oceny?tab=symulator')
+        self.assertEqual(res_oceny_sym.status_code, 200)
+        self.assertIn(b'grades-pane-symulator', res_oceny_sym.data)
 
         # 4. Widok terminarza
         res_term = client.get('/terminarz')
@@ -371,6 +387,28 @@ class TestWebDashboard(unittest.TestCase):
         self.assertEqual(sim['old_avg'], 4.33)
         self.assertEqual(sim['new_avg'], 5.17)
         self.assertEqual(sim['diff'], 0.84)
+
+        # Test zestawienia na świadectwo (calculate_certificate_summary)
+        averages_with_empty = dict(averages)
+        averages_with_empty['Plastyka'] = {
+            'subject': 'Plastyka',
+            'grades': [],
+            'count': 0,
+            'numeric_count': 0,
+            'average': None,
+            'sum_weights': 0.0,
+        }
+        cert = calculate_certificate_summary(averages_with_empty)
+        # Matematyka (śr 4.33 -> 4) + Fizyka (śr 4.0 -> 4)
+        # Plastyka ma 0 ocen, więc nie wchodzi do średniej ze świadectwa
+        self.assertEqual(cert['rated_count'], 2)
+        self.assertEqual(cert['unrated_count'], 1)
+        self.assertEqual(cert['total_count'], 3)
+        self.assertEqual(cert['certificate_average'], 4.00)
+        self.assertFalse(cert['has_red_stripe'])
+        self.assertEqual(cert['red_stripe_diff'], 0.75)
+        self.assertEqual(cert['subjects'][0]['proposed_grade_word'], 'dobry')
+        self.assertEqual(cert['subjects'][2]['proposed_grade_word'], 'brak ocen')
 
         # Test ustalania pełnej nazwy ucznia (resolve_student_name)
         storage = get_storage(self.mock_config, self.storage_dir)

@@ -10,6 +10,7 @@ from typing import Any
 from librus2mail.mail_sender import MailSender
 from librus2mail.progress_analyzer import (
     ProgressAnalyzer,
+    get_predicted_grade_tuple,
     parse_numeric_grade,
     parse_weight,
 )
@@ -223,6 +224,61 @@ def calculate_overall_average(subject_averages: dict[str, dict[str, Any]]) -> fl
     if not avgs:
         return None
     return round(sum(avgs) / len(avgs), 2)
+
+
+GRADE_WORDS = {
+    6: "celujący",
+    5: "bardzo dobry",
+    4: "dobry",
+    3: "dostateczny",
+    2: "dopuszczający",
+    1: "niedostateczny",
+}
+
+
+def calculate_certificate_summary(subject_averages: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    """Wylicza zestawienie przedmiotów na świadectwo wraz ze średnią z proponowanych ocen końcowych."""
+    subjects_list = []
+    rated_grades: list[int] = []
+    unrated_count = 0
+
+    for subj, sdata in subject_averages.items():
+        avg = sdata.get('average')
+        num_count = sdata.get('numeric_count', 0)
+
+        if avg is not None and num_count > 0:
+            prop_num, prop_label = get_predicted_grade_tuple(avg)
+            prop_word = GRADE_WORDS.get(prop_num, "—")
+            rated_grades.append(prop_num)
+        else:
+            prop_num = None
+            prop_label = "Brak ocen"
+            prop_word = "brak ocen"
+            unrated_count += 1
+
+        subjects_list.append({
+            'subject': subj,
+            'count': sdata.get('count', 0),
+            'numeric_count': num_count,
+            'average': avg,
+            'proposed_grade_num': prop_num,
+            'proposed_grade_word': prop_word,
+            'proposed_grade_label': prop_label,
+        })
+
+    certificate_avg = round(sum(rated_grades) / len(rated_grades), 2) if rated_grades else None
+    has_red_stripe = certificate_avg is not None and certificate_avg >= 4.75
+    red_stripe_diff = round(4.75 - certificate_avg, 2) if (certificate_avg is not None and certificate_avg < 4.75) else 0.0
+
+    return {
+        'subjects': subjects_list,
+        'rated_count': len(rated_grades),
+        'unrated_count': unrated_count,
+        'total_count': len(subjects_list),
+        'certificate_average': certificate_avg,
+        'has_red_stripe': has_red_stripe,
+        'red_stripe_diff': red_stripe_diff,
+    }
 
 
 def simulate_new_grade(

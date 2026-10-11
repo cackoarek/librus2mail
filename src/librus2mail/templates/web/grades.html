@@ -91,155 +91,432 @@
     </div>
 </div>
 
-<!-- Interaktywny Kalkulator "Co jeśli?" (What-If Grade Simulator) -->
-<div class="bg-gradient-to-br from-indigo-900 to-slate-900 text-white p-6 rounded-2xl shadow-lg my-6">
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-indigo-800/80 pb-4 mb-4">
-        <div>
-            <h2 class="text-lg font-extrabold flex items-center gap-2">
-                <span>🔮</span>
-                <span>Symulator Nowej Oceny ("Co jeśli?")</span>
-            </h2>
-            <p class="text-xs text-indigo-200 mt-1">
-                Sprawdź natychmiast, jak potencjalna ocena ze sprawdzianu lub kartkówki wpłynie na średnią ważoną z danego przedmiotu.
-            </p>
-        </div>
+<!-- Pasek podzakładek (horyzontalny styl jak w dziale Raporty) -->
+<div class="flex items-center gap-1.5 p-1 bg-slate-200/70 rounded-xl overflow-x-auto scrollbar-none w-fit mb-6">
+    <button type="button"
+            onclick="switchGradesTab('oceny')"
+            id="grades-tab-btn-oceny"
+            class="grades-tab-btn px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'oceny' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
+        📝 Aktualne oceny
+    </button>
+    <button type="button"
+            onclick="switchGradesTab('swiadectwo')"
+            id="grades-tab-btn-swiadectwo"
+            class="grades-tab-btn px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'swiadectwo' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
+        📜 Świadectwo
+    </button>
+    <button type="button"
+            onclick="switchGradesTab('symulator')"
+            id="grades-tab-btn-symulator"
+            class="grades-tab-btn px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'symulator' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
+        🔮 Symulator nowej oceny
+    </button>
+</div>
+
+<!-- ========================================== -->
+<!-- ZAKŁADKA 1: AKTUALNE OCENY                 -->
+<!-- ========================================== -->
+<div id="grades-pane-oceny" class="grades-tab-pane {{ '' if active_tab == 'oceny' else 'hidden' }}">
+    {% if not subject_averages %}
+    <div class="p-12 bg-white border border-slate-200 rounded-2xl text-center">
+        <div class="text-4xl mb-3">📝</div>
+        <h3 class="text-lg font-bold text-slate-800">Brak ocen w pamięci podręcznej</h3>
+        <p class="text-sm text-slate-500 mt-1 max-w-md mx-auto">
+            Nie odnaleziono zarejestrowanych ocen dla tego konta. Kliknij przycisk "Pobierz świeże oceny", aby pobrać dane z systemu Librus.
+        </p>
     </div>
+    {% else %}
 
-    <form hx-post="{{ url_for('web.api_whatif') }}"
-          hx-target="#whatif-result"
-          hx-indicator="#whatif-spinner"
-          class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
-
-        <!-- Wybór przedmiotu -->
-        <div>
-            <label class="block text-xs font-bold text-indigo-200 uppercase tracking-wider mb-1.5">
-                Przedmiot
-            </label>
-            <select name="subject" required
-                    class="w-full bg-slate-800 border border-indigo-700/60 rounded-xl px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-400 focus:outline-none">
-                {% for subj, sdata in subject_averages.items() %}
-                <option value="{{ subj }}">{{ subj }} (śr. {{ sdata.average or '-' }})</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <!-- Nowa ocena -->
-        <div>
-            <label class="block text-xs font-bold text-indigo-200 uppercase tracking-wider mb-1.5">
-                Spodziewana ocena
-            </label>
-            <select name="grade"
-                    class="w-full bg-slate-800 border border-indigo-700/60 rounded-xl px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-400 focus:outline-none">
-                <option value="6.0">6 (Celujący)</option>
-                <option value="5.0" selected>5 (Bardzo dobry)</option>
-                <option value="4.0">4 (Dobry)</option>
-                <option value="3.0">3 (Dostateczny)</option>
-                <option value="2.0">2 (Dopuszczający)</option>
-                <option value="1.0">1 (Niedostateczny)</option>
-            </select>
-        </div>
-
-        <!-- Waga oceny -->
-        <div>
-            <label class="block text-xs font-bold text-indigo-200 uppercase tracking-wider mb-1.5">
-                Waga oceny
-            </label>
-            <select name="weight"
-                    class="w-full bg-slate-800 border border-indigo-700/60 rounded-xl px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-400 focus:outline-none">
-                <option value="1">Waga 1 (odpowiedź, zadanie)</option>
-                <option value="2">Waga 2 (kartkówka)</option>
-                <option value="3" selected>Waga 3 (sprawdzian, praca klasowa)</option>
-                <option value="4">Waga 4 (projekt)</option>
-                <option value="5">Waga 5 (duży test)</option>
-            </select>
-        </div>
-
-        <!-- Przycisk symulacji -->
-        <div>
-            <button type="submit"
-                    class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold text-indigo-950 bg-indigo-300 hover:bg-white shadow-md transition-all cursor-pointer">
-                <span id="whatif-spinner" class="htmx-indicator animate-spin">⏳</span>
-                <span>Oblicz nową średnią</span>
-            </button>
-        </div>
-    </form>
-
-    <div id="whatif-result" class="mt-4"></div>
-</div>
-
-<!-- Zestawienie Ocen per Przedmiot -->
-{% if not subject_averages %}
-<div class="p-12 bg-white border border-slate-200 rounded-2xl text-center">
-    <div class="text-4xl mb-3">📝</div>
-    <h3 class="text-lg font-bold text-slate-800">Brak ocen w pamięci podręcznej</h3>
-    <p class="text-sm text-slate-500 mt-1 max-w-md mx-auto">
-        Nie odnaleziono zarejestrowanych ocen dla tego konta. Kliknij przycisk "Pobierz świeże oceny", aby pobrać dane z systemu Librus.
-    </p>
-</div>
-{% else %}
-
-<div class="space-y-4">
-    {% for subj, sdata in subject_averages.items() %}
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden transition-all hover:border-slate-300">
-        <!-- Pasek przedmiotu -->
-        <div class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/50 border-b border-slate-100">
-            <div>
-                <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                    <span>{{ subj }}</span>
-                </h3>
-                <div class="text-xs text-slate-500 mt-0.5">
-                    Liczba ocen: <strong>{{ sdata.count }}</strong> (suma wag: {{ sdata.sum_weights|round(1) }})
-                </div>
-            </div>
-
-            <!-- Średnia ważona z odznaką -->
-            <div class="flex items-center gap-3">
-                <div class="text-right">
-                    <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
-                    <span class="text-xl font-extrabold
-                        {% if sdata.average and sdata.average >= 4.75 %} text-emerald-600
-                        {% elif sdata.average and sdata.average >= 3.75 %} text-sky-600
-                        {% elif sdata.average and sdata.average >= 2.75 %} text-amber-600
-                        {% elif sdata.average %} text-rose-600
-                        {% else %} text-slate-400 {% endif %}">
-                        {{ sdata.average or '-' }}
-                    </span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Karty / Pigułki ocen -->
-        <div class="p-4 sm:p-5">
-            <div class="flex flex-wrap gap-2.5">
-                {% for g in sdata.grades %}
-                <div class="group relative inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300 shadow-xs transition-all cursor-default">
-                    <!-- Odznaka oceny -->
-                    <span class="w-7 h-7 rounded-lg flex items-center justify-center font-extrabold text-sm
-                        {% if g.grade in ['5', '6', '5+', '6-'] %} bg-emerald-100 text-emerald-800
-                        {% elif g.grade in ['4', '4+', '4-'] %} bg-sky-100 text-sky-800
-                        {% elif g.grade in ['3', '3+', '3-'] %} bg-amber-100 text-amber-800
-                        {% elif g.grade in ['1', '2', '1+', '2+'] %} bg-rose-100 text-rose-800
-                        {% else %} bg-slate-100 text-slate-700 {% endif %}">
-                        {{ g.grade }}
-                    </span>
-
-                    <!-- Szczegóły: Kategoria & Waga -->
-                    <div class="text-left">
-                        <div class="text-xs font-bold text-slate-800 truncate max-w-[140px] sm:max-w-[200px]" title="{{ g.category or 'Ocena' }}">
-                            {{ g.category or 'Ocena' }}
-                        </div>
-                        <div class="text-[10px] text-slate-400 font-medium">
-                            waga: {{ g.weight or '1' }} • {{ g.date or '' }}
-                        </div>
+    <div class="space-y-4">
+        {% for subj, sdata in subject_averages.items() %}
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden transition-all hover:border-slate-300">
+            <!-- Pasek przedmiotu -->
+            <div class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/50 border-b border-slate-100">
+                <div>
+                    <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                        <span>{{ subj }}</span>
+                    </h3>
+                    <div class="text-xs text-slate-500 mt-0.5">
+                        Liczba ocen: <strong>{{ sdata.count }}</strong> (suma wag: {{ sdata.sum_weights|round(1) }})
                     </div>
                 </div>
-                {% endfor %}
+
+                <!-- Średnia ważona z odznaką -->
+                <div class="flex items-center gap-3">
+                    <div class="text-right">
+                        <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
+                        <span class="text-xl font-extrabold
+                            {% if sdata.average and sdata.average >= 4.75 %} text-emerald-600
+                            {% elif sdata.average and sdata.average >= 3.75 %} text-sky-600
+                            {% elif sdata.average and sdata.average >= 2.75 %} text-amber-600
+                            {% elif sdata.average %} text-rose-600
+                            {% else %} text-slate-400 {% endif %}">
+                            {{ sdata.average or '-' }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Karty / Pigułki ocen -->
+            <div class="p-4 sm:p-5">
+                <div class="flex flex-wrap gap-2.5">
+                    {% for g in sdata.grades %}
+                    <div class="group relative inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300 shadow-xs transition-all cursor-default">
+                        <!-- Odznaka oceny -->
+                        <span class="w-7 h-7 rounded-lg flex items-center justify-center font-extrabold text-sm
+                            {% if g.grade in ['5', '6', '5+', '6-'] %} bg-emerald-100 text-emerald-800
+                            {% elif g.grade in ['4', '4+', '4-'] %} bg-sky-100 text-sky-800
+                            {% elif g.grade in ['3', '3+', '3-'] %} bg-amber-100 text-amber-800
+                            {% elif g.grade in ['1', '2', '1+', '2+'] %} bg-rose-100 text-rose-800
+                            {% else %} bg-slate-100 text-slate-700 {% endif %}">
+                            {{ g.grade }}
+                        </span>
+
+                        <!-- Szczegóły: Kategoria & Waga -->
+                        <div class="text-left">
+                            <div class="text-xs font-bold text-slate-800 truncate max-w-[140px] sm:max-w-[200px]" title="{{ g.category or 'Ocena' }}">
+                                {{ g.category or 'Ocena' }}
+                            </div>
+                            <div class="text-[10px] text-slate-400 font-medium">
+                                waga: {{ g.weight or '1' }} • {{ g.date or '' }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% endif %}
+</div>
+
+<!-- ========================================== -->
+<!-- ZAKŁADKA 2: ŚWIADECTWO                     -->
+<!-- ========================================== -->
+<div id="grades-pane-swiadectwo" class="grades-tab-pane {{ '' if active_tab == 'swiadectwo' else 'hidden' }}">
+    {% if not certificate_summary or not certificate_summary.subjects %}
+    <div class="p-12 bg-white border border-slate-200 rounded-2xl text-center">
+        <div class="text-4xl mb-3">📜</div>
+        <h3 class="text-lg font-bold text-slate-800">Brak przedmiotów do wyliczenia świadectwa</h3>
+        <p class="text-sm text-slate-500 mt-1 max-w-md mx-auto">
+            Nie odnaleziono przedmiotów z ocenami dla tego profilu ucznia. Kliknij "Pobierz świeże oceny", aby zaktualizować dane.
+        </p>
+    </div>
+    {% else %}
+
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6">
+        <!-- Nagłówek karty świadectwa -->
+        <div class="p-5 sm:p-6 bg-slate-50/60 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>📜</span>
+                    <span>Projekcja ocen na świadectwo</span>
+                </h2>
+                <p class="text-xs text-slate-500 mt-1">
+                    Przewidywane oceny końcowe na podstawie bieżących średnich ważonych. Przedmioty bez ocen nie są wliczane do średniej ze świadectwa.
+                </p>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                    <span>📚</span>
+                    <span>{{ certificate_summary.rated_count }} ocenianych / {{ certificate_summary.total_count }} przedmiotów</span>
+                </span>
+            </div>
+        </div>
+
+        <!-- Tabela przedmiotów -->
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-100/80 border-b border-slate-200 text-[11px] font-extrabold uppercase tracking-wider text-slate-600">
+                        <th rowspan="2" class="py-3 px-4 sm:px-6 w-12 text-center border-r border-slate-200/80">Lp.</th>
+                        <th rowspan="2" class="py-3 px-4 sm:px-6 border-r border-slate-200/80">Przedmiot</th>
+                        <th rowspan="2" class="py-3 px-4 sm:px-6 text-center border-r border-slate-200/80">Ilość ocen</th>
+                        <th rowspan="2" class="py-3 px-4 sm:px-6 text-right border-r border-slate-200/80">Średnia ważona</th>
+                        <th colspan="2" class="py-2.5 px-4 sm:px-6 text-center bg-gradient-to-r from-blue-600 to-blue-700 text-white font-black tracking-wider text-xs uppercase border-l-2 border-blue-500 shadow-xs">
+                            📜 Proponowana
+                        </th>
+                    </tr>
+                    <tr class="bg-slate-100/80 border-b border-slate-200 text-[11px] font-extrabold uppercase tracking-wider text-slate-600">
+                        <th class="py-2 px-3 sm:px-4 text-center w-24 bg-blue-100/80 text-blue-950 font-black border-r border-blue-200 border-l-2 border-blue-300 text-xs">Ocena</th>
+                        <th class="py-2 px-4 sm:px-6 text-left bg-blue-100/80 text-blue-950 font-black text-xs">Słownie</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-sm">
+                    {% for s in certificate_summary.subjects %}
+                    <tr class="hover:bg-blue-50/25 transition-colors group">
+                        <!-- Lp -->
+                        <td class="py-3.5 px-4 sm:px-6 text-center text-xs font-bold text-slate-400">
+                            {{ loop.index }}
+                        </td>
+
+                        <!-- Przedmiot -->
+                        <td class="py-3.5 px-4 sm:px-6">
+                            <span class="font-extrabold text-slate-900 block">{{ s.subject }}</span>
+                            {% if s.numeric_count == 0 %}
+                            <span class="text-[10px] text-slate-400 italic">brak zarejestrowanych ocen cząstkowych</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Ilość ocen -->
+                        <td class="py-3.5 px-4 sm:px-6 text-center">
+                            {% if s.numeric_count > 0 %}
+                            <span class="inline-flex items-center justify-center min-w-[28px] h-7 px-2 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold">
+                                {{ s.numeric_count }}
+                            </span>
+                            {% else %}
+                            <span class="text-xs text-slate-400 font-medium">0</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Średnia ważona -->
+                        <td class="py-3.5 px-4 sm:px-6 text-right border-r border-slate-200/60">
+                            {% if s.average is not none %}
+                            <span class="font-extrabold text-base
+                                {% if s.average >= 4.75 %} text-emerald-600
+                                {% elif s.average >= 3.75 %} text-sky-600
+                                {% elif s.average >= 2.75 %} text-amber-600
+                                {% else %} text-rose-600 {% endif %}">
+                                {{ "%.2f"|format(s.average) }}
+                            </span>
+                            {% else %}
+                            <span class="text-slate-400 text-sm font-semibold">—</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Proponowana: Ocena (wyróżniona kolumna niebieskim akcentem) -->
+                        <td class="py-3.5 px-3 sm:px-4 text-center bg-blue-50/35 group-hover:bg-blue-100/40 border-l-2 border-blue-300/80 transition-colors">
+                            {% if s.proposed_grade_num %}
+                            <span class="inline-flex items-center justify-center w-9 h-9 rounded-xl font-black text-base shadow-sm ring-2 border
+                                {% if s.proposed_grade_num == 6 %} bg-emerald-100 text-emerald-950 border-emerald-300 ring-emerald-400/30
+                                {% elif s.proposed_grade_num == 5 %} bg-teal-100 text-teal-950 border-teal-300 ring-teal-400/30
+                                {% elif s.proposed_grade_num == 4 %} bg-sky-100 text-sky-950 border-sky-300 ring-sky-400/30
+                                {% elif s.proposed_grade_num == 3 %} bg-amber-100 text-amber-950 border-amber-300 ring-amber-400/30
+                                {% elif s.proposed_grade_num == 2 %} bg-orange-100 text-orange-950 border-orange-300 ring-orange-400/30
+                                {% else %} bg-rose-100 text-rose-950 border-rose-300 ring-rose-400/30 {% endif %}">
+                                {{ s.proposed_grade_num }}
+                            </span>
+                            {% else %}
+                            <span class="text-slate-400 font-bold text-sm">—</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Proponowana: Słownie (wyróżniona kolumna niebieskim akcentem) -->
+                        <td class="py-3.5 px-4 sm:px-6 text-left bg-blue-50/35 group-hover:bg-blue-100/40 transition-colors">
+                            {% if s.proposed_grade_num %}
+                            <span class="font-black text-sm capitalize tracking-tight
+                                {% if s.proposed_grade_num == 6 %} text-emerald-900
+                                {% elif s.proposed_grade_num == 5 %} text-teal-900
+                                {% elif s.proposed_grade_num == 4 %} text-blue-900
+                                {% elif s.proposed_grade_num == 3 %} text-amber-900
+                                {% elif s.proposed_grade_num == 2 %} text-orange-900
+                                {% else %} text-rose-900 {% endif %}">
+                                {{ s.proposed_grade_word }}
+                            </span>
+                            {% else %}
+                            <span class="text-xs font-semibold text-slate-400 italic">
+                                brak ocen (pominięty)
+                            </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Podsumowanie na dole tabeli -->
+        <div class="p-6 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex flex-col md:flex-row md:items-center md:justify-between gap-5 border-t border-slate-200">
+            <!-- Lewa strona: Średnia za całe świadectwo -->
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center text-2xl border border-white/20 shadow-inner">
+                    🎓
+                </div>
+                <div>
+                    <div class="text-xs font-bold text-indigo-300 uppercase tracking-wider">
+                        Średnia za całe świadectwo
+                    </div>
+                    <div class="flex items-baseline gap-2 mt-0.5">
+                        <span class="text-3xl sm:text-4xl font-black text-white tracking-tight">
+                            {{ certificate_summary.certificate_average or '—' }}
+                        </span>
+                        <span class="text-xs text-indigo-200">
+                            (z {{ certificate_summary.rated_count }} ocenianych przedmiotów)
+                        </span>
+                    </div>
+                    <div class="text-[11px] text-slate-400 mt-0.5">
+                        Wyliczona ze stopni końcowych (przedmioty bez ocen nie wchodzą w skład średniej)
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prawa strona: Pasek z wyróżnieniem -->
+            <div class="flex items-center gap-3">
+                {% if certificate_summary.has_red_stripe %}
+                <div class="px-4 py-3 rounded-2xl bg-emerald-500/20 border border-emerald-400/50 text-emerald-100 flex items-center gap-3 shadow-sm">
+                    <span class="text-2xl">🎉</span>
+                    <div>
+                        <div class="text-xs font-black text-emerald-300 uppercase tracking-wider">Świadectwo z wyróżnieniem</div>
+                        <div class="text-xs text-emerald-200 mt-0.5">Średnia końcowa ≥ 4.75 osiągnięta (czerwony pasek)!</div>
+                    </div>
+                </div>
+                {% elif certificate_summary.certificate_average %}
+                <div class="px-4 py-3 rounded-2xl bg-amber-500/20 border border-amber-400/50 text-amber-100 flex items-center gap-3 shadow-sm">
+                    <span class="text-2xl">🎖️</span>
+                    <div>
+                        <div class="text-xs font-bold text-amber-300 uppercase tracking-wider">Do czerwonego paska (4.75)</div>
+                        <div class="text-xs text-amber-200 mt-0.5">Brakuje <strong>{{ "%.2f"|format(certificate_summary.red_stripe_diff) }} pkt</strong> średniej</div>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
-    {% endfor %}
+    {% endif %}
 </div>
 
-{% endif %}
+<!-- ========================================== -->
+<!-- ZAKŁADKA 3: SYMULATOR NOWEJ OCENY          -->
+<!-- ========================================== -->
+<div id="grades-pane-symulator" class="grades-tab-pane {{ '' if active_tab == 'symulator' else 'hidden' }}">
+    <!-- Interaktywny Kalkulator "Co jeśli?" (What-If Grade Simulator) -->
+    <div class="bg-gradient-to-br from-indigo-900 to-slate-900 text-white p-6 rounded-2xl shadow-lg mb-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-indigo-800/80 pb-4 mb-4">
+            <div>
+                <h2 class="text-lg font-extrabold flex items-center gap-2">
+                    <span>🔮</span>
+                    <span>Symulator Nowej Oceny ("Co jeśli?")</span>
+                </h2>
+                <p class="text-xs text-indigo-200 mt-1">
+                    Sprawdź natychmiast, jak potencjalna ocena ze sprawdzianu lub kartkówki wpłynie na średnią ważoną z danego przedmiotu.
+                </p>
+            </div>
+        </div>
+
+        <form hx-post="{{ url_for('web.api_whatif') }}"
+              hx-target="#whatif-result"
+              hx-indicator="#whatif-spinner"
+              class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
+
+            <!-- Wybór przedmiotu -->
+            <div>
+                <label class="block text-xs font-bold text-indigo-200 uppercase tracking-wider mb-1.5">
+                    Przedmiot
+                </label>
+                <select name="subject" required
+                        class="w-full bg-slate-800 border border-indigo-700/60 rounded-xl px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-400 focus:outline-none">
+                    {% for subj, sdata in subject_averages.items() %}
+                    <option value="{{ subj }}">{{ subj }} (śr. {{ sdata.average or '-' }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Nowa ocena -->
+            <div>
+                <label class="block text-xs font-bold text-indigo-200 uppercase tracking-wider mb-1.5">
+                    Spodziewana ocena
+                </label>
+                <select name="grade"
+                        class="w-full bg-slate-800 border border-indigo-700/60 rounded-xl px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-400 focus:outline-none">
+                    <option value="6.0">6 (Celujący)</option>
+                    <option value="5.0" selected>5 (Bardzo dobry)</option>
+                    <option value="4.0">4 (Dobry)</option>
+                    <option value="3.0">3 (Dostateczny)</option>
+                    <option value="2.0">2 (Dopuszczający)</option>
+                    <option value="1.0">1 (Niedostateczny)</option>
+                </select>
+            </div>
+
+            <!-- Waga oceny -->
+            <div>
+                <label class="block text-xs font-bold text-indigo-200 uppercase tracking-wider mb-1.5">
+                    Waga oceny
+                </label>
+                <select name="weight"
+                        class="w-full bg-slate-800 border border-indigo-700/60 rounded-xl px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-400 focus:outline-none">
+                    <option value="1">Waga 1 (odpowiedź, zadanie)</option>
+                    <option value="2">Waga 2 (kartkówka)</option>
+                    <option value="3" selected>Waga 3 (sprawdzian, praca klasowa)</option>
+                    <option value="4">Waga 4 (projekt)</option>
+                    <option value="5">Waga 5 (duży test)</option>
+                </select>
+            </div>
+
+            <!-- Przycisk symulacji -->
+            <div>
+                <button type="submit"
+                        class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold text-indigo-950 bg-indigo-300 hover:bg-white shadow-md transition-all cursor-pointer">
+                    <span id="whatif-spinner" class="htmx-indicator animate-spin">⏳</span>
+                    <span>Oblicz nową średnią</span>
+                </button>
+            </div>
+        </form>
+
+        <div id="whatif-result" class="mt-4"></div>
+    </div>
+
+    <!-- Tabela / Kafelki pomocnicze: Aktualne średnie przedmiotowe jako punkt odniesienia -->
+    {% if subject_averages %}
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+        <h3 class="text-sm font-extrabold text-slate-900 mb-1 flex items-center gap-2">
+            <span>📊</span>
+            <span>Aktualne średnie ważone (punkt wyjścia do kalkulacji)</span>
+        </h3>
+        <p class="text-xs text-slate-500 mb-4">
+            Poniższe wartości to bieżące średnie poszczególnych przedmiotów. Wybierz przedmiot powyżej, aby przetestować zmianę.
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {% for subj, sdata in subject_averages.items() %}
+            <div class="p-3 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-700 truncate max-w-[180px]" title="{{ subj }}">{{ subj }}</span>
+                <span class="text-sm font-extrabold {% if sdata.average and sdata.average >= 4.75 %} text-emerald-600 {% elif sdata.average and sdata.average >= 3.75 %} text-sky-600 {% elif sdata.average and sdata.average >= 2.75 %} text-amber-600 {% elif sdata.average %} text-rose-600 {% else %} text-slate-400 {% endif %}">
+                    {{ sdata.average or '-' }}
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Skrypt obsługi zakładek -->
+<script>
+function switchGradesTab(tabId) {
+    document.querySelectorAll('.grades-tab-pane').forEach(el => el.classList.add('hidden'));
+
+    document.querySelectorAll('.grades-tab-btn').forEach(btn => {
+        btn.classList.remove('bg-white', 'text-indigo-700', 'shadow-sm');
+        btn.classList.add('text-slate-600', 'hover:text-slate-900', 'hover:bg-white/50');
+    });
+
+    const pane = document.getElementById('grades-pane-' + tabId);
+    if (pane) {
+        pane.classList.remove('hidden');
+    }
+
+    const btn = document.getElementById('grades-tab-btn-' + tabId);
+    if (btn) {
+        btn.classList.remove('text-slate-600', 'hover:text-slate-900', 'hover:bg-white/50');
+        btn.classList.add('bg-white', 'text-indigo-700', 'shadow-sm');
+    }
+
+    if (window.history && window.history.replaceState) {
+        const url = new URL(window.location);
+        url.searchParams.set('tab', tabId);
+        window.history.replaceState(null, '', url);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    let tabParam = params.get('tab') || window.location.hash.replace('#', '');
+    if (tabParam === 'świadectwo') tabParam = 'swiadectwo';
+    if (tabParam && ['oceny', 'swiadectwo', 'symulator'].includes(tabParam)) {
+        switchGradesTab(tabParam);
+    }
+});
+</script>
 
 {% endblock %}

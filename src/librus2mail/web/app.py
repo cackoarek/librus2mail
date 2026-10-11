@@ -41,6 +41,7 @@ from .services import (
     build_progress_report_html,
     build_schedule_day_context,
     build_student_report_html,
+    calculate_certificate_summary,
     calculate_subject_averages,
     capture_action_execution,
     format_human_timestamp,
@@ -233,8 +234,23 @@ def grades_view():
     data = get_student_dashboard_bundle(storage, active_login, config, now=request.app_actual_date)
     grades = storage.get_grades_history(active_login) if hasattr(storage, 'get_grades_history') else []
     subject_averages = calculate_subject_averages(grades)
+    certificate_summary = calculate_certificate_summary(subject_averages)
 
-    return render_template('web/grades.html', data=data, subject_averages=subject_averages)
+    raw_tab = (request.args.get('tab') or '').strip().lower()
+    if raw_tab in ('swiadectwo', 'świadectwo'):
+        active_tab = 'swiadectwo'
+    elif raw_tab in ('symulator', 'simulator'):
+        active_tab = 'symulator'
+    else:
+        active_tab = 'oceny'
+
+    return render_template(
+        'web/grades.html',
+        data=data,
+        subject_averages=subject_averages,
+        certificate_summary=certificate_summary,
+        active_tab=active_tab,
+    )
 
 
 @web_bp.route('/terminarz')

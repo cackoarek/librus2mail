@@ -30,10 +30,6 @@
 
     <!-- Przyciski szybkich akcji -->
     <div class="flex items-center gap-2">
-        <a href="{{ url_for('web.actions_view') }}"
-           class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 shadow-sm transition-all">
-            ⚡ Centrum Akcji
-        </a>
         <button hx-post="{{ url_for('web.action_sync') }}"
                 hx-vals='{"login": "{{ data.login }}"}'
                 hx-target="#action-toast"

@@ -1319,6 +1319,37 @@ class TestWebDashboard(unittest.TestCase):
         self.assertLess(pos_notif_new, pos_notif_mid, "Najnowsze ogłoszenie powinno pojawić się przed średnim")
         self.assertLess(pos_notif_mid, pos_notif_old, "Średnie ogłoszenie powinno pojawić się przed najstarszym")
 
+    def test_api_grade_update_and_reset(self):
+        """Testuje endpointy edycji oceny/wagi oraz przywracania oryginalnych wartości."""
+        app = create_app(config_path=self.config_path, storage_dir=self.storage_dir, no_auth=True)
+        client = app.test_client()
+
+        # 1. Walidacja błędnych danych
+        res_bad = client.post('/api/grade/update', data={'grade_id': 'g1', 'grade': '5', 'weight': 'invalid'})
+        self.assertEqual(res_bad.status_code, 400)
+
+        res_neg = client.post('/api/grade/update', data={'grade_id': 'g1', 'grade': '5', 'weight': '-2'})
+        self.assertEqual(res_neg.status_code, 400)
+
+        # 2. Udana edycja oceny (np. zmiana wagi sprawdzianu z 1 na 3)
+        res_ok = client.post('/api/grade/update', data={'grade_id': 'g1', 'grade': '4+', 'weight': '3'})
+        self.assertEqual(res_ok.status_code, 200)
+        data = res_ok.get_json()
+        self.assertTrue(data['success'])
+
+        # Sprawdzenie w widoku /oceny
+        res_view = client.get('/oceny')
+        self.assertEqual(res_view.status_code, 200)
+        self.assertIn(b'zmieniona', res_view.data)
+
+        # 3. Przywrócenie ze szkoły (reset)
+        res_reset = client.post('/api/grade/reset', data={'grade_id': 'g1'})
+        self.assertEqual(res_reset.status_code, 200)
+        data_reset = res_reset.get_json()
+        self.assertTrue(data_reset['success'])
+
 
 if __name__ == '__main__':
     unittest.main()
+
+

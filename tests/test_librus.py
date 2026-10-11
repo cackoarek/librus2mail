@@ -765,6 +765,33 @@ class TestLibrus(unittest.TestCase):
             now_iso = "2026-09-18T17:00:00"
             st.save_last_progress_report_date(user, now_iso)
             self.assertEqual(st.get_last_progress_report_date(user), now_iso)
+
+            # Test ręcznej korekty oceny i wagi (custom override)
+            updated = st.update_grade_custom(user, 'g1', new_grade='4+', new_weight='3')
+            self.assertIsNotNone(updated)
+            self.assertEqual(updated['grade'], '4+')
+            self.assertEqual(updated['weight'], '3')
+            self.assertTrue(updated['is_custom'])
+            self.assertEqual(updated['original_grade'], '5')
+            self.assertEqual(updated['original_weight'], '2')
+
+            # Test kolejnej synchronizacji z Librusa - waga i ocena NIE mogą zostać nadpisane
+            librus_fresh_grades = [
+                {'id': 'g1', 'subject': 'Fizyka', 'grade': '5', 'weight': '2', 'date': '2026-09-15', 'comment': 'Nowy komentarz ze szkoły'}
+            ]
+            st.save_grades_details(user, librus_fresh_grades)
+            g1_after_sync = next(g for g in st.get_grades_history(user) if g['id'] == 'g1')
+            self.assertEqual(g1_after_sync['grade'], '4+')
+            self.assertEqual(g1_after_sync['weight'], '3')
+            self.assertTrue(g1_after_sync['is_custom'])
+            self.assertEqual(g1_after_sync['comment'], 'Nowy komentarz ze szkoły')
+
+            # Test przywrócenia oryginalnych danych z Librusa
+            reset_res = st.reset_grade_custom(user, 'g1')
+            self.assertIsNotNone(reset_res)
+            self.assertEqual(reset_res['grade'], '5')
+            self.assertEqual(reset_res['weight'], '2')
+            self.assertNotIn('is_custom', reset_res)
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 

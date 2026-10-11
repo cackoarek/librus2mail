@@ -420,6 +420,58 @@ def api_whatif():
     return html
 
 
+@web_bp.route('/api/grade/update', methods=['POST'])
+@login_required
+def api_grade_update():
+    """Ręczna edycja wartości i/lub wagi oceny."""
+    storage = request.app_storage
+    active_login = get_active_student_login(request.app_config, storage, session_login=session.get('active_student_login'))
+
+    grade_id = request.form.get('grade_id', '').strip()
+    new_grade = request.form.get('grade', '').strip()
+    raw_weight = request.form.get('weight', '').strip()
+
+    if not grade_id or not new_grade:
+        return jsonify({'success': False, 'message': 'Brak identyfikatora oceny lub wartości oceny.'}), 400
+
+    try:
+        w_val = float(raw_weight.replace(',', '.'))
+        if w_val < 0:
+            return jsonify({'success': False, 'message': 'Waga nie może być ujemna.'}), 400
+    except (ValueError, TypeError):
+        return jsonify({'success': False, 'message': 'Wprowadź prawidłową wagę (liczbę).'}), 400
+
+    formatted_weight = f"{w_val:g}"
+
+    if hasattr(storage, 'update_grade_custom'):
+        res = storage.update_grade_custom(active_login, grade_id, new_grade, formatted_weight)
+        if not res:
+            return jsonify({'success': False, 'message': 'Nie znaleziono oceny w bazie.'}), 404
+        return jsonify({'success': True, 'message': f'Ocena została zaktualizowana (ocena: {new_grade}, waga: {formatted_weight}).'})
+
+    return jsonify({'success': False, 'message': 'Magazyn danych nie obsługuje edycji ocen.'}), 500
+
+
+@web_bp.route('/api/grade/reset', methods=['POST'])
+@login_required
+def api_grade_reset():
+    """Przywrócenie oryginalnej oceny i wagi ze szkoły z Librusa."""
+    storage = request.app_storage
+    active_login = get_active_student_login(request.app_config, storage, session_login=session.get('active_student_login'))
+
+    grade_id = request.form.get('grade_id', '').strip()
+    if not grade_id:
+        return jsonify({'success': False, 'message': 'Brak identyfikatora oceny.'}), 400
+
+    if hasattr(storage, 'reset_grade_custom'):
+        res = storage.reset_grade_custom(active_login, grade_id)
+        if not res:
+            return jsonify({'success': False, 'message': 'Nie znaleziono oceny w bazie.'}), 404
+        return jsonify({'success': True, 'message': 'Przywrócono oryginalne dane oceny ze szkoły.'})
+
+    return jsonify({'success': False, 'message': 'Magazyn danych nie obsługuje resetowania ocen.'}), 500
+
+
 @web_bp.route('/api/action/sync', methods=['POST'])
 @login_required
 def action_sync():

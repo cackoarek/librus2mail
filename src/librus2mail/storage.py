@@ -151,6 +151,16 @@ class BaseStorage(ABC):
         pass
 
     @abstractmethod
+    def update_grade_custom(self, user_login: str, grade_id: str, new_grade: str, new_weight: str) -> dict | None:
+        """Ręcznie modyfikuje ocenę i/lub wagę, oznaczając ją flagą is_custom."""
+        pass
+
+    @abstractmethod
+    def reset_grade_custom(self, user_login: str, grade_id: str) -> dict | None:
+        """Przywraca oryginalną ocenę i wagę z Librusa."""
+        pass
+
+    @abstractmethod
     def get_last_progress_report_date(self, user_login: str, report_key: str | None = None) -> str | None:
         """Zwraca datę ostatnio wygenerowanego raportu postępów (ISO format) lub None."""
         pass
@@ -365,7 +375,21 @@ class FileStorage(BaseStorage):
                 g_copy['added_at'] = g_copy.get('added_at') or now_iso
                 grades_history[gid] = g_copy
             else:
-                grades_history[gid].update({k: v for k, v in g.items() if v})
+                existing = grades_history[gid]
+                if existing.get('is_custom'):
+                    # Zachowaj ręczne nadpisania użytkownika (ocena, waga),
+                    # zapisując aktualne wartości ze szkoły jako oryginalne
+                    orig_g = g.get('grade')
+                    orig_w = g.get('weight')
+                    if orig_g:
+                        existing['original_grade'] = orig_g
+                    if orig_w:
+                        existing['original_weight'] = orig_w
+                    for k, v in g.items():
+                        if k not in ('grade', 'weight', 'is_custom', 'original_grade', 'original_weight', 'custom_modified_at') and v:
+                            existing[k] = v
+                else:
+                    existing.update({k: v for k, v in g.items() if v})
 
         data['grades_history'] = grades_history
         write_json_atomic(path, data)
@@ -422,6 +446,67 @@ class FileStorage(BaseStorage):
         elif isinstance(gh, list):
             return gh
         return []
+
+    def update_grade_custom(self, user_login: str, grade_id: str, new_grade: str, new_weight: str) -> dict | None:
+        """Ręcznie modyfikuje ocenę i/lub wagę, oznaczając ją flagą is_custom."""
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
+        raw_history = data.get('grades_history', {})
+        if isinstance(raw_history, list):
+            grades_history = {str(g.get('id', '')): g for g in raw_history if g.get('id')}
+        elif isinstance(raw_history, dict):
+            grades_history = dict(raw_history)
+        else:
+            return None
+
+        gid = str(grade_id)
+        if gid not in grades_history:
+            return None
+
+        target = grades_history[gid]
+        if not target.get('is_custom'):
+            target['original_grade'] = target.get('grade', '')
+            target['original_weight'] = target.get('weight', '')
+
+        target['grade'] = str(new_grade).strip()
+        target['weight'] = str(new_weight).strip()
+        target['is_custom'] = True
+        target['custom_modified_at'] = datetime.now().isoformat()
+
+        data['grades_history'] = grades_history
+        write_json_atomic(path, data)
+        logger.info(f"Zaktualizowano ręcznie ocenę {gid} dla {user_login}: ocena={new_grade}, waga={new_weight}")
+        return target
+
+    def reset_grade_custom(self, user_login: str, grade_id: str) -> dict | None:
+        """Przywraca oryginalną ocenę i wagę ze szkoły (z Librusa)."""
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
+        raw_history = data.get('grades_history', {})
+        if isinstance(raw_history, list):
+            grades_history = {str(g.get('id', '')): g for g in raw_history if g.get('id')}
+        elif isinstance(raw_history, dict):
+            grades_history = dict(raw_history)
+        else:
+            return None
+
+        gid = str(grade_id)
+        if gid not in grades_history:
+            return None
+
+        target = grades_history[gid]
+        if target.get('is_custom'):
+            if 'original_grade' in target:
+                target['grade'] = target.pop('original_grade')
+            if 'original_weight' in target:
+                target['weight'] = target.pop('original_weight')
+            target.pop('is_custom', None)
+            target.pop('custom_modified_at', None)
+
+        data['grades_history'] = grades_history
+        write_json_atomic(path, data)
+        logger.info(f"Przywrócono oryginalną ocenę {gid} z Librusa dla {user_login}")
+        return target
 
     def get_last_progress_report_date(self, user_login: str, report_key: str | None = None) -> str | None:
         path = self._get_file_path(user_login)

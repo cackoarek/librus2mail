@@ -161,6 +161,16 @@ class BaseStorage(ABC):
         pass
 
     @abstractmethod
+    def get_excluded_certificate_subjects(self, user_login: str) -> list[str]:
+        """Zwraca listę przedmiotów wykluczonych ze średniej do świadectwa."""
+        pass
+
+    @abstractmethod
+    def set_subject_certificate_inclusion(self, user_login: str, subject: str, included: bool) -> list[str]:
+        """Włącza lub wyklucza dany przedmiot z liczenia średniej do świadectwa."""
+        pass
+
+    @abstractmethod
     def get_last_progress_report_date(self, user_login: str, report_key: str | None = None) -> str | None:
         """Zwraca datę ostatnio wygenerowanego raportu postępów (ISO format) lub None."""
         pass
@@ -507,6 +517,36 @@ class FileStorage(BaseStorage):
         write_json_atomic(path, data)
         logger.info(f"Przywrócono oryginalną ocenę {gid} z Librusa dla {user_login}")
         return target
+
+    def get_excluded_certificate_subjects(self, user_login: str) -> list[str]:
+        """Zwraca listę przedmiotów wykluczonych z liczenia średniej do świadectwa."""
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
+        ex = data.get('excluded_certificate_subjects', [])
+        if isinstance(ex, list):
+            return [str(s).strip() for s in ex if str(s).strip()]
+        return []
+
+    def set_subject_certificate_inclusion(self, user_login: str, subject: str, included: bool) -> list[str]:
+        """Włącza lub wyklucza przedmiot z liczenia średniej do świadectwa."""
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
+        raw_ex = data.get('excluded_certificate_subjects', [])
+        ex_set = {str(s).strip() for s in raw_ex if str(s).strip()} if isinstance(raw_ex, list) else set()
+
+        target = str(subject).strip()
+        matched = {s for s in ex_set if s.lower() == target.lower()}
+        if included:
+            ex_set -= matched
+        else:
+            if not matched:
+                ex_set.add(target)
+
+        new_list = sorted(list(ex_set))
+        data['excluded_certificate_subjects'] = new_list
+        write_json_atomic(path, data)
+        logger.info(f"Zaktualizowano przedmioty wykluczone ze świadectwa dla {user_login}: {new_list}")
+        return new_list
 
     def get_last_progress_report_date(self, user_login: str, report_key: str | None = None) -> str | None:
         path = self._get_file_path(user_login)

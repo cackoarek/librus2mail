@@ -133,31 +133,51 @@
 
     <div class="space-y-4">
         {% for subj, sdata in subject_averages.items() %}
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden transition-all hover:border-slate-300">
+        <div class="rounded-2xl border {{ 'border-rose-200 bg-slate-50/30 shadow-2xs' if sdata.is_excluded else 'bg-white border-slate-200 shadow-sm' }} overflow-hidden transition-all hover:border-slate-300">
             <!-- Pasek przedmiotu -->
-            <div class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/50 border-b border-slate-100">
+            <div class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 {{ 'bg-rose-50/20' if sdata.is_excluded else 'bg-slate-50/50' }} border-b border-slate-100">
                 <div>
                     <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
                         <span>{{ subj }}</span>
                     </h3>
-                    <div class="text-xs text-slate-500 mt-0.5">
-                        Liczba ocen: <strong>{{ sdata.count }}</strong> (suma wag: {{ sdata.sum_weights|round(1) }})
+                    <div class="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-500">
+                        <span>Liczba ocen: <strong>{{ sdata.count }}</strong> (suma wag: {{ sdata.sum_weights|round(1) }})</span>
+                        <span class="text-slate-300 hidden sm:inline">•</span>
+
+                        <!-- Interaktywna pigułka statusu świadectwa (Styl Linear / Notion) -->
+                        {% if sdata.is_excluded %}
+                        <button type="button"
+                                onclick="toggleSubjectInclusion('{{ subj|e }}', true)"
+                                class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-700 border border-rose-300 hover:bg-rose-200 hover:border-rose-400 transition-all cursor-pointer group shadow-2xs"
+                                title="Przedmiot wykluczony ze średniej. Kliknij, aby włączyć go z powrotem.">
+                            <span>🚫</span>
+                            <span>Nie zaliczany do średniej</span>
+                            <span class="text-[10px] text-rose-600 group-hover:text-rose-900 font-semibold underline ml-0.5">Włącz</span>
+                        </button>
+                        {% else %}
+                        <button type="button"
+                                onclick="toggleSubjectInclusion('{{ subj|e }}', false)"
+                                class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-white text-slate-600 border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/60 hover:text-indigo-700 transition-all cursor-pointer group shadow-2xs"
+                                title="Przedmiot wliczany do średniej. Kliknij, aby go wykluczyć (np. Godzina wychowawcza).">
+                            <span class="text-xs">🎓</span>
+                            <span>Wliczany do średniej</span>
+                            <span class="text-[10px] text-slate-400 group-hover:text-indigo-600 group-hover:underline opacity-0 group-hover:opacity-100 transition-opacity">Wyłącz</span>
+                        </button>
+                        {% endif %}
                     </div>
                 </div>
 
                 <!-- Średnia ważona z odznaką -->
-                <div class="flex items-center gap-3">
-                    <div class="text-right">
-                        <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
-                        <span class="text-xl font-extrabold
-                            {% if sdata.average and sdata.average >= 4.75 %} text-emerald-600
-                            {% elif sdata.average and sdata.average >= 3.75 %} text-sky-600
-                            {% elif sdata.average and sdata.average >= 2.75 %} text-amber-600
-                            {% elif sdata.average %} text-rose-600
-                            {% else %} text-slate-400 {% endif %}">
-                            {{ sdata.average or '-' }}
-                        </span>
-                    </div>
+                <div class="text-right flex items-center sm:block justify-between sm:justify-end">
+                    <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
+                    <span class="text-xl font-extrabold
+                        {% if sdata.average and sdata.average >= 4.75 %} text-emerald-600
+                        {% elif sdata.average and sdata.average >= 3.75 %} text-sky-600
+                        {% elif sdata.average and sdata.average >= 2.75 %} text-amber-600
+                        {% elif sdata.average %} text-rose-600
+                        {% else %} text-slate-400 {% endif %}">
+                        {{ sdata.average or '-' }}
+                    </span>
                 </div>
             </div>
 
@@ -274,7 +294,14 @@
 
                         <!-- Przedmiot -->
                         <td class="py-3.5 px-4 sm:px-6">
-                            <span class="font-extrabold text-slate-900 block">{{ s.subject }}</span>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="font-extrabold text-slate-900">{{ s.subject }}</span>
+                                {% if s.is_excluded %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-rose-100 text-rose-700 border border-rose-300 shadow-2xs">
+                                    Nie zaliczany do średniej
+                                </span>
+                                {% endif %}
+                            </div>
                             {% if s.numeric_count == 0 %}
                             <span class="text-[10px] text-slate-400 italic">brak zarejestrowanych ocen cząstkowych</span>
                             {% endif %}
@@ -308,7 +335,11 @@
 
                         <!-- Proponowana: Ocena (wyróżniona kolumna niebieskim akcentem) -->
                         <td class="py-3.5 px-3 sm:px-4 text-center bg-blue-50/35 group-hover:bg-blue-100/40 border-l-2 border-blue-300/80 transition-colors">
-                            {% if s.proposed_grade_num %}
+                            {% if s.is_excluded and s.proposed_grade_num %}
+                            <span class="inline-flex items-center justify-center w-9 h-9 rounded-xl font-bold text-base shadow-2xs ring-1 border bg-slate-100 text-slate-600 border-slate-300 ring-slate-200" title="Przedmiot niezaliczany do średniej">
+                                {{ s.proposed_grade_num }}
+                            </span>
+                            {% elif s.proposed_grade_num %}
                             <span class="inline-flex items-center justify-center w-9 h-9 rounded-xl font-black text-base shadow-sm ring-2 border
                                 {% if s.proposed_grade_num == 6 %} bg-emerald-100 text-emerald-950 border-emerald-300 ring-emerald-400/30
                                 {% elif s.proposed_grade_num == 5 %} bg-teal-100 text-teal-950 border-teal-300 ring-teal-400/30
@@ -325,7 +356,12 @@
 
                         <!-- Proponowana: Słownie (wyróżniona kolumna niebieskim akcentem) -->
                         <td class="py-3.5 px-4 sm:px-6 text-left bg-blue-50/35 group-hover:bg-blue-100/40 transition-colors">
-                            {% if s.proposed_grade_num %}
+                            {% if s.is_excluded %}
+                            <div>
+                                <span class="font-bold text-sm text-slate-600 capitalize tracking-tight">{{ s.proposed_grade_word }}</span>
+                                <div class="text-[11px] font-bold text-rose-600">Nie zaliczany do średniej</div>
+                            </div>
+                            {% elif s.proposed_grade_num %}
                             <span class="font-black text-sm capitalize tracking-tight
                                 {% if s.proposed_grade_num == 6 %} text-emerald-900
                                 {% elif s.proposed_grade_num == 5 %} text-teal-900
@@ -785,6 +821,29 @@ async function resetEditGrade() {
     } catch (err) {
         errorEl.innerText = 'Błąd połączenia z serwerem: ' + err;
         errorEl.classList.remove('hidden');
+    }
+}
+
+async function toggleSubjectInclusion(subject, isChecked) {
+    const formData = new FormData();
+    formData.append('subject', subject);
+    formData.append('included', isChecked ? 'true' : 'false');
+
+    try {
+        const resp = await fetch('{{ url_for("web.api_subject_toggle_certificate") }}', {
+            method: 'POST',
+            body: formData,
+        });
+        const data = await resp.json();
+        if (resp.ok && data.success) {
+            const url = new URL(window.location);
+            url.searchParams.set('tab', 'oceny');
+            window.location.href = url.toString();
+        } else {
+            alert(data.message || 'Wystąpił błąd podczas zmiany statusu przedmiotu.');
+        }
+    } catch (err) {
+        alert('Błąd połączenia z serwerem: ' + err);
     }
 }
 

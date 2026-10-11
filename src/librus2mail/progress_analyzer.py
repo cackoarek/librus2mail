@@ -181,7 +181,8 @@ class ProgressAnalyzer:
         cls,
         grades: list[dict],
         period_start: datetime = None,
-        period_end: datetime = None
+        period_end: datetime = None,
+        excluded_subjects: list[str] | set[str] | None = None,
     ) -> dict[str, Any]:
         period_end = period_end or datetime.now()
 
@@ -470,7 +471,11 @@ class ProgressAnalyzer:
             learning_style['diagnosis'] = "Zbyt mała liczba ocen do wyznaczenia stylu nauki."
 
         # 8. Analiza dodatkowa 3: Symulator "Czerwonego Paska" (Świadectwo z wyróżnieniem)
-        subjects_with_avg = [s for s in analyzed_subjects if s['overall_avg'] is not None]
+        norm_excluded = {s.strip().lower() for s in (excluded_subjects or [])}
+        subjects_with_avg = [
+            s for s in analyzed_subjects
+            if s['overall_avg'] is not None and s['subject'].strip().lower() not in norm_excluded
+        ]
         predicted_grade_nums = [
             get_predicted_grade_tuple(s['overall_avg'])[0]
             for s in subjects_with_avg

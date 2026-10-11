@@ -231,10 +231,11 @@ def grades_view():
     storage = request.app_storage
     active_login = get_active_student_login(config, storage, session_login=session.get('active_student_login'))
 
+    excluded_subjects = storage.get_excluded_certificate_subjects(active_login) if hasattr(storage, 'get_excluded_certificate_subjects') else []
     data = get_student_dashboard_bundle(storage, active_login, config, now=request.app_actual_date)
     grades = storage.get_grades_history(active_login) if hasattr(storage, 'get_grades_history') else []
-    subject_averages = calculate_subject_averages(grades)
-    certificate_summary = calculate_certificate_summary(subject_averages)
+    subject_averages = calculate_subject_averages(grades, excluded_subjects=excluded_subjects)
+    certificate_summary = calculate_certificate_summary(subject_averages, excluded_subjects=excluded_subjects)
 
     raw_tab = (request.args.get('tab') or '').strip().lower()
     if raw_tab in ('swiadectwo', 'świadectwo'):
@@ -250,6 +251,7 @@ def grades_view():
         subject_averages=subject_averages,
         certificate_summary=certificate_summary,
         active_tab=active_tab,
+        excluded_subjects=excluded_subjects,
     )
 
 
@@ -470,6 +472,34 @@ def api_grade_reset():
         return jsonify({'success': True, 'message': 'Przywrócono oryginalne dane oceny ze szkoły.'})
 
     return jsonify({'success': False, 'message': 'Magazyn danych nie obsługuje resetowania ocen.'}), 500
+
+
+@web_bp.route('/api/subject/toggle-certificate', methods=['POST'])
+@login_required
+def api_subject_toggle_certificate():
+    """Włącza lub wyklucza przedmiot z liczenia średniej do świadectwa."""
+    storage = request.app_storage
+    active_login = get_active_student_login(request.app_config, storage, session_login=session.get('active_student_login'))
+
+    subject = request.form.get('subject', '').strip()
+    included_raw = request.form.get('included', 'true').strip().lower()
+    included = included_raw in ('true', '1', 'yes', 'on')
+
+    if not subject:
+        return jsonify({'success': False, 'message': 'Brak nazwy przedmiotu.'}), 400
+
+    if hasattr(storage, 'set_subject_certificate_inclusion'):
+        new_excluded = storage.set_subject_certificate_inclusion(active_login, subject, included=included)
+        status_msg = "włączony do" if included else "wykluczony ze"
+        return jsonify({
+            'success': True,
+            'subject': subject,
+            'included': included,
+            'excluded_subjects': new_excluded,
+            'message': f'Przedmiot "{subject}" został {status_msg} średniej ze świadectwa.',
+        })
+
+    return jsonify({'success': False, 'message': 'Magazyn danych nie obsługuje wykluczania przedmiotów.'}), 500
 
 
 @web_bp.route('/api/action/sync', methods=['POST'])

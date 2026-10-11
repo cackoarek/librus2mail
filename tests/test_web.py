@@ -1348,6 +1348,41 @@ class TestWebDashboard(unittest.TestCase):
         data_reset = res_reset.get_json()
         self.assertTrue(data_reset['success'])
 
+    def test_api_subject_toggle_certificate(self):
+        """Testuje wykluczanie i włączanie przedmiotu do średniej ze świadectwa."""
+        app = create_app(config_path=self.config_path, storage_dir=self.storage_dir, no_auth=True)
+        client = app.test_client()
+
+        # 1. Walidacja braku nazwy przedmiotu
+        res_empty = client.post('/api/subject/toggle-certificate', data={'subject': ''})
+        self.assertEqual(res_empty.status_code, 400)
+
+        # 2. Wykluczenie przedmiotu ze średniej (np. Godzina wychowawcza lub Język polski)
+        res_ex = client.post('/api/subject/toggle-certificate', data={'subject': 'Język polski', 'included': 'false'})
+        self.assertEqual(res_ex.status_code, 200)
+        data_ex = res_ex.get_json()
+        self.assertTrue(data_ex['success'])
+        self.assertFalse(data_ex['included'])
+        self.assertIn('Język polski', data_ex['excluded_subjects'])
+
+        # 3. Sprawdzenie widoku /oceny - etykieta "Nie zaliczany do średniej" musi się pojawić
+        res_view = client.get('/oceny')
+        self.assertEqual(res_view.status_code, 200)
+        self.assertIn('Nie zaliczany do średniej'.encode(), res_view.data)
+
+        # Sprawdzenie w zakładce świadectwo
+        res_swiad = client.get('/oceny?tab=swiadectwo')
+        self.assertEqual(res_swiad.status_code, 200)
+        self.assertIn('Nie zaliczany do średniej'.encode(), res_swiad.data)
+
+        # 4. Ponowne włączenie przedmiotu
+        res_inc = client.post('/api/subject/toggle-certificate', data={'subject': 'Język polski', 'included': 'true'})
+        self.assertEqual(res_inc.status_code, 200)
+        data_inc = res_inc.get_json()
+        self.assertTrue(data_inc['success'])
+        self.assertTrue(data_inc['included'])
+        self.assertNotIn('Język polski', data_inc['excluded_subjects'])
+
 
 if __name__ == '__main__':
     unittest.main()

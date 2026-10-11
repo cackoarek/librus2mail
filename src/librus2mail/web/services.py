@@ -181,8 +181,12 @@ def get_active_student_login(
     return students[0]['login']
 
 
-def calculate_subject_averages(grades_history: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+def calculate_subject_averages(
+    grades_history: list[dict[str, Any]],
+    excluded_subjects: list[str] | set[str] | None = None,
+) -> dict[str, dict[str, Any]]:
     """Wylicza średnie ważone i statystyki per przedmiot na podstawie historii ocen."""
+    norm_excluded = {s.strip().lower() for s in (excluded_subjects or [])}
     by_subject = defaultdict(list)
     for g in grades_history:
         subj = g.get('subject', 'Inne')
@@ -205,6 +209,7 @@ def calculate_subject_averages(grades_history: list[dict[str, Any]]) -> dict[str
 
         avg = round(sum_weighted / sum_weights, 2) if sum_weights > 0 else None
         sorted_grades = sorted(g_list, key=lambda x: str(x.get('date', '')), reverse=True)
+        is_excluded = subj.strip().lower() in norm_excluded
 
         result[subj] = {
             'subject': subj,
@@ -213,6 +218,7 @@ def calculate_subject_averages(grades_history: list[dict[str, Any]]) -> dict[str
             'numeric_count': numeric_count,
             'average': avg,
             'sum_weights': sum_weights,
+            'is_excluded': is_excluded,
         }
 
     return dict(sorted(result.items(), key=lambda item: item[0]))
@@ -236,25 +242,32 @@ GRADE_WORDS = {
 }
 
 
-def calculate_certificate_summary(subject_averages: dict[str, dict[str, Any]]) -> dict[str, Any]:
+def calculate_certificate_summary(
+    subject_averages: dict[str, dict[str, Any]],
+    excluded_subjects: list[str] | set[str] | None = None,
+) -> dict[str, Any]:
     """Wylicza zestawienie przedmiotów na świadectwo wraz ze średnią z proponowanych ocen końcowych."""
+    norm_excluded = {s.strip().lower() for s in (excluded_subjects or [])}
     subjects_list = []
     rated_grades: list[int] = []
     unrated_count = 0
 
     for subj, sdata in subject_averages.items():
+        is_excluded = bool(sdata.get('is_excluded')) or (subj.strip().lower() in norm_excluded)
         avg = sdata.get('average')
         num_count = sdata.get('numeric_count', 0)
 
         if avg is not None and num_count > 0:
             prop_num, prop_label = get_predicted_grade_tuple(avg)
             prop_word = GRADE_WORDS.get(prop_num, "—")
-            rated_grades.append(prop_num)
+            if not is_excluded:
+                rated_grades.append(prop_num)
         else:
             prop_num = None
             prop_label = "Brak ocen"
             prop_word = "brak ocen"
-            unrated_count += 1
+            if not is_excluded:
+                unrated_count += 1
 
         subjects_list.append({
             'subject': subj,
@@ -264,6 +277,7 @@ def calculate_certificate_summary(subject_averages: dict[str, dict[str, Any]]) -
             'proposed_grade_num': prop_num,
             'proposed_grade_word': prop_word,
             'proposed_grade_label': prop_label,
+            'is_excluded': is_excluded,
         })
 
     certificate_avg = round(sum(rated_grades) / len(rated_grades), 2) if rated_grades else None
@@ -518,8 +532,10 @@ def get_student_dashboard_bundle(
     last_sync_human = format_human_timestamp(last_sync, now=ref_now)
 
     # Analityka ocen
-    subj_averages = calculate_subject_averages(grades)
+    excluded_subjects = storage.get_excluded_certificate_subjects(login) if hasattr(storage, 'get_excluded_certificate_subjects') else []
+    subj_averages = calculate_subject_averages(grades, excluded_subjects=excluded_subjects)
     overall_avg = calculate_overall_average(subj_averages)
+    certificate_summary = calculate_certificate_summary(subj_averages, excluded_subjects=excluded_subjects)
 
     # Najnowsze oceny (ostatnie 8)
     recent_grades = sorted(grades, key=lambda x: str(x.get('added_at', '') or x.get('date', '')), reverse=True)[:8]
@@ -541,6 +557,8 @@ def get_student_dashboard_bundle(
         'grades_count': len(grades),
         'subject_averages': subj_averages,
         'overall_average': overall_avg,
+        'certificate_summary': certificate_summary,
+        'excluded_subjects': excluded_subjects,
         'recent_grades': recent_grades,
         'timetable_summary': timetable_summary,
         'schedule_summary': schedule_summary,
@@ -625,10 +643,12 @@ def build_progress_report_html(
             days_back = config.get('progress_report', {}).get('days_back', 7)
             period_start = ref_now - timedelta(days=days_back)
 
+    excluded_subjects = storage.get_excluded_certificate_subjects(login) if hasattr(storage, 'get_excluded_certificate_subjects') else []
     analysis = ProgressAnalyzer.analyze(
         grades=grades,
         period_start=period_start,
         period_end=ref_now,
+        excluded_subjects=excluded_subjects,
     )
 
     timetable_summary = None

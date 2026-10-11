@@ -792,6 +792,13 @@ class TestLibrus(unittest.TestCase):
             self.assertEqual(reset_res['grade'], '5')
             self.assertEqual(reset_res['weight'], '2')
             self.assertNotIn('is_custom', reset_res)
+
+            # Test wykluczania przedmiotów ze świadectwa
+            self.assertEqual(st.get_excluded_certificate_subjects(user), [])
+            st.set_subject_certificate_inclusion(user, 'Godzina wychowawcza', included=False)
+            self.assertEqual(st.get_excluded_certificate_subjects(user), ['Godzina wychowawcza'])
+            st.set_subject_certificate_inclusion(user, 'Godzina wychowawcza', included=True)
+            self.assertEqual(st.get_excluded_certificate_subjects(user), [])
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 

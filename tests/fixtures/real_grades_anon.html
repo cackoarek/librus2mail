@@ -1,0 +1,1989 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+
+<html lang="pl-PL">
+
+<head>
+    <title>LIBRUS Synergia</title>
+    <meta content="text/html; charset=utf-8" http-equiv="Content-type" />
+    <meta content="administrator@dziennik.librus.pl" http-equiv="Reply-to" />
+    <meta content="pl" http-equiv="Content-Language" />
+    <meta content="dziennik, elektroniczny, edukacja, oświata, programy, komputerowe, edziennik, e-dziennik, synergia"
+        name="Keywords" />
+    <meta content="Dziennik elektroniczny" name="Description" />
+    <meta content="noindex, nofollow" name="robots" />
+    <link href="/images/synergia.ico" rel="shortcut icon" />
+    <link href="/js/librus-component/data-table/librus-data-table.css?v2" rel="stylesheet" />
+    <link href="/js/librus-component/panel/librus-panel.css?v1" rel="stylesheet">
+    <link href="/js/librus-component/notification/librus-notification.css?v4" rel="stylesheet" />
+    <link href="/js/librus-component/dialog/librus-dialog.css?v1" rel="stylesheet" />
+    <link href="/js/jquery/themes/base/jquery.ui.all.1285316921.css" rel="stylesheet" type="text/css" />
+    <link href="/js/jquery/jquery-ui-1.9.2.custom/css/librus/jquery-ui-1.9.2.custom.min.1422664051.css" rel="stylesheet"
+        type="text/css" />
+    <link href="/js/jquery/jquery-ui-1.9.2.custom/css/librus/librus-aditional.1507325373.css" rel="stylesheet"
+        type="text/css" />
+
+
+
+
+
+
+
+
+    <link href="/assets/css/fancybox/jquery.fancybox-1.3.4.css" rel="stylesheet" type="text/css" />
+
+    <!--<script type="module" src="/js/2fa.js"></script>-->
+
+    <link href="/LibrusStyleSheet2.1786741639.css" media="screen" rel="stylesheet" type="text/css">
+    <link href="/LibrusPrintStyleSheet2.1495831305.css" media="print" rel="stylesheet" type="text/css" />
+    <!--[if !IE]><!-->
+    <link href="/LibrusStyleSheet2NonIE.1361960241.css" media="screen" rel="stylesheet" type="text/css" />
+    <!--<![endif]-->
+    <!--[if IE]>
+        <link rel="stylesheet" href="/LibrusStyleSheet2IE.1615587149.css" type="text/css" media="screen">        <![endif]-->
+    <!--[if IE 7]>
+        <link rel="stylesheet" href="/LibrusStyleSheet2IE7.1371460280.css" type="text/css" media="screen">        <![endif]-->
+    <!--[if IE 8]>
+        <link rel="stylesheet" href="/LibrusStyleSheet2IE8.1367217179.css" type="text/css" media="screen">        <![endif]-->
+    <!--[if IE 9]>
+        <link rel="stylesheet" href="/LibrusStyleSheet2IE9.1366628972.css" type="text/css" media="screen">        <![endif]-->
+    <link href="/LibrusStyleSheet2Light.1774650888.css" media="screen" rel="stylesheet" type="text/css" />
+    <link href="/assets/css/synergia.1731710352.css" media="screen" rel="stylesheet" type="text/css" />
+    <link href="/assets/css/style.1679696063.css" media="screen" rel="stylesheet" type="text/css" />
+    <link href="/js/newLayout/SparkBoxSelect/sparkbox-select.css" media="screen" rel="stylesheet" type="text/css" />
+    <link href="/jquery.treeview.css" media="screen" rel="stylesheet" type="text/css" />
+
+
+
+    <link href="/assets/css/tippy/tippy.css" rel="stylesheet" />
+    <link href="/assets/css/tippy-theme.css" rel="stylesheet" />
+
+
+
+
+
+
+
+
+
+    <!--[if IE 7]>
+    <script type="text/javascript" src="/js/newLayout/newLayoutJSIE7.1368708313.js"></script>    <![endif]-->
+    <!--[if lt IE 9]>
+    <script type="text/javascript" src="/js/newLayout/newLauoutJSltIE9.1375344710.js"></script>    <![endif]-->
+    <link href="/js/jquery/jquery.multiselect.1628259749.css" rel="stylesheet" type="text/css"> <!--[if lt IE 9]>
+   <script type="text/javascript">
+   $(document).ready(function(){
+        $(window).on("resize", function(){
+            simMediaQuery();
+        });
+
+        simMediaQuery();
+
+        function simMediaQuery(){
+            var widthTrigger = 1100;
+            var viewportW = parseInt($(window).width());
+            if (viewportW > widthTrigger){
+                if( $('#interfejs-lekcyjny').length <= 0 || parseInt( $('#body').css("padding-left") ) < 50 ) {
+                    $('#body').css({"padding-left" : "50px"});
+                }
+                $('#body').css({"padding-right" : "50px"});
+            } else {
+                if( $('#interfejs-lekcyjny').length <= 0 ) {
+                    $('#body').css({"padding-left" : "0"});
+                }
+                $('#body').css({"padding-right" : "0"});
+            }
+        }
+
+    });
+   </script>
+   <![endif]-->
+
+
+
+
+
+
+
+
+    </link>
+    </link>
+    </link>
+</head>
+
+<body onload="ImageSwaper.GetInstance().Load(); ">
+    <div id="preloader-box" style="display: none;">
+        <div id="preloader-curtain"></div>
+        <div id="preloader">
+            <span id="preloader-logo"></span>
+            <span id="preloader-loader"></span>
+        </div>
+    </div>
+    <div class="screen-only ui-widget-content draggable" id="yellowCard_1" style=" left: 0px; top: 0px; display: none;">
+        <div class="titleYellowCard maximalize" id="yellowCard_1_DraggHandle"
+            onmouseup="interface_object_save_position('yellowCard_1', $(this.parentNode).offset().left, $(this.parentNode).offset().top, interfejs_fold_object());">
+            <div class="content"></div>
+        </div>
+        <div class="yellowCardClose" onclick='yellowCardAction("close", "yellowCard_1");' onmouseup="return false;">
+            <a href="javascript:void(0);"></a>
+        </div>
+        <div class="yellowCardMinimalize" onclick='yellowCardAction("minimalize", "yellowCard_1");'></div>
+        <div class="yellowCardMaximalize" onclick='yellowCardAction("maximalize", "yellowCard_1");'
+            style="display:none;"></div>
+        <div class="cardBody">
+            <div class="content"></div>
+        </div>
+    </div>
+
+
+    <!--
+ <div id="kontener">
+ <div id="baner"><img src="/images/baner_top1.jpg"></div>
+  -->
+    <div class="systema" id="page">
+        <div id="header">
+            <div id="main-navigation-container">
+                <div id="main-navigation">
+                    <div id="main-menu">
+                        <ul class="main-menu-list">
+                            <li><a href="/wyloguj">Wyloguj</a></li>
+                            <li><a href="/help/D13" target="_blank">Pomoc</a></li>
+                            <li><a href="/ustawienia">Ustawienia</a></li>
+                            <li><a href="/ankiety_admin_ankiety">Ankiety</a></li>
+                            <li>
+                                <a href="javascript: void(null);">Uczeń</a>
+                                <ul>
+                                    <li><a href="/uwagi">Uwagi</a></li>
+                                    <li><a href="/szczegolne_osiagniecia_ucznia">Szczególne osiągnięcia</a></li>
+                                    <li><a href="/informacja">Informacje</a></li>
+                                </ul>
+                            </li>
+                            <li>
+                                <a href="javascript: void(null);">Organizacja</a>
+                                <ul>
+                                    <li><a
+                                            href="javascript:otworz_w_nowym_oknie('/przegladaj_plan_lekcji','plan_u',0,0)">Plan
+                                            lekcji</a></li>
+                                    <li><a href="/dyzury">Dyżury</a></li>
+                                    <li><a href="/zaplanowane_lekcje">Lekcje</a></li>
+                                    <li><a href="/pliki_szkoly">Pliki szkoły</a></li>
+                                </ul>
+                            </li>
+                            <li>
+                                <a href="javascript: void(null);">Świetlica</a>
+                                <ul>
+                                    <li><a href="/panel_rodzica/swietlica/wygenerowane_kody">Kody PIN</a></li>
+                                    <li><a href="/panel_rodzica/swietlica/osoby_uprawnione">Osoby uprawnione</a></li>
+                                </ul>
+                            </li>
+                            <li>
+                                <a href="https://eduranga.pl/librus" target="_blank">EDURANGA</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div id="top-banner-container">
+                <a href="/rodzic/index             ">
+                    <img id="top-banner" src="/assets/img/synergia/header/benners/default.png         " />
+                </a>
+                <div id="graphic-menu">
+                    <ul>
+                        <li>
+                            <a href="/gateway/ms/studentdatapanel/ui/" id="icon-wcag" title="Widok alternatywny">
+                                <span class="circle"></span> Widok alternatywny
+                            </a>
+                        </li>
+                        <li><a href="/przegladaj_oceny/uczen" id="icon-oceny"><span class="circle"></span>Oceny</a>
+                        </li>
+                        <li>
+                            <a href="/przegladaj_nb/uczen" id="icon-nb">
+                                <span class="circle"></span>Frekwencja
+                            </a>
+                        </li>
+                        <li><a href="/wiadomosci" id="icon-wiadomosci"><span class="circle"></span>Wiadomości</a>
+                        <li><a href="/ogloszenia" id="icon-ogloszenia"><span class="circle"></span>Ogłoszenia</a> </li>
+                        <li><a href="/terminarz" id="icon-terminarz"><span class="circle"></span>Terminarz</a> </li>
+                        <li><a href="/moje_zadania" id="icon-zadania"><span class="circle"></span>Zadania domowe</a>
+                        </li>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div id="user-section">
+                szczęśliwy numerek: <a href="javascript:void(0);"
+                    title="Szczęśliwy numerek to losowany każdego dnia numer z dziennika. Wylosowana liczba ma różne zastosowania, np. uczeń z określonym numerem może być zwolniony z odpowiedzi ustnych w danym dniu. Zapytaj  w szkole o możliwość bezpłatnego włączenia usługi Szczęśliwego Numerka."><span
+                        alt="Szczęśliwy numerek to losowany każdego dnia numer z dziennika. Wylosowana liczba ma różne zastosowania, np. uczeń z określonym numerem może być zwolniony z odpowiedzi ustnych w danym dniu. Zapytaj  w szkole o możliwość bezpłatnego włączenia usługi Szczęśliwego Numerka."
+                        class="luckyNumber"> <b>?</b> </span></a>    <span class="tooltip"
+                    title="&lt;b&gt;ostatnie udane logowania:&lt;/b&gt;&lt;br /&gt;2026-09-12 21:03:20, IP: 123.119.78.123&lt;br /&gt;2026-09-12 20:55:25, IP: 123.119.78.123&lt;br /&gt;2026-09-12 20:49:30, IP: 123.119.78.123&lt;br /&gt;2026-09-12 16:02:00, IP: 13.167.159.132&lt;br /&gt;2026-09-11 16:01:55, IP: 195.167.159.167&lt;br /&gt;&lt;b&gt;ostatnie nieudane logowania:&lt;/b&gt;&lt;br /&gt;brak">historia
+                    logowań </span> <img
+                    alt="&lt;b&gt;ostatnie udane logowania:&lt;/b&gt;&lt;br /&gt;2026-09-12 21:03:20, IP: 123.119.78.243&lt;br /&gt;2026-09-12 20:55:25, IP: 217.119.78.243&lt;br /&gt;2026-09-12 20:49:30, IP: 217.119.78.243&lt;br /&gt;2026-09-12 16:02:00, IP: 195.167.159.167&lt;br /&gt;2026-09-11 16:01:55, IP: 192.164.159.169&lt;br /&gt;&lt;b&gt;ostatnie nieudane logowania:&lt;/b&gt;&lt;br /&gt;brak"
+                    class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                    title="&lt;b&gt;ostatnie udane logowania:&lt;/b&gt;&lt;br /&gt;2026-09-12 21:03:20, IP: 217.119.78.243&lt;br /&gt;2026-09-12 20:55:25, IP: 217.119.78.243&lt;br /&gt;2026-09-12 20:49:30, IP: 217.119.78.243&lt;br /&gt;2026-09-12 16:02:00, IP: 195.167.159.167&lt;br /&gt;2026-09-11 16:01:55, IP: 195.167.159.167&lt;br /&gt;&lt;b&gt;ostatnie nieudane logowania:&lt;/b&gt;&lt;br /&gt;brak" /> 
+                | jesteś zalogowany jako: <b>
+                    Jan Kowalski (rodzic <img alt="Dane można zmienić w konfiguracji" class="tooltip helper-icon"
+                        src="/images/pomoc_ciemna.png" title="Dane można zmienić w konfiguracji" /> )</b>
+                <select id="language" name="Język" onchange="window.location.href=this.value;"
+                    style="width: 80px; height: 20px;">
+                    <option value="/gateway/ms/studentdatapanel/ui/">polski</option>
+                    <option value="/gateway/ms/studentdatapanel/ui/angielska-instrukcja">english</option>
+                    <option value="/gateway/ms/studentdatapanel/ui/rosyjska-instrukcja">русский</option>
+                    <option value="/gateway/ms/studentdatapanel/ui/ukrainska-instrukcja">український</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="left-widgets-container">
+        </div>
+        <div id="body">
+            <div id="missing-2fa-warning"></div>
+            <table class="decorated stretch" style="display: none;">
+                <tr class="line0">
+                    <td><img id="przedmioty_00000_node" onclick="" /></td>
+                    <td></td>
+                    <td class="line0">
+                        <span class="grade-box" id="Ocena0">
+                            <a aria-describedby="ui-tooltip-1" class="ocena" href="/przegladaj_oceny/szczegoly/000000"
+                                id="ocenaTest" title="">1</a>
+                        </span>
+                    </td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr class="line0" id="przedmioty_00000">
+                    <td colspan="12">
+                        <table class="stretch">
+                            <tbody>
+                                <tr class="line1 detail-grades">
+                                    <td class="center">1</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+
+
+
+            <form action="/przegladaj_oceny/uczen" method="POST" name="PrzegladajOceny">
+                <input name="requestkey" type="hidden"
+                    value="MC42Mkg5OTkwMCAxNzkxODMxODAwX24yMWY2MTZlOWY3NzdjYmRkYT3lMjNkMjMwYjMyYWI2" />
+                <div class="container">
+                    <h2 class="inside">Oceny ucznia
+                    </h2>
+                    <span class="fold"> <a class="fold-link" href="javascript:print();"><span
+                                class="fold-start">Drukuj</span><span class="fold-end"></span></a></span><input
+                        disabled="disabled" id="zmiany_logowanie" name="zmiany_logowanie" type="hidden" /><span
+                        class="fold"> <a class="fold-link" href="javascript:
+                    $('input[name=zmiany_logowanie_wszystkie]').remove();
+                    $('input[name=zmiany_logowanie_tydzien]').remove();
+                    $('&lt;input&gt;').attr({ type: 'hidden',id: 'zmiany_logowanie',name: 'zmiany_logowanie', value : '1'}).appendTo('form');
+                    document.forms['PrzegladajOceny'].submit();"><span class="fold-start">Pokaż dodane od ostatniego
+                                logowania</span><span class="fold-end"></span></a></span><input disabled="disabled"
+                        id="zmiany_logowanie_tydzien" name="zmiany_logowanie_tydzien" type="hidden" /><span
+                        class="fold"> <a class="fold-link" href="javascript:
+                    $('input[name=zmiany_logowanie]').remove();
+                    $('input[name=zmiany_logowanie_wszystkie]').remove();
+                    $('&lt;input&gt;').attr({ type: 'hidden',id: 'zmiany_logowanie_tydzien',name: 'zmiany_logowanie_tydzien', value : '1'}).appendTo('form');
+                    document.forms['PrzegladajOceny'].submit();"><span class="fold-start">Pokaż dodane w aktualnym
+                                tygodniu</span><span class="fold-end"></span></a></span><span class="fold"> <a
+                            class="fold-link" href="/archiwum"><span class="fold-start">Archiwum</span><span
+                                class="fold-end"></span></a></span>
+                    <div class="container-background">
+                        <div class="container-icon">
+                            <table>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <img alt="Uczeń" class="screen-only" src="/images/naglowek_uczen.png" />
+                                        </td>
+                                        <td>
+                                            <p><b>Uczeń:</b> Jan Kowalski<br /><b>Klasa: </b>4a SA-SJ-43 </p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div>
+                            <center></center>
+                        </div>
+
+
+                        <br />
+                        <h3 class="center">Oceny bieżące</h3>
+                        <div class="right screen-only">
+                            <table>
+                                <tr>
+                                    <td class="right">
+                                        <table class="right sort_box">
+                                            <tr>
+                                                <td>sortuj </td>
+                                                <td><select class="right black" name="sortowanieOcen"
+                                                        onchange="this.form.submit()">
+                                                        <option selected="" value="2">wg daty</option>
+                                                        <option value="1">wg kategorii</option>
+                                                        <option value="3">wg ocen</option>
+                                                    </select></td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <table class="decorated stretch">
+                            <thead>
+                                <tr>
+                                    <th class="micro screen-only" rowspan="2"><img id="przedmioty_all_node"
+                                            onclick="showHide.AllNodeHandler();" src="/images/tree_colapsed.png" /></th>
+                                    <td rowspan="2">Przedmiot</td>
+                                    <td class="colspan center" colspan="3"><span>Okres 1</span></td>
+                                    <td class="colspan center" colspan="3"><span>Okres 2</span></td>
+                                    <td class="colspan center" colspan="2"><span>Koniec roku</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="no-border-top spacing">Oceny bieżące</td>
+                                    <td class="no-border-top no-border-left"
+                                        title="Średnia ocen&lt;br&gt; z pierwszego okresu">Śr.I</td>
+                                    <td class="no-border-top" title="Ocena śródroczna z pierwszego okresu">I</td>
+                                    <td class="no-border-top">Oceny bieżące</td>
+                                    <td class="no-border-top" title="Średnia ocen z drugiego okresu">Śr.II</td>
+                                    <td class="no-border-top" title="Ocena śródroczna z drugiego okresu">II</td>
+                                    <td class="no-border-top" title="Średnia roczna">Śr.R</td>
+                                    <td class="no-border-top" title="Ocena roczna">R</td>
+                                </tr>
+                            </thead>
+                            <tr class="line0">
+                                <td class="center micro screen-only"><img id="przedmioty_88866_node"
+                                        onclick="showHide.ShowHide(88866);" src="/images/tree_colapsed.png" /></td>
+                                <td>Edukacja zdrowotna</td>
+                                <td>Brak ocen</td>
+                                <td> <img alt="Podgląd średniej ocen został wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td>Brak ocen</td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                            </tr>
+                            <tr class="line0" id="przedmioty_88866" name="przedmioty_all"
+                                style="display: none; visibility: hidden;">
+                                <td colspan="14">
+                                    <table class="stretch">
+                                        <thead>
+                                            <tr class="">
+                                                <td>Ocena</td>
+                                                <td title="Komentarz do oceny">K</td>
+                                                <td>Kategoria</td>
+                                                <td class="center">Data</td>
+                                                <td>Nauczyciel</td>
+                                                <td>Licz do śr.</td>
+                                                <td>Waga</td>
+                                                <td>Poprawa oceny</td>
+                                                <td>Dodał</td>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr class="line1">
+                                                <td class="WierszTab2" colspan="9">Brak ocen</td>
+                                            </tr>
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <td class="center" colspan="14"></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </td>
+                            </tr>
+                            <tr class="line1">
+                                <td class="center micro screen-only"><img id="przedmioty_29445_node"
+                                        onclick="showHide.ShowHide(29445);" src="/images/tree_colapsed.png" /></td>
+                                <td>Godzina wychowawcza</td>
+                                <td><span class="grade-box" id="Ocena1" style="background-color:#DC143C; ">
+                                        <a class="ocena" href="/przegladaj_oceny/szczegoly/2872531"
+                                            title="Kategoria: Strój galowy&lt;br&gt;Data: 2026-09-09 (pt.)&lt;br&gt;Nauczyciel: Janina Nauczycielka&lt;br&gt;Licz do średniej: nie&lt;br&gt;Dodał: Janina Nauczycielka&lt;br/&gt;&lt;br&gt;Komentarz: Strój galowy - święto szkoły - brak krawata">6</a></span>
+                                </td>
+                                <td> <img alt="Podgląd średniej ocen został wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td>Brak ocen</td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                            </tr>
+                            <tr class="line1" id="przedmioty_29445" name="przedmioty_all"
+                                style="display: none; visibility: hidden;">
+                                <td colspan="14">
+                                    <table class="stretch">
+                                        <thead>
+                                            <tr class="">
+                                                <td>Ocena</td>
+                                                <td title="Komentarz do oceny">K</td>
+                                                <td>Kategoria</td>
+                                                <td class="center">Data</td>
+                                                <td>Nauczyciel</td>
+                                                <td>Licz do śr.</td>
+                                                <td>Waga</td>
+                                                <td>Poprawa oceny</td>
+                                                <td>Dodał</td>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr class="line1 bolded">
+                                                <td class="center" colspan="9">Okres 1</td>
+                                            </tr>
+                                            <tr class="line1 detail-grades" style="background-color: #DC143C;">
+                                                <td class="center">6</td>
+                                                <td class="center"><strong><a href="javascript:void(0);"
+                                                            onclick="otworz_w_nowym_oknie('/komentarz_oceny/1/2872531','ko',480,450)">K</a></strong>
+                                                </td>
+                                                <td>Strój galowy</td>
+                                                <td class="center">2026-09-09</td>
+                                                <td>Janina Nauczycielka</td>
+                                                <td class="center"><img border="0" src="/images/nieaktywne.png" /></td>
+                                                <td class="right"></td>
+                                                <td class="center">-</td>
+                                                <td>Janina Nauczycielka</td>
+                                            </tr>
+                                            <tr class="line1 bolded">
+                                                <td class="center" colspan="9">Okres 2</td>
+                                            </tr>
+                                            <tr class="line1">
+                                                <td class="center" colspan="9">Brak ocen</td>
+                                            </tr>
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <td class="center" colspan="14"></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </td>
+                            </tr>
+                            <tr class="line0">
+                                <td class="center micro screen-only"><img id="przedmioty_29484_node"
+                                        onclick="showHide.ShowHide(29484);" src="/images/tree_colapsed.png" /></td>
+                                <td>Historia</td>
+                                <td>Brak ocen</td>
+                                <td> <img alt="Podgląd średniej ocen został wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td>Brak ocen</td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                            </tr>
+                            <tr class="line0" id="przedmioty_29484" name="przedmioty_all"
+                                style="display: none; visibility: hidden;">
+                                <td colspan="14">
+                                    <table class="stretch">
+                                        <thead>
+                                            <tr class="">
+                                                <td>Ocena</td>
+                                                <td title="Komentarz do oceny">K</td>
+                                                <td>Kategoria</td>
+                                                <td class="center">Data</td>
+                                                <td>Nauczyciel</td>
+                                                <td>Licz do śr.</td>
+                                                <td>Waga</td>
+                                                <td>Poprawa oceny</td>
+                                                <td>Dodał</td>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr class="line1">
+                                                <td class="WierszTab2" colspan="9">Brak ocen</td>
+                                            </tr>
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <td class="center" colspan="14"></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </td>
+                            </tr>
+                            <tr class="line1">
+                                <td class="center micro screen-only"><img id="przedmioty_29447_node"
+                                        onclick="showHide.ShowHide(29447);" src="/images/tree_colapsed.png" /></td>
+                                <td>Informatyka</td>
+                                <td><span class="grade-box" id="Ocena2" style="background-color:#32CD32; ">
+                                        <a class="ocena" href="/przegladaj_oceny/szczegoly/947424"
+                                            title="Kategoria: praca na lekcji&lt;br&gt;Data: 2026-09-22 (wt.)&lt;br&gt;Nauczyciel: Agata Nauczycielka&lt;br&gt;Licz do średniej: tak&lt;br&gt;Waga: 1&lt;br&gt;Dodał: Agata Nauczycielka&lt;br/&gt;">5</a></span><span
+                                        class="grade-box" id="Ocena3" style="background-color:#F0E68C; ">
+                                        <a class="ocena" href="/przegladaj_oceny/szczegoly/1616551"
+                                            title="Kategoria: zadanie&lt;br&gt;Data: 2026-09-29 (wt.)&lt;br&gt;Nauczyciel: Agata Nauczycielka&lt;br&gt;Licz do średniej: tak&lt;br&gt;Waga: 1&lt;br&gt;Dodał: Agata Nauczycielka&lt;br/&gt;&lt;br&gt;Komentarz: Dokończ grafikę z internetu w programie MS Paint">5-</a></span>
+                                </td>
+                                <td> <img alt="Podgląd średniej ocen został wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td>Brak ocen</td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                            </tr>
+                            <tr class="line1" id="przedmioty_29447" name="przedmioty_all"
+                                style="display: none; visibility: hidden;">
+                                <td colspan="14">
+                                    <table class="stretch">
+                                        <thead>
+                                            <tr class="">
+                                                <td>Ocena</td>
+                                                <td title="Komentarz do oceny">K</td>
+                                                <td>Kategoria</td>
+                                                <td class="center">Data</td>
+                                                <td>Nauczyciel</td>
+                                                <td>Licz do śr.</td>
+                                                <td>Waga</td>
+                                                <td>Poprawa oceny</td>
+                                                <td>Dodał</td>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr class="line1 bolded">
+                                                <td class="center" colspan="9">Okres 1</td>
+                                            </tr>
+                                            <tr class="line1 detail-grades" style="background-color: #32CD32;">
+                                                <td class="center">5</td>
+                                                <td class="center"> </td>
+                                                <td>praca na lekcji</td>
+                                                <td class="center">2026-09-22</td>
+                                                <td>Agata Nauczycielka</td>
+                                                <td class="center"><img border="0" src="/images/aktywne.png" /></td>
+                                                <td class="right">1</td>
+                                                <td class="center">-</td>
+                                                <td>Agata Nauczycielka</td>
+                                            </tr>
+                                            <tr class="line1 detail-grades" style="background-color: #F0E68C;">
+                                                <td class="center">5-</td>
+                                                <td class="center"><strong><a href="javascript:void(0);"
+                                                            onclick="otworz_w_nowym_oknie('/komentarz_oceny/1/1616551','ko',480,450)">K</a></strong>
+                                                </td>
+                                                <td>zadanie</td>
+                                                <td class="center">2026-09-29</td>
+                                                <td>Agata Nauczycielka</td>
+                                                <td class="center"><img border="0" src="/images/aktywne.png" /></td>
+                                                <td class="right">1</td>
+                                                <td class="center">-</td>
+                                                <td>Agata Nauczycielka</td>
+                                            </tr>
+                                            <tr class="line1 bolded">
+                                                <td class="center" colspan="9">Okres 2</td>
+                                            </tr>
+                                            <tr class="line1">
+                                                <td class="center" colspan="9">Brak ocen</td>
+                                            </tr>
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <td class="center" colspan="14"></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </td>
+                            </tr>
+                            <tr class="line0">
+                                <td class="center micro screen-only"><img id="przedmioty_29448_node"
+                                        onclick="showHide.ShowHide(29448);" src="/images/tree_colapsed.png" /></td>
+                                <td>Język angielski</td>
+                                <td><span class="grade-box" id="Ocena4" style="background-color:#ADFF2F; ">
+                                        <a class="ocena" href="/przegladaj_oceny/szczegoly/58084"
+                                            title="Kategoria: aktywność&lt;br&gt;Data: 2026-09-07 (pon.)&lt;br&gt;Nauczyciel: Janina Nauczycielka&lt;br&gt;Dodał: Janina Nauczycielka&lt;br/&gt;">+</a></span><span
+                                        class="grade-box" id="Ocena5" style="background-color:#7B68EE; ">
+                                        <a class="ocena" href="/przegladaj_oceny/szczegoly/ksztaltujace/37852"
+                                            title="Ocena: Diagnoza na start 56% 25/45 pkt&lt;br&gt;Kategoria: Test kompetencji&lt;br&gt;Data: 2026-09-22 (wt.)&lt;br&gt;Nauczyciel: Janina Nauczycielka&lt;br&gt;Dodał: Janina Nauczycielka&lt;br/&gt;">T</a></span><span
+                                        class="grade-box" id="Ocena6" style="background-color:#ADFF2F; ">
+                                        <a class="ocena" href="/przegladaj_oceny/szczegoly/2272345"
+                                            title="Kategoria: aktywność&lt;br&gt;Data: 2026-09-05 (pon.)&lt;br&gt;Nauczyciel: Janina Nauczycielka&lt;br&gt;Dodał: Janina Nauczycielka&lt;br/&gt;">+</a></span><span
+                                        class="grade-box" id="Ocena7" style="background-color:#87CEFA; ">
+                                        <a class="ocena" href="/przegladaj_oceny/szczegoly/2261655"
+                                            title="Kategoria: praca domowa&lt;br&gt;Data: 2026-09-05 (pon.)&lt;br&gt;Nauczyciel: Janina Nauczycielka&lt;br&gt;Dodał: Janina Nauczycielka&lt;br/&gt;">+</a></span><span
+                                        class="grade-box" id="Ocena8" style="background-color:#FF0000; ">
+                                        <a class="ocena" href="/przegladaj_oceny/szczegoly/2754433"
+                                            title="Kategoria: sprawdzian&lt;br&gt;Data: 2026-09-08 (czw.)&lt;br&gt;Nauczyciel: Janina Nauczycielka&lt;br&gt;Licz do średniej: tak&lt;br&gt;Waga: 1&lt;br&gt;Dodał: Janina Nauczycielka&lt;br/&gt;&lt;br&gt;Komentarz: Unit 1">2+</a></span><span
+                                        class="grade-box" id="Ocena9" style="background-color:#ADFF2F; ">
+                                        <a class="ocena" href="/przegladaj_oceny/szczegoly/3067366"
+                                            title="Kategoria: aktywność&lt;br&gt;Data: 2026-09-12 (pon.)&lt;br&gt;Nauczyciel: Janina Nauczycielka&lt;br&gt;Dodał: Janina Nauczycielka&lt;br/&gt;">+</a></span>
+                                </td>
+                                <td> <img alt="Podgląd średniej ocen został wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td>Brak ocen</td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                            </tr>
+                            <tr class="line0" id="przedmioty_29448" name="przedmioty_all"
+                                style="display: none; visibility: hidden;">
+                                <td colspan="14">
+                                    <table class="stretch">
+                                        <thead>
+                                            <tr class="">
+                                                <td>Ocena</td>
+                                                <td title="Komentarz do oceny">K</td>
+                                                <td>Kategoria</td>
+                                                <td class="center">Data</td>
+                                                <td>Nauczyciel</td>
+                                                <td>Licz do śr.</td>
+                                                <td>Waga</td>
+                                                <td>Poprawa oceny</td>
+                                                <td>Dodał</td>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr class="line1 bolded">
+                                                <td class="center" colspan="9">Okres 1</td>
+                                            </tr>
+                                            <tr class="line1 detail-grades" style="background-color: #ADFF2F;">
+                                                <td class="center">+</td>
+                                                <td class="center"> </td>
+                                                <td>aktywność</td>
+                                                <td class="center">2026-09-07</td>
+                                                <td>Janina Nauczycielka</td>
+                                                <td class="center"><img border="0" src="/images/nieaktywne.png" /></td>
+                                                <td class="right"></td>
+                                                <td class="center">-</td>
+                                                <td>Janina Nauczycielka</td>
+                                            </tr>
+                                            <tr class="line1 detail-grades" style="background-color: #7B68EE;">
+                                                <td class="center"><a class="" href="javascript:void(0);"
+                                                        title="Diagnoza na start 56% 25/45 pkt">T</a></td>
+                                                <td class="center"> </td>
+                                                <td>Test kompetencji</td>
+                                                <td class="center">2026-09-22</td>
+                                                <td>Janina Nauczycielka</td>
+                                                <td class="center"><img border="0" src="/images/aktywne.png" /></td>
+                                                <td class="right">-</td>
+                                                <td class="center">-</td>
+                                                <td>Janina Nauczycielka</td>
+                                            </tr>
+                                            <tr class="line1 detail-grades" style="background-color: #ADFF2F;">
+                                                <td class="center">+</td>
+                                                <td class="center"> </td>
+                                                <td>aktywność</td>
+                                                <td class="center">2026-09-05</td>
+                                                <td>Janina Nauczycielka</td>
+                                                <td class="center"><img border="0" src="/images/nieaktywne.png" /></td>
+                                                <td class="right"></td>
+                                                <td class="center">-</td>
+                                                <td>Janina Nauczycielka</td>
+                                            </tr>
+                                            <tr class="line1 detail-grades" style="background-color: #87CEFA;">
+                                                <td class="center">+</td>
+                                                <td class="center"> </td>
+                                                <td>praca domowa</td>
+                                                <td class="center">2026-09-05</td>
+                                                <td>Janina Nauczycielka</td>
+                                                <td class="center"><img border="0" src="/images/aktywne.png" /></td>
+                                                <td class="right">1</td>
+                                                <td class="center">-</td>
+                                                <td>Janina Nauczycielka</td>
+                                            </tr>
+                                            <tr class="line1 detail-grades" style="background-color: #FF0000;">
+                                                <td class="center">2+</td>
+                                                <td class="center"><strong><a href="javascript:void(0);"
+                                                            onclick="otworz_w_nowym_oknie('/komentarz_oceny/1/2754433','ko',480,450)">K</a></strong>
+                                                </td>
+                                                <td>sprawdzian</td>
+                                                <td class="center">2026-09-08</td>
+                                                <td>Janina Nauczycielka</td>
+                                                <td class="center"><img border="0" src="/images/aktywne.png" /></td>
+                                                <td class="right">1</td>
+                                                <td class="center">-</td>
+                                                <td>Janina Nauczycielka</td>
+                                            </tr>
+                                            <tr class="line1 detail-grades" style="background-color: #ADFF2F;">
+                                                <td class="center">+</td>
+                                                <td class="center"> </td>
+                                                <td>aktywność</td>
+                                                <td class="center">2026-09-12</td>
+                                                <td>Janina Nauczycielka</td>
+                                                <td class="center"><img border="0" src="/images/nieaktywne.png" /></td>
+                                                <td class="right"></td>
+                                                <td class="center">-</td>
+                                                <td>Janina Nauczycielka</td>
+                                            </tr>
+                                            <tr class="line1 bolded">
+                                                <td class="center" colspan="9">Okres 2</td>
+                                            </tr>
+                                            <tr class="line1">
+                                                <td class="center" colspan="9">Brak ocen</td>
+                                            </tr>
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <td class="center" colspan="14"></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </td>
+                            </tr>
+                            <tr class="line1">
+                                <td class="center micro screen-only"><img id="przedmioty_29449_node"
+                                        onclick="showHide.ShowHide(29449);" src="/images/tree_colapsed.png" /></td>
+                                <td>Język francuski</td>
+                                <td>Brak ocen</td>
+                                <td> <img alt="Podgląd średniej ocen został wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td>Brak ocen</td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                            </tr>
+                            <tr class="line1" id="przedmioty_29449" name="przedmioty_all"
+                                style="display: none; visibility: hidden;">
+                                <td colspan="14">
+                                    <table class="stretch">
+                                        <thead>
+                                            <tr class="">
+                                                <td>Ocena</td>
+                                                <td title="Komentarz do oceny">K</td>
+                                                <td>Kategoria</td>
+                                                <td class="center">Data</td>
+                                                <td>Nauczyciel</td>
+                                                <td>Licz do śr.</td>
+                                                <td>Waga</td>
+                                                <td>Poprawa oceny</td>
+                                                <td>Dodał</td>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr class="line1">
+                                                <td class="WierszTab2" colspan="9">Brak ocen</td>
+                                            </tr>
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <td class="center" colspan="14"></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </td>
+                            </tr>
+                            <tr class="line0">
+                                <td class="center micro screen-only"><img id="przedmioty_29450_node"
+                                        onclick="showHide.ShowHide(29450);" src="/images/tree_colapsed.png" /></td>
+                                <td>Język niemiecki</td>
+                                <td><span class="grade-box" id="Ocena10" style="background-color:#F0E68C; ">
+                                        <a class="ocena" href="/przegladaj_oceny/szczegoly/37235"
+                                            title="Kategoria: odpowiedź ustna &lt;br&gt;Data: 2026-09-04 (pt.)&lt;br&gt;Nauczyciel: Gawkowska Agata&lt;br&gt;Dodał: Gawkowska Agata&lt;br/&gt;&lt;br&gt;Komentarz: nazwy krajów niemieckojęzycznych">+</a></span><span
+                                        class="grade-box" id="Ocena11" style="background-color:#FFD700; ">
+                                        <a class="ocena" href="/przegladaj_oceny/szczegoly/147288"
+                                            title="Kategoria: praca domowa&lt;br&gt;Data: 2026-09-09 (śr.)&lt;br&gt;Nauczyciel: Gawkowska Agata&lt;br&gt;Dodał: Gawkowska Agata&lt;br/&gt;&lt;br&gt;Komentarz: flagi krajów niemieckojęzycznych">+</a></span><span
+                                        class="grade-box" id="Ocena12" style="background-color:#BA55D3; ">
+                                        <a class="ocena" href="/przegladaj_oceny/szczegoly/1135788"
+                                            title="Kategoria: praca na lekcji&lt;br&gt;Data: 2026-09-23 (śr.)&lt;br&gt;Nauczyciel: Gawkowska Agata&lt;br&gt;Dodał: Gawkowska Agata&lt;br/&gt;&lt;br&gt;Komentarz: krótkie dialogi">+</a></span><span
+                                        class="grade-box" id="Ocena13" style="background-color:#32CD32; ">
+                                        <a class="ocena" href="/przegladaj_oceny/szczegoly/2121966"
+                                            title="Kategoria: kartkówka&lt;br&gt;Data: 2026-09-02 (pt.)&lt;br&gt;Nauczyciel: Gawkowska Agata&lt;br&gt;Licz do średniej: tak&lt;br&gt;Waga: 1&lt;br&gt;Dodał: Gawkowska Agata&lt;br/&gt;&lt;br&gt;Komentarz: pytania z odpowiedziami - miejsce zamieszkania, pochodzenia, wiek, imię.">4-</a></span>
+                                </td>
+                                <td> <img alt="Podgląd średniej ocen został wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td>Brak ocen</td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                            </tr>
+                            <tr class="line0" id="przedmioty_29450" name="przedmioty_all"
+                                style="display: none; visibility: hidden;">
+                                <td colspan="14">
+                                    <table class="stretch">
+                                        <thead>
+                                            <tr class="">
+                                                <td>Ocena</td>
+                                                <td title="Komentarz do oceny">K</td>
+                                                <td>Kategoria</td>
+                                                <td class="center">Data</td>
+                                                <td>Nauczyciel</td>
+                                                <td>Licz do śr.</td>
+                                                <td>Waga</td>
+                                                <td>Poprawa oceny</td>
+                                                <td>Dodał</td>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr class="line1 bolded">
+                                                <td class="center" colspan="9">Okres 1</td>
+                                            </tr>
+                                            <tr class="line1 detail-grades" style="background-color: #F0E68C;">
+                                                <td class="center">+</td>
+                                                <td class="center"><strong><a href="javascript:void(0);"
+                                                            onclick="otworz_w_nowym_oknie('/komentarz_oceny/1/37235','ko',480,450)">K</a></strong>
+                                                </td>
+                                                <td>odpowiedź ustna </td>
+                                                <td class="center">2026-09-04</td>
+                                                <td>Gawkowska Agata</td>
+                                                <td class="center"><img border="0" src="/images/aktywne.png" /></td>
+                                                <td class="right">2</td>
+                                                <td class="center">-</td>
+                                                <td>Gawkowska Agata</td>
+                                            </tr>
+                                            <tr class="line1 detail-grades" style="background-color: #FFD700;">
+                                                <td class="center">+</td>
+                                                <td class="center"><strong><a href="javascript:void(0);"
+                                                            onclick="otworz_w_nowym_oknie('/komentarz_oceny/1/147288','ko',480,450)">K</a></strong>
+                                                </td>
+                                                <td>praca domowa</td>
+                                                <td class="center">2026-09-09</td>
+                                                <td>Gawkowska Agata</td>
+                                                <td class="center"><img border="0" src="/images/aktywne.png" /></td>
+                                                <td class="right">1</td>
+                                                <td class="center">-</td>
+                                                <td>Gawkowska Agata</td>
+                                            </tr>
+                                            <tr class="line1 detail-grades" style="background-color: #BA55D3;">
+                                                <td class="center">+</td>
+                                                <td class="center"><strong><a href="javascript:void(0);"
+                                                            onclick="otworz_w_nowym_oknie('/komentarz_oceny/1/1135788','ko',480,450)">K</a></strong>
+                                                </td>
+                                                <td>praca na lekcji</td>
+                                                <td class="center">2026-09-23</td>
+                                                <td>Gawkowska Agata</td>
+                                                <td class="center"><img border="0" src="/images/aktywne.png" /></td>
+                                                <td class="right">1</td>
+                                                <td class="center">-</td>
+                                                <td>Gawkowska Agata</td>
+                                            </tr>
+                                            <tr class="line1 detail-grades" style="background-color: #32CD32;">
+                                                <td class="center">4-</td>
+                                                <td class="center"><strong><a href="javascript:void(0);"
+                                                            onclick="otworz_w_nowym_oknie('/komentarz_oceny/1/2121966','ko',480,450)">K</a></strong>
+                                                </td>
+                                                <td>kartkówka</td>
+                                                <td class="center">2026-09-02</td>
+                                                <td>Gawkowska Agata</td>
+                                                <td class="center"><img border="0" src="/images/aktywne.png" /></td>
+                                                <td class="right">1</td>
+                                                <td class="center">-</td>
+                                                <td>Gawkowska Agata</td>
+                                            </tr>
+                                            <tr class="line1 bolded">
+                                                <td class="center" colspan="9">Okres 2</td>
+                                            </tr>
+                                            <tr class="line1">
+                                                <td class="center" colspan="9">Brak ocen</td>
+                                            </tr>
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <td class="center" colspan="14"></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </td>
+                            </tr>
+                            <tr class="line1">
+                                <td class="center micro screen-only"><img id="przedmioty_29451_node"
+                                        onclick="showHide.ShowHide(29451);" src="/images/tree_colapsed.png" /></td>
+                                <td>Język polski</td>
+                                <td><span>[<span class="grade-box" id="Ocena14" style="background-color:#32CD32; ">
+                                            <a class="ocena" href="/przegladaj_oceny/szczegoly/657842"
+                                                title="Kategoria: KARTKÓWKA&lt;br&gt;Data: 2026-09-17 (czw.)&lt;br&gt;Nauczyciel: Kłopotowska Justyna&lt;br&gt;Licz do średniej: tak&lt;br&gt;Waga: 1&lt;br&gt;Dodał: Kłopotowska Justyna&lt;br/&gt;&lt;br&gt;Komentarz: skłądnia (zdanie/ równoważnik zdania/ podmiot i orzeczenie)">1</a></span><span
+                                            class="grade-box" id="Ocena15" style="background-color:#32CD32; ">
+                                            <a class="ocena" href="/przegladaj_oceny/szczegoly/1187296"
+                                                title="Kategoria: KARTKÓWKA&lt;br&gt;Data: 2026-09-24 (czw.)&lt;br&gt;Nauczyciel: Kłopotowska Justyna&lt;br&gt;Licz do średniej: tak&lt;br&gt;Waga: 1&lt;br&gt;Dodał: Kłopotowska Justyna&lt;br/&gt;&lt;br /&gt;Poprawa oceny: 1 (KARTKÓWKA)">2+</a></span>]</span><span
+                                        class="grade-box" id="Ocena16" style="background-color:#DC143C; ">
+                                        <a class="ocena" href="/przegladaj_oceny/szczegoly/3026851"
+                                            title="Kategoria: SPRAWDZIAN ZE ZNAJOMOŚCI LEKTURY&lt;br&gt;Data: 2026-09-12 (pon.)&lt;br&gt;Nauczyciel: Kłopotowska Justyna&lt;br&gt;Licz do średniej: tak&lt;br&gt;Waga: 1&lt;br&gt;Dodał: Kłopotowska Justyna&lt;br/&gt;&lt;br&gt;Komentarz: APK">4-</a></span>
+                                </td>
+                                <td> <img alt="Podgląd średniej ocen został wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td>Brak ocen</td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                            </tr>
+                            <tr class="line1" id="przedmioty_29451" name="przedmioty_all"
+                                style="display: none; visibility: hidden;">
+                                <td colspan="14">
+                                    <table class="stretch">
+                                        <thead>
+                                            <tr class="">
+                                                <td>Ocena</td>
+                                                <td title="Komentarz do oceny">K</td>
+                                                <td>Kategoria</td>
+                                                <td class="center">Data</td>
+                                                <td>Nauczyciel</td>
+                                                <td>Licz do śr.</td>
+                                                <td>Waga</td>
+                                                <td>Poprawa oceny</td>
+                                                <td>Dodał</td>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr class="line1 bolded">
+                                                <td class="center" colspan="9">Okres 1</td>
+                                            </tr>
+                                            <tr class="line1 detail-grades" style="background-color: #32CD32;">
+                                                <td class="center">1</td>
+                                                <td class="center"><strong><a href="javascript:void(0);"
+                                                            onclick="otworz_w_nowym_oknie('/komentarz_oceny/1/657842','ko',480,450)">K</a></strong>
+                                                </td>
+                                                <td>KARTKÓWKA</td>
+                                                <td class="center">2026-09-17</td>
+                                                <td>Kłopotowska Justyna</td>
+                                                <td class="center"><img border="0" src="/images/aktywne.png" /></td>
+                                                <td class="right">1</td>
+                                                <td class="center">-</td>
+                                                <td>Kłopotowska Justyna</td>
+                                            </tr>
+                                            <tr class="line1 detail-grades" style="background-color: #32CD32;">
+                                                <td class="center">2+</td>
+                                                <td class="center"> </td>
+                                                <td>KARTKÓWKA</td>
+                                                <td class="center">2026-09-24</td>
+                                                <td>Kłopotowska Justyna</td>
+                                                <td class="center"><img border="0" src="/images/aktywne.png" /></td>
+                                                <td class="right">1</td>
+                                                <td class="center">1 (KARTKÓWKA)</td>
+                                                <td>Kłopotowska Justyna</td>
+                                            </tr>
+                                            <tr class="line1 detail-grades" style="background-color: #DC143C;">
+                                                <td class="center">4-</td>
+                                                <td class="center"><strong><a href="javascript:void(0);"
+                                                            onclick="otworz_w_nowym_oknie('/komentarz_oceny/1/3026851','ko',480,450)">K</a></strong>
+                                                </td>
+                                                <td>SPRAWDZIAN ZE ZNAJOMOŚCI LEKTURY</td>
+                                                <td class="center">2026-09-12</td>
+                                                <td>Kłopotowska Justyna</td>
+                                                <td class="center"><img border="0" src="/images/aktywne.png" /></td>
+                                                <td class="right">1</td>
+                                                <td class="center">-</td>
+                                                <td>Kłopotowska Justyna</td>
+                                            </tr>
+                                            <tr class="line1 bolded">
+                                                <td class="center" colspan="9">Okres 2</td>
+                                            </tr>
+                                            <tr class="line1">
+                                                <td class="center" colspan="9">Brak ocen</td>
+                                            </tr>
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <td class="center" colspan="14"></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </td>
+                            </tr>
+                            <tr class="line0">
+                                <td class="center micro screen-only"><img id="przedmioty_29452_node"
+                                        onclick="showHide.ShowHide(29452);" src="/images/tree_colapsed.png" /></td>
+                                <td>Matematyka</td>
+                                <td><span class="grade-box" id="Ocena17" style="background-color:#FF8C00; ">
+                                        <a class="ocena" href="/przegladaj_oceny/szczegoly/248970"
+                                            title="Kategoria: kartkówka&lt;br&gt;Data: 2026-09-11 (pt.)&lt;br&gt;Nauczyciel: Maria Nauczycielka&lt;br&gt;Licz do średniej: tak&lt;br&gt;Waga: 1&lt;br&gt;Dodał: Maria Nauczycielka&lt;br/&gt;&lt;br&gt;Komentarz: rachunki pamięciowe">3</a></span><span
+                                        class="grade-box" id="Ocena18" style="background-color:#FF8C00; ">
+                                        <a class="ocena" href="/przegladaj_oceny/szczegoly/1041420"
+                                            title="Kategoria: kartkówka&lt;br&gt;Data: 2026-09-22 (wt.)&lt;br&gt;Nauczyciel: Maria Nauczycielka&lt;br&gt;Licz do średniej: tak&lt;br&gt;Waga: 1&lt;br&gt;Dodał: Maria Nauczycielka&lt;br/&gt;&lt;br&gt;Komentarz: mnożenie i dzielenie w pamięci">3</a></span><span
+                                        class="grade-box" id="Ocena19" style="background-color:#FF8C00; ">
+                                        <a class="ocena" href="/przegladaj_oceny/szczegoly/1385492"
+                                            title="Kategoria: kartkówka&lt;br&gt;Data: 2026-09-25 (pt.)&lt;br&gt;Nauczyciel: Maria Nauczycielka&lt;br&gt;Licz do średniej: tak&lt;br&gt;Waga: 1&lt;br&gt;Dodał: Maria Nauczycielka&lt;br/&gt;&lt;br&gt;Komentarz: dzielenie z resztą">5-</a></span><span
+                                        class="grade-box" id="Ocena20" style="background-color:#FF8C00; ">
+                                        <a class="ocena" href="/przegladaj_oceny/szczegoly/2747429"
+                                            title="Kategoria: kartkówka&lt;br&gt;Data: 2026-09-08 (czw.)&lt;br&gt;Nauczyciel: Maria Nauczycielka&lt;br&gt;Licz do średniej: tak&lt;br&gt;Waga: 1&lt;br&gt;Dodał: Maria Nauczycielka&lt;br/&gt;&lt;br&gt;Komentarz: rachunki pamięciowe">4</a></span>
+                                </td>
+                                <td> <img alt="Podgląd średniej ocen został wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td>Brak ocen</td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                            </tr>
+                            <tr class="line0" id="przedmioty_29452" name="przedmioty_all"
+                                style="display: none; visibility: hidden;">
+                                <td colspan="14">
+                                    <table class="stretch">
+                                        <thead>
+                                            <tr class="">
+                                                <td>Ocena</td>
+                                                <td title="Komentarz do oceny">K</td>
+                                                <td>Kategoria</td>
+                                                <td class="center">Data</td>
+                                                <td>Nauczyciel</td>
+                                                <td>Licz do śr.</td>
+                                                <td>Waga</td>
+                                                <td>Poprawa oceny</td>
+                                                <td>Dodał</td>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr class="line1 bolded">
+                                                <td class="center" colspan="9">Okres 1</td>
+                                            </tr>
+                                            <tr class="line1 detail-grades" style="background-color: #FF8C00;">
+                                                <td class="center">3</td>
+                                                <td class="center"><strong><a href="javascript:void(0);"
+                                                            onclick="otworz_w_nowym_oknie('/komentarz_oceny/1/248970','ko',480,450)">K</a></strong>
+                                                </td>
+                                                <td>kartkówka</td>
+                                                <td class="center">2026-09-11</td>
+                                                <td>Maria Nauczycielka</td>
+                                                <td class="center"><img border="0" src="/images/aktywne.png" /></td>
+                                                <td class="right">1</td>
+                                                <td class="center">-</td>
+                                                <td>Maria Nauczycielka</td>
+                                            </tr>
+                                            <tr class="line1 detail-grades" style="background-color: #FF8C00;">
+                                                <td class="center">3</td>
+                                                <td class="center"><strong><a href="javascript:void(0);"
+                                                            onclick="otworz_w_nowym_oknie('/komentarz_oceny/1/1041420','ko',480,450)">K</a></strong>
+                                                </td>
+                                                <td>kartkówka</td>
+                                                <td class="center">2026-09-22</td>
+                                                <td>Maria Nauczycielka</td>
+                                                <td class="center"><img border="0" src="/images/aktywne.png" /></td>
+                                                <td class="right">1</td>
+                                                <td class="center">-</td>
+                                                <td>Maria Nauczycielka</td>
+                                            </tr>
+                                            <tr class="line1 detail-grades" style="background-color: #FF8C00;">
+                                                <td class="center">5-</td>
+                                                <td class="center"><strong><a href="javascript:void(0);"
+                                                            onclick="otworz_w_nowym_oknie('/komentarz_oceny/1/1385492','ko',480,450)">K</a></strong>
+                                                </td>
+                                                <td>kartkówka</td>
+                                                <td class="center">2026-09-25</td>
+                                                <td>Maria Nauczycielka</td>
+                                                <td class="center"><img border="0" src="/images/aktywne.png" /></td>
+                                                <td class="right">1</td>
+                                                <td class="center">-</td>
+                                                <td>Maria Nauczycielka</td>
+                                            </tr>
+                                            <tr class="line1 detail-grades" style="background-color: #FF8C00;">
+                                                <td class="center">4</td>
+                                                <td class="center"><strong><a href="javascript:void(0);"
+                                                            onclick="otworz_w_nowym_oknie('/komentarz_oceny/1/2747429','ko',480,450)">K</a></strong>
+                                                </td>
+                                                <td>kartkówka</td>
+                                                <td class="center">2026-09-08</td>
+                                                <td>Maria Nauczycielka</td>
+                                                <td class="center"><img border="0" src="/images/aktywne.png" /></td>
+                                                <td class="right">1</td>
+                                                <td class="center">-</td>
+                                                <td>Maria Nauczycielka</td>
+                                            </tr>
+                                            <tr class="line1 bolded">
+                                                <td class="center" colspan="9">Okres 2</td>
+                                            </tr>
+                                            <tr class="line1">
+                                                <td class="center" colspan="9">Brak ocen</td>
+                                            </tr>
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <td class="center" colspan="14"></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </td>
+                            </tr>
+                            <tr class="line1">
+                                <td class="center micro screen-only"><img id="przedmioty_29453_node"
+                                        onclick="showHide.ShowHide(29453);" src="/images/tree_colapsed.png" /></td>
+                                <td>Muzyka</td>
+                                <td><span class="grade-box" id="Ocena21" style="background-color:#87CEFA; ">
+                                        <a class="ocena" href="/przegladaj_oceny/szczegoly/1389437"
+                                            title="Kategoria: śpiew&lt;br&gt;Data: 2026-09-25 (pt.)&lt;br&gt;Nauczyciel: Leśniewska Beata&lt;br&gt;Licz do średniej: tak&lt;br&gt;Waga: 1&lt;br&gt;Dodał: Leśniewska Beata&lt;br/&gt;">6</a></span><span
+                                        class="grade-box" id="Ocena22" style="background-color:#8FBC8F; ">
+                                        <a class="ocena" href="/przegladaj_oceny/szczegoly/1381254"
+                                            title="Ocena: nieprzygotowany&lt;br&gt;Kategoria: inna&lt;br&gt;Data: 2026-09-25 (pt.)&lt;br&gt;Nauczyciel: Leśniewska Beata&lt;br&gt;Dodał: Leśniewska Beata&lt;br/&gt;">np</a></span>
+                                </td>
+                                <td> <img alt="Podgląd średniej ocen został wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td>Brak ocen</td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                            </tr>
+                            <tr class="line1" id="przedmioty_29453" name="przedmioty_all"
+                                style="display: none; visibility: hidden;">
+                                <td colspan="14">
+                                    <table class="stretch">
+                                        <thead>
+                                            <tr class="">
+                                                <td>Ocena</td>
+                                                <td title="Komentarz do oceny">K</td>
+                                                <td>Kategoria</td>
+                                                <td class="center">Data</td>
+                                                <td>Nauczyciel</td>
+                                                <td>Licz do śr.</td>
+                                                <td>Waga</td>
+                                                <td>Poprawa oceny</td>
+                                                <td>Dodał</td>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr class="line1 bolded">
+                                                <td class="center" colspan="9">Okres 1</td>
+                                            </tr>
+                                            <tr class="line1 detail-grades" style="background-color: #87CEFA;">
+                                                <td class="center">6</td>
+                                                <td class="center"> </td>
+                                                <td>śpiew</td>
+                                                <td class="center">2026-09-25</td>
+                                                <td>Leśniewska Beata</td>
+                                                <td class="center"><img border="0" src="/images/aktywne.png" /></td>
+                                                <td class="right">1</td>
+                                                <td class="center">-</td>
+                                                <td>Leśniewska Beata</td>
+                                            </tr>
+                                            <tr class="line1 detail-grades" style="background-color: #8FBC8F;">
+                                                <td class="center">np</td>
+                                                <td class="center"> </td>
+                                                <td>inna</td>
+                                                <td class="center">2026-09-25</td>
+                                                <td>Leśniewska Beata</td>
+                                                <td class="center"><img border="0" src="/images/aktywne.png" /></td>
+                                                <td class="right">1</td>
+                                                <td class="center">-</td>
+                                                <td>Leśniewska Beata</td>
+                                            </tr>
+                                            <tr class="line1 bolded">
+                                                <td class="center" colspan="9">Okres 2</td>
+                                            </tr>
+                                            <tr class="line1">
+                                                <td class="center" colspan="9">Brak ocen</td>
+                                            </tr>
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <td class="center" colspan="14"></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </td>
+                            </tr>
+                            <tr class="line0">
+                                <td class="center micro screen-only"><img id="przedmioty_29454_node"
+                                        onclick="showHide.ShowHide(29454);" src="/images/tree_colapsed.png" /></td>
+                                <td>Plastyka</td>
+                                <td><span class="grade-box" id="Ocena23" style="background-color:#FF1493; ">
+                                        <a class="ocena" href="/przegladaj_oceny/szczegoly/3101121"
+                                            title="Kategoria: PORTRET , Rysunek&lt;br&gt;Data: 2026-09-12 (pon.)&lt;br&gt;Nauczyciel: Wachaczyk Anna&lt;br&gt;Licz do średniej: tak&lt;br&gt;Waga: 1&lt;br&gt;Dodał: Wachaczyk Anna&lt;br/&gt;">5</a></span>
+                                </td>
+                                <td> <img alt="Podgląd średniej ocen został wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td>Brak ocen</td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                            </tr>
+                            <tr class="line0" id="przedmioty_29454" name="przedmioty_all"
+                                style="display: none; visibility: hidden;">
+                                <td colspan="14">
+                                    <table class="stretch">
+                                        <thead>
+                                            <tr class="">
+                                                <td>Ocena</td>
+                                                <td title="Komentarz do oceny">K</td>
+                                                <td>Kategoria</td>
+                                                <td class="center">Data</td>
+                                                <td>Nauczyciel</td>
+                                                <td>Licz do śr.</td>
+                                                <td>Waga</td>
+                                                <td>Poprawa oceny</td>
+                                                <td>Dodał</td>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr class="line1 bolded">
+                                                <td class="center" colspan="9">Okres 1</td>
+                                            </tr>
+                                            <tr class="line1 detail-grades" style="background-color: #FF1493;">
+                                                <td class="center">5</td>
+                                                <td class="center"> </td>
+                                                <td>PORTRET , Rysunek</td>
+                                                <td class="center">2026-09-12</td>
+                                                <td>Wachaczyk Anna</td>
+                                                <td class="center"><img border="0" src="/images/aktywne.png" /></td>
+                                                <td class="right">1</td>
+                                                <td class="center">-</td>
+                                                <td>Wachaczyk Anna</td>
+                                            </tr>
+                                            <tr class="line1 bolded">
+                                                <td class="center" colspan="9">Okres 2</td>
+                                            </tr>
+                                            <tr class="line1">
+                                                <td class="center" colspan="9">Brak ocen</td>
+                                            </tr>
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <td class="center" colspan="14"></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </td>
+                            </tr>
+                            <tr class="line1">
+                                <td class="center micro screen-only"><img id="przedmioty_29455_node"
+                                        onclick="showHide.ShowHide(29455);" src="/images/tree_colapsed.png" /></td>
+                                <td>Przyroda</td>
+                                <td><span class="grade-box" id="Ocena24" style="background-color:#FFB6C1; ">
+                                        <a class="ocena" href="/przegladaj_oceny/szczegoly/835621"
+                                            title="Kategoria: odpowiedź ustna&lt;br&gt;Data: 2026-09-21 (pon.)&lt;br&gt;Nauczyciel: Broma Kacper&lt;br&gt;Licz do średniej: tak&lt;br&gt;Waga: 1&lt;br&gt;Dodał: Broma Kacper&lt;br/&gt;&lt;br&gt;Komentarz: Niepełna odpowiedź na zadane pytania.">3</a></span><span
+                                        class="grade-box" id="Ocena25" style="background-color:#FF8C00; ">
+                                        <a class="ocena" href="/przegladaj_oceny/szczegoly/1301457"
+                                            title="Kategoria: kartkówka&lt;br&gt;Data: 2026-09-24 (czw.)&lt;br&gt;Nauczyciel: Broma Kacper&lt;br&gt;Licz do średniej: tak&lt;br&gt;Waga: 1&lt;br&gt;Dodał: Broma Kacper&lt;br/&gt;">4</a></span><span
+                                        class="grade-box" id="Ocena26" style="background-color:#FFB6C1; ">
+                                        <a class="ocena" href="/przegladaj_oceny/szczegoly/1493172"
+                                            title="Kategoria: odpowiedź ustna&lt;br&gt;Data: 2026-09-28 (pon.)&lt;br&gt;Nauczyciel: Broma Kacper&lt;br&gt;Licz do średniej: tak&lt;br&gt;Waga: 1&lt;br&gt;Dodał: Broma Kacper&lt;br/&gt;">2</a></span><span
+                                        class="grade-box" id="Ocena27" style="background-color:#8FBC8F; ">
+                                        <a class="ocena" href="/przegladaj_oceny/szczegoly/2210825"
+                                            title="Ocena: nieprzygotowany&lt;br&gt;Kategoria: inna&lt;br&gt;Data: 2026-09-05 (pon.)&lt;br&gt;Nauczyciel: Broma Kacper&lt;br&gt;Dodał: Broma Kacper&lt;br/&gt;">np</a></span>
+                                </td>
+                                <td> <img alt="Podgląd średniej ocen został wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td>Brak ocen</td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                            </tr>
+                            <tr class="line1" id="przedmioty_29455" name="przedmioty_all"
+                                style="display: none; visibility: hidden;">
+                                <td colspan="14">
+                                    <table class="stretch">
+                                        <thead>
+                                            <tr class="">
+                                                <td>Ocena</td>
+                                                <td title="Komentarz do oceny">K</td>
+                                                <td>Kategoria</td>
+                                                <td class="center">Data</td>
+                                                <td>Nauczyciel</td>
+                                                <td>Licz do śr.</td>
+                                                <td>Waga</td>
+                                                <td>Poprawa oceny</td>
+                                                <td>Dodał</td>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr class="line1 bolded">
+                                                <td class="center" colspan="9">Okres 1</td>
+                                            </tr>
+                                            <tr class="line1 detail-grades" style="background-color: #FFB6C1;">
+                                                <td class="center">3</td>
+                                                <td class="center"><strong><a href="javascript:void(0);"
+                                                            onclick="otworz_w_nowym_oknie('/komentarz_oceny/1/835621','ko',480,450)">K</a></strong>
+                                                </td>
+                                                <td>odpowiedź ustna</td>
+                                                <td class="center">2026-09-21</td>
+                                                <td>Broma Kacper</td>
+                                                <td class="center"><img border="0" src="/images/aktywne.png" /></td>
+                                                <td class="right">1</td>
+                                                <td class="center">-</td>
+                                                <td>Broma Kacper</td>
+                                            </tr>
+                                            <tr class="line1 detail-grades" style="background-color: #FF8C00;">
+                                                <td class="center">4</td>
+                                                <td class="center"> </td>
+                                                <td>kartkówka</td>
+                                                <td class="center">2026-09-24</td>
+                                                <td>Broma Kacper</td>
+                                                <td class="center"><img border="0" src="/images/aktywne.png" /></td>
+                                                <td class="right">1</td>
+                                                <td class="center">-</td>
+                                                <td>Broma Kacper</td>
+                                            </tr>
+                                            <tr class="line1 detail-grades" style="background-color: #FFB6C1;">
+                                                <td class="center">2</td>
+                                                <td class="center"> </td>
+                                                <td>odpowiedź ustna</td>
+                                                <td class="center">2026-09-28</td>
+                                                <td>Broma Kacper</td>
+                                                <td class="center"><img border="0" src="/images/aktywne.png" /></td>
+                                                <td class="right">1</td>
+                                                <td class="center">-</td>
+                                                <td>Broma Kacper</td>
+                                            </tr>
+                                            <tr class="line1 detail-grades" style="background-color: #8FBC8F;">
+                                                <td class="center">np</td>
+                                                <td class="center"> </td>
+                                                <td>inna</td>
+                                                <td class="center">2026-09-05</td>
+                                                <td>Broma Kacper</td>
+                                                <td class="center"><img border="0" src="/images/aktywne.png" /></td>
+                                                <td class="right">1</td>
+                                                <td class="center">-</td>
+                                                <td>Broma Kacper</td>
+                                            </tr>
+                                            <tr class="line1 bolded">
+                                                <td class="center" colspan="9">Okres 2</td>
+                                            </tr>
+                                            <tr class="line1">
+                                                <td class="center" colspan="9">Brak ocen</td>
+                                            </tr>
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <td class="center" colspan="14"></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </td>
+                            </tr>
+                            <tr class="line0">
+                                <td class="center micro screen-only"><img id="przedmioty_29456_node"
+                                        onclick="showHide.ShowHide(29456);" src="/images/tree_colapsed.png" /></td>
+                                <td>Religia</td>
+                                <td><span class="grade-box" id="Ocena28" style="background-color:#FFA07A; ">
+                                        <a class="ocena" href="/przegladaj_oceny/szczegoly/1028455"
+                                            title="Kategoria: praca na lekcji&lt;br&gt;Data: 2026-09-22 (wt.)&lt;br&gt;Nauczyciel: Jakubiec Monika&lt;br&gt;Licz do średniej: nie&lt;br&gt;Dodał: Jakubiec Monika&lt;br/&gt;">5-</a></span><span
+                                        class="grade-box" id="Ocena29" style="background-color:#FFA07A; ">
+                                        <a class="ocena" href="/przegladaj_oceny/szczegoly/2717884"
+                                            title="Kategoria: praca na lekcji&lt;br&gt;Data: 2026-09-08 (czw.)&lt;br&gt;Nauczyciel: Jakubiec Monika&lt;br&gt;Licz do średniej: nie&lt;br&gt;Dodał: Jakubiec Monika&lt;br/&gt;">6</a></span>
+                                </td>
+                                <td> <img alt="Podgląd średniej ocen został wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td>Brak ocen</td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                            </tr>
+                            <tr class="line0" id="przedmioty_29456" name="przedmioty_all"
+                                style="display: none; visibility: hidden;">
+                                <td colspan="14">
+                                    <table class="stretch">
+                                        <thead>
+                                            <tr class="">
+                                                <td>Ocena</td>
+                                                <td title="Komentarz do oceny">K</td>
+                                                <td>Kategoria</td>
+                                                <td class="center">Data</td>
+                                                <td>Nauczyciel</td>
+                                                <td>Licz do śr.</td>
+                                                <td>Waga</td>
+                                                <td>Poprawa oceny</td>
+                                                <td>Dodał</td>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr class="line1 bolded">
+                                                <td class="center" colspan="9">Okres 1</td>
+                                            </tr>
+                                            <tr class="line1 detail-grades" style="background-color: #FFA07A;">
+                                                <td class="center">5-</td>
+                                                <td class="center"> </td>
+                                                <td>praca na lekcji</td>
+                                                <td class="center">2026-09-22</td>
+                                                <td>Jakubiec Monika</td>
+                                                <td class="center"><img border="0" src="/images/nieaktywne.png" /></td>
+                                                <td class="right"></td>
+                                                <td class="center">-</td>
+                                                <td>Jakubiec Monika</td>
+                                            </tr>
+                                            <tr class="line1 detail-grades" style="background-color: #FFA07A;">
+                                                <td class="center">6</td>
+                                                <td class="center"> </td>
+                                                <td>praca na lekcji</td>
+                                                <td class="center">2026-09-08</td>
+                                                <td>Jakubiec Monika</td>
+                                                <td class="center"><img border="0" src="/images/nieaktywne.png" /></td>
+                                                <td class="right"></td>
+                                                <td class="center">-</td>
+                                                <td>Jakubiec Monika</td>
+                                            </tr>
+                                            <tr class="line1 bolded">
+                                                <td class="center" colspan="9">Okres 2</td>
+                                            </tr>
+                                            <tr class="line1">
+                                                <td class="center" colspan="9">Brak ocen</td>
+                                            </tr>
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <td class="center" colspan="14"></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </td>
+                            </tr>
+                            <tr class="line1">
+                                <td class="center micro screen-only"><img id="przedmioty_29487_node"
+                                        onclick="showHide.ShowHide(29487);" src="/images/tree_colapsed.png" /></td>
+                                <td>Taniec</td>
+                                <td>Brak ocen</td>
+                                <td> <img alt="Podgląd średniej ocen został wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td>Brak ocen</td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                            </tr>
+                            <tr class="line1" id="przedmioty_29487" name="przedmioty_all"
+                                style="display: none; visibility: hidden;">
+                                <td colspan="14">
+                                    <table class="stretch">
+                                        <thead>
+                                            <tr class="">
+                                                <td>Ocena</td>
+                                                <td title="Komentarz do oceny">K</td>
+                                                <td>Kategoria</td>
+                                                <td class="center">Data</td>
+                                                <td>Nauczyciel</td>
+                                                <td>Licz do śr.</td>
+                                                <td>Waga</td>
+                                                <td>Poprawa oceny</td>
+                                                <td>Dodał</td>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr class="line1">
+                                                <td class="WierszTab2" colspan="9">Brak ocen</td>
+                                            </tr>
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <td class="center" colspan="14"></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </td>
+                            </tr>
+                            <tr class="line0">
+                                <td class="center micro screen-only"><img id="przedmioty_29459_node"
+                                        onclick="showHide.ShowHide(29459);" src="/images/tree_colapsed.png" /></td>
+                                <td>Wychowanie fizyczne</td>
+                                <td><span class="grade-box" id="Ocena30" style="background-color:#F0E68C; ">
+                                        <a class="ocena" href="/przegladaj_oceny/szczegoly/2053384"
+                                            title="Kategoria: zadanie&lt;br&gt;Data: 2026-09-02 (pt.)&lt;br&gt;Nauczyciel: Jacek Nauczyciel&lt;br&gt;Licz do średniej: tak&lt;br&gt;Waga: 1&lt;br&gt;Dodał: Jacek Nauczyciel&lt;br/&gt;&lt;br&gt;Komentarz: Bieg na dystansie 1600 metrów ">6</a></span><span
+                                        class="grade-box" id="Ocena31" style="background-color:#FF0000; ">
+                                        <a class="ocena" href="/przegladaj_oceny/szczegoly/2052580"
+                                            title="Kategoria: sprawdzian&lt;br&gt;Data: 2026-09-02 (pt.)&lt;br&gt;Nauczyciel: Jacek Nauczyciel&lt;br&gt;Licz do średniej: tak&lt;br&gt;Waga: 1&lt;br&gt;Dodał: Jacek Nauczyciel&lt;br/&gt;&lt;br&gt;Komentarz: Biegi przełajowe na dystansie 1000 metrów ">5</a></span>
+                                </td>
+                                <td> <img alt="Podgląd średniej ocen został wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td>Brak ocen</td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                            </tr>
+                            <tr class="line0" id="przedmioty_29459" name="przedmioty_all"
+                                style="display: none; visibility: hidden;">
+                                <td colspan="14">
+                                    <table class="stretch">
+                                        <thead>
+                                            <tr class="">
+                                                <td>Ocena</td>
+                                                <td title="Komentarz do oceny">K</td>
+                                                <td>Kategoria</td>
+                                                <td class="center">Data</td>
+                                                <td>Nauczyciel</td>
+                                                <td>Licz do śr.</td>
+                                                <td>Waga</td>
+                                                <td>Poprawa oceny</td>
+                                                <td>Dodał</td>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr class="line1 bolded">
+                                                <td class="center" colspan="9">Okres 1</td>
+                                            </tr>
+                                            <tr class="line1 detail-grades" style="background-color: #F0E68C;">
+                                                <td class="center">6</td>
+                                                <td class="center"><strong><a href="javascript:void(0);"
+                                                            onclick="otworz_w_nowym_oknie('/komentarz_oceny/1/2053384','ko',480,450)">K</a></strong>
+                                                </td>
+                                                <td>zadanie</td>
+                                                <td class="center">2026-09-02</td>
+                                                <td>Jacek Nauczyciel</td>
+                                                <td class="center"><img border="0" src="/images/aktywne.png" /></td>
+                                                <td class="right">1</td>
+                                                <td class="center">-</td>
+                                                <td>Jacek Nauczyciel</td>
+                                            </tr>
+                                            <tr class="line1 detail-grades" style="background-color: #FF0000;">
+                                                <td class="center">5</td>
+                                                <td class="center"><strong><a href="javascript:void(0);"
+                                                            onclick="otworz_w_nowym_oknie('/komentarz_oceny/1/2052580','ko',480,450)">K</a></strong>
+                                                </td>
+                                                <td>sprawdzian</td>
+                                                <td class="center">2026-09-02</td>
+                                                <td>Jacek Nauczyciel</td>
+                                                <td class="center"><img border="0" src="/images/aktywne.png" /></td>
+                                                <td class="right">1</td>
+                                                <td class="center">-</td>
+                                                <td>Jacek Nauczyciel</td>
+                                            </tr>
+                                            <tr class="line1 bolded">
+                                                <td class="center" colspan="9">Okres 2</td>
+                                            </tr>
+                                            <tr class="line1">
+                                                <td class="center" colspan="9">Brak ocen</td>
+                                            </tr>
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <td class="center" colspan="14"></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </td>
+                            </tr>
+                            <tr class="line1">
+                                <td class="center micro screen-only"><img id="przedmioty_29457_node"
+                                        onclick="showHide.ShowHide(29457);" src="/images/tree_colapsed.png" /></td>
+                                <td>Zajęcia praktyczno-techniczne</td>
+                                <td>Brak ocen</td>
+                                <td> <img alt="Podgląd średniej ocen został wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td>Brak ocen</td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                                <td class="center"> <img
+                                        alt="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły."
+                                        class="tooltip helper-icon" src="/images/pomoc_ciemna.png"
+                                        title="Podgląd średniej ocen został&lt;br/&gt;wyłączony przez administratora szkoły." /> 
+                                </td>
+                                <td class="center"> - </td>
+                            </tr>
+                            <tr class="line1" id="przedmioty_29457" name="przedmioty_all"
+                                style="display: none; visibility: hidden;">
+                                <td colspan="14">
+                                    <table class="stretch">
+                                        <thead>
+                                            <tr class="">
+                                                <td>Ocena</td>
+                                                <td title="Komentarz do oceny">K</td>
+                                                <td>Kategoria</td>
+                                                <td class="center">Data</td>
+                                                <td>Nauczyciel</td>
+                                                <td>Licz do śr.</td>
+                                                <td>Waga</td>
+                                                <td>Poprawa oceny</td>
+                                                <td>Dodał</td>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr class="line1">
+                                                <td class="WierszTab2" colspan="9">Brak ocen</td>
+                                            </tr>
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <td class="center" colspan="14"></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </td>
+                            </tr>
+                            <tr class="bolded line0">
+                                <td class="center micro screen-only">
+                                    <img id="przedmioty_zachowanie_node" onclick="showHide.ShowHide('zachowanie');"
+                                        src="/images/tree_colapsed.png" />
+                                </td>
+                                <td>
+                                    Zachowanie
+                                </td>
+                                <td colspan="2">
+                                    <span class="grade-box positive-behaviour"><a "="" href="
+                                            /przegladaj_oceny/zachowanie_szczegoly/79640"
+                                            title="poszanowanie norm etycznych(1)&lt;br/&gt;Zakres od: 1&lt;br/&gt;Zakres do: 6&lt;br /&gt;Data wystawienia: 2026-09-12&lt;br /&gt;Dodał: Maria Nauczycielka">1</a></span>
+                                     
+                                </td>
+                                <td class="center">
+                                    - </td>
+                                <td colspan="2">
+                                     
+                                </td>
+                                <td class="center" colspan="3">
+                                    - </td>
+                            </tr>
+                            <tr class="line0" id="przedmioty_zachowanie" name="przedmioty_all"
+                                style="display: none; visibility: hidden;">
+                                <td> </td>
+                                <td colspan="14">
+                                    <table class="stretch">
+                                        <thead>
+                                            <tr>
+                                                <td>Kategoria</td>
+                                                <td>Komentarz</td>
+                                                <td>Oceny</td>
+                                                <td>Data wystawienia</td>
+                                                <td>Dodał</td>
+                                            </tr>
+                                        </thead>
+                                        <tr class="line0 bolded">
+                                            <td class="center" colspan="5">Okres 1</td>
+                                        </tr>
+                                        <tr class="line1">
+                                            <td>poszanowanie norm etycznych</td>
+                                            <td class="center"> </td>
+                                            <td class="right">1</td>
+                                            <td class="center">2026-09-12</td>
+                                            <td>Maria Nauczycielka</td>
+                                        </tr>
+                                        <tr class="line0">
+                                            <td colspan="2"> </td>
+                                            <td> </td>
+                                            <td class="" colspan="3">Ocena śródroczna przewidywana wystawiona przez
+                                                nauczyciela: </td>
+                                        <tr class="line1">
+                                            <td class="right" colspan="2">Ocena opisowa śródroczna</td>
+                                            <td> </td>
+                                            <td class="" colspan="3"></td>
+                                        </tr>
+                                        <tr class="line0 bolded">
+                                            <td class="center" colspan="5">Okres 2</td>
+                                        </tr>
+                                        <tr class="line1">
+                                            <td class="center" colspan="5">Brak ocen</td>
+                                        </tr>
+                                        <tr class="line1">
+                                            <td colspan="2"> </td>
+                                            <td> </td>
+                                            <td class="" colspan="3">Ocena roczna przewidywana wystawiona przez
+                                                nauczyciela: </td>
+                                        </tr>
+                                        <tr class="line0">
+                                            <td class="right" colspan="2">Ocena opisowa roczna</td>
+                                            <td> </td>
+                                            <td class="" colspan="3"></td>
+                                        </tr>
+                                        <tfoot>
+                                            <tr>
+                                                <td colspan="8"></td>
+                                            </tr>
+                                        </tfoot>
+                            </tr>
+                        </table>
+                        </td>
+                        </tr>
+                        <tfoot>
+                            <tr>
+                                <td colspan="10"> </td>
+                            </tr>
+                        </tfoot>
+                        </table>
+                        <div class="legend left stretch">
+                            <h3>Legenda:</h3>
+                            <div style="display: inline-block; width: 100%;">
+                                <ul>
+                                    <li class="double big">
+                                        <p><span>bz</span> - brak zadania</p>
+                                    </li>
+                                    <li class="double big">
+                                        <p><span>np</span> - nieprzygotowany</p>
+                                    </li>
+                                    <li class="double big">
+                                        <p><span>nk</span> - nieklasyfikowany</p>
+                                    </li>
+                                    <li class="double big">
+                                        <p><span>uł</span> - uczestniczył</p>
+                                    </li>
+                                    <li class="double big">
+                                        <p><span>nł</span> - nie uczestniczył</p>
+                                    </li>
+                                    <li class="double big">
+                                        <p><span>zl</span> - zaliczył</p>
+                                    </li>
+                                    <li class="double big">
+                                        <p><span>nz</span> - nie zaliczył</p>
+                                    </li>
+                                    <li class="double big">
+                                        <p><span>zw</span> - zwolniony</p>
+                                    </li>
+                                    <li class="double big">
+                                        <p><span>uc</span> - uczęszczał</p>
+                                    </li>
+                                    <li class="double big">
+                                        <p><span>nu</span> - nie uczęszczał</p>
+                                    </li>
+                                    <li class="double big">
+                                        <p><b>Śr.I</b> - Średnia ocen bieżących z pierwszego okresu</p>
+                                    </li>
+                                    <li class="double big">
+                                        <p><b>I</b> - Ocena śródroczna z pierwszego okresu</p>
+                                    </li>
+                                    <li class="double big">
+                                        <p><b>Śr.II</b> - Średnia ocen bieżących z drugiego okresu</p>
+                                    </li>
+                                    <li class="double big">
+                                        <p><b>II</b> - Ocena śródroczna z drugiego okresu</p>
+                                    </li>
+                                    <li class="double big">
+                                        <p><b>Śr.R</b> - Średnia ocen bieżących z całego roku szkolnego</p>
+                                    </li>
+                                    <li class="double big">
+                                        <p><b>R</b> - Ocena roczna</p>
+                                    </li>
+                                    <li {$listclass}="">
+                                        <p><b>*</b> - Ocena poprawiona w innym semestrze</p>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <p> </p><br />
+                        <h3 class="center">Oceny kształtujące</h3>
+                        <div class="right screen-only">
+                            <table>
+                                <tr>
+                                    <td class="right">
+                                        <table class="right sort_box">
+                                            <tr>
+                                                <td>sortuj</td>
+                                                <td><select class="right black" name="sortowanieOcen3"
+                                                        onchange="this.form.submit()">
+                                                        <option selected="" value="2">wg daty</option>
+                                                        <option value="1">wg kategorii</option>
+                                                    </select></td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                <tr></tr>
+                                </tr>
+                            </table>
+                        </div>
+                        <table class="stretch decorated" id="tabSource">
+                            <thead>
+                                <tr>
+                                    <td>Przedmiot</td>
+                                    <td>Ocena kształtująca</td>
+                                    <td>Kategoria</td>
+                                    <td>Okres</td>
+                                    <td>Data</td>
+                                    <td>Typ</td>
+                                </tr>
+                            </thead>
+                            <tr class="line0">
+                                <th rowspan="1">Język angielski</th>
+                                <td class="spacing">
+                                      <a class="" href="/przegladaj_oceny/szczegoly/ksztaltujace/37852" title=""><span
+                                            class="grade-box" style="background-color:#7B68EE"></span>Diagnoza na start
+                                        56% 25/45 pkt</a></td>
+                                <td no-border-left="">Test kompetencji</td>
+                                <td class="center no-border-left">1</td>
+                                <td class="center no-border-left">2026-09-22</td>
+                                <td class="no-border-left">Bieżąca</td>
+                            </tr>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="6"> </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </form>
+            <form action="https://synergia.librus.pl/" id="go_back_form" method="POST">
+                <input name="requestkey" type="hidden"
+                    value="MC44Mjg5OTkwMCAxNzkxODMxODAwX2UyMWY2MTZlOWY3NzdjYmRkYTFlMjNkMjMwYjMyYWI0" />
+                <input name="Kid" type="hidden" value="-1" /><input name="UZid" type="hidden" value="-1" /><input
+                    name="Pid" type="hidden" value="-1" /><input name="oldKid" type="hidden" value="-1" />
+            </form>
+        </div>
+
+
+        <div class="cookieBox" id="cookieBox" style="display: none;">
+            <div class="cookieBoxClose" id="cookieBoxClose"><a href="javascript: void(null);">x</a></div>
+            <p>
+                Ta strona wykorzystuje pliki cookies. Za ich pomocą zbierane są informacje, które mogą stanowić dane
+                osobowe. Wykorzystujemy je m.in. w celach statystycznych i funkcjonalnych. Korzystając z serwisu bez
+                zmiany konfiguracji przeglądarki, wyrażasz zgodę na zapisanie plików cookies w pamięci Twojego
+                urządzenia. Możesz samodzielnie zarządzać cookies zmieniając odpowiednio ustawienia w Twojej
+                przeglądarce. Więcej informacji o zasadach przetwarzania Twoich danych osobowych oraz przysługujących Ci
+                prawach znajdziesz w <a href="https://synergia.librus.pl/polityka-prywatnosci/"
+                    rel="noreferrer noopener" target="_blank">Polityce prywatności</a>.
+            </p>
+        </div>
+        <div id="footer">
+            <hr />
+            <span id="bottom-logo"></span>
+        </div>
+    </div>
+</body>
+
+</html>

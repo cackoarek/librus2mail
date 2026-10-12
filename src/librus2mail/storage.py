@@ -2,12 +2,29 @@ import collections.abc
 import json
 import logging
 import re
+import shutil
 from abc import ABC, abstractmethod
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from .date_utils import parse_datetime_safe
+
 logger = logging.getLogger(__name__)
+
+# Kanoniczne nazwy pól znaczników czasu w plikach JSON pamięci stanu:
+FIELD_LAST_COLLECT_TIME = "last_collect_time"
+FIELD_LAST_NOTIFY_TIME = "last_notify_time"
+FIELD_LAST_PROGRESS_REPORT_DATE = "last_progress_report_date"
+FIELD_LAST_PROGRESS_REPORT_DATES = "last_progress_report_dates"
+FIELD_TIMETABLE_LAST_SYNC = "timetable_last_sync"
+FIELD_SCHEDULE_LAST_SYNC = "schedule_last_sync"
+
+# Historyczne aliasy kluczy dla 100% kompatybilności wstecznej:
+LEGACY_LAST_COLLECT_TIME = "last_updated"
+LEGACY_LAST_NOTIFY_TIME = "last_update_create"
+LEGACY_TIMETABLE_LAST_SYNC = "last_timetable_sync"
+LEGACY_SCHEDULE_LAST_SYNC = "last_schedule_sync"
 
 
 def read_json_safe(path: Path | str) -> dict[str, Any]:
@@ -19,8 +36,18 @@ def read_json_safe(path: Path | str) -> dict[str, Any]:
         with open(p, encoding='utf-8') as f:
             data = json.load(f)
             return data if isinstance(data, dict) else {}
-    except Exception as e:
-        logger.error(f"Błąd podczas odczytu pliku JSON {p}: {e}")
+    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        logger.error(f"Uszkodzony plik JSON {p}: {e}")
+        try:
+            corrupted_backup = p.with_suffix(f"{p.suffix}.corrupted")
+            if not corrupted_backup.exists():
+                shutil.copy2(p, corrupted_backup)
+                logger.warning(f"Utworzono kopię zapasową uszkodzonego pliku stanu: {corrupted_backup}")
+        except OSError as copy_err:
+            logger.debug(f"Nie udało się utworzyć kopii zapasowej {p}: {copy_err}")
+        return {}
+    except OSError as e:
+        logger.error(f"Błąd we/wy podczas odczytu pliku JSON {p}: {e}")
         return {}
 
 
@@ -33,8 +60,15 @@ def write_json_atomic(path: Path | str, data: Any) -> None:
         with open(temp_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
         temp_path.replace(p)
-    except Exception as e:
-        logger.error(f"Błąd podczas atomowego zapisu JSON do {p}: {e}")
+    except (TypeError, ValueError) as e:
+        logger.error(f"Błąd serializacji JSON dla pliku {p}: {e}", exc_info=True)
+        if temp_path.exists():
+            try:
+                temp_path.unlink()
+            except OSError:
+                pass
+    except OSError as e:
+        logger.error(f"Błąd we/wy podczas atomowego zapisu JSON do {p}: {e}")
         if temp_path.exists():
             try:
                 temp_path.unlink()
@@ -44,46 +78,8 @@ def write_json_atomic(path: Path | str, data: Any) -> None:
 
 def parse_date_sort_key(val: Any) -> datetime:
     """Parsuje ciąg daty lub datę/czas do obiektu datetime w celu precyzyjnego sortowania."""
-    if not val:
-        return datetime.min
-    if isinstance(val, datetime):
-        return val
-    if isinstance(val, date):
-        return datetime.combine(val, datetime.min.time())
-
-    val_str = str(val).strip()
-    if not val_str:
-        return datetime.min
-
-    for fmt in (
-        "%Y-%m-%d %H:%M:%S",
-        "%Y-%m-%d %H:%M",
-        "%Y-%m-%dT%H:%M:%S",
-        "%Y-%m-%dT%H:%M:%S.%f",
-        "%Y-%m-%d",
-        "%d.%m.%Y %H:%M:%S",
-        "%d.%m.%Y %H:%M",
-        "%d.%m.%Y",
-        "%d-%m-%Y %H:%M:%S",
-        "%d-%m-%Y",
-    ):
-        try:
-            return datetime.strptime(val_str, fmt)
-        except ValueError:
-            pass
-
-    m = re.search(r'(\d{4}-\d{2}-\d{2})(?:[T\s](\d{2}:\d{2}(?::\d{2})?))?', val_str)
-    if m:
-        d_part = m.group(1)
-        t_part = m.group(2) or "00:00:00"
-        if len(t_part) == 5:
-            t_part += ":00"
-        try:
-            return datetime.strptime(f"{d_part} {t_part}", "%Y-%m-%d %H:%M:%S")
-        except ValueError:
-            pass
-
-    return datetime.min
+    dt = parse_datetime_safe(val)
+    return dt if dt is not None else datetime.min
 
 
 def sort_items_descending(items: list[Any]) -> list[Any]:
@@ -143,6 +139,16 @@ class BaseStorage(ABC):
     @abstractmethod
     def save_grades_details(self, user_login: str, grades: list[dict]) -> None:
         """Zapisuje szczegółowe informacje o ocenach (waga, data, kategoria, komentarz)."""
+        pass
+
+    @abstractmethod
+    def save_subjects(self, user_login: str, subjects: list[str]) -> None:
+        """Zapisuje listę wszystkich przedmiotów szkolnych (w tym bez ocen)."""
+        pass
+
+    @abstractmethod
+    def get_subjects(self, user_login: str) -> list[str]:
+        """Zwraca listę wszystkich zarejestrowanych przedmiotów szkolnych."""
         pass
 
     @abstractmethod
@@ -355,7 +361,9 @@ class FileStorage(BaseStorage):
         path = self._get_file_path(user_login)
         data = read_json_safe(path)
         data['librus_login'] = str(user_login)
-        data['last_updated'] = datetime.now().isoformat()
+        now_iso = datetime.now().isoformat()
+        data[FIELD_LAST_COLLECT_TIME] = now_iso
+        data[LEGACY_LAST_COLLECT_TIME] = now_iso
         data['known_messages'] = sorted(list(known_messages))
         data['known_notifications'] = sorted(list(known_notifications))
         data['known_grades'] = sorted(list(known_grades))
@@ -366,7 +374,9 @@ class FileStorage(BaseStorage):
         path = self._get_file_path(user_login)
         data = read_json_safe(path)
         data['librus_login'] = str(user_login)
-        data['last_updated'] = datetime.now().isoformat()
+        now_iso = datetime.now().isoformat()
+        data[FIELD_LAST_COLLECT_TIME] = now_iso
+        data[LEGACY_LAST_COLLECT_TIME] = now_iso
         raw_history = data.get('grades_history', {})
         if isinstance(raw_history, list):
             grades_history = {str(g.get('id', '')): g for g in raw_history if g.get('id')}
@@ -404,6 +414,31 @@ class FileStorage(BaseStorage):
         data['grades_history'] = grades_history
         write_json_atomic(path, data)
         logger.debug(f"Zapisano historię ocen do pliku {path} dla {user_login}")
+
+    def save_subjects(self, user_login: str, subjects: list[str]) -> None:
+        """Zapisuje listę wszystkich przedmiotów szkolnych (w tym bez ocen) w storage."""
+        if not subjects:
+            return
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
+        data['librus_login'] = str(user_login)
+        existing = set(data.get('all_subjects', []))
+        existing.update(s.strip() for s in subjects if s and s.strip())
+        data['all_subjects'] = sorted(list(existing))
+        write_json_atomic(path, data)
+        logger.debug(f"Zapisano listę przedmiotów ({len(data['all_subjects'])}) do {path} dla {user_login}")
+
+    def get_subjects(self, user_login: str) -> list[str]:
+        """Zwraca listę wszystkich zarejestrowanych przedmiotów (ze spisu oraz ocen)."""
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
+        subjects_set = set(data.get('all_subjects', []))
+        # Dołącz również przedmioty występujące w historii ocen
+        for g in data.get('grades_history', {}).values() if isinstance(data.get('grades_history'), dict) else (data.get('grades_history') or []):
+            s = g.get('subject')
+            if s and str(s).strip() and str(s).strip() != 'Inny przedmiot':
+                subjects_set.add(str(s).strip())
+        return sorted(list(subjects_set))
 
     def save_messages_details(self, user_login: str, messages: list[dict]) -> None:
         """Zapisuje listę wiadomości ze szczegółami w storage."""
@@ -552,22 +587,22 @@ class FileStorage(BaseStorage):
         path = self._get_file_path(user_login)
         data = read_json_safe(path)
         if report_key:
-            rep_dates = data.get('last_progress_report_dates', {})
+            rep_dates = data.get(FIELD_LAST_PROGRESS_REPORT_DATES, {})
             if isinstance(rep_dates, dict) and report_key in rep_dates:
                 return rep_dates[report_key]
-        return data.get('last_progress_report_date')
+        return data.get(FIELD_LAST_PROGRESS_REPORT_DATE) or data.get('last_progress_report_time')
 
     def save_last_progress_report_date(self, user_login: str, date_iso: str, report_key: str | None = None) -> None:
         path = self._get_file_path(user_login)
         data = read_json_safe(path)
         data['librus_login'] = str(user_login)
-        data['last_progress_report_date'] = date_iso
+        data[FIELD_LAST_PROGRESS_REPORT_DATE] = date_iso
         if report_key:
-            rep_dates = data.get('last_progress_report_dates')
+            rep_dates = data.get(FIELD_LAST_PROGRESS_REPORT_DATES)
             if not isinstance(rep_dates, dict):
                 rep_dates = {}
             rep_dates[report_key] = date_iso
-            data['last_progress_report_dates'] = rep_dates
+            data[FIELD_LAST_PROGRESS_REPORT_DATES] = rep_dates
         write_json_atomic(path, data)
         logger.debug(f"Zapisano last_progress_report_date ({report_key or 'global'}) do {path}")
 
@@ -575,15 +610,15 @@ class FileStorage(BaseStorage):
         """Zwraca znacznik czasu (ISO) ostatniej synchronizacji danych z Librusa."""
         path = self._get_file_path(user_login)
         data = read_json_safe(path)
-        return data.get('last_collect_time') or data.get('last_updated')
+        return data.get(FIELD_LAST_COLLECT_TIME) or data.get(LEGACY_LAST_COLLECT_TIME)
 
     def save_last_collect_time(self, user_login: str, date_iso: str) -> None:
         """Zapisuje znacznik czasu (ISO) ostatniej synchronizacji danych z Librusa."""
         path = self._get_file_path(user_login)
         data = read_json_safe(path)
         data['librus_login'] = str(user_login)
-        data['last_collect_time'] = date_iso
-        data['last_updated'] = date_iso
+        data[FIELD_LAST_COLLECT_TIME] = date_iso
+        data[LEGACY_LAST_COLLECT_TIME] = date_iso
         write_json_atomic(path, data)
         logger.debug(f"Zapisano last_collect_time do {path}")
 
@@ -591,15 +626,15 @@ class FileStorage(BaseStorage):
         """Zwraca znacznik czasu (ISO) ostatniego wysłanego/wygenerowanego powiadomienia."""
         path = self._get_file_path(user_login)
         data = read_json_safe(path)
-        return data.get('last_notify_time') or data.get('last_update_create')
+        return data.get(FIELD_LAST_NOTIFY_TIME) or data.get(LEGACY_LAST_NOTIFY_TIME)
 
     def save_last_notify_time(self, user_login: str, date_iso: str) -> None:
         """Zapisuje znacznik czasu (ISO) ostatniego wysłanego/wygenerowanego powiadomienia."""
         path = self._get_file_path(user_login)
         data = read_json_safe(path)
         data['librus_login'] = str(user_login)
-        data['last_notify_time'] = date_iso
-        data['last_update_create'] = date_iso
+        data[FIELD_LAST_NOTIFY_TIME] = date_iso
+        data[LEGACY_LAST_NOTIFY_TIME] = date_iso
         write_json_atomic(path, data)
         logger.debug(f"Zapisano last_notify_time do {path}")
 
@@ -631,7 +666,7 @@ class FileStorage(BaseStorage):
             for p in self.storage_dir.glob("*.json"):
                 if p.is_file() and not p.name.endswith('.tmp'):
                     logins.append(p.stem)
-        except Exception as e:
+        except OSError as e:
             logger.error(f"Błąd podczas listowania plików w {self.storage_dir}: {e}")
         return sorted(logins)
 
@@ -724,13 +759,15 @@ class FileStorage(BaseStorage):
 
     def get_last_timetable_sync(self, user_login: str) -> str | None:
         path = self._get_file_path(user_login)
-        return read_json_safe(path).get('timetable_last_sync')
+        data = read_json_safe(path)
+        return data.get(FIELD_TIMETABLE_LAST_SYNC) or data.get(LEGACY_TIMETABLE_LAST_SYNC)
 
     def save_last_timetable_sync(self, user_login: str, date_iso: str) -> None:
         path = self._get_file_path(user_login)
         data = read_json_safe(path)
         data['librus_login'] = str(user_login)
-        data['timetable_last_sync'] = date_iso
+        data[FIELD_TIMETABLE_LAST_SYNC] = date_iso
+        data[LEGACY_TIMETABLE_LAST_SYNC] = date_iso
         write_json_atomic(path, data)
 
     def mark_timetable_entries_notified(self, user_login: str, entry_ids: list[str], notified_at_iso: str | None = None) -> None:
@@ -823,13 +860,15 @@ class FileStorage(BaseStorage):
 
     def get_last_schedule_sync(self, user_login: str) -> str | None:
         path = self._get_file_path(user_login)
-        return read_json_safe(path).get('schedule_last_sync')
+        data = read_json_safe(path)
+        return data.get(FIELD_SCHEDULE_LAST_SYNC) or data.get(LEGACY_SCHEDULE_LAST_SYNC)
 
     def save_last_schedule_sync(self, user_login: str, date_iso: str) -> None:
         path = self._get_file_path(user_login)
         data = read_json_safe(path)
         data['librus_login'] = str(user_login)
-        data['schedule_last_sync'] = date_iso
+        data[FIELD_SCHEDULE_LAST_SYNC] = date_iso
+        data[LEGACY_SCHEDULE_LAST_SYNC] = date_iso
         write_json_atomic(path, data)
 
 

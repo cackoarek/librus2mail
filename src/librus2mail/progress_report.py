@@ -6,9 +6,12 @@ import sys
 from datetime import datetime, timedelta
 from time import sleep
 
+import requests
+
 from .base_logger import setup_logging
 from .config import get_reports_schedules, read_config
-from .librus import Librus
+from .date_utils import parse_datetime_safe
+from .librus import Librus, NotLogged
 from .librus_collector import configure_mail_provider
 from .mail_sender import (
     MailSender,
@@ -251,9 +254,8 @@ def run_progress_reports(
         fetch_live = args.fetch
         force = args.force
         if args.actual_date:
-            try:
-                actual_date = datetime.strptime(args.actual_date, "%Y-%m-%d")
-            except ValueError:
+            actual_date = parse_datetime_safe(args.actual_date)
+            if not actual_date:
                 logger.error(f"Nieprawidłowy format --actual-date: '{args.actual_date}'. Wymagany format: YYYY-MM-DD")
                 sys.exit(1)
     else:
@@ -356,7 +358,7 @@ def run_progress_reports(
                     try:
                         librus.login()
                         break
-                    except Exception as log_err:
+                    except (requests.RequestException, NotLogged) as log_err:
                         if attempt < max_retries:
                             logger.warning(
                                 f"{name} ({login}): Próba logowania {attempt}/{max_retries} nie powiodła się ({log_err}). "
@@ -368,8 +370,13 @@ def run_progress_reports(
 
                 logger.info("Pobieram najświeższe oceny z dziennika...")
                 librus.fetch_grades()
+            except (requests.RequestException, NotLogged) as e:
+                logger.error(f"Błąd sieciowy podczas pobierania ocen z Librusa dla {name} ({login}): {e}")
             except Exception as e:
-                logger.error(f"Błąd podczas pobierania ocen z Librusa dla {name} ({login}): {e}")
+                logger.error(
+                    f"Nieoczekiwany błąd podczas pobierania ocen z Librusa dla {name} ({login}): {e}",
+                    exc_info=True,
+                )
 
         # 2. Pobranie bazy ocen ze storage (działanie w 100% lokalne/offline)
         grades = storage.get_grades_history(login)
@@ -405,11 +412,11 @@ def run_progress_reports(
             else:
                 last_report_iso = storage.get_last_progress_report_date(login)
                 if last_report_iso:
-                    try:
-                        period_start = datetime.fromisoformat(last_report_iso)
+                    period_start = parse_datetime_safe(last_report_iso)
+                    if period_start:
                         logger.info(f"Zakres raportu: od ostatniego wygenerowania ({period_start.strftime('%Y-%m-%d %H:%M')})")
-                    except Exception as e:
-                        logger.warning(f"Nie udało się sparsować daty ostatniego raportu ({last_report_iso}): {e}")
+                    else:
+                        logger.warning(f"Nie udało się sparsować daty ostatniego raportu ({last_report_iso})")
 
                 if period_start is None:
                     days_back = report_cfg.get('days_back', 7)
@@ -448,7 +455,7 @@ def run_progress_reports(
                     f.write(full_html)
                 logger.info(f"Zapisano raport HTML dla ucznia {name} ({login}) -> {out_file}")
                 print(f"✅ Zapisano raport HTML: {out_file}")
-            except Exception as e:
+            except OSError as e:
                 logger.error(f"Nie udało się zapisać pliku HTML '{out_file}': {e}")
 
         # 7. Tryb Dry-Run lub wysyłka pocztowa

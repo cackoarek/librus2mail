@@ -1,5 +1,6 @@
 """Mechanizm autoryzacji i ochrony rodzicielskiej dla panelu webowego z blokadą IP."""
 
+import collections.abc
 import functools
 import logging
 import threading
@@ -12,14 +13,34 @@ logger = logging.getLogger(__name__)
 
 auth_bp = Blueprint('auth', __name__)
 
+DEFAULT_TRUSTED_PROXIES = frozenset({'127.0.0.1', '::1', 'localhost'})
 
-def get_client_ip(req) -> str:
-    """Ustala rzeczywisty adres IP klienta z uwzględnieniem nagłówków proxy."""
-    if xff := req.headers.get('X-Forwarded-For'):
-        return xff.split(',')[0].strip()
-    if x_real := req.headers.get('X-Real-IP'):
-        return x_real.strip()
-    return req.remote_addr or '127.0.0.1'
+
+def get_client_ip(req, trusted_proxies: collections.abc.Container[str] | None = None) -> str:
+    """
+    Ustala rzeczywisty adres IP klienta z uwzględnieniem nagłówków proxy wyłącznie dla zaufanych źródeł.
+    Zapobiega spoofingowi nagłówków X-Forwarded-For i omijaniu blokady brute-force.
+    """
+    remote_addr = (getattr(req, 'remote_addr', None) or '127.0.0.1').strip()
+
+    if trusted_proxies is None:
+        try:
+            trusted_proxies = current_app.config.get('TRUSTED_PROXIES')
+        except RuntimeError:
+            trusted_proxies = None
+
+    if trusted_proxies is None:
+        trusted_proxies = DEFAULT_TRUSTED_PROXIES
+
+    is_trusted = ('*' in trusted_proxies) or (remote_addr in trusted_proxies)
+    if is_trusted:
+        headers = getattr(req, 'headers', {})
+        if xff := headers.get('X-Forwarded-For'):
+            return xff.split(',')[0].strip()
+        if x_real := headers.get('X-Real-IP'):
+            return x_real.strip()
+
+    return remote_addr
 
 
 class LoginRateLimiter:

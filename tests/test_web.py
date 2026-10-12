@@ -325,6 +325,23 @@ class TestWebDashboard(unittest.TestCase):
         })
         self.assertEqual(bad_res.status_code, 400)
 
+        # Ocena spoza zakresu 1–6
+        out_res = client.post('/api/whatif', data={
+            'subject': 'Matematyka',
+            'grade': '7.5',
+            'weight': '1',
+        })
+        self.assertEqual(out_res.status_code, 400)
+        self.assertIn('Ocena musi być w przedziale 1–6'.encode(), out_res.data)
+
+        # Waga ujemna lub 0
+        neg_weight_res = client.post('/api/whatif', data={
+            'subject': 'Matematyka',
+            'grade': '5',
+            'weight': '0',
+        })
+        self.assertEqual(neg_weight_res.status_code, 400)
+
     @patch('librus2mail.web.app.run_collector')
     def test_action_sync_endpoint(self, mock_collector):
         """Testuje wyzwolenie synchronizacji przez endpoint API /api/action/sync."""

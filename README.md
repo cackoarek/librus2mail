@@ -7,7 +7,7 @@
 [![CI Status](https://img.shields.io/github/actions/workflow/status/cackoarek/librus2mail/ci.yml?branch=main&label=CI&style=flat-square&logo=githubactions&logoColor=white)](https://github.com/cackoarek/librus2mail/actions/workflows/ci.yml)
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-3776AB.svg?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![Code Style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg?style=flat-square&logo=ruff&logoColor=white)](https://github.com/astral-sh/ruff)
-[![Tests: pytest](https://img.shields.io/badge/tests-pytest%20(136%20passed)-success.svg?style=flat-square&logo=pytest&logoColor=white)](tests/)
+[![Tests: pytest](https://img.shields.io/badge/tests-pytest%20(193%20passed)-success.svg?style=flat-square&logo=pytest&logoColor=white)](tests/)
 [![Packaging: PEP 517/518](https://img.shields.io/badge/packaging-PEP%20517%2F518-00599C.svg?style=flat-square)](pyproject.toml)
 [![Web UI: Flask + Tailwind](https://img.shields.io/badge/web%20ui-Flask%20%2B%20Tailwind-4B8BBE.svg?style=flat-square&logo=flask&logoColor=white)](src/librus2mail/web/)
 [![Docker Ready](https://img.shields.io/badge/docker-ready-2496ED.svg?style=flat-square&logo=docker&logoColor=white)](Dockerfile)
@@ -299,6 +299,9 @@ Każdy element listy `librus_users` reprezentuje jedno konto w e-dzienniku:
 * `password` (`string`): Hasło rodzica chroniące dostęp do panelu w przeglądarce (Parent Gate). Jeśli pozostanie puste, panel uruchomi się bez logowania (dopuszczalne tylko w zaufanej sieci lokalnej).
 * `max_login_attempts` (`int`): Maksymalna liczba nieudanych prób logowania z danego adresu IP przed nałożeniem blokady (domyślnie: `5`).
 * `lockout_duration_s` (`int`): Czas blokady adresu IP po przekroczeniu limitu błędnych haseł w sekundach (domyślnie: `900` = 15 minut).
+* `cookie_secure` (`bool`): Wymuszenie flagi `Secure` na ciasteczkach sesyjnych (wymaga HTTPS, domyślnie `false` dla lokalnego HTTP; można też włączyć przez zmienną środowiskową `LIBRUS_WEB_COOKIE_SECURE=true`).
+* `session_cookie_samesite` (`string`): Polityka SameSite ciasteczka sesyjnego (`"Lax"` domyślnie, lub `"Strict"`).
+* `trusted_proxies` (`list[string]`): Lista zaufanych adresów IP serwerów reverse proxy (domyślnie: `["127.0.0.1", "::1", "localhost"]`), z których nagłówek `X-Forwarded-For` jest akceptowany. Zapobiega spoofingowi adresu IP i omijaniu blokady brute-force przy pracy za Nginx, Traefik lub Caddy.
 
 ---
 
@@ -687,7 +690,7 @@ Działa jako spójne centrum kontroli: integruje dane zebrane przez kolektor, pr
 * ⚙️ **Graficzny konfigurator (`/ustawienia`)**: Pełna edycja parametrów kont, powiadomień, harmonogramów i poczty bez konieczności dotykania plików YAML.
 * 📊 **Pulpit rodzica (Dashboard)**: Błyskawiczny podgląd kluczowych KPI (średnia ogólna, liczba ocen, plan na dziś i jutro, zapowiedziane sprawdziany, ostatnie wiadomości).
 * 📅 **Plan lekcji (Schedule)**: Przejrzysty tygodniowy rozkład zajęć z czytelnym wyróżnieniem zastępstw, sal, odwołanych lekcji oraz powiązanych sprawdzianów.
-* 🎯 **Zestawienie ocen & Symulator „Co jeśli...?”**: Przegląd ocen cząstkowych i semestralnych z wagami oraz interaktywny kalkulator HTMX, który natychmiast przelicza przewidywaną średnią po wpisaniu hipotetycznej oceny!
+* 🎯 **Zestawienie ocen & Symulator „Co jeśli...?”**: Przegląd ocen cząstkowych i semestralnych z wagami, interaktywny kalkulator HTMX przeliczający wpływ nowej oceny oraz przełącznik „Wliczany do średniej” umożliwiający wyłączenie przedmiotów takich jak Godzina wychowawcza ze średniej i symulatora świadectwa z wyróżnieniem.
 * 🗓️ **Terminarz szkolny (Timetable)**: Chronologiczny kalendarz nadchodzących sprawdzianów, kartkówek i prac klasowych.
 * 📬 **Wiadomości i ogłoszenia**: Wygodna przeglądarka korespondencji od nauczycieli oraz oficjalnych komunikatów szkoły.
 * ⚡ **Centrum Akcji CLI (`/akcje`)**: Graficzny pulpit wyzwalania operacji (pobranie danych, wysyłka e-maila, generowanie raportów) z bezpośrednim podglądem logów w oknie terminala webowego.
@@ -920,13 +923,17 @@ librus2mail/
 │       ├── __init__.py         # Eksporty kluczowych klas i funkcji pakietu
 │       ├── base_logger.py      # Konfiguracja loggera ('librus')
 │       ├── config.py           # Wczytywanie konfiguracji z pliku YAML
+│       ├── config_watcher.py   # Detekcja zmian pliku konfiguracyjnego w locie (ConfigWatcher)
+│       ├── date_utils.py       # Bezpieczne i deterministyczne parsowanie dat i czasu
+│       ├── dom_parser.py       # Defensywne parsowanie HTML/DOM Librusa (wiadomości, ogłoszenia, oceny, plan)
 │       ├── gmail_sender.py     # Obsługa wysyłki przez Gmail (yagmail)
-│       ├── librus.py           # Klient autoryzacji OAuth i scraping portalu Librus Synergia
+│       ├── librus.py           # Klient autoryzacji OAuth i sesji portalu Librus Synergia
 │       ├── collect_and_notify.py # Główny orkiestrator CLI i runner potoku
 │       ├── librus_collector.py # Moduł 1: Pobieranie danych i synchronizacja ze storage
 │       ├── mail_sender.py      # Klasa bazowa z obsługą szablonów Jinja2
 │       ├── progress_analyzer.py# Silnik analizy postępów (średnie, wagi, alerty)
 │       ├── progress_report.py  # Moduł 3: Generator raportów postępów dla rodziców
+│       ├── scheduler.py        # Harmonogram pobierania (daily/interval) i raportów (ReportScheduler)
 │       ├── smtp_sender.py      # Obsługa wysyłki SMTP (STARTTLS)
 │       ├── storage.py          # Trwały zapis stanu i historia ocen JSON (FileStorage)
 │       ├── student_analyzer.py # Silnik motywacyjny ucznia (supermoce, odznaki, quick wins)
@@ -963,10 +970,17 @@ librus2mail/
 ├── examples/                   # Przykładowe dane i wygenerowane raporty
 │   ├── storage/                # Przykładowa baza ucznia ze zmyślonymi ocenami
 │   └── reports/                # Przykładowe wygenerowane raporty HTML i widoki WWW
-├── tests/                      # Pakiet testów jednostkowych
+├── tests/                      # Pakiet testów jednostkowych (190 testów)
+│   ├── fixtures/               # Przykładowe fragmenty HTML do testów offline DOM
+│   ├── test_date_utils.py      # Testy parsera i walidacji dat
+│   ├── test_dom_parser.py      # Testy defensywnego parsera HTML w trybie 100% offline
 │   ├── test_librus.py          # Testy logowania, scrapingu, formatowania, watermarking i analityki
 │   ├── test_package_layout.py  # Testy struktury pakietu i eksportów
-│   └── test_student_report.py  # Testy silnika motywacyjnego i raportów ucznia
+│   ├── test_scheduler_and_watcher.py # Testy harmonogramu i monitora zmian konfiguracji
+│   ├── test_storage_dates.py   # Testy spójności i migracji dat w storage
+│   ├── test_student_report.py  # Testy silnika motywacyjnego i raportów ucznia
+│   ├── test_web.py             # Testy panelu webowego, kreatora i kalkulatora ocen
+│   └── test_web_security.py    # Testy zabezpieczeń proxy, rate limitera i ciasteczek
 ├── librus_collect_and_notify.py# Główny punkt wejścia demona i orkiestratora (CLI)
 ├── librus_collector.py         # Moduł 1: CLI zbierania danych ze szkoły
 ├── librus_updates_notifier.py  # Moduł 2: CLI bieżących powiadomień

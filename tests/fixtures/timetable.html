@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head><title>Terminarz - Synergia</title></head>
+<body>
+<form>
+  <select name="miesiac">
+    <option value="9">Wrzesień</option>
+    <option value="10" selected>Październik</option>
+  </select>
+  <select name="rok">
+    <option value="2026" selected>2026</option>
+  </select>
+</form>
+
+<div class="kalendarz-dzien">
+  <div class="kalendarz-numer-dnia">15</div>
+  <table>
+    <tr>
+      <td onclick="otworz_szczegoly('/szczegoly/501');" title="Nauczyciel: Jan Kowalski<br>Opis: Sprawdzian z działu 1<br>Data dodania: 2026-10-01">
+        <span class="przedmiot">Matematyka</span>
+        Nr lekcji: 3, Sprawdzian
+      </td>
+    </tr>
+  </table>
+</div>
+
+<div class="kalendarz-dzien">
+  <div class="kalendarz-numer-dnia">16</div>
+  <table>
+    <tr>
+      <td onclick="otworz_szczegoly_wolne('/szczegoly_wolne/801');">
+        Nieobecność: Nauczyciel: Anna Nowak Godziny: 1-4
+      </td>
+    </tr>
+  </table>
+</div>
+</body>
+</html>

@@ -7,6 +7,7 @@ from collections import defaultdict
 from datetime import date, datetime, timedelta
 from typing import Any
 
+from librus2mail.date_utils import parse_date_safe, parse_datetime_safe
 from librus2mail.mail_sender import MailSender
 from librus2mail.progress_analyzer import (
     ProgressAnalyzer,
@@ -66,32 +67,11 @@ def format_human_timestamp(val: str | datetime | None, now: datetime | None = No
     if not val:
         return "Brak danych"
 
-    dt: datetime | None = None
-    if isinstance(val, datetime):
-        dt = val
-    else:
-        val_str = str(val).strip()
-        if not val_str:
-            return "Brak danych"
-        if val_str.endswith('Z'):
-            val_str = val_str[:-1]
-        try:
-            dt = datetime.fromisoformat(val_str)
-        except Exception:
-            for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
-                try:
-                    dt = datetime.strptime(val_str, fmt)
-                    break
-                except Exception:
-                    pass
-
+    dt = parse_datetime_safe(val, make_naive=True)
     if not dt:
         return str(val)
 
     ref_now = now or datetime.now()
-
-    if dt.tzinfo is not None:
-        dt = dt.astimezone().replace(tzinfo=None)
     if ref_now.tzinfo is not None:
         ref_now = ref_now.astimezone().replace(tzinfo=None)
 
@@ -184,13 +164,21 @@ def get_active_student_login(
 def calculate_subject_averages(
     grades_history: list[dict[str, Any]],
     excluded_subjects: list[str] | set[str] | None = None,
+    all_subjects: list[str] | set[str] | None = None,
 ) -> dict[str, dict[str, Any]]:
-    """Wylicza średnie ważone i statystyki per przedmiot na podstawie historii ocen."""
+    """Wylicza średnie ważone i statystyki per przedmiot na podstawie historii ocen (oraz listy wszystkich przedmiotów)."""
     norm_excluded = {s.strip().lower() for s in (excluded_subjects or [])}
     by_subject = defaultdict(list)
     for g in grades_history:
         subj = g.get('subject', 'Inne')
         by_subject[subj].append(g)
+
+    # Upewnij się, że przedmioty bez ocen (np. Taniec, Historia) również są uwzględnione
+    if all_subjects:
+        for s in all_subjects:
+            s_clean = str(s).strip()
+            if s_clean and s_clean not in by_subject:
+                by_subject[s_clean] = []
 
     result = {}
     for subj, g_list in by_subject.items():
@@ -301,8 +289,12 @@ def simulate_new_grade(
     new_grade: float,
     new_weight: float = 1.0,
 ) -> dict[str, Any]:
-    """Symuluje dodanie nowej oceny z wagą i oblicza przewidywaną zmianę średniej ważonej."""
-    subject_grades = [g for g in grades_history if g.get('subject', '').strip().lower() == subject.strip().lower()]
+    # Guard i normalizacja parametrów symulacji
+    eff_grade = max(1.0, min(6.0, float(new_grade)))
+    eff_new_weight = max(0.1, min(100.0, float(new_weight)))
+
+    clean_subj = subject.strip()
+    subject_grades = [g for g in grades_history if g.get('subject', '').strip().lower() == clean_subj.lower()]
 
     sum_weighted = 0.0
     sum_weights = 0.0
@@ -318,20 +310,19 @@ def simulate_new_grade(
     old_avg = round(sum_weighted / sum_weights, 2) if sum_weights > 0 else None
 
     # Dodanie nowej oceny
-    eff_new_weight = max(0.1, new_weight)
-    new_sum_weighted = sum_weighted + (new_grade * eff_new_weight)
+    new_sum_weighted = sum_weighted + (eff_grade * eff_new_weight)
     new_sum_weights = sum_weights + eff_new_weight
     new_avg = round(new_sum_weighted / new_sum_weights, 2)
 
     diff = round(new_avg - old_avg, 2) if old_avg is not None else 0.0
 
     return {
-        'subject': subject,
+        'subject': clean_subj,
         'old_avg': old_avg,
         'new_avg': new_avg,
         'diff': diff,
-        'new_grade': new_grade,
-        'new_weight': new_weight,
+        'new_grade': eff_grade,
+        'new_weight': eff_new_weight,
     }
 
 
@@ -428,12 +419,12 @@ def build_schedule_day_context(
     tomorrow_str = (now.date() + timedelta(days=1)).strftime('%Y-%m-%d')
 
     for d_str in sorted_dates:
-        try:
-            d_obj = datetime.strptime(d_str, "%Y-%m-%d").date()
+        d_obj = parse_date_safe(d_str)
+        if d_obj:
             w_name = weekdays_pl[d_obj.weekday()]
             w_short = weekdays_short_pl[d_obj.weekday()]
             f_date = d_obj.strftime("%d.%m")
-        except Exception:
+        else:
             w_name = ""
             w_short = ""
             f_date = d_str
@@ -533,7 +524,8 @@ def get_student_dashboard_bundle(
 
     # Analityka ocen
     excluded_subjects = storage.get_excluded_certificate_subjects(login) if hasattr(storage, 'get_excluded_certificate_subjects') else []
-    subj_averages = calculate_subject_averages(grades, excluded_subjects=excluded_subjects)
+    all_subjects = storage.get_subjects(login) if hasattr(storage, 'get_subjects') else []
+    subj_averages = calculate_subject_averages(grades, excluded_subjects=excluded_subjects, all_subjects=all_subjects)
     overall_avg = calculate_overall_average(subj_averages)
     certificate_summary = calculate_certificate_summary(subj_averages, excluded_subjects=excluded_subjects)
 
@@ -633,12 +625,7 @@ def build_progress_report_html(
         period_start = ref_now - timedelta(days=days)
     else:
         last_report_iso = storage.get_last_progress_report_date(login) if hasattr(storage, 'get_last_progress_report_date') else None
-        period_start = None
-        if last_report_iso:
-            try:
-                period_start = datetime.fromisoformat(last_report_iso)
-            except Exception:
-                period_start = None
+        period_start = parse_datetime_safe(last_report_iso) if last_report_iso else None
         if period_start is None:
             days_back = config.get('progress_report', {}).get('days_back', 7)
             period_start = ref_now - timedelta(days=days_back)
@@ -736,10 +723,7 @@ def build_daily_summary_html(
     schedule = storage.get_schedule_history(login) if hasattr(storage, 'get_schedule_history') else []
 
     if isinstance(target_date, str):
-        try:
-            sel_date = datetime.strptime(target_date.strip(), "%Y-%m-%d").date()
-        except ValueError:
-            sel_date = now.date() if now else datetime.now().date()
+        sel_date = parse_date_safe(target_date) or (now.date() if now else datetime.now().date())
     elif isinstance(target_date, date):
         sel_date = target_date
     elif now:

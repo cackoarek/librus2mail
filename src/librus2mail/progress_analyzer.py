@@ -4,6 +4,8 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Any
 
+from .date_utils import parse_datetime_safe
+
 GRADE_VALUE_MAP = {
     '6': 6.0,
     '6-': 5.75,
@@ -96,26 +98,13 @@ def parse_grade_date(date_str: str, added_at_iso: str = None) -> datetime | None
     """
     Wyodrębnia datę z ciągu Librusa (np. '2026-09-16', '2026-09-11 (pt.)') lub z added_at.
     """
-    if date_str and date_str != '-':
-        m = re.search(r'(\d{4})-(\d{2})-(\d{2})', str(date_str))
-        if m:
-            try:
-                return datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)))
-            except ValueError:
-                pass
-
-        m2 = re.search(r'(\d{2})\.(\d{2})\.(\d{4})', str(date_str))
-        if m2:
-            try:
-                return datetime(int(m2.group(3)), int(m2.group(2)), int(m2.group(1)))
-            except ValueError:
-                pass
+    if date_str and str(date_str).strip() != '-':
+        dt = parse_datetime_safe(date_str)
+        if dt:
+            return dt
 
     if added_at_iso:
-        try:
-            return datetime.fromisoformat(str(added_at_iso))
-        except (ValueError, TypeError):
-            pass
+        return parse_datetime_safe(added_at_iso)
 
     return None
 

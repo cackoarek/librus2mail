@@ -30,6 +30,7 @@ from flask import (
 
 from librus2mail.base_logger import setup_logging
 from librus2mail.config import get_reports_schedules, read_config
+from librus2mail.date_utils import parse_date_safe, parse_datetime_safe
 from librus2mail.librus_collector import run_collector
 from librus2mail.progress_report import run_progress_reports
 from librus2mail.student_report import run_student_reports
@@ -76,7 +77,7 @@ def get_app_version() -> str:
             )
             if res.returncode == 0 and res.stdout.strip():
                 return res.stdout.strip().lstrip("v")
-    except Exception:
+    except (OSError, subprocess.SubprocessError):
         pass
 
     # 2. Odczyt __version__ z librus2mail (aktualizowane automatycznie w CI/CD przez release.yml)
@@ -84,13 +85,13 @@ def get_app_version() -> str:
         import librus2mail
         if hasattr(librus2mail, "__version__") and librus2mail.__version__:
             return str(librus2mail.__version__).lstrip("v")
-    except Exception:
+    except ImportError:
         pass
 
     # 3. Próba odczytania z metadanych zainstalowanego pakietu (pip install / wheel)
     try:
         return importlib.metadata.version("librus2mail")
-    except Exception:
+    except importlib.metadata.PackageNotFoundError:
         pass
 
     return "2.0.1"
@@ -232,9 +233,10 @@ def grades_view():
     active_login = get_active_student_login(config, storage, session_login=session.get('active_student_login'))
 
     excluded_subjects = storage.get_excluded_certificate_subjects(active_login) if hasattr(storage, 'get_excluded_certificate_subjects') else []
+    all_subjects = storage.get_subjects(active_login) if hasattr(storage, 'get_subjects') else []
     data = get_student_dashboard_bundle(storage, active_login, config, now=request.app_actual_date)
     grades = storage.get_grades_history(active_login) if hasattr(storage, 'get_grades_history') else []
-    subject_averages = calculate_subject_averages(grades, excluded_subjects=excluded_subjects)
+    subject_averages = calculate_subject_averages(grades, excluded_subjects=excluded_subjects, all_subjects=all_subjects)
     certificate_summary = calculate_certificate_summary(subject_averages, excluded_subjects=excluded_subjects)
 
     raw_tab = (request.args.get('tab') or '').strip().lower()
@@ -306,12 +308,9 @@ def reports_view(report_type: str = 'podsumowanie'):
     default_date_str = default_date.strftime("%Y-%m-%d")
 
     date_param = request.args.get('date')
-    selected_date = default_date
-    if date_param:
-        try:
-            selected_date = datetime.strptime(date_param.strip(), "%Y-%m-%d").date()
-        except ValueError:
-            selected_date = default_date
+    selected_date = parse_date_safe(date_param) if date_param else default_date
+    if not selected_date:
+        selected_date = default_date
 
     selected_date_str = selected_date.strftime("%Y-%m-%d")
     prev_date_str = (selected_date - timedelta(days=1)).strftime("%Y-%m-%d")
@@ -393,6 +392,8 @@ def api_whatif():
     try:
         new_grade = float(request.form.get('grade', 5.0))
         new_weight = float(request.form.get('weight', 1.0))
+        if not (1.0 <= new_grade <= 6.0) or not (0.01 <= new_weight <= 100.0):
+            return "<div class='text-red-500 text-sm'>Ocena musi być w przedziale 1–6, a waga dodatnia.</div>", 400
     except (ValueError, TypeError):
         return "<div class='text-red-500 text-sm'>Nieprawidłowa wartość oceny lub wagi.</div>", 400
 
@@ -532,7 +533,10 @@ def action_notify():
     config_path = request.app_config_path
     storage_dir = request.app_storage_dir
     login = request.form.get('login') or session.get('active_student_login')
-    days = int(request.form.get('days', 1))
+    try:
+        days = max(1, min(365, int(request.form.get('days', 1))))
+    except (ValueError, TypeError):
+        days = 1
     is_summary = request.form.get('summary') == '1'
     dry_run = request.form.get('dry_run') == '1'
 
@@ -560,7 +564,10 @@ def action_progress_report():
     config_path = request.app_config_path
     storage_dir = request.app_storage_dir
     login = request.form.get('login') or session.get('active_student_login')
-    days = int(request.form.get('days', 7))
+    try:
+        days = max(1, min(365, int(request.form.get('days', 7))))
+    except (ValueError, TypeError):
+        days = 7
 
     success, output, _ = capture_action_execution(
         run_progress_reports,
@@ -584,7 +591,12 @@ def action_student_report():
     storage_dir = request.app_storage_dir
     login = request.form.get('login') or session.get('active_student_login')
     template_name = request.form.get('template', 'kids')
-    days = int(request.form.get('days', 7))
+    if template_name not in ('kids', 'teens', 'youth'):
+        template_name = 'kids'
+    try:
+        days = max(1, min(365, int(request.form.get('days', 7))))
+    except (ValueError, TypeError):
+        days = 7
 
     success, output, _ = capture_action_execution(
         run_student_reports,
@@ -844,7 +856,7 @@ def setup_submit():
 
     try:
         save_config_yaml(full_config, config_path)
-    except Exception as e:
+    except OSError as e:
         logger.error(f"Nie udało się zapisać konfiguracji do {config_path}: {e}")
         flash(f"Błąd podczas zapisu konfiguracji: {e}", "error")
         return redirect(url_for('web.setup_view'))
@@ -1000,7 +1012,7 @@ def settings_view():
                 else:
                     current_app.config['WEB_PASSWORD'] = None
             flash("Ustawienia zostały pomyślnie zaktualizowane.", "success")
-        except Exception as e:
+        except (OSError, ValueError) as e:
             logger.error(f"Błąd zapisu ustawień do {config_path}: {e}")
             flash(f"Nie udało się zapisać ustawień: {e}", "error")
 
@@ -1074,7 +1086,7 @@ def start_background_collector(
                             "⏰ [BackgroundCollector] Harmonogram w tle jest wyłączony w konfiguracji (work-in-loop: false). "
                             "Wątek czuwa i oczekuje na ewentualną zmianę konfiguracji w panelu WWW..."
                         )
-                        from librus2mail.librus_collector import sleep_with_config_watch
+                        from librus2mail.config_watcher import sleep_with_config_watch
                         sleep_with_config_watch(30, config_path=config_path)
                         continue
 
@@ -1140,11 +1152,27 @@ def create_app(
         window_s=eff_window_s,
     )
 
-    parsed_date = None
-    if isinstance(actual_date, str):
-        parsed_date = datetime.strptime(actual_date, "%Y-%m-%d")
-    elif isinstance(actual_date, datetime):
-        parsed_date = actual_date
+    # Konfiguracja bezpieczeństwa ciasteczek sesyjnych
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = web_cfg.get('session_cookie_samesite', 'Lax')
+    cookie_secure = web_cfg.get('cookie_secure')
+    if cookie_secure is None:
+        cookie_secure = os.environ.get('LIBRUS_WEB_COOKIE_SECURE', '').lower() in ('1', 'true', 'yes')
+    app.config['SESSION_COOKIE_SECURE'] = bool(cookie_secure)
+
+    # Konfiguracja zaufanych serwerów proxy (ochrona przed spoofingiem nagłówków X-Forwarded-For)
+    raw_trusted = web_cfg.get('trusted_proxies')
+    if raw_trusted is None:
+        raw_trusted = os.environ.get('LIBRUS_WEB_TRUSTED_PROXIES')
+    if isinstance(raw_trusted, str):
+        trusted_proxies = {p.strip() for p in raw_trusted.split(',') if p.strip()}
+    elif isinstance(raw_trusted, (list, set, tuple)):
+        trusted_proxies = {str(p).strip() for p in raw_trusted if str(p).strip()}
+    else:
+        trusted_proxies = {'127.0.0.1', '::1', 'localhost'}
+    app.config['TRUSTED_PROXIES'] = trusted_proxies
+
+    parsed_date = parse_datetime_safe(actual_date) if actual_date else None
 
     app.config['SECRET_KEY'] = secret_key or web_cfg.get('secret_key') or os.environ.get('LIBRUS_WEB_SECRET_KEY') or secrets.token_hex(32)
     app.config['NO_AUTH'] = no_auth

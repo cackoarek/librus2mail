@@ -396,10 +396,11 @@ Dostarcza nowoczesny, lekki i interaktywny pulpit rodzica w przeglądarce WWW (o
 - **Ochrona hasłem rodzica (Parent Gate)**: Zabezpiecza oceny i dane ucznia przed niepowołanym dostępem w sieci lokalnej lub internecie.
 - **Pulpit główny (Dashboard)**: Błyskawiczny podgląd kluczowych wskaźników KPI (średnia ogólna, liczba ocen, plan na najbliższy dzień, zapowiedziane sprawdziany).
 - **Plan lekcji (Schedule)**: Pełny widok tygodniowy z wyróżnieniem zastępstw, odwołanych lekcji i zapowiedzianych sprawdzianów.
-- **Zestawienie ocen & Symulator "Co jeśli?"**: Oceny z wagami per przedmiot oraz dynamiczny kalkulator prognozujący wpływ nowej oceny na średnią ważoną (HTMX).
+- **Zestawienie ocen & Symulator "Co jeśli?"**: Oceny z wagami per przedmiot oraz dynamiczny kalkulator prognozujący wpływ nowej oceny na średnią ważoną (HTMX). Dodatkowo przełącznik „Wliczany do średniej” umożliwia wykluczenie wybranych przedmiotów (np. Godzina wychowawcza) ze średniej i świadectwa z wyróżnieniem.
 - **Terminarz (Timetable)**: Chronologiczny kalendarz nadchodzących sprawdzianów i nieobecności nauczycieli.
 - **Wiadomości & Ogłoszenia**: Przeglądarka korespondencji z nauczycielami i oficjalnych komunikatów dyrekcji.
 - **Centrum Akcji CLI**: Graficzny panel wyzwalania operacji (pobranie z Librusa, wysyłka maila, generowanie raportów) z bezpośrednim podglądem logów w konsoli przeglądarki.
+- **Bezpieczeństwo i zaufane proxy**: Ochrona hasłem rodzica (Parent Gate), blokada brute-force, weryfikacja zaufanych proxy (`trusted_proxies` odrzucająca sfałszowane nagłówki `X-Forwarded-For`) oraz flagi bezpieczeństwa ciasteczek sesyjnych (`cookie_secure`, `session_cookie_samesite`).
 
 ### 💻 Składnia polecenia
 ```bash
@@ -453,7 +454,7 @@ venv/bin/python librus_web.py -u 8979296 -s examples/storage --actual-date 2026-
 W projekcie skonfigurowano zestaw narzędzi do weryfikacji jakości kodu i poprawności działania:
 
 ```bash
-# 1. Uruchomienie pełnego pakietu testów jednostkowych (pytest):
+# 1. Uruchomienie pełnego pakietu testów jednostkowych (pytest, 176 testów):
 venv/bin/pytest
 
 # 2. Uruchomienie testów z raportem pokrycia kodu (coverage):

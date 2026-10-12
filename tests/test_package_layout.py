@@ -10,6 +10,7 @@ class TestPackageLayout(unittest.TestCase):
         import librus2mail
         from librus2mail import (
             BaseStorage,
+            ConfigWatcher,
             FileStorage,
             GmailSender,
             Librus,
@@ -17,6 +18,7 @@ class TestPackageLayout(unittest.TestCase):
             MailSender,
             NotLogged,
             ProgressAnalyzer,
+            ReportScheduler,
             SmtpSender,
             StudentAnalyzer,
             UpdatesNotifier,
@@ -60,6 +62,8 @@ class TestPackageLayout(unittest.TestCase):
         self.assertIsNotNone(parse_weight)
         self.assertIsNotNone(parse_grade_date)
         self.assertIsNotNone(get_predicted_grade)
+        self.assertIsNotNone(ConfigWatcher)
+        self.assertIsNotNone(ReportScheduler)
 
     def test_mail_sender_modules_identity(self):
         import librus2mail
@@ -124,9 +128,10 @@ class TestPackageLayout(unittest.TestCase):
             child.info("Hello from child logger")
 
             # Flush and close handlers
-            for h in pkg_logger.handlers:
+            for h in list(pkg_logger.handlers):
                 h.flush()
                 h.close()
+                pkg_logger.removeHandler(h)
 
             with open(test_log_file, encoding="utf-8") as f:
                 content = f.read()

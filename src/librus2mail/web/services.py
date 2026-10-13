@@ -386,16 +386,19 @@ def _compute_risk_analysis(
         new_w = current_sum_weights + test_w
         new_sum = current_sum_weighted + (test_grade * test_w)
         sim_avg = round(new_sum / new_w, 2)
-        causes_drop = sim_avg < current_threshold
+        sim_grade_num, sim_grade_label = get_predicted_grade_tuple(sim_avg)
+        causes_drop = sim_grade_num < current_grade_num
         drop_simulations.append({
             'test_grade': int(test_grade),
             'test_weight': int(test_w),
             'sim_avg': sim_avg,
             'diff': round(sim_avg - current_avg, 2),
             'causes_drop': causes_drop,
+            'sim_grade_num': sim_grade_num,
+            'sim_grade_label': sim_grade_label,
             'desc': (
                 f"Ocena {int(test_grade)} z wagą {int(test_w)} obniży średnią do {sim_avg}"
-                + (f" ⚠️ (spadek do {lower_label})!" if causes_drop else f" (nadal bezpieczna ocena {current_grade_num})")
+                + (f" ⚠️ (spadek do {sim_grade_label})!" if causes_drop else f" (nadal bezpieczna ocena {current_grade_num})")
             ),
         })
 

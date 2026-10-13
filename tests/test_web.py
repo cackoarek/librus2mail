@@ -1475,6 +1475,17 @@ class TestWebDashboard(unittest.TestCase):
         self.assertEqual(risk['lower_grade_num'], 3)
         self.assertIn('drop_simulations', risk)
 
+        # Test scenariusza z głębszym spadkiem (wyjściowa ocena 5 spadająca do 3 po 1 z wagą 3)
+        sample_high = [
+            {'id': '10', 'subject': 'Biologia', 'grade': '5', 'weight': '2', 'date': '2026-09-10'},
+            {'id': '11', 'subject': 'Biologia', 'grade': '5', 'weight': '2', 'date': '2026-09-15'},
+        ]
+        analytics_high = get_subject_detailed_analytics(sample_high, 'Biologia')
+        risk_high = analytics_high['risk_analysis']
+        sim_3w = next(d for d in risk_high['drop_simulations'] if d['test_grade'] == 1 and d['test_weight'] == 3)
+        self.assertEqual(sim_3w['sim_grade_num'], 3)
+        self.assertIn('spadek do 3 (dostateczny)', sim_3w['desc'])
+
 
 if __name__ == '__main__':
     unittest.main()

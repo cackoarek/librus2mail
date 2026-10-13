@@ -18,7 +18,7 @@ RUN mkdir -p /app/storage && chown -R librus:librus /app
 # Kopiowanie plików projektu i definicji pakietu
 COPY pyproject.toml requirements.txt README.md LICENSE /app/
 COPY src/ /app/src/
-COPY librus_collector.py librus_updates_notifier.py librus_progress_report.py librus_collect_and_notify.py /app/
+COPY librus_collector.py librus_updates_notifier.py librus_progress_report.py librus_student_report.py librus_collect_and_notify.py librus_web.py /app/
 
 # Instalacja pakietu librus2mail wraz ze skryptami CLI i wsparciem strefy czasowej
 RUN pip install --no-cache-dir --upgrade pip && \
@@ -29,6 +29,9 @@ USER librus
 
 # Punkt montowania dla trwałej bazy JSON
 VOLUME ["/app/storage"]
+
+# Port dla panelu webowego WWW (Moduł 5)
+EXPOSE 5000
 
 # Domyślne uruchomienie demona monitorującego
 CMD ["librus-collector", "config.yaml"]

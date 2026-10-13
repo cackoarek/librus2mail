@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from typing import Any
 
+from librus2mail.date_utils import parse_date_safe
 from librus2mail.progress_analyzer import parse_grade_date, parse_numeric_grade, parse_weight
 
 logger = logging.getLogger(__name__)
@@ -149,16 +150,7 @@ class StudentAnalyzer:
         self.raw_grades = grades or []
         self.student_name = student_name
 
-        if isinstance(actual_date, str):
-            try:
-                self.reference_date = datetime.strptime(actual_date, "%Y-%m-%d").date()
-            except ValueError:
-                self.reference_date = datetime.now().date()
-        elif isinstance(actual_date, date):
-            self.reference_date = actual_date
-        else:
-            self.reference_date = datetime.now().date()
-
+        self.reference_date = parse_date_safe(actual_date) or datetime.now().date()
         self.days = days
         self._parsed_grades = self._parse_all_grades()
 

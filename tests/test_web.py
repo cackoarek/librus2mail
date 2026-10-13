@@ -17,6 +17,7 @@ from librus2mail.web.services import (
     build_daily_summary_html,
     build_progress_report_html,
     build_student_report_html,
+    calculate_certificate_summary,
     calculate_overall_average,
     calculate_subject_averages,
     capture_action_execution,
@@ -226,6 +227,9 @@ class TestWebDashboard(unittest.TestCase):
         self.assertEqual(res_dash.status_code, 200)
         self.assertIn(b'Jan Kowalski', res_dash.data)
         self.assertIn('Średnia ocen'.encode(), res_dash.data)
+        self.assertIn(b'href="/oceny"', res_dash.data)
+        self.assertIn(b'href="/plan', res_dash.data)
+        self.assertIn(b'href="/terminarz"', res_dash.data)
 
         # 2. Widok planu lekcji
         res_plan = client.get('/plan')
@@ -239,8 +243,25 @@ class TestWebDashboard(unittest.TestCase):
         res_oceny = client.get('/oceny')
         self.assertEqual(res_oceny.status_code, 200)
         self.assertIn('Oceny i Średnie'.encode(), res_oceny.data)
+        self.assertIn(b'Aktualne oceny', res_oceny.data)
+        self.assertIn('Świadectwo'.encode(), res_oceny.data)
+        self.assertIn('Pasek z wyróżnieniem'.encode(), res_oceny.data)
+        self.assertIn(b"switchGradesTab('swiadectwo')", res_oceny.data)
+        self.assertIn(b'Symulator nowej oceny', res_oceny.data)
         self.assertIn(b'Symulator Nowej Oceny', res_oceny.data)
         self.assertIn(b'Matematyka', res_oceny.data)
+
+        res_oceny_swiad = client.get('/oceny?tab=swiadectwo')
+        self.assertEqual(res_oceny_swiad.status_code, 200)
+        self.assertIn(b'grades-pane-swiadectwo', res_oceny_swiad.data)
+        self.assertIn('Średnia za całe świadectwo'.encode(), res_oceny_swiad.data)
+        self.assertIn(b'Proponowana', res_oceny_swiad.data)
+        self.assertIn(b'Ocena', res_oceny_swiad.data)
+        self.assertIn('Słownie'.encode(), res_oceny_swiad.data)
+
+        res_oceny_sym = client.get('/oceny?tab=symulator')
+        self.assertEqual(res_oceny_sym.status_code, 200)
+        self.assertIn(b'grades-pane-symulator', res_oceny_sym.data)
 
         # 4. Widok terminarza
         res_term = client.get('/terminarz')
@@ -303,6 +324,23 @@ class TestWebDashboard(unittest.TestCase):
             'weight': '3',
         })
         self.assertEqual(bad_res.status_code, 400)
+
+        # Ocena spoza zakresu 1–6
+        out_res = client.post('/api/whatif', data={
+            'subject': 'Matematyka',
+            'grade': '7.5',
+            'weight': '1',
+        })
+        self.assertEqual(out_res.status_code, 400)
+        self.assertIn('Ocena musi być w przedziale 1–6'.encode(), out_res.data)
+
+        # Waga ujemna lub 0
+        neg_weight_res = client.post('/api/whatif', data={
+            'subject': 'Matematyka',
+            'grade': '5',
+            'weight': '0',
+        })
+        self.assertEqual(neg_weight_res.status_code, 400)
 
     @patch('librus2mail.web.app.run_collector')
     def test_action_sync_endpoint(self, mock_collector):
@@ -368,6 +406,28 @@ class TestWebDashboard(unittest.TestCase):
         self.assertEqual(sim['old_avg'], 4.33)
         self.assertEqual(sim['new_avg'], 5.17)
         self.assertEqual(sim['diff'], 0.84)
+
+        # Test zestawienia na świadectwo (calculate_certificate_summary)
+        averages_with_empty = dict(averages)
+        averages_with_empty['Plastyka'] = {
+            'subject': 'Plastyka',
+            'grades': [],
+            'count': 0,
+            'numeric_count': 0,
+            'average': None,
+            'sum_weights': 0.0,
+        }
+        cert = calculate_certificate_summary(averages_with_empty)
+        # Matematyka (śr 4.33 -> 4) + Fizyka (śr 4.0 -> 4)
+        # Plastyka ma 0 ocen, więc nie wchodzi do średniej ze świadectwa
+        self.assertEqual(cert['rated_count'], 2)
+        self.assertEqual(cert['unrated_count'], 1)
+        self.assertEqual(cert['total_count'], 3)
+        self.assertEqual(cert['certificate_average'], 4.00)
+        self.assertFalse(cert['has_red_stripe'])
+        self.assertEqual(cert['red_stripe_diff'], 0.75)
+        self.assertEqual(cert['subjects'][0]['proposed_grade_word'], 'dobry')
+        self.assertEqual(cert['subjects'][2]['proposed_grade_word'], 'brak ocen')
 
         # Test ustalania pełnej nazwy ucznia (resolve_student_name)
         storage = get_storage(self.mock_config, self.storage_dir)
@@ -915,7 +975,7 @@ class TestWebDashboard(unittest.TestCase):
         self.assertEqual(saved_cfg['schedule']['reports'][1]['name'], 'Raport miesięczny')
         self.assertEqual(saved_cfg['schedule']['reports'][1]['frequency'], 'monthly')
         self.assertEqual(saved_cfg['schedule']['reports'][1]['interval_days'], 30)
-        self.assertTrue(saved_cfg['work-in-loop'])
+        self.assertTrue(saved_cfg['work_in_loop'])
         self.assertTrue(saved_cfg.get('one_summary_message'))
         self.assertTrue(saved_cfg['librus_users'][0].get('one_summary_message'))
 
@@ -1039,11 +1099,9 @@ class TestWebDashboard(unittest.TestCase):
         # 2. Test get_reports_schedules z różnymi formatami
         reps = get_reports_schedules({'schedule': sched_cfg})
         self.assertEqual(len(reps), 2)
-        # Kompatybilność wsteczna z formatem słownika
-        legacy_reps = get_reports_schedules({'schedule': {'reports': {'weekday': 'friday', 'interval_days': 7}}})
-        self.assertEqual(len(legacy_reps), 1)
-        self.assertEqual(legacy_reps[0]['interval_days'], 7)
-        self.assertEqual(legacy_reps[0]['frequency'], 'weekly')
+        single_rep_list = get_reports_schedules({'schedule': {'reports': [{'name': 'Raport piątkowy', 'weekday': 'friday', 'interval_days': 7}]}})
+        self.assertEqual(len(single_rep_list), 1)
+        self.assertEqual(single_rep_list[0]['interval_days'], 7)
 
         # 3. Test izolacji znaczników czasu w storage per report_key
         storage = get_storage(self.mock_config, self.storage_dir)
@@ -1276,6 +1334,72 @@ class TestWebDashboard(unittest.TestCase):
         self.assertLess(pos_notif_new, pos_notif_mid, "Najnowsze ogłoszenie powinno pojawić się przed średnim")
         self.assertLess(pos_notif_mid, pos_notif_old, "Średnie ogłoszenie powinno pojawić się przed najstarszym")
 
+    def test_api_grade_update_and_reset(self):
+        """Testuje endpointy edycji oceny/wagi oraz przywracania oryginalnych wartości."""
+        app = create_app(config_path=self.config_path, storage_dir=self.storage_dir, no_auth=True)
+        client = app.test_client()
+
+        # 1. Walidacja błędnych danych
+        res_bad = client.post('/api/grade/update', data={'grade_id': 'g1', 'grade': '5', 'weight': 'invalid'})
+        self.assertEqual(res_bad.status_code, 400)
+
+        res_neg = client.post('/api/grade/update', data={'grade_id': 'g1', 'grade': '5', 'weight': '-2'})
+        self.assertEqual(res_neg.status_code, 400)
+
+        # 2. Udana edycja oceny (np. zmiana wagi sprawdzianu z 1 na 3)
+        res_ok = client.post('/api/grade/update', data={'grade_id': 'g1', 'grade': '4+', 'weight': '3'})
+        self.assertEqual(res_ok.status_code, 200)
+        data = res_ok.get_json()
+        self.assertTrue(data['success'])
+
+        # Sprawdzenie w widoku /oceny
+        res_view = client.get('/oceny')
+        self.assertEqual(res_view.status_code, 200)
+        self.assertIn(b'zmieniona', res_view.data)
+
+        # 3. Przywrócenie ze szkoły (reset)
+        res_reset = client.post('/api/grade/reset', data={'grade_id': 'g1'})
+        self.assertEqual(res_reset.status_code, 200)
+        data_reset = res_reset.get_json()
+        self.assertTrue(data_reset['success'])
+
+    def test_api_subject_toggle_certificate(self):
+        """Testuje wykluczanie i włączanie przedmiotu do średniej ze świadectwa."""
+        app = create_app(config_path=self.config_path, storage_dir=self.storage_dir, no_auth=True)
+        client = app.test_client()
+
+        # 1. Walidacja braku nazwy przedmiotu
+        res_empty = client.post('/api/subject/toggle-certificate', data={'subject': ''})
+        self.assertEqual(res_empty.status_code, 400)
+
+        # 2. Wykluczenie przedmiotu ze średniej (np. Godzina wychowawcza lub Język polski)
+        res_ex = client.post('/api/subject/toggle-certificate', data={'subject': 'Język polski', 'included': 'false'})
+        self.assertEqual(res_ex.status_code, 200)
+        data_ex = res_ex.get_json()
+        self.assertTrue(data_ex['success'])
+        self.assertFalse(data_ex['included'])
+        self.assertIn('Język polski', data_ex['excluded_subjects'])
+
+        # 3. Sprawdzenie widoku /oceny - etykieta "Nie zaliczany do średniej" musi się pojawić
+        res_view = client.get('/oceny')
+        self.assertEqual(res_view.status_code, 200)
+        self.assertIn('Nie zaliczany do średniej'.encode(), res_view.data)
+
+        # Sprawdzenie w zakładce świadectwo
+        res_swiad = client.get('/oceny?tab=swiadectwo')
+        self.assertEqual(res_swiad.status_code, 200)
+        self.assertIn('Nie zaliczany do średniej'.encode(), res_swiad.data)
+
+        # 4. Ponowne włączenie przedmiotu
+        res_inc = client.post('/api/subject/toggle-certificate', data={'subject': 'Język polski', 'included': 'true'})
+        self.assertEqual(res_inc.status_code, 200)
+        data_inc = res_inc.get_json()
+        self.assertTrue(data_inc['success'])
+        self.assertTrue(data_inc['included'])
+        self.assertNotIn('Język polski', data_inc['excluded_subjects'])
+
 
 if __name__ == '__main__':
     unittest.main()
+
+

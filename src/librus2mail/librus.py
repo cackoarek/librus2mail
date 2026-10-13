@@ -1,6 +1,5 @@
 import logging
 import random
-import re
 import time
 import urllib.parse
 from datetime import datetime, timedelta
@@ -10,7 +9,14 @@ from typing import Any
 import requests
 from bs4 import BeautifulSoup
 
-from .domain_models import Announcement, Grade, Message, ScheduleLesson, TimetableEntry
+from .dom_parser import (
+    parse_announcements_html,
+    parse_grades_html,
+    parse_messages_html,
+    parse_schedule_html,
+    parse_subjects_from_html,
+    parse_timetable_html,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -32,20 +38,6 @@ class NotLogged(Exception):
         logger.error(f"Nie zalogowany: {message}")
         self.message = message
         super().__init__(self.message)
-
-
-DEFAULT_LESSON_TIMES: dict[int, tuple[str, str]] = {
-    1: ("08:00", "08:45"),
-    2: ("08:55", "09:40"),
-    3: ("09:50", "10:35"),
-    4: ("10:45", "11:30"),
-    5: ("11:50", "12:35"),
-    6: ("12:50", "13:35"),
-    7: ("13:45", "14:30"),
-    8: ("14:35", "15:20"),
-    9: ("15:25", "16:10"),
-    10: ("16:15", "17:00"),
-}
 
 
 class Librus:
@@ -114,7 +106,7 @@ class Librus:
         if hasattr(self, '_Librus__session') and self.__session:
             try:
                 self.__session.close()
-            except Exception:
+            except OSError:
                 pass
         self.__session = requests.Session()
         self.logged = False
@@ -154,7 +146,7 @@ class Librus:
         # Analiza odpowiedzi JSON
         try:
             resp_json = post_res.json()
-        except Exception:
+        except (ValueError, requests.JSONDecodeError):
             resp_json = None
 
         next_url = None
@@ -216,7 +208,7 @@ class Librus:
             two_fa_res = self.__session.post(action_target, data=two_fa_payload, headers=two_fa_headers)
             try:
                 two_fa_json = two_fa_res.json()
-            except Exception:
+            except (ValueError, requests.JSONDecodeError):
                 two_fa_json = None
 
             if two_fa_json and two_fa_json.get('status') == 'ok':
@@ -293,7 +285,7 @@ class Librus:
                 )
                 if mess_tab:
                     soup = soup_inbox
-            except Exception as e:
+            except (requests.RequestException, NotLogged) as e:
                 logger.debug(f"Próba odpytania /wiadomosci/5 nie powiodła się: {e}")
 
         if not mess_tab:
@@ -309,44 +301,13 @@ class Librus:
             self.unread_count = 0
             return
 
-        tbody = mess_tab.find('tbody') or mess_tab
-
-        messages = []
-        for msg_row in tbody.find_all('tr'):
-            tds = msg_row.find_all('td')
-            if len(tds) < 5:
-                continue
-
-            link_elem = tds[2].find('a')
-            link = link_elem.attrs.get('href', '').strip() if link_elem else ""
-
-            has_attachment = bool(tds[1].find('img')) if len(tds) > 1 else False
-
-            title = tds[3].get_text().strip()
-            sender = correct_sender(tds[2].get_text())
-            dt = tds[4].get_text().strip()
-
-            message = Message.model_validate({
-                'title': title,
-                'sender': sender,
-                'is_unread': False,
-                'datetime': dt,
-                'link': link,
-                'has_attachment': has_attachment,
-                'id': title + dt + tds[2].get_text().strip(),
-            })
-
-            if message.id not in self.__known_messages:
-                message.is_unread = True
-                if self.__do_read_messages and link:
-                    message.body = self.__get_message_body(link)
-                if style := tds[2].attrs.get('style'):
-                    message.is_unread = 'bold' in style
-
-            messages.append(message)
-
-        # sortowanie w kolejności od najnowszych
-        messages = sorted(messages, key=lambda m: m['datetime'], reverse=True)
+        fetch_body_cb = (lambda link: self.__get_message_body(link)) if self.__do_read_messages else None
+        messages = parse_messages_html(
+            soup,
+            known_messages=self.__known_messages,
+            fetch_body_fn=fetch_body_cb,
+            do_read_messages=self.__do_read_messages,
+        )
         self.messages = messages
         self.unread_count = sum(1 for m in messages if m.get('is_unread'))
 
@@ -362,6 +323,11 @@ class Librus:
                 self.__storage.save_grades_details(
                     str(self.__librus_login),
                     self.grades
+                )
+            if hasattr(self, 'subjects') and self.subjects and hasattr(self.__storage, 'save_subjects'):
+                self.__storage.save_subjects(
+                    str(self.__librus_login),
+                    self.subjects
                 )
             if hasattr(self, 'messages') and self.messages and hasattr(self.__storage, 'save_messages_details'):
                 self.__storage.save_messages_details(
@@ -415,34 +381,10 @@ class Librus:
             self.notifications = []
             return
 
-        notifications = []
-        for notif_row in notif_tab.find_all('table'):
-            tds = notif_row.find_all('td')
-            if len(tds) < 4:
-                continue
-
-            title = tds[0].get_text().strip()
-            sender = tds[1].get_text().strip()
-            dt = tds[2].get_text().strip()
-            body = tds[3].get_text().strip()
-
-            notification = Announcement.model_validate({
-                'title': title,
-                'sender': sender,
-                'datetime': dt,
-                'is_unread': False,
-                'body': body,
-                'id': title + sender + dt,
-            })
-
-            if notification.id not in self.__known_notifications:
-                notification.is_unread = True
-
-            notifications.append(notification)
-
-        # sortowanie w kolejności od najnowszych
-        notifications = sorted(notifications, key=lambda m: m['datetime'], reverse=True)
-        self.notifications = notifications
+        self.notifications = parse_announcements_html(
+            soup,
+            known_notifications=self.__known_notifications,
+        )
 
     @property
     def do_read_grades(self) -> bool:
@@ -464,94 +406,13 @@ class Librus:
         logger.info("Pobieram oceny ucznia")
         soup = self.parse_page(GRADES_URL)
 
-        # Pobieramy widoczne tabele ocen, ignorując ukryte tabele-pułapki (np. z display: none przeciwko rozszerzeniom)
-        visible_tables = [
-            table for table in soup.find_all('table', class_='decorated')
-            if 'display:none' not in table.get('style', '').replace(' ', '').lower()
-        ]
-        if not visible_tables:
-            body = soup.find('div', id='body') or soup
-            visible_tables = [
-                table for table in body.find_all('table')
-                if 'display:none' not in table.get('style', '').replace(' ', '').lower()
-            ]
-
-        if not visible_tables:
+        grades = parse_grades_html(soup)
+        subjects = parse_subjects_from_html(soup)
+        if not grades:
             logger.warning("Nie znaleziono tabeli ocen")
-            self.grades = []
-            return
-
-        raw_grades = []
-        for table in visible_tables:
-            for a in table.find_all('a', class_='ocena'):
-                href = a.get('href', '').strip()
-                if not href or '/przegladaj_oceny/szczegoly/' not in href:
-                    continue
-
-                grade_id = href.split('/')[-1].split('?')[0]
-                if not grade_id or grade_id == '000000':
-                    continue
-
-                val = a.get_text().strip()
-                title_attr = a.get('title', '')
-
-                tr = a.find_parent('tr')
-                subject = ''
-                if tr:
-                    tds = tr.find_all('td')
-                    if len(tds) > 1:
-                        subject = tds[1].get_text().strip()
-
-                if not subject:
-                    parent_table = a.find_parent('table')
-                    if parent_table:
-                        parent_tr = parent_table.find_parent('tr')
-                        if parent_tr:
-                            prev_tr = parent_tr.find_previous_sibling('tr')
-                            if prev_tr:
-                                prev_tds = prev_tr.find_all('td')
-                                if len(prev_tds) > 1:
-                                    subject = prev_tds[1].get_text().strip()
-
-                category = ''
-                date = ''
-                teacher = ''
-                weight = ''
-                comment = ''
-                for part in title_attr.replace('<br/>', '<br>').replace('<br />', '<br>').split('<br>'):
-                    part = part.strip()
-                    if part.startswith('Kategoria:'):
-                        category = part.replace('Kategoria:', '').strip()
-                    elif part.startswith('Data:'):
-                        date = part.replace('Data:', '').strip()
-                    elif part.startswith('Nauczyciel:'):
-                        teacher = part.replace('Nauczyciel:', '').strip()
-                    elif part.startswith('Waga:'):
-                        weight = part.replace('Waga:', '').strip()
-                    elif part.startswith('Komentarz:'):
-                        comment = part.replace('Komentarz:', '').strip()
-
-                raw_grades.append(Grade.model_validate({
-                    'id': grade_id,
-                    'subject': subject or "Inny przedmiot",
-                    'grade': val,
-                    'category': category or "-",
-                    'date': date or "-",
-                    'teacher': teacher or "-",
-                    'weight': weight or "-",
-                    'comment': comment or "-",
-                    'href': href,
-                }))
-
-        # Deduplikacja po ID
-        unique_grades = {}
-        for g in raw_grades:
-            if g['id'] not in unique_grades:
-                unique_grades[g['id']] = g
-
-        grades = list(unique_grades.values())
-        logger.info(f"Pobrano {len(grades)} ocen")
+        logger.info(f"Pobrano {len(grades)} ocen oraz {len(subjects)} przedmiotów")
         self.grades = grades
+        self.subjects = subjects
         self.save_state()
 
     def get_not_known_grades_and_mark_as_known(self) -> list[dict[str, bool | str | Any]]:
@@ -561,118 +422,7 @@ class Librus:
         return resp
 
     def _parse_timetable_soup(self, soup: BeautifulSoup) -> list[dict[str, Any]]:
-        m_sel = soup.find('select', {'name': 'miesiac'})
-        r_sel = soup.find('select', {'name': 'rok'})
-        cal_month = None
-        cal_year = None
-        if m_sel:
-            selected_m = [opt.get('value') for opt in m_sel.find_all('option') if opt.get('selected') is not None]
-            if selected_m and str(selected_m[0]).isdigit():
-                cal_month = int(selected_m[0])
-        if r_sel:
-            selected_r = [opt.get('value') for opt in r_sel.find_all('option') if opt.get('selected') is not None]
-            if selected_r and str(selected_r[0]).isdigit():
-                cal_year = int(selected_r[0])
-
-        if not cal_month or not cal_year:
-            now = datetime.now()
-            cal_month = cal_month or now.month
-            cal_year = cal_year or now.year
-
-        entries: list[dict[str, Any]] = []
-        for num_div in soup.find_all('div', class_='kalendarz-numer-dnia'):
-            day_str = num_div.get_text(strip=True)
-            if not day_str.isdigit():
-                continue
-            day = int(day_str)
-            date_str = f"{cal_year:04d}-{cal_month:02d}-{day:02d}"
-
-            parent_day = num_div.find_parent('div', class_='kalendarz-dzien')
-            if not parent_day:
-                continue
-
-            for td in parent_day.find_all('td'):
-                onclick = td.get('onclick', '')
-                title_attr = td.get('title', '')
-
-                if 'szczegoly_wolne' in onclick:
-                    # Nieobecność nauczyciela
-                    m_id = re.search(r'/(\d+)', onclick)
-                    raw_id = m_id.group(1) if m_id else f"absence_{date_str}"
-                    entry_id = f"{raw_id}_{date_str}"
-
-                    text = td.get_text(separator=' ', strip=True)
-                    teacher = ""
-                    hours = "Cały dzień"
-                    if 'Nauczyciel:' in text:
-                        t_part = text.split('Nauczyciel:')[1]
-                        if 'Godziny:' in t_part:
-                            teacher = t_part.split('Godziny:')[0].strip()
-                            hours = t_part.split('Godziny:')[1].strip()
-                        else:
-                            teacher = t_part.strip()
-
-                    entries.append(TimetableEntry.model_validate({
-                        'id': entry_id,
-                        'date': date_str,
-                        'type': 'absence',
-                        'category': 'Nieobecność nauczyciela',
-                        'teacher': teacher,
-                        'time': hours,
-                        'raw_text': text,
-                    }))
-
-                elif 'szczegoly' in onclick:
-                    m_id = re.search(r'/(\d+)', onclick)
-                    entry_id = m_id.group(1) if m_id else None
-                    if not entry_id:
-                        continue
-
-                    subject_span = td.find('span', class_='przedmiot')
-                    subject = subject_span.get_text(strip=True) if subject_span else ''
-
-                    teacher = ''
-                    description = ''
-                    add_date = ''
-                    if title_attr:
-                        clean_title = re.sub(r'<br\s*/?>', '\n', title_attr)
-                        for line in clean_title.split('\n'):
-                            line = line.strip()
-                            if line.startswith('Nauczyciel:'):
-                                teacher = line.replace('Nauczyciel:', '').strip()
-                            elif line.startswith('Opis:'):
-                                description = line.replace('Opis:', '').strip()
-                            elif line.startswith('Data dodania:'):
-                                add_date = line.replace('Data dodania:', '').strip()
-
-                    td_lines = [line_text.strip() for line_text in td.get_text(separator='\n').split('\n') if line_text.strip()]
-                    lesson_no = ''
-                    category = 'Inne'
-
-                    for line in td_lines:
-                        clean_line = line.strip(',').strip()
-                        if 'Nr lekcji:' in clean_line:
-                            lesson_no = clean_line.replace('Nr lekcji:', '').strip()
-                        for cat in ['Sprawdzian', 'Kartkówka', 'Praca klasowa', 'Zadanie domowe', 'Projekt', 'Wycieczka']:
-                            if cat.lower() in clean_line.lower():
-                                category = cat
-                                break
-
-                    entry_type = 'test' if any(cat in category for cat in ['Sprawdzian', 'Kartkówka', 'Praca klasowa']) else 'event'
-
-                    entries.append(TimetableEntry.model_validate({
-                        'id': entry_id,
-                        'date': date_str,
-                        'type': entry_type,
-                        'category': category,
-                        'subject': subject,
-                        'lesson_no': lesson_no,
-                        'teacher': teacher,
-                        'description': description,
-                        'add_date': add_date,
-                    }))
-
-        return entries
+        return parse_timetable_html(soup)
 
     def fetch_timetable(self, force: bool = False, month: int | None = None, year: int | None = None) -> list[dict[str, Any]]:
         if not self.__do_read_timetable and not force:
@@ -713,7 +463,7 @@ class Librus:
                             if ne['id'] not in existing_ids:
                                 entries.append(ne)
                                 existing_ids.add(ne['id'])
-                except Exception as e:
+                except (requests.RequestException, NotLogged) as e:
                     logger.warning(f"Nie udało się pobrać terminarza na kolejny miesiąc: {e}")
 
         entries.sort(key=lambda e: (e.get('date', ''), e.get('lesson_no', '')))
@@ -723,194 +473,7 @@ class Librus:
         return entries
 
     def _parse_schedule_soup(self, soup: BeautifulSoup) -> list[dict[str, Any]]:
-        table = soup.find('table', class_=lambda c: c and 'plan-lekcji' in c)
-        if not table:
-            table = soup.find('table', class_=lambda c: c and 'decorated' in c and soup.find('td', id='timetableEntryBox'))
-        if not table:
-            return []
-
-        # Wykrycie dat w nagłówkach kolumn
-        header_dates: dict[int, str] = {}
-        header_row = table.find('tr')
-        if header_row:
-            ths = header_row.find_all(['th', 'td'])
-            for idx, th in enumerate(ths):
-                th_text = th.get_text(separator=' ', strip=True)
-                m_iso = re.search(r'(\d{4}-\d{2}-\d{2})', th_text)
-                if m_iso:
-                    header_dates[idx] = m_iso.group(1)
-                else:
-                    m_pl = re.search(r'(\d{2})\.(\d{2})\.(\d{4})', th_text)
-                    if m_pl:
-                        header_dates[idx] = f"{m_pl.group(3)}-{m_pl.group(2)}-{m_pl.group(1)}"
-
-        entries: list[dict[str, Any]] = []
-
-        rows = table.find_all('tr')
-        for row in rows:
-            cells = row.find_all(['td', 'th'])
-            if not cells:
-                continue
-
-            first_text = cells[0].get_text(strip=True)
-            if not first_text.isdigit():
-                continue
-            lesson_no = int(first_text)
-
-            row_time_from = ""
-            row_time_to = ""
-            for c in cells[:3]:
-                c_text = c.get_text(separator=' ', strip=True).replace('\xa0', ' ')
-                m_times = re.findall(r'\b\d{1,2}[:.]\d{2}\b', c_text)
-                if len(m_times) >= 2:
-                    row_time_from = m_times[0].replace('.', ':').zfill(5)
-                    row_time_to = m_times[1].replace('.', ':').zfill(5)
-                    break
-            if not row_time_from and lesson_no in DEFAULT_LESSON_TIMES:
-                row_time_from, row_time_to = DEFAULT_LESSON_TIMES[lesson_no]
-
-            for col_idx, cell in enumerate(cells):
-                is_entry_box = cell.get('id') == 'timetableEntryBox' or 'timetableEntryBox' in cell.get('class', [])
-                if not is_entry_box and col_idx not in header_dates:
-                    continue
-
-                date_str = cell.get('data-date') or cell.get('date') or header_dates.get(col_idx)
-                if not date_str:
-                    continue
-
-                time_from = (
-                    cell.get('data-time_from')
-                    or cell.get('data-time-from')
-                    or cell.get('data-date-from')
-                    or cell.get('date_from')
-                    or row_time_from
-                )
-                time_to = (
-                    cell.get('data-time_to')
-                    or cell.get('data-time-to')
-                    or cell.get('data-date-to')
-                    or cell.get('date_to')
-                    or row_time_to
-                )
-                if time_from and len(time_from) < 5 and ':' in time_from:
-                    time_from = time_from.zfill(5)
-                if time_to and len(time_to) < 5 and ':' in time_to:
-                    time_to = time_to.zfill(5)
-
-                cell_text = cell.get_text(separator=' ', strip=True).replace('\xa0', ' ')
-                if not cell_text or cell_text in ('-', '') or cell_text.isdigit():
-                    continue
-
-                text_divs = cell.find_all('div', class_='text')
-                blocks = text_divs if text_divs else [cell]
-
-                info_div = cell.find('div', class_=lambda c: c and 'plan-lekcji-info' in c)
-                info_text = info_div.get_text(separator=' ', strip=True).replace('\xa0', ' ') if info_div else ""
-
-                tooltip_attrs: dict[str, str] = {}
-                a_tag = cell.find('a')
-                if a_tag and a_tag.get('title'):
-                    raw_title = a_tag.get('title', '')
-                    clean_title = re.sub(r'<br\s*/?>', '\n', raw_title)
-                    clean_title = re.sub(r'<[^>]+>', '', clean_title)
-                    for line in clean_title.split('\n'):
-                        if ':' in line:
-                            k, v = line.split(':', 1)
-                            tooltip_attrs[k.strip().lower()] = v.strip()
-
-                for b_idx, block in enumerate(blocks):
-                    block_text = re.sub(r'\s+', ' ', block.get_text(separator=' ', strip=True).replace('\xa0', ' ')).strip()
-                    if not block_text:
-                        continue
-
-                    sub_tag = block.find('b')
-                    subject = ""
-                    rest = ""
-                    if sub_tag:
-                        subject = re.sub(r'\s+', ' ', sub_tag.get_text(strip=True).replace('\xa0', ' ')).strip()
-                        rest = block_text.replace(subject, '', 1).strip(' -')
-                    elif '-' in block_text:
-                        parts = block_text.split('-', 1)
-                        subject = parts[0].strip()
-                        rest = parts[1].strip()
-                    else:
-                        m_split = re.search(r'^(.*?)(?:\s+(?:s\.|sala|\()\s*.*)$', block_text, re.IGNORECASE)
-                        if m_split and m_split.group(1).strip():
-                            subject = m_split.group(1).strip()
-                            rest = block_text[len(subject):].strip(' -')
-                        else:
-                            subject = block_text
-
-                    subject = re.sub(r'\s+', ' ', subject).strip(' -')
-                    teacher = ""
-                    classroom = ""
-                    if rest:
-                        m_room = re.search(r'(?:s\.|sala)\s*([0-9a-zA-Z_.-]+)', rest, re.IGNORECASE)
-                        if m_room:
-                            classroom = m_room.group(1).strip('. ')
-                            teacher = re.sub(r'(?:s\.|sala)\s*([0-9a-zA-Z_.-]+)', '', rest, flags=re.IGNORECASE).strip(' ,.-')
-                        else:
-                            teacher = rest.strip(' ,()')
-
-                    teacher = re.sub(r'\s+', ' ', teacher).strip(' ,.-')
-                    if 'nauczyciel' in tooltip_attrs and not teacher:
-                        teacher = re.sub(r'\s+', ' ', tooltip_attrs['nauczyciel'].replace('\xa0', ' ')).strip()
-                    if 'sala' in tooltip_attrs and not classroom:
-                        classroom = re.sub(r'\s+', ' ', tooltip_attrs['sala'].replace('\xa0', ' ')).strip('. ')
-
-                    has_strike = bool(
-                        block.find(['s', 'strike', 'del'])
-                        or 'line-through' in block.get('style', '')
-                        or 'line-through' in cell.get('style', '')
-                        or 'odwolana' in block.get('class', [])
-                        or 'odwolana' in cell.get('class', [])
-                    )
-
-                    all_context = f"{info_text} {cell_text} {' '.join(tooltip_attrs.values())}".lower()
-                    is_cancelled = False
-                    is_substitution = False
-                    is_moved = False
-                    substitution_info = ""
-
-                    if 'odwołan' in all_context or 'odwolana' in all_context or (has_strike and 'zastęp' not in all_context):
-                        is_cancelled = True
-                    elif 'zastęp' in all_context or 'zastep' in all_context:
-                        is_substitution = True
-                        if tooltip_attrs:
-                            sub_parts = []
-                            if 'przedmiot' in tooltip_attrs:
-                                sub_parts.append(tooltip_attrs['przedmiot'])
-                            if 'nauczyciel' in tooltip_attrs:
-                                sub_parts.append(f"p. {tooltip_attrs['nauczyciel']}")
-                            if 'sala' in tooltip_attrs:
-                                sub_parts.append(f"s. {tooltip_attrs['sala']}")
-                            substitution_info = ", ".join(sub_parts)
-                        elif info_text:
-                            substitution_info = info_text
-                    elif 'przesunię' in all_context or 'przesunie' in all_context:
-                        is_moved = True
-
-                    entry_id = f"sched_{date_str}_{lesson_no}_{subject}_{b_idx}"
-                    entries.append(ScheduleLesson.model_validate({
-                        'id': entry_id,
-                        'date': date_str,
-                        'lesson_no': lesson_no,
-                        'time_from': time_from,
-                        'time_to': time_to,
-                        'time_range': f"{time_from} - {time_to}" if time_from and time_to else "",
-                        'subject': subject,
-                        'teacher': teacher,
-                        'classroom': classroom,
-                        'is_cancelled': is_cancelled,
-                        'is_substitution': is_substitution,
-                        'is_moved': is_moved,
-                        'substitution_info': substitution_info,
-                        'info': info_text,
-                        'raw_text': block_text,
-                    }))
-
-        entries.sort(key=lambda x: (x.get('date', ''), x.get('lesson_no', 0)))
-        return entries
+        return parse_schedule_html(soup)
 
     def fetch_schedule(self, force: bool = False, date: datetime | None = None) -> list[dict[str, Any]]:
         if not self.__do_read_schedule and not force:
@@ -946,7 +509,7 @@ class Librus:
                     for item in w_entries:
                         eid = item.get('id') or f"{item.get('date')}_{item.get('lesson_no')}"
                         entries_by_id[eid] = item
-            except Exception as e:
+            except (requests.RequestException, NotLogged) as e:
                 logger.warning(f"POST do planu lekcji ({week_str}) nie powiódł się ({e})")
 
         if not entries_by_id:

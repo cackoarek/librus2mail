@@ -5,6 +5,8 @@ arek_config.yaml
 *.local.yaml
 .env
 ai-continue.txt
+todo.md
+work-plan.md
 
 # Logi
 *.log

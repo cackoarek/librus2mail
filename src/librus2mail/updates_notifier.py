@@ -9,13 +9,13 @@ Działa w 100% offline na bazie danych ze storage/.
 
 import argparse
 import logging
-import re
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from typing import Any
 
 from .base_logger import setup_logging
 from .config import read_config
+from .date_utils import parse_date_safe, parse_datetime_safe
 from .gmail_sender import GmailSender
 from .mail_sender import MailSender, render_standalone_html, resolve_output_path
 from .smtp_sender import SmtpSender
@@ -36,17 +36,7 @@ def prepare_timetable_summary(
     if not raw_entries:
         return {'has_any': False}
 
-    if isinstance(reference_date, str):
-        try:
-            ref_date = datetime.strptime(reference_date[:10], "%Y-%m-%d").date()
-        except ValueError:
-            ref_date = datetime.now().date()
-    elif isinstance(reference_date, datetime):
-        ref_date = reference_date.date()
-    elif isinstance(reference_date, date):
-        ref_date = reference_date
-    else:
-        ref_date = datetime.now().date()
+    ref_date = parse_date_safe(reference_date) or datetime.now().date()
 
     weekdays_pl = [
         "poniedziałek", "wtorek", "środa", "czwartek",
@@ -98,21 +88,20 @@ def prepare_timetable_summary(
             else:
                 immediate_events.append(entry)
         elif e_date <= horizon_date_str:
-            try:
-                d_obj = datetime.strptime(e_date, "%Y-%m-%d").date()
-                day_group = upcoming_by_date[e_date]
-                day_group['date'] = e_date
-                day_group['date_str'] = d_obj.strftime("%d.%m.%Y")
-                day_group['weekday'] = weekdays_pl[d_obj.weekday()].capitalize()
-
-                if entry.get('type') == 'absence':
-                    day_group['absences'].append(entry)
-                elif entry.get('type') == 'test':
-                    day_group['tests'].append(entry)
-                else:
-                    day_group['events'].append(entry)
-            except Exception:
+            d_obj = parse_date_safe(e_date)
+            if not d_obj:
                 continue
+            day_group = upcoming_by_date[e_date]
+            day_group['date'] = e_date
+            day_group['date_str'] = d_obj.strftime("%d.%m.%Y")
+            day_group['weekday'] = weekdays_pl[d_obj.weekday()].capitalize()
+
+            if entry.get('type') == 'absence':
+                day_group['absences'].append(entry)
+            elif entry.get('type') == 'test':
+                day_group['tests'].append(entry)
+            else:
+                day_group['events'].append(entry)
 
     upcoming_days = [upcoming_by_date[k] for k in sorted(upcoming_by_date.keys())]
 
@@ -187,14 +176,11 @@ def prepare_schedule_summary(
     if not day_lessons:
         future_dates = sorted({entry.get('date') for entry in schedule_entries if entry.get('date') and entry.get('date') >= ref_date.isoformat()})
         if future_dates:
-            target_date_str = future_dates[0]
-            try:
-                d_obj = datetime.strptime(target_date_str, "%Y-%m-%d").date()
+            d_obj = parse_date_safe(target_date_str)
+            if d_obj:
                 w_name = weekdays_pl[d_obj.weekday()]
                 target_label = f"Plan lekcji ({w_name}, {d_obj.strftime('%d.%m')})"
                 target_date = d_obj
-            except Exception:
-                pass
             day_lessons = [entry for entry in schedule_entries if entry.get('date') == target_date_str]
 
     if not day_lessons:
@@ -311,7 +297,6 @@ def parse_item_datetime(item: Any) -> datetime | None:
     if not item:
         return None
 
-    raw_str = ""
     if isinstance(item, dict):
         raw_str = (
             item.get('datetime')
@@ -322,34 +307,10 @@ def parse_item_datetime(item: Any) -> datetime | None:
         )
     elif isinstance(item, str):
         raw_str = item
+    else:
+        raw_str = ""
 
-    raw_str = str(raw_str).strip()
-    if not raw_str:
-        return None
-
-    # 1. ISO format (np. 2026-09-16T15:39:20)
-    try:
-        return datetime.fromisoformat(raw_str)
-    except Exception:
-        pass
-
-    # 2. Pełna data i godzina: 'YYYY-MM-DD HH:MM:SS'
-    m_full = re.search(r'(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})', raw_str)
-    if m_full:
-        try:
-            return datetime.strptime(f"{m_full.group(1)} {m_full.group(2)}", "%Y-%m-%d %H:%M:%S")
-        except Exception:
-            pass
-
-    # 3. Sama data: 'YYYY-MM-DD' (np. ogłoszenia lub oceny z '2026-09-15 (wt.)')
-    m_date = re.search(r'(\d{4}-\d{2}-\d{2})', raw_str)
-    if m_date:
-        try:
-            return datetime.strptime(m_date.group(1), "%Y-%m-%d")
-        except Exception:
-            pass
-
-    return None
+    return parse_datetime_safe(raw_str)
 
 
 def print_cli_summary(
@@ -557,24 +518,24 @@ class UpdatesNotifier:
             filtered_grades = new_grades if new_grades is not None else []
         else:
             # Tryb asynchroniczny / nieregularny:
-            # Sprawdzamy watermark ostatniego powiadomienia w bazie storage (last_notify_time / last_update_create)
+            # Sprawdzamy watermark ostatniego powiadomienia w bazie storage (last_notify_time)
             last_notify = self.storage.get_last_notify_time(login) if hasattr(self.storage, 'get_last_notify_time') else None
             if last_notify:
-                try:
-                    cutoff = datetime.fromisoformat(last_notify)
+                cutoff = parse_datetime_safe(last_notify)
+                if cutoff:
                     period_desc = f"od ostatniego powiadomienia ({cutoff.strftime('%Y-%m-%d %H:%M')})"
                     logger.info(f"{name} ({login}): Filtrowanie wpisów z okresu ({period_desc})")
                     filtered_messages = self.filter_by_cutoff(all_messages, cutoff)
                     filtered_notifications = self.filter_by_cutoff(all_notifications, cutoff)
                     filtered_grades = self.filter_by_cutoff(all_grades, cutoff) if user_config.get('read_grades', True) else []
-                except Exception as e:
-                    logger.warning(f"Nieprawidłowy format last_notify_time ({last_notify}): {e}")
+                else:
+                    logger.warning(f"Nieprawidłowy format last_notify_time ({last_notify})")
                     filtered_messages, filtered_notifications, filtered_grades = [], [], []
             else:
-                # Pierwsze uruchomienie bez wcześniejszego znacznika powiadomień
-                if user_config.get('dry-parse', False) or user_config.get('do_not_send_first_parse', False):
-                    period_desc = "pierwsza inicjalizacja (baseline, brak wysyłki)"
-                    logger.info(f"{name} ({login}): Pierwsze uruchomienie z do_not_send_first_parse – brak wysyłki historycznych danych.")
+                # Pierwsze powiadomienie bez wcześniejszego znacznika
+                if user_config.get('dry-parse', False):
+                    period_desc = "pierwsza inicjalizacja (punkt bazowy, brak wysyłki)"
+                    logger.info(f"{name} ({login}): Pierwsze uruchomienie – utworzenie bazy stanu, pomijam wysyłkę historycznych danych.")
                     filtered_messages, filtered_notifications, filtered_grades = [], [], []
                 else:
                     cutoff = now - timedelta(days=1)
@@ -650,7 +611,7 @@ class UpdatesNotifier:
 
             if user_config.get('dry-parse', False):
                 logger.info(
-                    f"{name} ({login}): Tryb dry-parse (pierwsze parsowanie/baseline) – "
+                    f"{name} ({login}): Tryb dry-parse (pierwsze parsowanie/punkt bazowy) – "
                     "pomijam wysyłkę powiadomień dla danych historycznych."
                 )
                 if hasattr(self.storage, 'save_last_notify_time'):
@@ -913,9 +874,8 @@ def main():
 
     actual_date: datetime | None = None
     if args.actual_date:
-        try:
-            actual_date = datetime.strptime(args.actual_date, "%Y-%m-%d")
-        except ValueError:
+        actual_date = parse_datetime_safe(args.actual_date)
+        if not actual_date:
             parser.error(f"Nieprawidłowy format --actual-date: '{args.actual_date}'. Wymagany format: YYYY-MM-DD")
 
     setup_logging()

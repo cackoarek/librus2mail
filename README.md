@@ -7,10 +7,10 @@
 [![CI Status](https://img.shields.io/github/actions/workflow/status/cackoarek/librus2mail/ci.yml?branch=main&label=CI&style=flat-square&logo=githubactions&logoColor=white)](https://github.com/cackoarek/librus2mail/actions/workflows/ci.yml)
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-3776AB.svg?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![Code Style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg?style=flat-square&logo=ruff&logoColor=white)](https://github.com/astral-sh/ruff)
-[![Tests: pytest](https://img.shields.io/badge/tests-pytest%20(136%20passed)-success.svg?style=flat-square&logo=pytest&logoColor=white)](tests/)
+[![Tests: pytest](https://img.shields.io/badge/tests-pytest%20(194%20passed)-success.svg?style=flat-square&logo=pytest&logoColor=white)](tests/)
 [![Packaging: PEP 517/518](https://img.shields.io/badge/packaging-PEP%20517%2F518-00599C.svg?style=flat-square)](pyproject.toml)
 [![Web UI: Flask + Tailwind](https://img.shields.io/badge/web%20ui-Flask%20%2B%20Tailwind-4B8BBE.svg?style=flat-square&logo=flask&logoColor=white)](src/librus2mail/web/)
-[![Docker Ready](https://img.shields.io/badge/docker-ready-2496ED.svg?style=flat-square&logo=docker&logoColor=white)](Dockerfile)
+[![Docker Ready](https://img.shields.io/badge/docker-ready-2496ED.svg?style=flat-square&logo=docker&logoColor=white)](docker/docker-installation.md)
 [![systemd Supported](https://img.shields.io/badge/systemd-supported-lightgrey.svg?style=flat-square&logo=linux&logoColor=white)](deploy/systemd/)
 [![Templates: Jinja2](https://img.shields.io/badge/templates-Jinja2-B41717.svg?style=flat-square&logo=jinja&logoColor=white)](src/librus2mail/templates/emails/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg?style=flat-square)](LICENSE)
@@ -122,7 +122,7 @@ Poniżej możesz zobaczyć jak wyglądają e-maile i ekrany modułu webowego gen
 * **Elastyczna wysyłka e-mail**:
   * **Gmail**: zoptymalizowana obsługa przez bibliotekę `yagmail` (wymagane hasło aplikacji Google).
   * **SMTP**: standardowy protokół SMTP z szyfrowaniem STARTTLS (działa z dowolnym serwerem pocztowym: hostingodawcy, OVH, Cyberfolks, WP, Onet itp.).
-* **Tryb pierwszego przebiegu (`do_not_send_first_parse`)**: Przy pierwszym uruchomieniu skrypt indeksuje aktualne wiadomości, ogłoszenia i oceny jako bazę i nie wysyła spamu ze wszystkimi historycznymi wpisami – kolejne uruchomienia wysyłają powiadomienia wyłącznie o nowych wpisach.
+* **Automatyczny punkt bazowy przy pierwszym starcie**: Przy pierwszym uruchomieniu skrypt automatycznie indeksuje aktualne wiadomości, ogłoszenia i oceny jako bazę i nie wysyła powiadomień ze wszystkimi historycznymi wpisami – kolejne uruchomienia wysyłają powiadomienia wyłącznie o nowych wpisach.
 * **Nowoczesne szablony Jinja2**: Wszystkie e-maile generowane są z responsywnych szablonów HTML (`src/librus2mail/templates/emails/`), łatwych w dostosowywaniu stylów i kolorów.
 * **Automatyczne alerty o awariach i błędach**: W razie braku połączenia do Librusa, problemów z sesją/autoryzacją lub błędu parsowania danych (np. po zmianie wyglądu dziennika), skrypt natychmiast wysyła e-mail z diagnozą i zalecanymi działaniami. Wbudowany mechanizm throttling / cooldown zapobiega zalewaniu skrzynki powtarzającymi się wiadomościami.
 * **Dedykowany moduł analizy postępów dziecka (`librus_progress_report.py`)**: Niezależny skrypt analityczny dla rodzica przeliczający średnie ważone przedmiotowe i ogólne, wskaźniki trendu (↗, ↘, ➡), sugerowane oceny roczne, rozkład ocen (histogram) oraz automatyczne wnioski rodzicielskie (sukcesy, zagrożenia, nieprzygotowania).
@@ -221,13 +221,12 @@ librus_users:
     read_messages: true
     read_grades: true
     one_summary_message: false
-    do_not_send_first_parse: true
     notification_receivers:
       - "mama@example.com"
       - "tata@example.com"
 
 wait_time_s: 3600
-work-in-loop: true  # true: pętla z oczekiwaniem wait_time_s (domyślnie), false: pojedynczy przebieg (np. pod crona)
+work_in_loop: true  # true: pętla z oczekiwaniem wait_time_s (domyślnie), false: pojedynczy przebieg (np. pod crona)
 storage_dir: "storage"  # (opcjonalnie) katalog zapisu plików stanu JSON (domyślnie: storage)
 
 mail:
@@ -260,7 +259,6 @@ Każdy element listy `librus_users` reprezentuje jedno konto w e-dzienniku:
 | `read_messages` | `bool` | Czy skrypt ma wchodzić w szczegóły wiadomości i pobierać jej treść (`true`/`false`). **Domyślnie `true`**.<br>**UWAGA:** Wejście w wiadomość oznacza ją w portalu Librus jako przeczytaną przez rodzica. Jeśli wolisz otrzymywać powiadomienie wyłącznie o tytule i nadawcy (bez oznaczania na portalu), ustaw `false`. |
 | `read_grades` | `bool` | Czy włączyć sprawdzanie i zbieranie ocen dla tego konta (`true`/`false`). **Domyślnie `true`**. |
 | `one_summary_message` | `bool` | Jeśli `true`, zamiast wysyłać osobne maile dla wiadomości, ogłoszeń i ocen, wyśle **jeden zbiorczy e-mail** podsumowujący wszystkie nowości z danego cyklu. Domyślnie `false`. |
-| `do_not_send_first_parse` | `bool` | Jeśli `true`, podczas pierwszego cyklu po uruchomieniu wiadomości zostaną tylko zaindeksowane, bez wysyłania e-maili o historii skrzynki. |
 | `send_error_notifications` | `bool` | Opcjonalne włączenie/wyłączenie wysyłania maili o błędach dla danego konta (domyślnie: `true`). |
 | `notification_receivers` | `list` | Lista adresów e-mail odbiorców, którzy mają otrzymać powiadomienie dla tego konta. |
 
@@ -269,8 +267,8 @@ Każdy element listy `librus_users` reprezentuje jedno konto w e-dzienniku:
 * `delay_between_users_s` (`int` / `float`): Czas oczekiwania w sekundach pomiędzy pobieraniem danych dla kolejnych kont dzieci (domyślnie: `10` sekund). Odstęp 10–15s chroni przed blokadami anty-botowymi i wymuszaniem 2FA na serwerach Librusa przy odpytywaniu wielu kont z tego samego adresu IP.
 * `login_retries` (`int`): Liczba automatycznych prób logowania do portalu Librus w przypadku chwilowych problemów z sesją lub 2FA (domyślnie: `2`).
 * `login_retry_delay_s` (`int` / `float`): Czas oczekiwania w sekundach przed ponowną próbą logowania (domyślnie: `5` sekund).
-* `wait_time_s` (`int`): Czas oczekiwania w sekundach pomiędzy kolejnymi cyklami sprawdzania e-dziennika (zalecane: minimum `3600`–`7200` sekund (1-2h), aby nie obciążać serwera i uniknąć blokad anty-botowych). Wykorzystywane, gdy `work-in-loop: true`.
-* `work-in-loop` (`bool`): Tryb pracy:
+* `wait_time_s` (`int`): Czas oczekiwania w sekundach pomiędzy kolejnymi cyklami sprawdzania e-dziennika (zalecane: minimum `3600`–`7200` sekund (1-2h), aby nie obciążać serwera i uniknąć blokad anty-botowych). Wykorzystywane, gdy `work_in_loop: true`.
+* `work_in_loop` (`bool`): Tryb pracy:
   * `true` (domyślnie) – skrypt działa nieprzerwanie w pętli i po sprawdzeniu kont odczekuje `wait_time_s` sekund.
   * `false` – skrypt wykonuje dokładnie jeden pełny przebieg (sprawdza konta, wysyła e-maile, zapisuje stan do pliku) i natychmiast kończy pracę. Idealne do uruchamiania przez systemowy harmonogram zadań `cron`.
 * `storage_dir` (`string`): Ścieżka do katalogu, w którym automatycznie zapisywany jest trwały stan aplikacji oraz pełna historia ocen w formacie JSON (np. `storage/8979295.json`). Domyślnie: `"storage"`.
@@ -299,6 +297,9 @@ Każdy element listy `librus_users` reprezentuje jedno konto w e-dzienniku:
 * `password` (`string`): Hasło rodzica chroniące dostęp do panelu w przeglądarce (Parent Gate). Jeśli pozostanie puste, panel uruchomi się bez logowania (dopuszczalne tylko w zaufanej sieci lokalnej).
 * `max_login_attempts` (`int`): Maksymalna liczba nieudanych prób logowania z danego adresu IP przed nałożeniem blokady (domyślnie: `5`).
 * `lockout_duration_s` (`int`): Czas blokady adresu IP po przekroczeniu limitu błędnych haseł w sekundach (domyślnie: `900` = 15 minut).
+* `cookie_secure` (`bool`): Wymuszenie flagi `Secure` na ciasteczkach sesyjnych (wymaga HTTPS, domyślnie `false` dla lokalnego HTTP; można też włączyć przez zmienną środowiskową `LIBRUS_WEB_COOKIE_SECURE=true`).
+* `session_cookie_samesite` (`string`): Polityka SameSite ciasteczka sesyjnego (`"Lax"` domyślnie, lub `"Strict"`).
+* `trusted_proxies` (`list[string]`): Lista zaufanych adresów IP serwerów reverse proxy (domyślnie: `["127.0.0.1", "::1", "localhost"]`), z których nagłówek `X-Forwarded-For` jest akceptowany. Zapobiega spoofingowi adresu IP i omijaniu blokady brute-force przy pracy za Nginx, Traefik lub Caddy.
 
 ---
 
@@ -394,8 +395,8 @@ librus-collector -u 8979296 --days 7 --dry-run
 | `--dry-run` | | Wyświetla podsumowanie wpisów w terminalu; nie wysyła maili ani nie modyfikuje `storage/`. |
 | `--save-html <ścieżka>` | `-o` | Zapisuje powiadomienie jako samodzielny plik HTML do podglądu w przeglądarce. |
 | `--offline` | | Odczytuje dane wyłącznie z lokalnego katalogu `storage/` bez łączenia z Librusem. |
-| `--once`, `--no-loop` | | Wymusza pojedyncze wykonanie i natychmiastowe zakończenie (nadpisuje `work-in-loop: true`). |
-| `--loop` | | Wymusza działanie w nieskończonej pętli z interwałem `wait_time_s` (nadpisuje `work-in-loop: false`). |
+| `--once`, `--no-loop` | | Wymusza pojedyncze wykonanie i natychmiastowe zakończenie (nadpisuje `work_in_loop: true`). |
+| `--loop` | | Wymusza działanie w nieskończonej pętli z interwałem `wait_time_s` (nadpisuje `work_in_loop: false`). |
 
 ### Uruchomienie w tle (nohup / cron)
 
@@ -407,12 +408,12 @@ nohup librus-collector >/dev/null 2>&1 &
 > [!TIP]
 > Do stałego wdrożenia produkcyjnego na serwerach Linux (VPS, Raspberry Pi, serwery domowe) zaleca się skorzystanie ze środowiska **Docker / Docker Compose** lub gotowych usług **systemd** z automatycznym wznawianiem po awarii. Szczegółowe instrukcje znajdziesz w sekcji [Wdrożenie produkcyjne i konteneryzacja (Docker & systemd)](#wdrożenie-produkcyjne-i-konteneryzacja-docker--systemd).
 
-#### Wariant B: Harmonogram zadań `cron` (z `work-in-loop: false` lub `--once`)
+#### Wariant B: Harmonogram zadań `cron` (z `work_in_loop: false` lub `--once`)
 
 Jeśli wolisz, aby skrypt nie działał jako ciągły proces w tle, lecz był wywoływany cyklicznie przez systemowego crona:
 1. W pliku `config.yaml` ustaw:
    ```yaml
-   work-in-loop: false
+   work_in_loop: false
    ```
 2. Dodaj wpis do tabeli zadań użytkownika poleceniem `crontab -e`:
 
@@ -444,7 +445,7 @@ Dedykowany moduł powiadomień **`librus_updates_notifier.py`** (`librus-notifie
 
 W pliku pamięci stanu ucznia (`storage/<login>.json`) utrzymywane są dwa kluczowe znaczniki czasowe:
 * **`last_collect_time`**: data ostatniej pomyślnej synchronizacji z portalem Librus (zapisywana przez `librus_collector.py`).
-* **`last_notify_time`** (alias **`last_update_create`**): data ostatniego faktycznie dostarczonego powiadomienia e-mail do rodzica (zapisywana przez `librus_updates_notifier.py`).
+* **`last_notify_time`**: data ostatniego faktycznie dostarczonego powiadomienia e-mail do rodzica (zapisywana przez `librus_updates_notifier.py`).
 
 Dzięki temu przy nieregularnym wywoływaniu powiadomień (np. z crona raz dziennie, podczas gdy kolektor zbiera dane co 30 minut):
 1. **Tryb automatyczny (bez parametrów `--days` i `--hours`)**: Skrypt pobiera `last_notify_time` ze storage i filtruje wpisy dodane lub opublikowane po tej dacie. Rodzic zawsze otrzymuje dokładnie to, co pojawiło się od poprzedniego e-maila, bez dubli i bez pomijania wpisów.
@@ -687,7 +688,7 @@ Działa jako spójne centrum kontroli: integruje dane zebrane przez kolektor, pr
 * ⚙️ **Graficzny konfigurator (`/ustawienia`)**: Pełna edycja parametrów kont, powiadomień, harmonogramów i poczty bez konieczności dotykania plików YAML.
 * 📊 **Pulpit rodzica (Dashboard)**: Błyskawiczny podgląd kluczowych KPI (średnia ogólna, liczba ocen, plan na dziś i jutro, zapowiedziane sprawdziany, ostatnie wiadomości).
 * 📅 **Plan lekcji (Schedule)**: Przejrzysty tygodniowy rozkład zajęć z czytelnym wyróżnieniem zastępstw, sal, odwołanych lekcji oraz powiązanych sprawdzianów.
-* 🎯 **Zestawienie ocen & Symulator „Co jeśli...?”**: Przegląd ocen cząstkowych i semestralnych z wagami oraz interaktywny kalkulator HTMX, który natychmiast przelicza przewidywaną średnią po wpisaniu hipotetycznej oceny!
+* 🎯 **Zestawienie ocen & Symulator „Co jeśli...?”**: Przegląd ocen cząstkowych i semestralnych z wagami, interaktywny kalkulator HTMX przeliczający wpływ nowej oceny oraz przełącznik „Wliczany do średniej” umożliwiający wyłączenie przedmiotów takich jak Godzina wychowawcza ze średniej i symulatora świadectwa z wyróżnieniem.
 * 🗓️ **Terminarz szkolny (Timetable)**: Chronologiczny kalendarz nadchodzących sprawdzianów, kartkówek i prac klasowych.
 * 📬 **Wiadomości i ogłoszenia**: Wygodna przeglądarka korespondencji od nauczycieli oraz oficjalnych komunikatów szkoły.
 * ⚡ **Centrum Akcji CLI (`/akcje`)**: Graficzny pulpit wyzwalania operacji (pobranie danych, wysyłka e-maila, generowanie raportów) z bezpośrednim podglądem logów w oknie terminala webowego.
@@ -796,79 +797,31 @@ Dla środowisk produkcyjnych (serwer VPS, Raspberry Pi, serwer domowy / NAS) zal
 
 ### Konteneryzacja Docker i Docker Compose
 
-Repozytorium zawiera gotowy [Dockerfile](file:///home/acacko/PycharmProjects/librus2mail/Dockerfile) oparty na lekkim obrazie `python:3.10-slim`.
-* Działa w bezpiecznym trybie na nieuprzywilejowanym użytkowniku `librus` (UID 1000).
-* Posiada skonfigurowaną polską strefę czasową (`TZ=Europe/Warsaw`) dla właściwego formatowania dat ocen i alertów.
-* Obsługuje montowanie konfiguracji `config.yaml` w trybie tylko do odczytu (`:ro`) oraz wolumen danych dla trwałego zapisu `storage/`.
+Aplikacja **Librus2mail** jest w pełni przygotowana do wdrożenia kontenerowego za pomocą **Docker** oraz **Docker Compose**:
+* 🛡️ **Bezpieczny kontener Non-Root**: Aplikacja uruchamia się z prawami dedykowanego użytkownika `librus` (UID 1000).
+* ⚙️ **Konfiguracja YAML lub 100% ENV**: Możesz zamontować plik `config.yaml` lub skonfigurować aplikację wyłącznie za pomocą zmiennych środowiskowych (plik `.env` lub flagi `-e`), bez konieczności tworzenia pliku YAML.
+* 🕒 **Polska strefa czasowa**: Wstępnie skonfigurowane `TZ=Europe/Warsaw` dla precyzyjnego planowania powiadomień.
+* 💾 **Trwały zapis stanu**: Wolumen `/app/storage` zachowuje pełną historię ocen i wiadomości.
+* 🌐 **Wsparcie dla Panelu WWW i Raportów**: Gotowe profile usług dla demona (`collector`), interaktywnego panelu WWW (`web`), raportu postępów (`report`) oraz raportu motywacyjnego ucznia (`student-report`).
 
-#### Szybki start z Docker Compose:
+> 📖 **Kompletny przewodnik wdrożenia, przykłady `docker-compose.yml`, pełna tabela zmiennych środowiskowych (ENV) oraz rozwiązywanie problemów znajdują się w dedykowanym dokumencie:**
+>
+> ➡️ **[docker/docker-installation.md](docker/docker-installation.md)** — *Pełna instrukcja instalacji Docker & Docker Compose*
 
-1. **Przygotuj plik `config.yaml`**:
-   ```bash
-   cp config-example.yaml config.yaml
-   # (lub wersję minimalistyczną: cp config-minimal.yaml config.yaml)
-   # uzupełnij dane logowania i listę odbiorców e-mail
-   ```
-
-2. **Uruchomienie demona monitorującego w tle**:
-   ```bash
-   docker-compose up -d --build
-   ```
-
-3. **Podgląd logów na żywo**:
-   ```bash
-   docker-compose logs -f collector
-   ```
-
-4. **Wygenerowanie raportu postępów ucznia z poziomu kontenera**:
-   ```bash
-   # Tryb testowy / symulacja (podgląd w terminalu bez wysyłania e-maila):
-   docker-compose run --rm report librus-report --dry-run
-
-   # Faktyczne wygenerowanie i wysłanie e-maila:
-   docker-compose run --rm report
-   ```
-
-5. **Uruchomienie interaktywnego panelu WWW (Moduł 5)**:
-   ```bash
-   docker-compose --profile web up -d web
-   # Panel dostępny pod adresem: http://localhost:5000 (lub http://IP_SERWERA:5000)
-   ```
-
-6. **Zatrzymanie usług**:
-   ```bash
-   docker-compose --profile web down
-   ```
-
-#### Uruchomienie czystym poleceniem `docker`:
-
+#### Szybki start:
 ```bash
-# Budowanie obrazu:
-docker build -t librus2mail .
+# 1. Konfiguracja przez zmienne środowiskowe (najprościej):
+cp docker/.env.example .env
+# uzupełnij login, hasło i e-mail w pliku .env
 
-# Uruchomienie demona monitorującego w tle:
-docker run -d \
-  --name librus2mail \
-  --restart unless-stopped \
-  -v $(pwd)/config.yaml:/app/config.yaml:ro \
-  -v $(pwd)/storage:/app/storage \
-  librus2mail
+# 2. Uruchomienie demona w tle:
+docker compose -f docker/docker-compose.yml up -d --build
 
-# Uruchomienie panelu WWW (Moduł 5) z dostępem na porcie 5000:
-docker run -d \
-  --name librus2mail-web \
-  --restart unless-stopped \
-  -p 5000:5000 \
-  -v $(pwd)/config.yaml:/app/config.yaml \
-  -v $(pwd)/storage:/app/storage \
-  librus2mail librus-web -b 0.0.0.0
-
-# Wygenerowanie raportu postępów:
-docker run --rm \
-  -v $(pwd)/config.yaml:/app/config.yaml:ro \
-  -v $(pwd)/storage:/app/storage \
-  librus2mail librus-report --dry-run
+# 3. Podgląd logów:
+docker compose -f docker/docker-compose.yml logs -f collector
 ```
+
+Szczegółowe instrukcje, uruchamianie raportów na żądanie oraz panelu WWW znajdziesz w pliku [docker/docker-installation.md](docker/docker-installation.md).
 
 ---
 
@@ -920,13 +873,17 @@ librus2mail/
 │       ├── __init__.py         # Eksporty kluczowych klas i funkcji pakietu
 │       ├── base_logger.py      # Konfiguracja loggera ('librus')
 │       ├── config.py           # Wczytywanie konfiguracji z pliku YAML
+│       ├── config_watcher.py   # Detekcja zmian pliku konfiguracyjnego w locie (ConfigWatcher)
+│       ├── date_utils.py       # Bezpieczne i deterministyczne parsowanie dat i czasu
+│       ├── dom_parser.py       # Defensywne parsowanie HTML/DOM Librusa (wiadomości, ogłoszenia, oceny, plan)
 │       ├── gmail_sender.py     # Obsługa wysyłki przez Gmail (yagmail)
-│       ├── librus.py           # Klient autoryzacji OAuth i scraping portalu Librus Synergia
+│       ├── librus.py           # Klient autoryzacji OAuth i sesji portalu Librus Synergia
 │       ├── collect_and_notify.py # Główny orkiestrator CLI i runner potoku
 │       ├── librus_collector.py # Moduł 1: Pobieranie danych i synchronizacja ze storage
 │       ├── mail_sender.py      # Klasa bazowa z obsługą szablonów Jinja2
 │       ├── progress_analyzer.py# Silnik analizy postępów (średnie, wagi, alerty)
 │       ├── progress_report.py  # Moduł 3: Generator raportów postępów dla rodziców
+│       ├── scheduler.py        # Harmonogram pobierania (daily/interval) i raportów (ReportScheduler)
 │       ├── smtp_sender.py      # Obsługa wysyłki SMTP (STARTTLS)
 │       ├── storage.py          # Trwały zapis stanu i historia ocen JSON (FileStorage)
 │       ├── student_analyzer.py # Silnik motywacyjny ucznia (supermoce, odznaki, quick wins)
@@ -963,10 +920,17 @@ librus2mail/
 ├── examples/                   # Przykładowe dane i wygenerowane raporty
 │   ├── storage/                # Przykładowa baza ucznia ze zmyślonymi ocenami
 │   └── reports/                # Przykładowe wygenerowane raporty HTML i widoki WWW
-├── tests/                      # Pakiet testów jednostkowych
+├── tests/                      # Pakiet testów jednostkowych (190 testów)
+│   ├── fixtures/               # Przykładowe fragmenty HTML do testów offline DOM
+│   ├── test_date_utils.py      # Testy parsera i walidacji dat
+│   ├── test_dom_parser.py      # Testy defensywnego parsera HTML w trybie 100% offline
 │   ├── test_librus.py          # Testy logowania, scrapingu, formatowania, watermarking i analityki
 │   ├── test_package_layout.py  # Testy struktury pakietu i eksportów
-│   └── test_student_report.py  # Testy silnika motywacyjnego i raportów ucznia
+│   ├── test_scheduler_and_watcher.py # Testy harmonogramu i monitora zmian konfiguracji
+│   ├── test_storage_dates.py   # Testy spójności i migracji dat w storage
+│   ├── test_student_report.py  # Testy silnika motywacyjnego i raportów ucznia
+│   ├── test_web.py             # Testy panelu webowego, kreatora i kalkulatora ocen
+│   └── test_web_security.py    # Testy zabezpieczeń proxy, rate limitera i ciasteczek
 ├── librus_collect_and_notify.py# Główny punkt wejścia demona i orkiestratora (CLI)
 ├── librus_collector.py         # Moduł 1: CLI zbierania danych ze szkoły
 ├── librus_updates_notifier.py  # Moduł 2: CLI bieżących powiadomień
@@ -979,8 +943,11 @@ librus2mail/
 │       ├── librus2mail-report.service # Usługa generowania raportu postępów
 │       ├── librus2mail-report.timer   # Zegar cotygodniowej wysyłki raportu
 │       └── README.md           # Instrukcja instalacji usług systemd
-├── Dockerfile                  # Wielowarstwowy obraz kontenera OCI (Python 3.10-slim, non-root)
-├── docker-compose.yml          # Definicja usług (kolektor w tle + raporty na żądanie)
+├── docker/                     # Konfiguracja środowiska kontenerowego OCI
+│   ├── Dockerfile              # Wielowarstwowy obraz kontenera OCI (Python 3.10-slim, non-root)
+│   ├── docker-compose.yml      # Definicja usług (kolektor w tle, raporty, panel web)
+│   ├── .env.example            # Szablon zmiennych środowiskowych dla kontenera
+│   └── docker-installation.md  # Przewodnik wdrożenia Docker & Docker Compose
 ├── .dockerignore               # Ochrona poufnych konfiguracji przed kopiowaniem do obrazu
 ├── pyproject.toml              # Nowoczesna konfiguracja projektu (PEP 517/518/621)
 ├── requirements.txt            # Tradycyjna lista zależności
@@ -996,7 +963,7 @@ librus2mail/
 1. **Collector (`librus_collector.py`)**: Loguje się OAuth do portalu Librus Synergia, pobiera wiadomości, ogłoszenia i oceny, deduplikuje je i zapisuje w trwałych plikach `storage/<login>.json` wraz ze znacznikiem `last_collect_time`.
 2. **Updates Notifier (`librus_updates_notifier.py`)**: Weryfikuje nowe pozycje w bazie `storage/` od znacznika `last_notify_time` (lub zadanego okna czasowego `--days` / `--hours`) i wysyła powiadomienia e-mail (bądź generuje podgląd HTML / konsolowy).
 3. **Progress Report (`librus_progress_report.py`)**: Działa w 100% offline, analizuje historię ocen ze `storage/` za pomocą [`ProgressAnalyzer`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/progress_analyzer.py) i tworzy bogaty dashboard postępów ucznia.
-4. **Orkiestrator (`librus_collect_and_notify.py`)**: W domyślnym trybie demona spina Moduł 1 i Moduł 2 w ciągłą pętlę z przerwami `wait_time_s` (gdy `work-in-loop: true`), lub wykonuje pojedynczy przebieg (`work-in-loop: false` / `--once`). Umożliwia też uruchomienie dowolnego modułu w odosobnieniu.
+4. **Orkiestrator (`librus_collect_and_notify.py`)**: W domyślnym trybie demona spina Moduł 1 i Moduł 2 w ciągłą pętlę z przerwami `wait_time_s` (gdy `work_in_loop: true`), lub wykonuje pojedynczy przebieg (`work_in_loop: false` / `--once`). Umożliwia też uruchomienie dowolnego modułu w odosobnieniu.
 5. **Panel WWW & Konfigurator (`librus_web.py`)**: Prezentuje zebrane dane w responsywnym interfejsie graficznym, umożliwia interaktywną symulację ocen ("Co jeśli...?"), edycję ustawień oraz wyzwalanie zadań kolektora i raportów z poziomu przeglądarki.
 
 ---

@@ -70,20 +70,24 @@
         </div>
         <div class="mt-3 flex items-baseline gap-2">
             <span class="text-3xl font-extrabold text-slate-900">{{ subject_averages|length }}</span>
-            <span class="text-xs font-semibold text-slate-500">z ocenami</span>
+            <span class="text-xs font-semibold text-slate-500">szkolnych</span>
         </div>
     </div>
 
-    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+    <div onclick="switchGradesTab('swiadectwo')"
+         class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:border-amber-300 hover:shadow-md transition-all cursor-pointer group"
+         title="Kliknij, aby przejść do zakładki Świadectwo">
         <div class="flex items-center justify-between">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Pasek z wyróżnieniem</span>
-            <span class="p-2 rounded-xl bg-amber-50 text-amber-600 text-sm">🎖️</span>
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400 group-hover:text-amber-600 transition-colors">Pasek z wyróżnieniem</span>
+            <span class="p-2 rounded-xl bg-amber-50 text-amber-600 text-sm group-hover:bg-amber-100 transition-colors">🎖️</span>
         </div>
         <div class="mt-3 flex items-baseline gap-2">
-            {% if data.overall_average and data.overall_average >= 4.75 %}
+            {% if certificate_summary and certificate_summary.has_red_stripe %}
             <span class="text-xl font-extrabold text-emerald-600">Osiągnięty! 🎉</span>
-            {% elif data.overall_average %}
-            <span class="text-xl font-extrabold text-slate-700">Brakuje {{ "%.2f"|format(4.75 - data.overall_average) }}</span>
+            <span class="text-xs font-semibold text-slate-500">ze świadectwa</span>
+            {% elif certificate_summary and certificate_summary.certificate_average %}
+            <span class="text-xl font-extrabold text-slate-700">Brakuje {{ "%.2f"|format(certificate_summary.red_stripe_diff) }}</span>
+            <span class="text-xs font-semibold text-slate-500">do 4.75</span>
             {% else %}
             <span class="text-base font-bold text-slate-400">Brak danych</span>
             {% endif %}
@@ -91,110 +95,80 @@
     </div>
 </div>
 
-<!-- Interaktywny Kalkulator "Co jeśli?" (What-If Grade Simulator) -->
-<div class="bg-gradient-to-br from-indigo-900 to-slate-900 text-white p-6 rounded-2xl shadow-lg my-6">
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-indigo-800/80 pb-4 mb-4">
-        <div>
-            <h2 class="text-lg font-extrabold flex items-center gap-2">
-                <span>🔮</span>
-                <span>Symulator Nowej Oceny ("Co jeśli?")</span>
-            </h2>
-            <p class="text-xs text-indigo-200 mt-1">
-                Sprawdź natychmiast, jak potencjalna ocena ze sprawdzianu lub kartkówki wpłynie na średnią ważoną z danego przedmiotu.
-            </p>
-        </div>
+<!-- Pasek podzakładek (horyzontalny styl jak w dziale Raporty) -->
+<div class="flex items-center gap-1.5 p-1 bg-slate-200/70 rounded-xl overflow-x-auto scrollbar-none w-fit mb-6">
+    <button type="button"
+            onclick="switchGradesTab('oceny')"
+            id="grades-tab-btn-oceny"
+            class="grades-tab-btn px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'oceny' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
+        📝 Aktualne oceny
+    </button>
+    <button type="button"
+            onclick="switchGradesTab('swiadectwo')"
+            id="grades-tab-btn-swiadectwo"
+            class="grades-tab-btn px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'swiadectwo' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
+        📜 Świadectwo
+    </button>
+    <button type="button"
+            onclick="switchGradesTab('symulator')"
+            id="grades-tab-btn-symulator"
+            class="grades-tab-btn px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'symulator' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
+        🔮 Symulator nowej oceny
+    </button>
+</div>
+
+<!-- ========================================== -->
+<!-- ZAKŁADKA 1: AKTUALNE OCENY                 -->
+<!-- ========================================== -->
+<div id="grades-pane-oceny" class="grades-tab-pane {{ '' if active_tab == 'oceny' else 'hidden' }}">
+    {% if not subject_averages %}
+    <div class="p-12 bg-white border border-slate-200 rounded-2xl text-center">
+        <div class="text-4xl mb-3">📝</div>
+        <h3 class="text-lg font-bold text-slate-800">Brak ocen w pamięci podręcznej</h3>
+        <p class="text-sm text-slate-500 mt-1 max-w-md mx-auto">
+            Nie odnaleziono zarejestrowanych ocen dla tego konta. Kliknij przycisk "Pobierz świeże oceny", aby pobrać dane z systemu Librus.
+        </p>
     </div>
+    {% else %}
 
-    <form hx-post="{{ url_for('web.api_whatif') }}"
-          hx-target="#whatif-result"
-          hx-indicator="#whatif-spinner"
-          class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
+    <div class="space-y-4">
+        {% for subj, sdata in subject_averages.items() %}
+        <div class="rounded-2xl border {{ 'border-rose-200 bg-slate-50/30 shadow-2xs' if sdata.is_excluded else 'bg-white border-slate-200 shadow-sm' }} overflow-hidden transition-all hover:border-slate-300">
+            <!-- Pasek przedmiotu -->
+            <div class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 {{ 'bg-rose-50/20' if sdata.is_excluded else 'bg-slate-50/50' }} border-b border-slate-100">
+                <div>
+                    <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                        <span>{{ subj }}</span>
+                    </h3>
+                    <div class="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-500">
+                        <span>Liczba ocen: <strong>{{ sdata.count }}</strong> (suma wag: {{ sdata.sum_weights|round(1) }})</span>
+                        <span class="text-slate-300 hidden sm:inline">•</span>
 
-        <!-- Wybór przedmiotu -->
-        <div>
-            <label class="block text-xs font-bold text-indigo-200 uppercase tracking-wider mb-1.5">
-                Przedmiot
-            </label>
-            <select name="subject" required
-                    class="w-full bg-slate-800 border border-indigo-700/60 rounded-xl px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-400 focus:outline-none">
-                {% for subj, sdata in subject_averages.items() %}
-                <option value="{{ subj }}">{{ subj }} (śr. {{ sdata.average or '-' }})</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <!-- Nowa ocena -->
-        <div>
-            <label class="block text-xs font-bold text-indigo-200 uppercase tracking-wider mb-1.5">
-                Spodziewana ocena
-            </label>
-            <select name="grade"
-                    class="w-full bg-slate-800 border border-indigo-700/60 rounded-xl px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-400 focus:outline-none">
-                <option value="6.0">6 (Celujący)</option>
-                <option value="5.0" selected>5 (Bardzo dobry)</option>
-                <option value="4.0">4 (Dobry)</option>
-                <option value="3.0">3 (Dostateczny)</option>
-                <option value="2.0">2 (Dopuszczający)</option>
-                <option value="1.0">1 (Niedostateczny)</option>
-            </select>
-        </div>
-
-        <!-- Waga oceny -->
-        <div>
-            <label class="block text-xs font-bold text-indigo-200 uppercase tracking-wider mb-1.5">
-                Waga oceny
-            </label>
-            <select name="weight"
-                    class="w-full bg-slate-800 border border-indigo-700/60 rounded-xl px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-400 focus:outline-none">
-                <option value="1">Waga 1 (odpowiedź, zadanie)</option>
-                <option value="2">Waga 2 (kartkówka)</option>
-                <option value="3" selected>Waga 3 (sprawdzian, praca klasowa)</option>
-                <option value="4">Waga 4 (projekt)</option>
-                <option value="5">Waga 5 (duży test)</option>
-            </select>
-        </div>
-
-        <!-- Przycisk symulacji -->
-        <div>
-            <button type="submit"
-                    class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold text-indigo-950 bg-indigo-300 hover:bg-white shadow-md transition-all cursor-pointer">
-                <span id="whatif-spinner" class="htmx-indicator animate-spin">⏳</span>
-                <span>Oblicz nową średnią</span>
-            </button>
-        </div>
-    </form>
-
-    <div id="whatif-result" class="mt-4"></div>
-</div>
-
-<!-- Zestawienie Ocen per Przedmiot -->
-{% if not subject_averages %}
-<div class="p-12 bg-white border border-slate-200 rounded-2xl text-center">
-    <div class="text-4xl mb-3">📝</div>
-    <h3 class="text-lg font-bold text-slate-800">Brak ocen w pamięci podręcznej</h3>
-    <p class="text-sm text-slate-500 mt-1 max-w-md mx-auto">
-        Nie odnaleziono zarejestrowanych ocen dla tego konta. Kliknij przycisk "Pobierz świeże oceny", aby pobrać dane z systemu Librus.
-    </p>
-</div>
-{% else %}
-
-<div class="space-y-4">
-    {% for subj, sdata in subject_averages.items() %}
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden transition-all hover:border-slate-300">
-        <!-- Pasek przedmiotu -->
-        <div class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/50 border-b border-slate-100">
-            <div>
-                <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                    <span>{{ subj }}</span>
-                </h3>
-                <div class="text-xs text-slate-500 mt-0.5">
-                    Liczba ocen: <strong>{{ sdata.count }}</strong> (suma wag: {{ sdata.sum_weights|round(1) }})
+                        <!-- Interaktywna pigułka statusu świadectwa (Styl Linear / Notion) -->
+                        {% if sdata.is_excluded %}
+                        <button type="button"
+                                onclick="toggleSubjectInclusion('{{ subj|e }}', true)"
+                                class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-700 border border-rose-300 hover:bg-rose-200 hover:border-rose-400 transition-all cursor-pointer group shadow-2xs"
+                                title="Przedmiot wykluczony ze średniej. Kliknij, aby włączyć go z powrotem.">
+                            <span>🚫</span>
+                            <span>Nie zaliczany do średniej</span>
+                            <span class="text-[10px] text-rose-600 group-hover:text-rose-900 font-semibold underline ml-0.5">Włącz</span>
+                        </button>
+                        {% else %}
+                        <button type="button"
+                                onclick="toggleSubjectInclusion('{{ subj|e }}', false)"
+                                class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-white text-slate-600 border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/60 hover:text-indigo-700 transition-all cursor-pointer group shadow-2xs"
+                                title="Przedmiot wliczany do średniej. Kliknij, aby go wykluczyć (np. Godzina wychowawcza).">
+                            <span class="text-xs">🎓</span>
+                            <span>Wliczany do średniej</span>
+                            <span class="text-[10px] text-slate-400 group-hover:text-indigo-600 group-hover:underline opacity-0 group-hover:opacity-100 transition-opacity">Wyłącz</span>
+                        </button>
+                        {% endif %}
+                    </div>
                 </div>
-            </div>
 
-            <!-- Średnia ważona z odznaką -->
-            <div class="flex items-center gap-3">
-                <div class="text-right">
+                <!-- Średnia ważona z odznaką -->
+                <div class="text-right flex items-center sm:block justify-between sm:justify-end">
                     <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
                     <span class="text-xl font-extrabold
                         {% if sdata.average and sdata.average >= 4.75 %} text-emerald-600
@@ -206,40 +180,694 @@
                     </span>
                 </div>
             </div>
-        </div>
 
-        <!-- Karty / Pigułki ocen -->
-        <div class="p-4 sm:p-5">
-            <div class="flex flex-wrap gap-2.5">
-                {% for g in sdata.grades %}
-                <div class="group relative inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300 shadow-xs transition-all cursor-default">
-                    <!-- Odznaka oceny -->
-                    <span class="w-7 h-7 rounded-lg flex items-center justify-center font-extrabold text-sm
-                        {% if g.grade in ['5', '6', '5+', '6-'] %} bg-emerald-100 text-emerald-800
-                        {% elif g.grade in ['4', '4+', '4-'] %} bg-sky-100 text-sky-800
-                        {% elif g.grade in ['3', '3+', '3-'] %} bg-amber-100 text-amber-800
-                        {% elif g.grade in ['1', '2', '1+', '2+'] %} bg-rose-100 text-rose-800
-                        {% else %} bg-slate-100 text-slate-700 {% endif %}">
-                        {{ g.grade }}
-                    </span>
+            <!-- Karty / Pigułki ocen -->
+            <div class="p-4 sm:p-5">
+                <div class="flex flex-wrap gap-2.5">
+                    {% if not sdata.grades %}
+                    <div class="text-xs text-slate-400 italic py-1 flex items-center gap-1.5">
+                        <span>⚪</span>
+                        <span>Brak ocen z tego przedmiotu w dzienniku</span>
+                    </div>
+                    {% else %}
+                    {% for g in sdata.grades %}
+                    <div onclick="openEditGradeModal({
+                            id: '{{ g.id }}',
+                            subject: '{{ subj|e }}',
+                            grade: '{{ g.grade|e }}',
+                            weight: '{{ g.weight or '1'|e }}',
+                            category: '{{ g.category or 'Ocena'|e }}',
+                            date: '{{ g.date or ''|e }}',
+                            teacher: '{{ g.teacher or ''|e }}',
+                            is_custom: {{ 'true' if g.is_custom else 'false' }},
+                            original_grade: '{{ g.original_grade or ''|e }}',
+                            original_weight: '{{ g.original_weight or ''|e }}'
+                         })"
+                         class="group relative inline-flex items-center gap-2 px-3 py-2 rounded-xl border {{ 'border-amber-300 bg-amber-50/40 ring-1 ring-amber-200' if g.is_custom else 'border-slate-200 bg-white' }} hover:bg-slate-50 hover:border-indigo-400 hover:shadow-md shadow-xs transition-all cursor-pointer"
+                         title="Kliknij, aby edytować ocenę lub wagę{% if g.is_custom %} (skorygowana ręcznie, oryg. waga: {{ g.original_weight }}){% endif %}">
+                        <!-- Odznaka oceny -->
+                        <span class="w-7 h-7 rounded-lg flex items-center justify-center font-extrabold text-sm
+                            {% if g.grade in ['5', '6', '5+', '6-'] %} bg-emerald-100 text-emerald-800
+                            {% elif g.grade in ['4', '4+', '4-'] %} bg-sky-100 text-sky-800
+                            {% elif g.grade in ['3', '3+', '3-'] %} bg-amber-100 text-amber-800
+                            {% elif g.grade in ['1', '2', '1+', '2+'] %} bg-rose-100 text-rose-800
+                            {% else %} bg-slate-100 text-slate-700 {% endif %}">
+                            {{ g.grade }}
+                        </span>
 
-                    <!-- Szczegóły: Kategoria & Waga -->
-                    <div class="text-left">
-                        <div class="text-xs font-bold text-slate-800 truncate max-w-[140px] sm:max-w-[200px]" title="{{ g.category or 'Ocena' }}">
-                            {{ g.category or 'Ocena' }}
-                        </div>
-                        <div class="text-[10px] text-slate-400 font-medium">
-                            waga: {{ g.weight or '1' }} • {{ g.date or '' }}
+                        <!-- Szczegóły: Kategoria & Waga -->
+                        <div class="text-left">
+                            <div class="text-xs font-bold text-slate-800 truncate max-w-[140px] sm:max-w-[200px] flex items-center gap-1" title="{{ g.category or 'Ocena' }}">
+                                <span>{{ g.category or 'Ocena' }}</span>
+                                {% if g.is_custom %}
+                                <span class="text-[9px] font-bold text-amber-700 bg-amber-100 px-1 py-0.2 rounded" title="Waga lub ocena skorygowana ręcznie">✏️ zmieniona</span>
+                                {% endif %}
+                            </div>
+                            <div class="text-[10px] text-slate-400 font-medium">
+                                waga: <strong class="{{ 'text-amber-700 font-bold' if g.is_custom else 'text-slate-600' }}">{{ g.weight or '1' }}</strong> • {{ g.date or '' }}
+                            </div>
                         </div>
                     </div>
+                    {% endfor %}
+                    {% endif %}
                 </div>
-                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% endif %}
+</div>
+
+<!-- ========================================== -->
+<!-- ZAKŁADKA 2: ŚWIADECTWO                     -->
+<!-- ========================================== -->
+<div id="grades-pane-swiadectwo" class="grades-tab-pane {{ '' if active_tab == 'swiadectwo' else 'hidden' }}">
+    {% if not certificate_summary or not certificate_summary.subjects %}
+    <div class="p-12 bg-white border border-slate-200 rounded-2xl text-center">
+        <div class="text-4xl mb-3">📜</div>
+        <h3 class="text-lg font-bold text-slate-800">Brak przedmiotów do wyliczenia świadectwa</h3>
+        <p class="text-sm text-slate-500 mt-1 max-w-md mx-auto">
+            Nie odnaleziono przedmiotów z ocenami dla tego profilu ucznia. Kliknij "Pobierz świeże oceny", aby zaktualizować dane.
+        </p>
+    </div>
+    {% else %}
+
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6">
+        <!-- Nagłówek karty świadectwa -->
+        <div class="p-5 sm:p-6 bg-slate-50/60 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>📜</span>
+                    <span>Predykcja ocen na świadectwo</span>
+                </h2>
+                <p class="text-xs text-slate-500 mt-1">
+                    Przewidywane oceny końcowe na podstawie bieżących średnich ważonych. Przedmioty bez ocen nie są wliczane do średniej ze świadectwa.
+                </p>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                    <span>📚</span>
+                    <span>{{ certificate_summary.rated_count }} ocenianych / {{ certificate_summary.total_count }} przedmiotów</span>
+                </span>
+            </div>
+        </div>
+
+        <!-- Tabela przedmiotów -->
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-100/80 border-b border-slate-200 text-[11px] font-extrabold uppercase tracking-wider text-slate-600">
+                        <th rowspan="2" class="py-3 px-4 sm:px-6 w-12 text-center border-r border-slate-200/80">Lp.</th>
+                        <th rowspan="2" class="py-3 px-4 sm:px-6 border-r border-slate-200/80">Przedmiot</th>
+                        <th rowspan="2" class="py-3 px-4 sm:px-6 text-center border-r border-slate-200/80">Ilość ocen</th>
+                        <th rowspan="2" class="py-3 px-4 sm:px-6 text-right border-r border-slate-200/80">Średnia ważona</th>
+                        <th colspan="2" class="py-2.5 px-4 sm:px-6 text-center bg-gradient-to-r from-blue-600 to-blue-700 text-white font-black tracking-wider text-xs uppercase border-l-2 border-blue-500 shadow-xs">
+                            📜 Proponowana
+                        </th>
+                    </tr>
+                    <tr class="bg-slate-100/80 border-b border-slate-200 text-[11px] font-extrabold uppercase tracking-wider text-slate-600">
+                        <th class="py-2 px-3 sm:px-4 text-center w-24 bg-blue-100/80 text-blue-950 font-black border-r border-blue-200 border-l-2 border-blue-300 text-xs">Ocena</th>
+                        <th class="py-2 px-4 sm:px-6 text-left bg-blue-100/80 text-blue-950 font-black text-xs">Słownie</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-sm">
+                    {% for s in certificate_summary.subjects %}
+                    <tr class="hover:bg-blue-50/25 transition-colors group">
+                        <!-- Lp -->
+                        <td class="py-3.5 px-4 sm:px-6 text-center text-xs font-bold text-slate-400">
+                            {{ loop.index }}
+                        </td>
+
+                        <!-- Przedmiot -->
+                        <td class="py-3.5 px-4 sm:px-6">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="font-extrabold text-slate-900">{{ s.subject }}</span>
+                                {% if s.is_excluded %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-rose-100 text-rose-700 border border-rose-300 shadow-2xs">
+                                    Nie zaliczany do średniej
+                                </span>
+                                {% endif %}
+                            </div>
+                            {% if s.numeric_count == 0 %}
+                            <span class="text-[10px] text-slate-400 italic">brak zarejestrowanych ocen cząstkowych</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Ilość ocen -->
+                        <td class="py-3.5 px-4 sm:px-6 text-center">
+                            {% if s.numeric_count > 0 %}
+                            <span class="inline-flex items-center justify-center min-w-[28px] h-7 px-2 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold">
+                                {{ s.numeric_count }}
+                            </span>
+                            {% else %}
+                            <span class="text-xs text-slate-400 font-medium">0</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Średnia ważona -->
+                        <td class="py-3.5 px-4 sm:px-6 text-right border-r border-slate-200/60">
+                            {% if s.average is not none %}
+                            <span class="font-extrabold text-base
+                                {% if s.average >= 4.75 %} text-emerald-600
+                                {% elif s.average >= 3.75 %} text-sky-600
+                                {% elif s.average >= 2.75 %} text-amber-600
+                                {% else %} text-rose-600 {% endif %}">
+                                {{ "%.2f"|format(s.average) }}
+                            </span>
+                            {% else %}
+                            <span class="text-slate-400 text-sm font-semibold">—</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Proponowana: Ocena (wyróżniona kolumna niebieskim akcentem) -->
+                        <td class="py-3.5 px-3 sm:px-4 text-center bg-blue-50/35 group-hover:bg-blue-100/40 border-l-2 border-blue-300/80 transition-colors">
+                            {% if s.is_excluded and s.proposed_grade_num %}
+                            <span class="inline-flex items-center justify-center w-9 h-9 rounded-xl font-bold text-base shadow-2xs ring-1 border bg-slate-100 text-slate-600 border-slate-300 ring-slate-200" title="Przedmiot niezaliczany do średniej">
+                                {{ s.proposed_grade_num }}
+                            </span>
+                            {% elif s.proposed_grade_num %}
+                            <span class="inline-flex items-center justify-center w-9 h-9 rounded-xl font-black text-base shadow-sm ring-2 border
+                                {% if s.proposed_grade_num == 6 %} bg-emerald-100 text-emerald-950 border-emerald-300 ring-emerald-400/30
+                                {% elif s.proposed_grade_num == 5 %} bg-teal-100 text-teal-950 border-teal-300 ring-teal-400/30
+                                {% elif s.proposed_grade_num == 4 %} bg-sky-100 text-sky-950 border-sky-300 ring-sky-400/30
+                                {% elif s.proposed_grade_num == 3 %} bg-amber-100 text-amber-950 border-amber-300 ring-amber-400/30
+                                {% elif s.proposed_grade_num == 2 %} bg-orange-100 text-orange-950 border-orange-300 ring-orange-400/30
+                                {% else %} bg-rose-100 text-rose-950 border-rose-300 ring-rose-400/30 {% endif %}">
+                                {{ s.proposed_grade_num }}
+                            </span>
+                            {% else %}
+                            <span class="text-slate-400 font-bold text-sm">—</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Proponowana: Słownie (wyróżniona kolumna niebieskim akcentem) -->
+                        <td class="py-3.5 px-4 sm:px-6 text-left bg-blue-50/35 group-hover:bg-blue-100/40 transition-colors">
+                            {% if s.is_excluded %}
+                            <div>
+                                <span class="font-bold text-sm text-slate-600 capitalize tracking-tight">{{ s.proposed_grade_word }}</span>
+                                <div class="text-[11px] font-bold text-rose-600">Nie zaliczany do średniej</div>
+                            </div>
+                            {% elif s.proposed_grade_num %}
+                            <span class="font-black text-sm capitalize tracking-tight
+                                {% if s.proposed_grade_num == 6 %} text-emerald-900
+                                {% elif s.proposed_grade_num == 5 %} text-teal-900
+                                {% elif s.proposed_grade_num == 4 %} text-blue-900
+                                {% elif s.proposed_grade_num == 3 %} text-amber-900
+                                {% elif s.proposed_grade_num == 2 %} text-orange-900
+                                {% else %} text-rose-900 {% endif %}">
+                                {{ s.proposed_grade_word }}
+                            </span>
+                            {% else %}
+                            <span class="text-xs font-semibold text-slate-400 italic">
+                                brak ocen (pominięty)
+                            </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Podsumowanie na dole tabeli -->
+        <div class="p-6 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex flex-col md:flex-row md:items-center md:justify-between gap-5 border-t border-slate-200">
+            <!-- Lewa strona: Średnia za całe świadectwo -->
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center text-2xl border border-white/20 shadow-inner">
+                    🎓
+                </div>
+                <div>
+                    <div class="text-xs font-bold text-indigo-300 uppercase tracking-wider">
+                        Średnia za całe świadectwo
+                    </div>
+                    <div class="flex items-baseline gap-2 mt-0.5">
+                        <span class="text-3xl sm:text-4xl font-black text-white tracking-tight">
+                            {{ certificate_summary.certificate_average or '—' }}
+                        </span>
+                        <span class="text-xs text-indigo-200">
+                            (z {{ certificate_summary.rated_count }} ocenianych przedmiotów)
+                        </span>
+                    </div>
+                    <div class="text-[11px] text-slate-400 mt-0.5">
+                        Wyliczona ze stopni końcowych (przedmioty bez ocen nie wchodzą w skład średniej)
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prawa strona: Pasek z wyróżnieniem -->
+            <div class="flex items-center gap-3">
+                {% if certificate_summary.has_red_stripe %}
+                <div class="px-4 py-3 rounded-2xl bg-emerald-500/20 border border-emerald-400/50 text-emerald-100 flex items-center gap-3 shadow-sm">
+                    <span class="text-2xl">🎉</span>
+                    <div>
+                        <div class="text-xs font-black text-emerald-300 uppercase tracking-wider">Świadectwo z wyróżnieniem</div>
+                        <div class="text-xs text-emerald-200 mt-0.5">Średnia końcowa ≥ 4.75 osiągnięta (czerwony pasek)!</div>
+                    </div>
+                </div>
+                {% elif certificate_summary.certificate_average %}
+                <div class="px-4 py-3 rounded-2xl bg-amber-500/20 border border-amber-400/50 text-amber-100 flex items-center gap-3 shadow-sm">
+                    <span class="text-2xl">🎖️</span>
+                    <div>
+                        <div class="text-xs font-bold text-amber-300 uppercase tracking-wider">Do czerwonego paska (4.75)</div>
+                        <div class="text-xs text-amber-200 mt-0.5">Brakuje <strong>{{ "%.2f"|format(certificate_summary.red_stripe_diff) }} pkt</strong> średniej</div>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
-    {% endfor %}
+    {% endif %}
 </div>
 
-{% endif %}
+<!-- ========================================== -->
+<!-- ZAKŁADKA 3: SYMULATOR NOWEJ OCENY          -->
+<!-- ========================================== -->
+<div id="grades-pane-symulator" class="grades-tab-pane {{ '' if active_tab == 'symulator' else 'hidden' }}">
+    <!-- Interaktywny Kalkulator "Co jeśli?" (What-If Grade Simulator) -->
+    <div class="bg-gradient-to-br from-indigo-900 to-slate-900 text-white p-6 rounded-2xl shadow-lg mb-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-indigo-800/80 pb-4 mb-4">
+            <div>
+                <h2 class="text-lg font-extrabold flex items-center gap-2">
+                    <span>🔮</span>
+                    <span>Symulator Nowej Oceny ("Co jeśli?")</span>
+                </h2>
+                <p class="text-xs text-indigo-200 mt-1">
+                    Sprawdź natychmiast, jak potencjalna ocena ze sprawdzianu lub kartkówki wpłynie na średnią ważoną z danego przedmiotu.
+                </p>
+            </div>
+        </div>
+
+        <form hx-post="{{ url_for('web.api_whatif') }}"
+              hx-target="#whatif-result"
+              hx-indicator="#whatif-spinner"
+              class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
+
+            <!-- Wybór przedmiotu -->
+            <div>
+                <label class="block text-xs font-bold text-indigo-200 uppercase tracking-wider mb-1.5">
+                    Przedmiot
+                </label>
+                <select name="subject" required
+                        class="w-full bg-slate-800 border border-indigo-700/60 rounded-xl px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-400 focus:outline-none">
+                    {% for subj, sdata in subject_averages.items() %}
+                    <option value="{{ subj }}">{{ subj }} (śr. {{ sdata.average or '-' }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Nowa ocena -->
+            <div>
+                <label class="block text-xs font-bold text-indigo-200 uppercase tracking-wider mb-1.5">
+                    Spodziewana ocena
+                </label>
+                <select name="grade"
+                        class="w-full bg-slate-800 border border-indigo-700/60 rounded-xl px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-400 focus:outline-none">
+                    <option value="6.0">6 (Celujący)</option>
+                    <option value="5.0" selected>5 (Bardzo dobry)</option>
+                    <option value="4.0">4 (Dobry)</option>
+                    <option value="3.0">3 (Dostateczny)</option>
+                    <option value="2.0">2 (Dopuszczający)</option>
+                    <option value="1.0">1 (Niedostateczny)</option>
+                </select>
+            </div>
+
+            <!-- Waga oceny -->
+            <div>
+                <label class="block text-xs font-bold text-indigo-200 uppercase tracking-wider mb-1.5">
+                    Waga oceny
+                </label>
+                <select name="weight"
+                        class="w-full bg-slate-800 border border-indigo-700/60 rounded-xl px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-400 focus:outline-none">
+                    <option value="1">Waga 1 (odpowiedź, zadanie)</option>
+                    <option value="2">Waga 2 (kartkówka)</option>
+                    <option value="3" selected>Waga 3 (sprawdzian, praca klasowa)</option>
+                    <option value="4">Waga 4 (projekt)</option>
+                    <option value="5">Waga 5 (duży test)</option>
+                </select>
+            </div>
+
+            <!-- Przycisk symulacji -->
+            <div>
+                <button type="submit"
+                        class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold text-indigo-950 bg-indigo-300 hover:bg-white shadow-md transition-all cursor-pointer">
+                    <span id="whatif-spinner" class="htmx-indicator animate-spin">⏳</span>
+                    <span>Oblicz nową średnią</span>
+                </button>
+            </div>
+        </form>
+
+        <div id="whatif-result" class="mt-4"></div>
+    </div>
+
+    <!-- Tabela / Kafelki pomocnicze: Aktualne średnie przedmiotowe jako punkt odniesienia -->
+    {% if subject_averages %}
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+        <h3 class="text-sm font-extrabold text-slate-900 mb-1 flex items-center gap-2">
+            <span>📊</span>
+            <span>Aktualne średnie ważone (punkt wyjścia do kalkulacji)</span>
+        </h3>
+        <p class="text-xs text-slate-500 mb-4">
+            Poniższe wartości to bieżące średnie poszczególnych przedmiotów. Wybierz przedmiot powyżej, aby przetestować zmianę.
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {% for subj, sdata in subject_averages.items() %}
+            <div class="p-3 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-700 truncate max-w-[180px]" title="{{ subj }}">{{ subj }}</span>
+                <span class="text-sm font-extrabold {% if sdata.average and sdata.average >= 4.75 %} text-emerald-600 {% elif sdata.average and sdata.average >= 3.75 %} text-sky-600 {% elif sdata.average and sdata.average >= 2.75 %} text-amber-600 {% elif sdata.average %} text-rose-600 {% else %} text-slate-400 {% endif %}">
+                    {{ sdata.average or '-' }}
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal Edycji Oceny i Wagi -->
+<div id="edit-grade-modal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 hidden" onclick="handleEditModalBackdropClick(event)">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 transform transition-all relative" onclick="event.stopPropagation()">
+        <!-- Header -->
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div>
+                <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>✏️</span>
+                    <span>Edytuj ocenę lub wagę</span>
+                </h3>
+                <p id="modal-grade-subject" class="text-xs text-indigo-600 font-semibold mt-0.5">Przedmiot</p>
+            </div>
+            <button type="button" onclick="closeEditGradeModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer text-lg leading-none">
+                ✕
+            </button>
+        </div>
+
+        <!-- Metadane ze szkoły -->
+        <div class="my-4 p-3 bg-slate-50 border border-slate-200/80 rounded-xl space-y-1 text-xs text-slate-600">
+            <div class="flex justify-between">
+                <span class="text-slate-400">Kategoria:</span>
+                <span id="modal-grade-category" class="font-bold text-slate-700 text-right">-</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-slate-400">Data / Nauczyciel:</span>
+                <span id="modal-grade-teacher-date" class="font-medium text-slate-600 text-right">-</span>
+            </div>
+        </div>
+
+        <!-- Alert jeśli ocena była już modyfikowana -->
+        <div id="modal-grade-custom-alert" class="hidden mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+            <div class="font-bold flex items-center gap-1.5">
+                <span>⚠️</span>
+                <span>Ocena skorygowana ręcznie</span>
+            </div>
+            <div id="modal-grade-original-info" class="mt-1 text-amber-700">
+                Wartości z Librusa: ocena <strong>-</strong>, waga: <strong>-</strong>.
+            </div>
+        </div>
+
+        <!-- Formularz edycji -->
+        <form id="edit-grade-form" onsubmit="submitEditGrade(event)" class="space-y-4">
+            <input type="hidden" id="modal-grade-id" name="grade_id" value="">
+
+            <div>
+                <label for="modal-input-grade" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Wartość oceny
+                </label>
+                <div class="grid grid-cols-2 gap-2">
+                    <select id="modal-input-grade" name="grade" class="px-3 py-2 text-sm font-bold text-slate-800 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                        <option value="6">6 (celujący)</option>
+                        <option value="6-">6-</option>
+                        <option value="5+">5+</option>
+                        <option value="5">5 (bardzo dobry)</option>
+                        <option value="5-">5-</option>
+                        <option value="4+">4+</option>
+                        <option value="4">4 (dobry)</option>
+                        <option value="4-">4-</option>
+                        <option value="3+">3+</option>
+                        <option value="3">3 (dostateczny)</option>
+                        <option value="3-">3-</option>
+                        <option value="2+">2+</option>
+                        <option value="2">2 (dopuszczający)</option>
+                        <option value="2-">2-</option>
+                        <option value="1+">1+</option>
+                        <option value="1">1 (niedostateczny)</option>
+                        <option value="np">np</option>
+                        <option value="+">+</option>
+                        <option value="-">-</option>
+                    </select>
+                    <input type="text" id="modal-input-grade-custom" placeholder="Wpisz inną..." class="px-3 py-2 text-sm text-slate-800 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" title="Wpisz niestandardową ocenę jeśli brak na liście">
+                </div>
+            </div>
+
+            <div>
+                <div class="flex items-center justify-between mb-1">
+                    <label for="modal-input-weight" class="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                        Waga oceny
+                    </label>
+                    <span class="text-[11px] text-slate-400">Szybki wybór:</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="number" id="modal-input-weight" name="weight" min="0" max="20" step="0.5" required
+                           class="w-24 px-3 py-2 text-sm font-bold text-slate-800 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                    
+                    <!-- Szybkie przyciski wag -->
+                    <div class="flex gap-1">
+                        <button type="button" onclick="setModalWeight(1)" class="px-2.5 py-1.5 text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg cursor-pointer">1</button>
+                        <button type="button" onclick="setModalWeight(2)" class="px-2.5 py-1.5 text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg cursor-pointer">2</button>
+                        <button type="button" onclick="setModalWeight(3)" class="px-2.5 py-1.5 text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg cursor-pointer">3</button>
+                        <button type="button" onclick="setModalWeight(4)" class="px-2.5 py-1.5 text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg cursor-pointer">4</button>
+                    </div>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-1">
+                    Korekta wagi dla sprawdzianów lub kartkówek błędnie oznaczonych przez nauczyciela.
+                </p>
+            </div>
+
+            <div id="modal-grade-error" class="hidden text-xs text-rose-600 bg-rose-50 border border-rose-200 p-2.5 rounded-xl"></div>
+
+            <!-- Stopka akcji -->
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                <button type="button" id="modal-btn-reset" onclick="resetEditGrade()"
+                        class="hidden px-3 py-2 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl transition-all cursor-pointer">
+                    🔄 Przywróć ze szkoły
+                </button>
+                <div class="flex items-center gap-2 ml-auto">
+                    <button type="button" onclick="closeEditGradeModal()"
+                            class="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-all cursor-pointer">
+                        Anuluj
+                    </button>
+                    <button type="submit" id="modal-btn-submit"
+                            class="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm shadow-indigo-100 transition-all cursor-pointer flex items-center gap-1.5">
+                        <span id="modal-spinner" class="hidden animate-spin">⏳</span>
+                        <span>Zapisz zmiany</span>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Skrypt obsługi zakładek oraz modala edycji -->
+<script>
+function switchGradesTab(tabId) {
+    document.querySelectorAll('.grades-tab-pane').forEach(el => el.classList.add('hidden'));
+
+    document.querySelectorAll('.grades-tab-btn').forEach(btn => {
+        btn.classList.remove('bg-white', 'text-indigo-700', 'shadow-sm');
+        btn.classList.add('text-slate-600', 'hover:text-slate-900', 'hover:bg-white/50');
+    });
+
+    const pane = document.getElementById('grades-pane-' + tabId);
+    if (pane) {
+        pane.classList.remove('hidden');
+    }
+
+    const btn = document.getElementById('grades-tab-btn-' + tabId);
+    if (btn) {
+        btn.classList.remove('text-slate-600', 'hover:text-slate-900', 'hover:bg-white/50');
+        btn.classList.add('bg-white', 'text-indigo-700', 'shadow-sm');
+    }
+
+    if (window.history && window.history.replaceState) {
+        const url = new URL(window.location);
+        url.searchParams.set('tab', tabId);
+        window.history.replaceState(null, '', url);
+    }
+}
+
+let currentEditingGrade = null;
+
+function openEditGradeModal(gradeData) {
+    currentEditingGrade = gradeData;
+    document.getElementById('modal-grade-id').value = gradeData.id;
+    document.getElementById('modal-grade-subject').innerText = gradeData.subject;
+    document.getElementById('modal-grade-category').innerText = gradeData.category || '-';
+    
+    let teacherDate = [];
+    if (gradeData.date) teacherDate.push(gradeData.date);
+    if (gradeData.teacher) teacherDate.push(gradeData.teacher);
+    document.getElementById('modal-grade-teacher-date').innerText = teacherDate.join(' • ') || '-';
+    
+    // Ustawienie wartości oceny
+    const selectEl = document.getElementById('modal-input-grade');
+    const customInputEl = document.getElementById('modal-input-grade-custom');
+    let found = false;
+    for (let opt of selectEl.options) {
+        if (opt.value === gradeData.grade) {
+            selectEl.value = gradeData.grade;
+            found = true;
+            break;
+        }
+    }
+    if (!found) {
+        customInputEl.value = gradeData.grade;
+    } else {
+        customInputEl.value = '';
+    }
+
+    // Ustawienie wagi
+    document.getElementById('modal-input-weight').value = gradeData.weight || '1';
+
+    // Obsługa alertu i przycisku resetu jeśli ocena ma is_custom
+    const customAlert = document.getElementById('modal-grade-custom-alert');
+    const resetBtn = document.getElementById('modal-btn-reset');
+    const origInfo = document.getElementById('modal-grade-original-info');
+    
+    if (gradeData.is_custom) {
+        customAlert.classList.remove('hidden');
+        resetBtn.classList.remove('hidden');
+        origInfo.innerHTML = `Wartości ze szkoły (Librus): ocena <strong>${gradeData.original_grade || '-'}</strong>, waga: <strong>${gradeData.original_weight || '-'}</strong>.`;
+    } else {
+        customAlert.classList.add('hidden');
+        resetBtn.classList.add('hidden');
+    }
+
+    document.getElementById('modal-grade-error').classList.add('hidden');
+    document.getElementById('edit-grade-modal').classList.remove('hidden');
+}
+
+function closeEditGradeModal() {
+    document.getElementById('edit-grade-modal').classList.add('hidden');
+    currentEditingGrade = null;
+}
+
+function handleEditModalBackdropClick(event) {
+    if (event.target.id === 'edit-grade-modal') {
+        closeEditGradeModal();
+    }
+}
+
+function setModalWeight(val) {
+    document.getElementById('modal-input-weight').value = val;
+}
+
+async function submitEditGrade(event) {
+    event.preventDefault();
+    const errorEl = document.getElementById('modal-grade-error');
+    const spinner = document.getElementById('modal-spinner');
+    const submitBtn = document.getElementById('modal-btn-submit');
+
+    errorEl.classList.add('hidden');
+    spinner.classList.remove('hidden');
+    submitBtn.disabled = true;
+
+    const gradeId = document.getElementById('modal-grade-id').value;
+    const customGrade = document.getElementById('modal-input-grade-custom').value.trim();
+    const selectedGrade = document.getElementById('modal-input-grade').value;
+    const finalGrade = customGrade || selectedGrade;
+    const weight = document.getElementById('modal-input-weight').value;
+
+    const formData = new FormData();
+    formData.append('grade_id', gradeId);
+    formData.append('grade', finalGrade);
+    formData.append('weight', weight);
+
+    try {
+        const resp = await fetch('{{ url_for("web.api_grade_update") }}', {
+            method: 'POST',
+            body: formData,
+        });
+        const data = await resp.json();
+        if (resp.ok && data.success) {
+            window.location.search = '?tab=oceny';
+        } else {
+            errorEl.innerText = data.message || 'Wystąpił błąd podczas zapisywania oceny.';
+            errorEl.classList.remove('hidden');
+            spinner.classList.add('hidden');
+            submitBtn.disabled = false;
+        }
+    } catch (err) {
+        errorEl.innerText = 'Błąd połączenia z serwerem: ' + err;
+        errorEl.classList.remove('hidden');
+        spinner.classList.add('hidden');
+        submitBtn.disabled = false;
+    }
+}
+
+async function resetEditGrade() {
+    if (!currentEditingGrade) return;
+    if (!confirm('Czy na pewno chcesz przywrócić oryginalną ocenę i wagę ze szkoły (z Librusa)?')) return;
+
+    const errorEl = document.getElementById('modal-grade-error');
+    errorEl.classList.add('hidden');
+
+    const formData = new FormData();
+    formData.append('grade_id', currentEditingGrade.id);
+
+    try {
+        const resp = await fetch('{{ url_for("web.api_grade_reset") }}', {
+            method: 'POST',
+            body: formData,
+        });
+        const data = await resp.json();
+        if (resp.ok && data.success) {
+            window.location.search = '?tab=oceny';
+        } else {
+            errorEl.innerText = data.message || 'Wystąpił błąd podczas resetowania oceny.';
+            errorEl.classList.remove('hidden');
+        }
+    } catch (err) {
+        errorEl.innerText = 'Błąd połączenia z serwerem: ' + err;
+        errorEl.classList.remove('hidden');
+    }
+}
+
+async function toggleSubjectInclusion(subject, isChecked) {
+    const formData = new FormData();
+    formData.append('subject', subject);
+    formData.append('included', isChecked ? 'true' : 'false');
+
+    try {
+        const resp = await fetch('{{ url_for("web.api_subject_toggle_certificate") }}', {
+            method: 'POST',
+            body: formData,
+        });
+        const data = await resp.json();
+        if (resp.ok && data.success) {
+            const url = new URL(window.location);
+            url.searchParams.set('tab', 'oceny');
+            window.location.href = url.toString();
+        } else {
+            alert(data.message || 'Wystąpił błąd podczas zmiany statusu przedmiotu.');
+        }
+    } catch (err) {
+        alert('Błąd połączenia z serwerem: ' + err);
+    }
+}
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeEditGradeModal();
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    let tabParam = params.get('tab') || window.location.hash.replace('#', '');
+    if (tabParam === 'świadectwo') tabParam = 'swiadectwo';
+    if (tabParam && ['oceny', 'swiadectwo', 'symulator'].includes(tabParam)) {
+        switchGradesTab(tabParam);
+    }
+});
+</script>
 
 {% endblock %}

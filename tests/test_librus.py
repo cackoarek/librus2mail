@@ -384,17 +384,13 @@ class TestLibrus(unittest.TestCase):
     def test_work_in_loop_config_handling(self):
         # Domyślnie True
         cfg_default = {}
-        self.assertTrue(cfg_default.get('work-in-loop', cfg_default.get('work_in_loop', True)))
+        self.assertTrue(cfg_default.get('work_in_loop', True))
 
-        # Wyłączona pętla (work-in-loop: false)
-        cfg_disabled_hyphen = {'work-in-loop': False}
-        self.assertFalse(cfg_disabled_hyphen.get('work-in-loop', cfg_disabled_hyphen.get('work_in_loop', True)))
+        # Wyłączona pętla (work_in_loop: false)
+        cfg_disabled = {'work_in_loop': False}
+        self.assertFalse(cfg_disabled.get('work_in_loop', True))
 
-        # Wyłączona pętla (work_in_loop: false z podkreśleniem)
-        cfg_disabled_underscore = {'work_in_loop': False}
-        self.assertFalse(cfg_disabled_underscore.get('work-in-loop', cfg_disabled_underscore.get('work_in_loop', True)))
-
-        # Weryfikacja wykonania w run_collector z work-in-loop: false
+        # Weryfikacja wykonania w run_collector z work_in_loop: false
         import tempfile
 
         import yaml
@@ -405,7 +401,7 @@ class TestLibrus(unittest.TestCase):
             cfg_file = os.path.join(tmp_dir, "config.yaml")
             with open(cfg_file, "w", encoding="utf-8") as f:
                 yaml.dump({
-                    'work-in-loop': False,
+                    'work_in_loop': False,
                     'storage_dir': tmp_dir,
                     'librus_users': [],
                     'mail': {'use_gmail': False, 'login': 'a', 'password': 'b'},
@@ -413,10 +409,10 @@ class TestLibrus(unittest.TestCase):
             # Powinno wykonać 1 przebieg i zakończyć działanie bez zawieszenia w pętli
             run_collector(config_path=cfg_file, storage_dir=tmp_dir, offline=True)
 
-            # Test z flagą once=True nadpisującą work-in-loop: true
+            # Test z flagą once=True nadpisującą work_in_loop: true
             with open(cfg_file, "w", encoding="utf-8") as f:
                 yaml.dump({
-                    'work-in-loop': True,
+                    'work_in_loop': True,
                     'storage_dir': tmp_dir,
                     'librus_users': [],
                     'mail': {'use_gmail': False, 'login': 'a', 'password': 'b'},
@@ -765,6 +761,40 @@ class TestLibrus(unittest.TestCase):
             now_iso = "2026-09-18T17:00:00"
             st.save_last_progress_report_date(user, now_iso)
             self.assertEqual(st.get_last_progress_report_date(user), now_iso)
+
+            # Test ręcznej korekty oceny i wagi (custom override)
+            updated = st.update_grade_custom(user, 'g1', new_grade='4+', new_weight='3')
+            self.assertIsNotNone(updated)
+            self.assertEqual(updated['grade'], '4+')
+            self.assertEqual(updated['weight'], '3')
+            self.assertTrue(updated['is_custom'])
+            self.assertEqual(updated['original_grade'], '5')
+            self.assertEqual(updated['original_weight'], '2')
+
+            # Test kolejnej synchronizacji z Librusa - waga i ocena NIE mogą zostać nadpisane
+            librus_fresh_grades = [
+                {'id': 'g1', 'subject': 'Fizyka', 'grade': '5', 'weight': '2', 'date': '2026-09-15', 'comment': 'Nowy komentarz ze szkoły'}
+            ]
+            st.save_grades_details(user, librus_fresh_grades)
+            g1_after_sync = next(g for g in st.get_grades_history(user) if g['id'] == 'g1')
+            self.assertEqual(g1_after_sync['grade'], '4+')
+            self.assertEqual(g1_after_sync['weight'], '3')
+            self.assertTrue(g1_after_sync['is_custom'])
+            self.assertEqual(g1_after_sync['comment'], 'Nowy komentarz ze szkoły')
+
+            # Test przywrócenia oryginalnych danych z Librusa
+            reset_res = st.reset_grade_custom(user, 'g1')
+            self.assertIsNotNone(reset_res)
+            self.assertEqual(reset_res['grade'], '5')
+            self.assertEqual(reset_res['weight'], '2')
+            self.assertNotIn('is_custom', reset_res)
+
+            # Test wykluczania przedmiotów ze świadectwa
+            self.assertEqual(st.get_excluded_certificate_subjects(user), [])
+            st.set_subject_certificate_inclusion(user, 'Godzina wychowawcza', included=False)
+            self.assertEqual(st.get_excluded_certificate_subjects(user), ['Godzina wychowawcza'])
+            st.set_subject_certificate_inclusion(user, 'Godzina wychowawcza', included=True)
+            self.assertEqual(st.get_excluded_certificate_subjects(user), [])
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
@@ -1471,18 +1501,18 @@ class TestLibrus(unittest.TestCase):
             storage.save_last_collect_time(login, collect_iso)
             self.assertEqual(storage.get_last_collect_time(login), collect_iso)
 
-            # Save and verify last_notify_time / last_update_create
+            # Save and verify last_notify_time
             notify_iso = "2026-09-18T12:30:00"
             storage.save_last_notify_time(login, notify_iso)
             self.assertEqual(storage.get_last_notify_time(login), notify_iso)
 
-            # Check backward/alias compatibility: last_update_create in raw JSON
+            # Check canonical keys in raw JSON
             file_path = os.path.join(temp_dir, f"{login}.json")
             with open(file_path, encoding='utf-8') as f:
                 data = json.load(f)
             self.assertEqual(data.get('last_collect_time'), collect_iso)
             self.assertEqual(data.get('last_notify_time'), notify_iso)
-            self.assertEqual(data.get('last_update_create'), notify_iso)
+            self.assertNotIn('last_update_create', data)
 
     def test_updates_notifier_watermark_flow(self):
         import tempfile
@@ -1669,7 +1699,7 @@ class TestLibrus(unittest.TestCase):
         config = {
             'librus_users': [{'librus_login': '111', 'librus_login_name': 'Uczeń 1'}],
             'storage_dir': 'storage',
-            'work-in-loop': False,
+            'work_in_loop': False,
         }
         with tempfile.TemporaryDirectory() as tmpdir:
             cfg_file = os.path.join(tmpdir, 'config.yaml')

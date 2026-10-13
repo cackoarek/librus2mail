@@ -31,38 +31,35 @@ class TestConfigModels(unittest.TestCase):
         self.assertEqual(settings.mail.non_gmail_settings.port, 587)
         self.assertIsInstance(settings.schedule, ScheduleConfig)
 
-    def test_key_aliases_and_dictionary_access(self):
+    def test_dictionary_access(self):
         user = LibrusUserConfig.model_validate({
             'librus_login': '123456',
             'librus_password': 'secret_password_123',
-            'dry-parse': False,
+            'read_messages': False,
         })
-        self.assertFalse(user.do_not_send_first_parse)
-        self.assertFalse(user['dry-parse'])
-        self.assertFalse(user['dry_parse'])
-        self.assertFalse(user.get('dry-parse'))
+        self.assertFalse(user.read_messages)
+        self.assertFalse(user['read_messages'])
+        self.assertFalse(user.get('read_messages'))
         self.assertEqual(user['librus_password'], 'secret_password_123')
         self.assertIsInstance(user.librus_password, SecretStr)
         self.assertIn('**********', repr(user.librus_password))
 
-        # Modyfikacja przez klucz aliasu
-        user['dry-parse'] = True
-        self.assertTrue(user.do_not_send_first_parse)
-        self.assertTrue(user['dry-parse'])
+        # Modyfikacja przez klucz słownikowy
+        user['read_messages'] = True
+        self.assertTrue(user.read_messages)
+        self.assertTrue(user['read_messages'])
 
-    def test_app_settings_key_aliases(self):
+    def test_app_settings_fields(self):
         app = AppSettings.model_validate({
-            'work-in-loop': False,
-            'user_delay_s': 25,
-            'dry-parse': False,
+            'work_in_loop': False,
+            'delay_between_users_s': 25,
+            'read_grades': False,
         })
         self.assertFalse(app.work_in_loop)
-        self.assertFalse(app['work-in-loop'])
         self.assertFalse(app['work_in_loop'])
         self.assertEqual(app.delay_between_users_s, 25)
-        self.assertEqual(app['user_delay_s'], 25)
         self.assertEqual(app['delay_between_users_s'], 25)
-        self.assertFalse(app.do_not_send_first_parse)
+        self.assertFalse(app.read_grades)
 
     def test_load_from_yaml_and_env_override(self):
         with tempfile.NamedTemporaryFile('w', suffix='.yaml', delete=False) as f:
@@ -134,6 +131,70 @@ class TestConfigModels(unittest.TestCase):
         cfg_minimal = read_config('config-minimal.yaml')
         self.assertEqual(len(cfg_minimal.librus_users), 1)
         self.assertEqual(cfg_minimal.librus_users[0].librus_login, '1234567')
+
+    def test_pure_env_configuration_without_yaml(self):
+        env_vars = {
+            'LIBRUS_LOGIN': '9876543',
+            'LIBRUS_PASSWORD': 'env_student_password',
+            'LIBRUS_LOGIN_NAME': 'Tomasz Testowy',
+            'LIBRUS_NOTIFICATION_RECEIVERS': 'tata@example.com, mama@example.com',
+            'LIBRUS_MAIL_LOGIN': 'robot@example.com',
+            'LIBRUS_MAIL_PASSWORD': 'robot_app_password',
+            'LIBRUS_MAIL_USE_GMAIL': 'false',
+            'LIBRUS_SMTP_HOST': 'smtp.mojadomena.pl',
+            'LIBRUS_SMTP_PORT': '465',
+            'LIBRUS_WEB_PASSWORD': 'super_web_pass',
+            'LIBRUS_SCHEDULE_MODE': 'daily',
+            'LIBRUS_SCHEDULE_TIME': '18:15',
+        }
+        for k, v in env_vars.items():
+            os.environ[k] = v
+
+        try:
+            # Wczytanie z nieistniejącego pliku powinno pomyślnie użyć konfiguracji z ENV
+            cfg = read_config('plik_ktory_na_pewno_nie_istnieje.yaml')
+            self.assertEqual(len(cfg.librus_users), 1)
+            u = cfg.librus_users[0]
+            self.assertEqual(u.librus_login, '9876543')
+            self.assertEqual(u.get_password(), 'env_student_password')
+            self.assertEqual(u.librus_login_name, 'Tomasz Testowy')
+            self.assertEqual(u.notification_receivers, ['tata@example.com', 'mama@example.com'])
+            self.assertEqual(cfg.mail.login, 'robot@example.com')
+            self.assertEqual(cfg.mail.get_password(), 'robot_app_password')
+            self.assertFalse(cfg.mail.use_gmail)
+            self.assertEqual(cfg.mail.non_gmail_settings.smtp_host, 'smtp.mojadomena.pl')
+            self.assertEqual(cfg.mail.non_gmail_settings.port, 465)
+            self.assertEqual(cfg.web.get_password(), 'super_web_pass')
+            self.assertEqual(cfg.schedule.collection.mode, 'daily')
+            self.assertEqual(cfg.schedule.collection.time, '18:15')
+        finally:
+            for k in env_vars:
+                os.environ.pop(k, None)
+
+    def test_env_librus_users_json(self):
+        import json
+        users_json = json.dumps([
+            {
+                'librus_login': '111111',
+                'librus_password': 'pass1',
+                'librus_login_name': 'Dziecko 1',
+                'notification_receivers': ['rodzic1@example.com'],
+            },
+            {
+                'librus_login': '222222',
+                'librus_password': 'pass2',
+                'librus_login_name': 'Dziecko 2',
+                'notification_receivers': ['rodzic2@example.com'],
+            },
+        ])
+        os.environ['LIBRUS_USERS'] = users_json
+        try:
+            cfg = AppSettings()
+            self.assertEqual(len(cfg.librus_users), 2)
+            self.assertEqual(cfg.librus_users[0].librus_login, '111111')
+            self.assertEqual(cfg.librus_users[1].librus_login, '222222')
+        finally:
+            os.environ.pop('LIBRUS_USERS', None)
 
 
 if __name__ == '__main__':

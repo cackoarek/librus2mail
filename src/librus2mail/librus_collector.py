@@ -6,19 +6,31 @@ Odpowiada wyłącznie za autoryzację i pobieranie surowych danych ze szkoły
 """
 
 import argparse
-import collections.abc
 import logging
-import os
 import sys
 import traceback
-from datetime import datetime, timedelta
+from datetime import datetime
 from time import sleep
 from typing import Any
 
 from .base_logger import setup_logging
-from .config import get_reports_schedules, read_config
+from .config import read_config
+from .config_watcher import (
+    ConfigWatcher,
+)
+from .config_watcher import (
+    sleep_with_config_watch as _sleep_with_config_watch,
+)
 from .librus import Librus
 from .mail_sender import MailSender
+from .scheduler import (
+    ReportScheduler,
+    should_collect_now,
+    trigger_scheduled_reports,
+)
+from .scheduler import (
+    calculate_next_wait_seconds as _calculate_next_wait_seconds,
+)
 from .storage import BaseStorage, create_storage
 from .updates_notifier import (
     UpdatesNotifier,
@@ -34,7 +46,9 @@ logger = logging.getLogger(__name__)
 print_collector_cli_summary = print_cli_summary
 
 __all__ = [
+    "ConfigWatcher",
     "LibrusCollector",
+    "ReportScheduler",
     "calculate_next_wait_seconds",
     "configure_mail_provider",
     "main",
@@ -42,7 +56,9 @@ __all__ = [
     "print_collector_cli_summary",
     "run_collector",
     "run_notifier",
+    "should_collect_now",
     "sleep_with_config_watch",
+    "trigger_scheduled_reports",
 ]
 
 
@@ -181,7 +197,7 @@ class LibrusCollector:
                 'new_grades': new_grades,
             }
         except Exception as e:
-            logger.error(f"Błąd podczas pobierania danych dla {login} na etapie '{step}': {e}")
+            logger.error(f"Błąd podczas pobierania danych dla {login} na etapie '{step}': {e}", exc_info=True)
             tb_str = traceback.format_exc()
 
             send_errors = self.config.get(
@@ -229,7 +245,7 @@ class LibrusCollector:
     def collect_all(self, users: list[dict]) -> dict[str, dict[str, Any]]:
         """Pobiera dane dla wszystkich przekazanych kont uczniów."""
         collected = {}
-        raw_delay = self.config.get('delay_between_users_s', self.config.get('user_delay_s', 10))
+        raw_delay = self.config.get('delay_between_users_s', 10)
         try:
             delay = float(raw_delay)
         except (ValueError, TypeError):
@@ -251,94 +267,11 @@ def calculate_next_wait_seconds(config: dict, now: datetime | None = None) -> in
     """Oblicza liczbę sekund do kolejnego cyklu na podstawie harmonogramu pobierania (collection)
     oraz zaplanowanych raportów (schedule.reports), wybierając najbliższe nadchodzące zdarzenie."""
     ref_now = now or datetime.now()
-    sched = config.get('schedule', {}) if isinstance(config, (dict, collections.abc.Mapping)) else {}
-    collection_sched = sched.get('collection', {}) if isinstance(sched, (dict, collections.abc.Mapping)) else {}
-    mode = collection_sched.get('mode')
-
-    candidates: list[datetime] = []
-
-    # 1. Najbliższy termin pobierania danych ze szkoły (collection)
-    if mode == 'daily':
-        time_str = collection_sched.get('time', '16:00')
-        days_rule = collection_sched.get('days', 'all')
-        try:
-            th, tm = map(int, time_str.split(':'))
-        except Exception:
-            th, tm = 16, 0
-
-        target = ref_now.replace(hour=th, minute=tm, second=0, microsecond=0)
-        if ref_now >= target:
-            target += timedelta(days=1)
-        if days_rule == 'workdays':
-            while target.weekday() >= 5:  # 5=sobota, 6=niedziela
-                target += timedelta(days=1)
-        candidates.append(target)
-    elif mode == 'interval' and 'interval_hours' in collection_sched:
-        wait_s = max(300, int(collection_sched['interval_hours']) * 3600)
-        candidates.append(ref_now + timedelta(seconds=wait_s))
-    else:
-        wait_s = max(300, int(config.get('wait_time_s', 3600)))
-        candidates.append(ref_now + timedelta(seconds=wait_s))
-
-    # 2. Najbliższy termin każdego włączonego raportu postępów / motywacyjnego (schedule.reports)
-    reports_schedules = get_reports_schedules(config)
-    weekdays_map = {
-        'monday': 0, 'tuesday': 1, 'wednesday': 2, 'thursday': 3,
-        'friday': 4, 'saturday': 5, 'sunday': 6
-    }
-    for rep in reports_schedules:
-        if not rep.get('enabled', True):
-            continue
-
-        freq = str(rep.get('frequency', 'weekly')).lower()
-        target_time_str = rep.get('time', '17:00')
-        try:
-            rh, rm = map(int, target_time_str.split(':'))
-        except Exception:
-            rh, rm = 17, 0
-
-        if freq == 'monthly':
-            dom_rule = str(rep.get('day_of_month', '1')).lower()
-            for offset in range(32):
-                test_date = (ref_now + timedelta(days=offset)).date()
-                matches_dom = False
-                if dom_rule == 'last':
-                    matches_dom = ((test_date + timedelta(days=1)).day == 1)
-                else:
-                    try:
-                        matches_dom = (test_date.day == int(dom_rule))
-                    except Exception:
-                        matches_dom = (test_date.day == 1)
-
-                if matches_dom:
-                    test_dt = datetime.combine(test_date, datetime.min.time()).replace(
-                        hour=rh, minute=rm, second=0, microsecond=0
-                    )
-                    if test_dt > ref_now:
-                        candidates.append(test_dt)
-                        break
-        else:  # weekly
-            target_weekday = str(rep.get('weekday', 'friday')).lower()
-            target_day_num = weekdays_map.get(target_weekday, 4)
-            for offset in range(8):
-                test_date = (ref_now + timedelta(days=offset)).date()
-                if test_date.weekday() == target_day_num:
-                    test_dt = datetime.combine(test_date, datetime.min.time()).replace(
-                        hour=rh, minute=rm, second=0, microsecond=0
-                    )
-                    if test_dt > ref_now:
-                        candidates.append(test_dt)
-                        break
-
-    if not candidates:
-        return max(300, int(config.get('wait_time_s', 3600)))
-
-    earliest_target = min(candidates)
-    return max(60, int((earliest_target - ref_now).total_seconds()))
+    return _calculate_next_wait_seconds(config, now=ref_now)
 
 
 def sleep_with_config_watch(
-    seconds: int,
+    seconds: int | float,
     config_path: str | None = None,
     poll_interval: float = 5.0,
 ) -> bool:
@@ -347,35 +280,12 @@ def sleep_with_config_watch(
     Zwraca True, jeśli plik został zmodyfikowany (co pozwala natychmiast przeładować ustawienia),
     lub False, jeśli upłynął cały zadany czas oczekiwania.
     """
-    if seconds <= 0:
-        return False
-
-    if not config_path or not os.path.isfile(config_path):
-        sleep(seconds)
-        return False
-
-    try:
-        initial_mtime = os.path.getmtime(config_path)
-    except OSError:
-        initial_mtime = None
-
-    remaining = float(seconds)
-    step = min(float(poll_interval), remaining) if poll_interval > 0 else remaining
-
-    while remaining > 0:
-        chunk = min(step, remaining)
-        sleep(chunk)
-        remaining -= chunk
-
-        if initial_mtime is not None:
-            try:
-                curr_mtime = os.path.getmtime(config_path)
-                if curr_mtime != initial_mtime:
-                    return True
-            except OSError:
-                pass
-
-    return False
+    return _sleep_with_config_watch(
+        seconds=seconds,
+        config_path=config_path,
+        poll_interval=poll_interval,
+        sleep_func=sleep,
+    )
 
 
 def run_collector(
@@ -415,9 +325,9 @@ def run_collector(
     elif work_in_loop is not None:
         effective_work_in_loop = work_in_loop
     else:
-        effective_work_in_loop = config.get('work-in-loop', config.get('work_in_loop', True))
+        effective_work_in_loop = config.get('work_in_loop', True)
 
-    logger.info(f"Tryb pracy w pętli (work-in-loop): {effective_work_in_loop}")
+    logger.info(f"Tryb pracy w pętli (work_in_loop): {effective_work_in_loop}")
 
     # Lista użytkowników
     users = config.get('librus_users', [])
@@ -484,13 +394,11 @@ def run_collector(
 
     for idx, user in enumerate(users):
         user['id'] = idx
-        if storage.has_existing_data(str(user.get('librus_login'))):
-            user['dry-parse'] = False
-        else:
-            user['dry-parse'] = user.get('do_not_send_first_parse', True)
+        user['dry-parse'] = not storage.has_existing_data(str(user.get('librus_login')))
 
     collector = LibrusCollector(config, storage=storage)
     notifier = UpdatesNotifier(config, storage=storage)
+    scheduler = ReportScheduler(config, storage=storage)
 
     while True:
         collected_data = {}
@@ -500,51 +408,7 @@ def run_collector(
         # czy dzisiejsze pobieranie już się odbyło lub czy jeszcze nie nadeszła jego pora.
         should_collect = True
         if effective_work_in_loop and not offline:
-            sched = config.get('schedule', {}) if isinstance(config, (dict, collections.abc.Mapping)) else {}
-            col_sched = sched.get('collection', {}) if isinstance(sched, (dict, collections.abc.Mapping)) else {}
-            if col_sched.get('mode') == 'daily':
-                time_str = col_sched.get('time', '16:00')
-                try:
-                    th, tm = map(int, time_str.split(':'))
-                except Exception:
-                    th, tm = 16, 0
-                now_dt = datetime.now()
-                is_after_time = (now_dt.hour > th or (now_dt.hour == th and now_dt.minute >= tm))
-
-                all_collected_today = True
-                all_have_data = True
-                for u in users:
-                    u_login = str(u.get('librus_login', ''))
-                    if not storage.has_existing_data(u_login):
-                        all_have_data = False
-                        all_collected_today = False
-                        break
-                    last_col = storage.get_last_collect_time(u_login)
-                    if not last_col:
-                        all_collected_today = False
-                    else:
-                        try:
-                            last_col_dt = datetime.fromisoformat(last_col)
-                            if last_col_dt.date() != now_dt.date() or not (
-                                last_col_dt.hour > th or (last_col_dt.hour == th and last_col_dt.minute >= tm)
-                            ):
-                                all_collected_today = False
-                        except Exception:
-                            all_collected_today = False
-
-                if all_have_data:
-                    if not is_after_time:
-                        logger.info(
-                            f"⏰ Harmonogram 'daily': zaplanowana godzina to {time_str} (aktualna: {now_dt.strftime('%H:%M')}). "
-                            "Pomijam natychmiastowe pobieranie przy starcie, czekam do wyznaczonej pory."
-                        )
-                        should_collect = False
-                    elif all_collected_today:
-                        logger.info(
-                            f"⏰ Harmonogram 'daily': dzisiejsze pobieranie o {time_str} zostało już zrealizowane. "
-                            "Pomijam powtórne pobieranie przy starcie, czekam do kolejnego terminu."
-                        )
-                        should_collect = False
+            should_collect = scheduler.should_collect_now(users, now=datetime.now())
 
         # 1. Pobieranie danych (chyba że tryb offline lub pominięto z uwagi na harmonogram)
         if should_collect:
@@ -584,95 +448,23 @@ def run_collector(
                     if user_config.get('dry-parse'):
                         user_config['dry-parse'] = False
 
-        # Opcjonalne wyzwolenie zaplanowanych raportów postępów ucznia
-        reports_schedules = get_reports_schedules(config)
-        if reports_schedules and not offline and not sync_only:
-            ref_now = datetime.now()
-            weekdays_map = {
-                'monday': 0, 'tuesday': 1, 'wednesday': 2, 'thursday': 3,
-                'friday': 4, 'saturday': 5, 'sunday': 6
-            }
-            for rep in reports_schedules:
-                if not rep.get('enabled', True):
-                    continue
-
-                freq = str(rep.get('frequency', 'weekly')).lower()
-                target_time_str = rep.get('time', '17:00')
-                try:
-                    rh, rm = map(int, target_time_str.split(':'))
-                except Exception:
-                    rh, rm = 17, 0
-
-                time_matches = (ref_now.hour > rh or (ref_now.hour == rh and ref_now.minute >= rm))
-                if not time_matches:
-                    continue
-
-                date_matches = False
-                if freq == 'monthly':
-                    dom_rule = str(rep.get('day_of_month', '1')).lower()
-                    if dom_rule == 'last':
-                        date_matches = ((ref_now + timedelta(days=1)).day == 1)
-                    else:
-                        try:
-                            date_matches = (ref_now.day == int(dom_rule))
-                        except Exception:
-                            date_matches = (ref_now.day == 1)
-                else:  # weekly
-                    target_weekday = str(rep.get('weekday', 'friday')).lower()
-                    target_day_num = weekdays_map.get(target_weekday, 4)
-                    date_matches = (ref_now.weekday() == target_day_num)
-
-                if date_matches:
-                    rep_days = int(rep.get('interval_days', 7))
-                    rep_name = rep.get('name') or f"Raport ({rep_days} dni)"
-                    rep_key = f"rep_{freq}_{rep_days}_{target_time_str}"
-
-                    for u in users:
-                        u_login = str(u.get('librus_login'))
-                        last_rep = storage.get_last_progress_report_date(u_login, report_key=rep_key)
-                        already_sent_today = False
-                        if last_rep:
-                            try:
-                                already_sent_today = (datetime.fromisoformat(last_rep).date() == ref_now.date())
-                            except Exception:
-                                pass
-                        if not already_sent_today:
-                            logger.info(f"📅 Wyzwalanie zaplanowanego raportu postępów '{rep_name}' dla {u_login} (za {rep_days} dni)...")
-                            try:
-                                from .progress_report import run_progress_reports
-                                run_progress_reports(
-                                    config_path=config_path,
-                                    storage_dir=effective_storage_dir,
-                                    user_filter=u_login,
-                                    days=rep_days,
-                                    report_key=rep_key,
-                                )
-                            except Exception as rep_err:
-                                logger.error(f"Błąd podczas generowania zaplanowanego raportu postępów '{rep_name}': {rep_err}")
-
-                            # Opcjonalne wyzwolenie raportu motywacyjnego dla samego dziecka, jeśli włączony w profilu ucznia
-                            st_rep_cfg = u.get('student_report') or {}
-                            if st_rep_cfg and st_rep_cfg.get('enabled', True) and (st_rep_cfg.get('email') or st_rep_cfg.get('receivers')):
-                                logger.info(f"🎓 Wyzwalanie zaplanowanego raportu motywacyjnego dla ucznia {u_login} (za {rep_days} dni)...")
-                                try:
-                                    from .student_report import run_student_reports
-                                    run_student_reports(
-                                        config_path=config_path,
-                                        storage_dir=effective_storage_dir,
-                                        user_filter=u_login,
-                                        days=rep_days,
-                                    )
-                                except Exception as st_err:
-                                    logger.error(f"Błąd podczas generowania zaplanowanego raportu motywacyjnego dla {u_login}: {st_err}")
+        # Opcjonalne wyzwolenie zaplanowanych raportów postępów oraz motywacyjnych
+        if not offline and not sync_only:
+            scheduler.trigger_scheduled_reports(
+                config_path=config_path,
+                users=users,
+                effective_storage_dir=effective_storage_dir,
+                now=datetime.now(),
+            )
 
         if not effective_work_in_loop:
             if is_simulation:
                 logger.info("Zakończono symulację / pojedynczy przebieg.")
             else:
-                logger.info("Zakończono pojedynczy przebieg (work-in-loop: false). Koniec pracy.")
+                logger.info("Zakończono pojedynczy przebieg (work_in_loop: false). Koniec pracy.")
             break
 
-        sleep_s = calculate_next_wait_seconds(config)
+        sleep_s = scheduler.calculate_next_wait_seconds(now=datetime.now())
         logger.info(f"Czekam przez {sleep_s} sekund do kolejnego sprawdzenia")
         try:
             config_changed = sleep_with_config_watch(sleep_s, config_path=config_path)
@@ -686,15 +478,16 @@ def run_collector(
                     new_users = config.get('librus_users', [])
                     for idx, user in enumerate(new_users):
                         user['id'] = idx
-                        if storage.has_existing_data(str(user.get('librus_login'))):
-                            user['dry-parse'] = False
-                        else:
-                            user['dry-parse'] = user.get('do_not_send_first_parse', True)
+                        user['dry-parse'] = not storage.has_existing_data(str(user.get('librus_login')))
                     users = new_users
                     collector.config = config
                     notifier.config = config
+                    scheduler.config = config
                 except Exception as reload_err:
-                    logger.warning(f"Błąd podczas przeładowywania pliku konfiguracji '{config_path}': {reload_err}")
+                    logger.warning(
+                        f"Błąd podczas przeładowywania pliku konfiguracji '{config_path}': {reload_err}",
+                        exc_info=True,
+                    )
                 continue
         except KeyboardInterrupt:
             logger.info("Zatrzymano działanie usługi (Ctrl+C).")
@@ -764,13 +557,13 @@ def main():
         '--once', '--no-loop',
         dest='once',
         action='store_true',
-        help="Wymuś pojedyncze wykonanie i zakończenie procesu (nadpisuje work-in-loop z konfiguracji)"
+        help="Wymuś pojedyncze wykonanie i zakończenie procesu (nadpisuje work_in_loop z konfiguracji)"
     )
     parser.add_argument(
         '--loop',
         dest='loop',
         action='store_true',
-        help="Wymuś działanie w nieskończonej pętli z interwałem wait_time_s (nadpisuje work-in-loop z konfiguracji)"
+        help="Wymuś działanie w nieskończonej pętli z interwałem wait_time_s (nadpisuje work_in_loop z konfiguracji)"
     )
     parser.add_argument(
         '--summary',

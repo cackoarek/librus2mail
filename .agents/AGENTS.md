@@ -13,7 +13,7 @@ Welcome to **Librus2mail**. This document provides essential context, architectu
 - Scraping messages (`/wiadomosci`) with optional body reading.
 - Scraping announcements (`/ogloszenia`).
 - Email delivery via Gmail (`yagmail`) or custom SMTP server (`smtplib` + STARTTLS).
-- Initial "dry-parse" run (`do_not_send_first_parse`) to establish a baseline without sending notifications for historical messages.
+- Automatyczny punkt bazowy (baseline) przy pierwszym uruchomieniu bez wysyłania powiadomień dla danych historycznych.
 - Periodic polling in an infinite loop with configurable interval (`wait_time_s`).
 
 ---
@@ -99,7 +99,6 @@ librus2mail/
    - Reads configuration (`config.yaml` or designated YAML).
    - Instantiates appropriate mail sender via `configure_mail_provider(config)`: `GmailSender` or `SmtpSender`.
    - Initializes a mapping of `Librus` parser instances per user account (`librus_parsers`).
-   - Sets up initial state flags (`dry-parse` set from `do_not_send_first_parse`).
 
 2. **Polling Loop (`librus_collect_and_notify.py` / `librus_collector.py`)**:
    - For each user in `config['librus_users']`:
@@ -111,8 +110,8 @@ librus2mail/
      6. Waits 5 seconds (`sleep(5)`).
      7. Calls `librus.fetch_grades()`.
      8. Retrieves newly discovered items (`get_not_known_messages_and_mark_as_known()`, `get_not_known_notifications_and_mark_as_known()`, `get_not_known_grades_and_mark_as_known()`).
-     9. If not in `dry-parse` mode and new items exist, triggers `mail_sender.send_mail_with_messages`, `mail_sender.send_mail_with_notifications`, or `mail_sender.send_mail_with_grades`.
-     10. If in `dry-parse` mode, marks baseline as initialized and sets `dry-parse = False`.
+     9. On initial run (no prior `last_notify_time`), establishes baseline state and updates timestamp without firing historical notifications.
+     10. On subsequent runs, if new items exist, triggers notifications via `UpdatesNotifier` / `mail_sender`.
    - Sleeps for `config['wait_time_s']` seconds before next round.
 
 3. **Librus Scraping (`librus.py`)**:

@@ -1,7 +1,7 @@
 {
   "librus_login": "8979296",
-  "librus_login_name": "Jan Kowalski (Przykładowy Uczeń)",
-  "last_updated": "2026-09-09T20:55:00.000000",
+  "librus_login_name": "Jan Kowalski",
+  "last_collect_time": "2026-09-09T20:55:00.000000",
   "known_messages": [
     "Podręczniki - j. niemiecki2026-09-08 14:14:14Węglarczyk  Marian (Węglarczyk  Marian) [Nauczyciel]",
     "Podziękowanie2026-09-11 10:12:14Wiaderko Magdalena (Wiaderko Magdalena) [Nauczyciel]",
@@ -66,7 +66,12 @@
     "1038",
     "1039"
   ],
-  "last_error": null,
+  "last_error": {
+    "error": "HTTPError: HTTP 403: Forbidden",
+    "step": "logowanie",
+    "timestamp": 1791731380.224421,
+    "time_str": "2026-10-11 17:09:40"
+  },
   "grades_history": {
     "1001": {
       "id": "1001",
@@ -1020,5 +1025,5 @@
   ],
   "schedule_last_sync": "2026-09-18T18:00:00.000000",
   "last_notify_time": "2026-09-19T14:38:18.631315",
-  "last_update_create": "2026-09-19T14:38:18.631315"
+  "student_name": "Jan Kowalski"
 }

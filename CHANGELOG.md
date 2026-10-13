@@ -9,6 +9,7 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ## [Unreleased]
 
+- ** WERSJA NIEKOMPATYBILNA WSTECZNIE, konieczność zainstalowania aplikacji ponownie (np. poprzez nowy wbudowany konfigurator)
 - **Usprawnienia wdrożenia Docker & Docker Compose oraz 100% wsparcie zmiennych ENV**:
   - Dedykowany, wyczerpujący podręcznik wdrożenia kontenerowego [docker/docker-installation.md](docker/docker-installation.md) z pełną tabelą zmiennych środowiskowych, architekturą non-root oraz instrukcją troubleshooting.
   - Przeniesienie wszystkich plików Docker do dedykowanego podkatalogu `docker/` (`Dockerfile`, `docker-compose.yml`, `.env.example`, `docker-installation.md`) dla czystości katalogu głównego.

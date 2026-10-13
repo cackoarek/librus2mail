@@ -1357,6 +1357,13 @@ class TestWebDashboard(unittest.TestCase):
         self.assertEqual(res_view.status_code, 200)
         self.assertIn(b'zmieniona', res_view.data)
 
+        # Sprawdzenie w widoku szczegółowym /oceny/Matematyka
+        res_detail = client.get('/oceny/Matematyka')
+        self.assertEqual(res_detail.status_code, 200)
+        self.assertIn(b'zmieniona', res_detail.data)
+        self.assertIn(b'edit-grade-modal', res_detail.data)
+        self.assertIn(b'openEditGradeModal', res_detail.data)
+
         # 3. Przywrócenie ze szkoły (reset)
         res_reset = client.post('/api/grade/reset', data={'grade_id': 'g1'})
         self.assertEqual(res_reset.status_code, 200)

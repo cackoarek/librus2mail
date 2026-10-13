@@ -474,6 +474,7 @@ def get_subject_detailed_analytics(
         timeline_data.append({
             'index': idx,
             'id': str(g.get('id', idx)),
+            'subject': canonical_name,
             'date': clean_date,
             'date_raw': str(g.get('date', '')),
             'grade': str(g.get('grade', '')),
@@ -484,6 +485,9 @@ def get_subject_detailed_analytics(
             'teacher': str(g.get('teacher') or '—'),
             'comment': str(g.get('comment') or '—'),
             'running_average': running_avg,
+            'is_custom': bool(g.get('is_custom')),
+            'original_grade': str(g.get('original_grade') or ''),
+            'original_weight': str(g.get('original_weight') or ''),
         })
 
     # Podsumowanie statystyk

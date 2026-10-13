@@ -1398,8 +1398,86 @@ class TestWebDashboard(unittest.TestCase):
         self.assertTrue(data_inc['included'])
         self.assertNotIn('Język polski', data_inc['excluded_subjects'])
 
+    def test_subject_detail_view_success(self):
+        """Testuje szczegółowy widok przedmiotu z wykresem, statystykami i analizą celów."""
+        app = create_app(config_path=self.config_path, storage_dir=self.storage_dir, no_auth=True)
+        client = app.test_client()
+
+        res = client.get('/oceny/Matematyka')
+        self.assertEqual(res.status_code, 200)
+        self.assertIn(b'Matematyka', res.data)
+        html_text = res.data.decode('utf-8')
+        self.assertIn('Dział raportów: Trajektoria ocen w czasie ze średnią kroczącą', html_text)
+        self.assertIn('Dział raportów', html_text)
+        self.assertIn('Śr. ważona', html_text)
+        self.assertIn('Szansa na podwyższenie oceny', html_text)
+        self.assertIn('Margines bezpieczeństwa & ryzyko', html_text)
+        self.assertIn('Interaktywny symulator nowej oceny z przedmiotu', html_text)
+        self.assertIn('Rozkład ocen (Histogram)', html_text)
+        self.assertIn('Wszystkie oceny cząstkowe z przedmiotu', html_text)
+
+    def test_subject_detail_przedmiot_alias(self):
+        """Testuje działanie aliasu URL /przedmiot/<nazwa>."""
+        app = create_app(config_path=self.config_path, storage_dir=self.storage_dir, no_auth=True)
+        client = app.test_client()
+
+        res = client.get('/przedmiot/Matematyka')
+        self.assertEqual(res.status_code, 200)
+        self.assertIn(b'Matematyka', res.data)
+        self.assertIn('Dział raportów', res.data.decode('utf-8'))
+
+    def test_subject_detail_no_grades(self):
+        """Testuje zachowanie widoku szczegółowego dla przedmiotu bez ocen."""
+        app = create_app(config_path=self.config_path, storage_dir=self.storage_dir, no_auth=True)
+        client = app.test_client()
+
+        res = client.get('/oceny/Informatyka')
+        self.assertEqual(res.status_code, 200)
+        self.assertIn('Brak zarejestrowanych ocen dla tego przedmiotu', res.data.decode('utf-8'))
+
+    def test_get_subject_detailed_analytics_function(self):
+        """Testuje bezpośrednio logikę get_subject_detailed_analytics w services.py."""
+        from src.librus2mail.web.services import get_subject_detailed_analytics
+
+        sample_grades = [
+            {'id': '1', 'subject': 'Fizyka', 'grade': '3', 'weight': '2', 'date': '2026-09-10'},
+            {'id': '2', 'subject': 'Fizyka', 'grade': '4', 'weight': '2', 'date': '2026-09-15'},
+            {'id': '3', 'subject': 'Fizyka', 'grade': '5', 'weight': '3', 'date': '2026-09-20'},
+            {'id': '4', 'subject': 'Chemia', 'grade': '6', 'weight': '1', 'date': '2026-09-22'},
+        ]
+
+        analytics = get_subject_detailed_analytics(sample_grades, 'Fizyka')
+        self.assertEqual(analytics['subject'], 'Fizyka')
+        self.assertEqual(analytics['total_count'], 3)
+        self.assertEqual(analytics['numeric_count'], 3)
+        self.assertIsNotNone(analytics['average'])
+        self.assertAlmostEqual(analytics['average'], 4.14, places=2)
+        self.assertEqual(analytics['min_grade'], 3.0)
+        self.assertEqual(analytics['max_grade'], 5.0)
+        self.assertEqual(analytics['median_grade'], 4.0)
+
+        # Sprawdzenie osi czasu (timeline)
+        timeline = analytics['timeline_data']
+        self.assertEqual(len(timeline), 3)
+        self.assertEqual(timeline[0]['running_average'], 3.0)
+        self.assertEqual(timeline[1]['running_average'], 3.5)
+        self.assertAlmostEqual(timeline[2]['running_average'], 4.14, places=2)
+
+        # Sprawdzenie analizy celu podwyższenia
+        target = analytics['target_analysis']
+        self.assertTrue(target['has_target'])
+        self.assertEqual(target['target_grade_num'], 5)
+        self.assertGreater(len(target['scenarios']), 0)
+
+        # Sprawdzenie analizy ryzyka
+        risk = analytics['risk_analysis']
+        self.assertTrue(risk['has_risk'])
+        self.assertEqual(risk['lower_grade_num'], 3)
+        self.assertIn('drop_simulations', risk)
+
 
 if __name__ == '__main__':
     unittest.main()
+
 
 

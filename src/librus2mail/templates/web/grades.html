@@ -137,8 +137,8 @@
             <!-- Pasek przedmiotu -->
             <div class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 {{ 'bg-rose-50/20' if sdata.is_excluded else 'bg-slate-50/50' }} border-b border-slate-100">
                 <div>
-                    <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                        <span>{{ subj }}</span>
+                    <h3 class="text-base font-extrabold text-slate-900">
+                        {{ subj }}
                     </h3>
                     <div class="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-500">
                         <span>Liczba ocen: <strong>{{ sdata.count }}</strong> (suma wag: {{ sdata.sum_weights|round(1) }})</span>
@@ -167,22 +167,34 @@
                     </div>
                 </div>
 
-                <!-- Średnia ważona z odznaką -->
-                <div class="text-right flex items-center sm:block justify-between sm:justify-end">
-                    <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
-                    <span class="text-xl font-extrabold
-                        {% if sdata.average and sdata.average >= 4.75 %} text-emerald-600
-                        {% elif sdata.average and sdata.average >= 3.75 %} text-sky-600
-                        {% elif sdata.average and sdata.average >= 2.75 %} text-amber-600
-                        {% elif sdata.average %} text-rose-600
-                        {% else %} text-slate-400 {% endif %}">
-                        {{ sdata.average or '-' }}
-                    </span>
+                <!-- Średnia ważona z odznaką oraz odseparowany przycisk do analizy -->
+                <div class="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
+                    <div class="text-right">
+                        <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
+                        <span class="text-xl font-extrabold
+                            {% if sdata.average and sdata.average >= 4.75 %} text-emerald-600
+                            {% elif sdata.average and sdata.average >= 3.75 %} text-sky-600
+                            {% elif sdata.average and sdata.average >= 2.75 %} text-amber-600
+                            {% elif sdata.average %} text-rose-600
+                            {% else %} text-slate-400 {% endif %}">
+                            {{ sdata.average or '-' }}
+                        </span>
+                    </div>
+
+                    <!-- Widoczne odseparowanie od średniej -->
+                    <div class="h-8 w-[1px] bg-slate-200 hidden sm:block"></div>
+
+                    <a href="{{ url_for('web.subject_detail_view', subject_name=subj) }}"
+                       class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-900 border border-indigo-200/80 transition-all shadow-2xs hover:shadow-xs group cursor-pointer"
+                       title="Zobacz pełne statystyki, cele oceny, analizę ryzyka i wykres trajektorii">
+                        <span>📊 Wykres & analiza</span>
+                        <span class="group-hover:translate-x-0.5 transition-transform font-extrabold">&rarr;</span>
+                    </a>
                 </div>
             </div>
 
-            <!-- Karty / Pigułki ocen -->
-            <div class="p-4 sm:p-5">
+            <!-- Karty / Pigułki ocen (wewnątrz tego samego zaokrąglonego kafelka) -->
+            <div class="p-4 sm:p-5 bg-white">
                 <div class="flex flex-wrap gap-2.5">
                     {% if not sdata.grades %}
                     <div class="text-xs text-slate-400 italic py-1 flex items-center gap-1.5">

@@ -7,7 +7,7 @@
 [![CI Status](https://img.shields.io/github/actions/workflow/status/cackoarek/librus2mail/ci.yml?branch=main&label=CI&style=flat-square&logo=githubactions&logoColor=white)](https://github.com/cackoarek/librus2mail/actions/workflows/ci.yml)
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-3776AB.svg?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![Code Style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg?style=flat-square&logo=ruff&logoColor=white)](https://github.com/astral-sh/ruff)
-[![Tests: pytest](https://img.shields.io/badge/tests-pytest%20(194%20passed)-success.svg?style=flat-square&logo=pytest&logoColor=white)](tests/)
+[![Tests: pytest](https://img.shields.io/badge/tests-pytest%20(198%20passed)-success.svg?style=flat-square&logo=pytest&logoColor=white)](tests/)
 [![Packaging: PEP 517/518](https://img.shields.io/badge/packaging-PEP%20517%2F518-00599C.svg?style=flat-square)](pyproject.toml)
 [![Web UI: Flask + Tailwind](https://img.shields.io/badge/web%20ui-Flask%20%2B%20Tailwind-4B8BBE.svg?style=flat-square&logo=flask&logoColor=white)](src/librus2mail/web/)
 [![Docker Ready](https://img.shields.io/badge/docker-ready-2496ED.svg?style=flat-square&logo=docker&logoColor=white)](docker/docker-installation.md)
@@ -689,6 +689,12 @@ Działa jako spójne centrum kontroli: integruje dane zebrane przez kolektor, pr
 * 📊 **Pulpit rodzica (Dashboard)**: Błyskawiczny podgląd kluczowych KPI (średnia ogólna, liczba ocen, plan na dziś i jutro, zapowiedziane sprawdziany, ostatnie wiadomości).
 * 📅 **Plan lekcji (Schedule)**: Przejrzysty tygodniowy rozkład zajęć z czytelnym wyróżnieniem zastępstw, sal, odwołanych lekcji oraz powiązanych sprawdzianów.
 * 🎯 **Zestawienie ocen & Symulator „Co jeśli...?”**: Przegląd ocen cząstkowych i semestralnych z wagami, interaktywny kalkulator HTMX przeliczający wpływ nowej oceny oraz przełącznik „Wliczany do średniej” umożliwiający wyłączenie przedmiotów takich jak Godzina wychowawcza ze średniej i symulatora świadectwa z wyróżnieniem.
+* 📈 **Dedykowany widok szczegółowy przedmiotu (`/oceny/<przedmiot>`)**: Kliknięcie na dowolny przedmiot otwiera pełną analizę:
+  * **Interaktywny wykres trajektorii ocen (Chart.js)**: Wielkość i kolor punktu odzwierciedla wagę i stopień pracy, a fioletowa linia rysuje dynamiczną średnią kroczącą (CMA).
+  * **Mini-histogram rozkładu ocen**: Udział procentowy i liczba wystawionych poszczególnych stopni (1–6).
+  * **Analiza szansy na wyższą ocenę**: Precyzyjny dystans punktowy do wyższego stopnia oraz gotowe scenariusze (np. 1x sprawdzian o wadze 3 na ocenę 5).
+  * **Analiza ryzyka i margines bezpieczeństwa**: Bufor punktowy nad dolnym prokiem bieżącej oceny oraz symulacje negatywnych zdarzeń (np. spadek po 1 ze sprawdzianu).
+  * **Interaktywny symulator ocen na żywo**: Natychmiastowe przeliczanie nowej średniej i stopnia w przeglądarce.
 * 🗓️ **Terminarz szkolny (Timetable)**: Chronologiczny kalendarz nadchodzących sprawdzianów, kartkówek i prac klasowych.
 * 📬 **Wiadomości i ogłoszenia**: Wygodna przeglądarka korespondencji od nauczycieli oraz oficjalnych komunikatów szkoły.
 * ⚡ **Centrum Akcji CLI (`/akcje`)**: Graficzny pulpit wyzwalania operacji (pobranie danych, wysyłka e-maila, generowanie raportów) z bezpośrednim podglądem logów w oknie terminala webowego.

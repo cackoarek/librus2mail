@@ -49,6 +49,7 @@ from .services import (
     get_active_student_login,
     get_storage,
     get_student_dashboard_bundle,
+    get_subject_detailed_analytics,
     list_students,
     resolve_student_name,
     save_config_yaml,
@@ -253,6 +254,30 @@ def grades_view():
         subject_averages=subject_averages,
         certificate_summary=certificate_summary,
         active_tab=active_tab,
+        excluded_subjects=excluded_subjects,
+    )
+
+
+@web_bp.route('/oceny/<path:subject_name>')
+@web_bp.route('/przedmiot/<path:subject_name>')
+@login_required
+def subject_detail_view(subject_name: str):
+    """Szczegółowy widok ocen z danego przedmiotu ze statystykami, celem, ryzykiem i wykresem trajektorii."""
+    config = request.app_config
+    storage = request.app_storage
+    active_login = get_active_student_login(config, storage, session_login=session.get('active_student_login'))
+
+    excluded_subjects = storage.get_excluded_certificate_subjects(active_login) if hasattr(storage, 'get_excluded_certificate_subjects') else []
+    grades = storage.get_grades_history(active_login) if hasattr(storage, 'get_grades_history') else []
+    data = get_student_dashboard_bundle(storage, active_login, config, now=request.app_actual_date)
+
+    analytics = get_subject_detailed_analytics(grades, subject_name, excluded_subjects=excluded_subjects)
+
+    return render_template(
+        'web/subject_detail.html',
+        data=data,
+        analytics=analytics,
+        subject_name=subject_name,
         excluded_subjects=excluded_subjects,
     )
 

@@ -229,13 +229,13 @@ def main():
         '--once', '--no-loop',
         dest='once',
         action='store_true',
-        help="Wymuś pojedyncze wykonanie i zakończenie procesu (nadpisuje work-in-loop z konfiguracji)"
+        help="Wymuś pojedyncze wykonanie i zakończenie procesu (nadpisuje work_in_loop z konfiguracji)"
     )
     parser.add_argument(
         '--loop',
         dest='loop',
         action='store_true',
-        help="Wymuś działanie w nieskończonej pętli z interwałem wait_time_s (nadpisuje work-in-loop z konfiguracji)"
+        help="Wymuś działanie w nieskończonej pętli z interwałem wait_time_s (nadpisuje work_in_loop z konfiguracji)"
     )
     parser.add_argument(
         '--summary',

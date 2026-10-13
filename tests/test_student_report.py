@@ -606,7 +606,6 @@ class TestStudentReportRunner(unittest.TestCase):
         self.config_path = os.path.join(self.temp_dir.name, "config.yaml")
         config_content = f"""
 storage_dir: "{self.storage_dir}"
-storage_type: "FILES"
 mail:
   login: "test@example.com"
   password: "secretpassword"
@@ -791,7 +790,7 @@ librus_users:
                     }
                 ]
             },
-            "work-in-loop": False,
+            "work_in_loop": False,
         }
         cfg_path = os.path.join(self.temp_dir.name, "sched_collector_cfg.yaml")
         with open(cfg_path, "w", encoding="utf-8") as f:

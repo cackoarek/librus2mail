@@ -327,7 +327,7 @@ def run_progress_reports(
             logger.info(f"Załadowano profile uczniów odnalezione w '{effective_storage_dir}': {[u['librus_login_name'] for u in auto_users]}")
             users = auto_users
 
-    raw_delay = config.get('delay_between_users_s', config.get('user_delay_s', 10))
+    raw_delay = config.get('delay_between_users_s', 10)
     try:
         delay = float(raw_delay)
     except (ValueError, TypeError):

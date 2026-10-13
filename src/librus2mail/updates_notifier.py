@@ -518,7 +518,7 @@ class UpdatesNotifier:
             filtered_grades = new_grades if new_grades is not None else []
         else:
             # Tryb asynchroniczny / nieregularny:
-            # Sprawdzamy watermark ostatniego powiadomienia w bazie storage (last_notify_time / last_update_create)
+            # Sprawdzamy watermark ostatniego powiadomienia w bazie storage (last_notify_time)
             last_notify = self.storage.get_last_notify_time(login) if hasattr(self.storage, 'get_last_notify_time') else None
             if last_notify:
                 cutoff = parse_datetime_safe(last_notify)
@@ -532,10 +532,10 @@ class UpdatesNotifier:
                     logger.warning(f"Nieprawidłowy format last_notify_time ({last_notify})")
                     filtered_messages, filtered_notifications, filtered_grades = [], [], []
             else:
-                # Pierwsze uruchomienie bez wcześniejszego znacznika powiadomień
-                if user_config.get('dry-parse', False) or user_config.get('do_not_send_first_parse', False):
-                    period_desc = "pierwsza inicjalizacja (baseline, brak wysyłki)"
-                    logger.info(f"{name} ({login}): Pierwsze uruchomienie z do_not_send_first_parse – brak wysyłki historycznych danych.")
+                # Pierwsze powiadomienie bez wcześniejszego znacznika
+                if user_config.get('dry-parse', False):
+                    period_desc = "pierwsza inicjalizacja (punkt bazowy, brak wysyłki)"
+                    logger.info(f"{name} ({login}): Pierwsze uruchomienie – utworzenie bazy stanu, pomijam wysyłkę historycznych danych.")
                     filtered_messages, filtered_notifications, filtered_grades = [], [], []
                 else:
                     cutoff = now - timedelta(days=1)
@@ -611,7 +611,7 @@ class UpdatesNotifier:
 
             if user_config.get('dry-parse', False):
                 logger.info(
-                    f"{name} ({login}): Tryb dry-parse (pierwsze parsowanie/baseline) – "
+                    f"{name} ({login}): Tryb dry-parse (pierwsze parsowanie/punkt bazowy) – "
                     "pomijam wysyłkę powiadomień dla danych historycznych."
                 )
                 if hasattr(self.storage, 'save_last_notify_time'):

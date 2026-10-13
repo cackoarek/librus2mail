@@ -975,7 +975,7 @@ class TestWebDashboard(unittest.TestCase):
         self.assertEqual(saved_cfg['schedule']['reports'][1]['name'], 'Raport miesięczny')
         self.assertEqual(saved_cfg['schedule']['reports'][1]['frequency'], 'monthly')
         self.assertEqual(saved_cfg['schedule']['reports'][1]['interval_days'], 30)
-        self.assertTrue(saved_cfg['work-in-loop'])
+        self.assertTrue(saved_cfg['work_in_loop'])
         self.assertTrue(saved_cfg.get('one_summary_message'))
         self.assertTrue(saved_cfg['librus_users'][0].get('one_summary_message'))
 
@@ -1099,11 +1099,9 @@ class TestWebDashboard(unittest.TestCase):
         # 2. Test get_reports_schedules z różnymi formatami
         reps = get_reports_schedules({'schedule': sched_cfg})
         self.assertEqual(len(reps), 2)
-        # Kompatybilność wsteczna z formatem słownika
-        legacy_reps = get_reports_schedules({'schedule': {'reports': {'weekday': 'friday', 'interval_days': 7}}})
-        self.assertEqual(len(legacy_reps), 1)
-        self.assertEqual(legacy_reps[0]['interval_days'], 7)
-        self.assertEqual(legacy_reps[0]['frequency'], 'weekly')
+        single_rep_list = get_reports_schedules({'schedule': {'reports': [{'name': 'Raport piątkowy', 'weekday': 'friday', 'interval_days': 7}]}})
+        self.assertEqual(len(single_rep_list), 1)
+        self.assertEqual(single_rep_list[0]['interval_days'], 7)
 
         # 3. Test izolacji znaczników czasu w storage per report_key
         storage = get_storage(self.mock_config, self.storage_dir)

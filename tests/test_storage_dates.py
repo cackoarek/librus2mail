@@ -13,10 +13,6 @@ from librus2mail.storage import (
     FIELD_LAST_PROGRESS_REPORT_DATE,
     FIELD_SCHEDULE_LAST_SYNC,
     FIELD_TIMETABLE_LAST_SYNC,
-    LEGACY_LAST_COLLECT_TIME,
-    LEGACY_LAST_NOTIFY_TIME,
-    LEGACY_SCHEDULE_LAST_SYNC,
-    LEGACY_TIMETABLE_LAST_SYNC,
     FileStorage,
     parse_date_sort_key,
     sort_items_descending,
@@ -28,24 +24,34 @@ class TestStorageDateNormalization:
     def storage(self, tmp_path):
         return FileStorage(storage_dir=tmp_path)
 
-    def test_legacy_field_fallback_on_read(self, tmp_path, storage):
-        """Upewnia się, że odczyt starych plików JSON zwraca poprawne wartości z pól legacy."""
-        user_file = tmp_path / "legacy_user.json"
-        legacy_data = {
-            "librus_login": "legacy_user",
-            LEGACY_LAST_COLLECT_TIME: "2026-09-10T10:00:00",
-            LEGACY_LAST_NOTIFY_TIME: "2026-09-10T11:00:00",
-            "last_progress_report_time": "2026-09-08T08:00:00",
-            LEGACY_TIMETABLE_LAST_SYNC: "2026-09-10T09:30:00",
-            LEGACY_SCHEDULE_LAST_SYNC: "2026-09-10T09:35:00",
-        }
-        user_file.write_text(json.dumps(legacy_data), encoding="utf-8")
+    def test_canonical_fields_read_and_write(self, tmp_path, storage):
+        """Upewnia się, że odczyt i zapis używają wyłącznie kanonicznych pól dat."""
+        storage.save_last_collect_time("test_user", "2026-09-15T12:00:00")
+        storage.save_last_notify_time("test_user", "2026-09-15T12:05:00")
+        storage.save_last_timetable_sync("test_user", "2026-09-15T12:10:00")
+        storage.save_last_schedule_sync("test_user", "2026-09-15T12:15:00")
+        storage.save_last_progress_report_date("test_user", "2026-09-15T12:20:00")
 
-        assert storage.get_last_collect_time("legacy_user") == "2026-09-10T10:00:00"
-        assert storage.get_last_notify_time("legacy_user") == "2026-09-10T11:00:00"
-        assert storage.get_last_progress_report_date("legacy_user") == "2026-09-08T08:00:00"
-        assert storage.get_last_timetable_sync("legacy_user") == "2026-09-10T09:30:00"
-        assert storage.get_last_schedule_sync("legacy_user") == "2026-09-10T09:35:00"
+        assert storage.get_last_collect_time("test_user") == "2026-09-15T12:00:00"
+        assert storage.get_last_notify_time("test_user") == "2026-09-15T12:05:00"
+        assert storage.get_last_timetable_sync("test_user") == "2026-09-15T12:10:00"
+        assert storage.get_last_schedule_sync("test_user") == "2026-09-15T12:15:00"
+        assert storage.get_last_progress_report_date("test_user") == "2026-09-15T12:20:00"
+
+        user_file = tmp_path / "test_user.json"
+        saved = json.loads(user_file.read_text(encoding="utf-8"))
+
+        assert saved[FIELD_LAST_COLLECT_TIME] == "2026-09-15T12:00:00"
+        assert saved[FIELD_LAST_NOTIFY_TIME] == "2026-09-15T12:05:00"
+        assert saved[FIELD_TIMETABLE_LAST_SYNC] == "2026-09-15T12:10:00"
+        assert saved[FIELD_SCHEDULE_LAST_SYNC] == "2026-09-15T12:15:00"
+        assert saved[FIELD_LAST_PROGRESS_REPORT_DATE] == "2026-09-15T12:20:00"
+
+        # Upewnij się, że stare legacy klucze nie są tworzone w pliku
+        assert "last_updated" not in saved
+        assert "last_update_create" not in saved
+        assert "last_timetable_sync" not in saved
+        assert "last_schedule_sync" not in saved
 
     def test_save_and_get_subjects(self, tmp_path, storage):
         """Weryfikuje zapisywanie i pobieranie listy wszystkich przedmiotów (w tym bez ocen)."""
@@ -57,31 +63,6 @@ class TestStorageDateNormalization:
 
         subjects = storage.get_subjects("student1")
         assert subjects == ["Historia", "Język polski", "Matematyka", "Taniec"]
-
-    def test_saving_updates_both_canonical_and_legacy_fields(self, tmp_path, storage):
-        """Upewnia się, że zapis zachowuje zarówno klucze kanoniczne jak i klucze legacy."""
-        storage.save_last_collect_time("test_user", "2026-09-15T12:00:00")
-        storage.save_last_notify_time("test_user", "2026-09-15T12:05:00")
-        storage.save_last_timetable_sync("test_user", "2026-09-15T12:10:00")
-        storage.save_last_schedule_sync("test_user", "2026-09-15T12:15:00")
-        storage.save_last_progress_report_date("test_user", "2026-09-15T12:20:00")
-
-        user_file = tmp_path / "test_user.json"
-        saved = json.loads(user_file.read_text(encoding="utf-8"))
-
-        assert saved[FIELD_LAST_COLLECT_TIME] == "2026-09-15T12:00:00"
-        assert saved[LEGACY_LAST_COLLECT_TIME] == "2026-09-15T12:00:00"
-
-        assert saved[FIELD_LAST_NOTIFY_TIME] == "2026-09-15T12:05:00"
-        assert saved[LEGACY_LAST_NOTIFY_TIME] == "2026-09-15T12:05:00"
-
-        assert saved[FIELD_TIMETABLE_LAST_SYNC] == "2026-09-15T12:10:00"
-        assert saved[LEGACY_TIMETABLE_LAST_SYNC] == "2026-09-15T12:10:00"
-
-        assert saved[FIELD_SCHEDULE_LAST_SYNC] == "2026-09-15T12:15:00"
-        assert saved[LEGACY_SCHEDULE_LAST_SYNC] == "2026-09-15T12:15:00"
-
-        assert saved[FIELD_LAST_PROGRESS_REPORT_DATE] == "2026-09-15T12:20:00"
 
     def test_parse_date_sort_key_various_formats(self):
         items = [

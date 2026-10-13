@@ -9,6 +9,13 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ## [Unreleased]
 
+- **Usprawnienia wdrożenia Docker & Docker Compose oraz 100% wsparcie zmiennych ENV**:
+  - Dedykowany, wyczerpujący podręcznik wdrożenia kontenerowego [docker/docker-installation.md](docker/docker-installation.md) z pełną tabelą zmiennych środowiskowych, architekturą non-root oraz instrukcją troubleshooting.
+  - Przeniesienie wszystkich plików Docker do dedykowanego podkatalogu `docker/` (`Dockerfile`, `docker-compose.yml`, `.env.example`, `docker-installation.md`) dla czystości katalogu głównego.
+  - Możliwość uruchomienia aplikacji w 100% w oparciu o zmienne środowiskowe (ENV / plik `.env`) bez konieczności montowania pliku `config.yaml` (`read_config` automatycznie inicjalizuje się z ENV).
+  - Wzbogacenie modelu `AppSettings` o płaskie aliasy ENV (np. `LIBRUS_LOGIN`, `LIBRUS_PASSWORD`, `LIBRUS_MAIL_LOGIN`, `LIBRUS_SMTP_HOST`, `LIBRUS_WEB_PASSWORD`, `LIBRUS_SCHEDULE_MODE`).
+  - Dodanie wzorcowego pliku [docker/.env.example](docker/.env.example) dla środowisk Docker.
+  - Aktualizacja [docker/Dockerfile](docker/Dockerfile) (dodanie brakujących skryptów CLI, `EXPOSE 5000`) oraz [docker/docker-compose.yml](docker/docker-compose.yml) (usługa `student-report`, profile, obsługa `.env`).
 - **Typowane modele obiektów domenowych (Issue #8 - Etap 2)**:
   - Wprowadzenie dedykowanych modeli Pydantic v2 dla obiektów domenowych: `Grade` (ocena), `Message` (wiadomość prywatna), `Announcement` / `Notification` (ogłoszenie szkolne), `TimetableEntry` (terminarz) oraz `ScheduleLesson` / `ScheduleEntry` (plan lekcji).
   - Obiekty domenowe implementują `collections.abc.MutableMapping` zapewniając pełną zgodność z dotychczasowym dostępem słownikowym (`obj['field']`, `obj.get('field')`), rozpakowywaniem `{**obj}` oraz szablonami Jinja2.
@@ -19,9 +26,9 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
   - Zastąpienie surowego, nietypowanego słownika konfiguracji silnie typowanymi modelami Pydantic v2 (`AppSettings`, `LibrusUserConfig`, `MailConfig`, `WebConfig`, `ScheduleConfig`, `NonGmailSettings`).
   - Natychmiastowa wczesna walidacja danych (fail-fast) przy starcie aplikacji — wyłapywanie błędnych adresów e-mail (`EmailStr`), nieprawidłowych typów czy brakujących danych logowania zanim aplikacja nawiąże połączenie sieciowe.
   - Zmienne środowiskowe i konteneryzacja (Docker / 12-factor): automatyczne nadpisywanie wartości z pliku YAML zmiennymi środowiskowymi z prefiksem `LIBRUS_` i zagnieżdżonym separatorem `__` (np. `LIBRUS_STORAGE_DIR`, `LIBRUS_MAIL__LOGIN`, `LIBRUS_MAIL__PASSWORD`).
-  - Bezpieczeństwo sekretów w logach: hasła przechowywane jako `SecretStr` (automatyczne maskowanie `**********` w logach i repr), z zachowaniem pełnej kompatybilności słownikowej przy wywołaniach sieciowych.
-  - Bezproblemowa obsługa aliasów historycznych konwencji nazewniczych kluczy (`work-in-loop` / `work_in_loop`, `dry-parse` / `dry_parse` / `do_not_send_first_parse`, `user_delay_s` / `delay_between_users_s`).
-  - Zachowanie 100% kompatybilności wstecznej (interfejs `MutableMapping` / dostęp słownikowy `.get()`, `[]`, `to_dict()`) ze wszystkimi istniejącymi skryptami, szablonami Jinja2 oraz zestawem testów jednostkowych.
+  - Zunifikowanie i uproszczenie kluczy konfiguracyjnych: zerwanie z historycznymi aliasami na rzecz czytelnego standardu snake_case (`work_in_loop`, `delay_between_users_s`). Usunięto niepotrzebne parametry `do_not_send_first_parse` (ustanawianie bazy stanu przy pierwszym starcie odbywa się w pełni automatycznie) oraz `storage_type`.
+  - Kanoniczne znaczniki czasu w bazie stanu JSON (`storage/`): usunięcie podwójnego zapisywania starych kluczy legacy (`last_updated`, `last_update_create`, `last_timetable_sync`, `last_schedule_sync`) na rzecz spójnych pól `last_collect_time`, `last_notify_time`, `timetable_last_sync`, `schedule_last_sync`.
+  - Pełna integracja (interfejs `MutableMapping` / dostęp słownikowy `.get()`, `[]`, `to_dict()`) ze wszystkimi modułami, CLI i szablonami Jinja2.
 - **Obsługa Google OAuth2 dla Gmail (`oauth2_file`)**:
   - Dodano alternatywną metodę uwierzytelniania konta pocztowego Gmail z użyciem pliku autoryzacyjnego OAuth2 (`client_secret.json` / plik tokenów autoryzacyjnych), zgodnie ze zgłoszeniem w Issue #5.
   - Wybór metody uwierzytelniania w kreatorze `/setup` oraz w zakładce `/ustawienia` (*Hasło do aplikacji (zalecane)* vs *Google OAuth2 (.json)*).

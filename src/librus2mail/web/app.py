@@ -778,7 +778,6 @@ def setup_submit():
                 'schedule_retention_days': int(form.get('schedule_retention_days', 30)),
                 'schedule_day_offset': int(form.get('schedule_day_offset', 1)),
                 'one_summary_message': is_one_summary,
-                'do_not_send_first_parse': 'do_not_send_first_parse' in form,
                 'notification_receivers': receivers or [form.get('mail_login', '').strip()],
             }
             if f'student_report_enabled_{idx}' in form:
@@ -838,10 +837,8 @@ def setup_submit():
         'schedule_day_offset': int(form.get('schedule_day_offset', 1)),
         'schedule_retention_days': int(form.get('schedule_retention_days', 30)),
         'one_summary_message': (form.get('one_summary_message', '1') == '1'),
-        'do_not_send_first_parse': 'do_not_send_first_parse' in form,
-        'work-in-loop': True if 'collection_mode' in form else ('work_in_loop' in form),
+        'work_in_loop': True if 'collection_mode' in form else ('work_in_loop' in form),
         'storage_dir': getattr(request, 'app_storage_dir', 'storage') or 'storage',
-        'storage_type': 'FILES',
         'send_error_notifications': 'send_error_notifications' in form,
         'error_cooldown_s': 3600,
         'mail': mail_cfg,
@@ -930,7 +927,6 @@ def settings_view():
                     'schedule_retention_days': int(form.get('schedule_retention_days', 30)),
                     'schedule_day_offset': int(form.get('schedule_day_offset', 1)),
                     'one_summary_message': is_one_summary,
-                    'do_not_send_first_parse': 'do_not_send_first_parse' in form,
                     'notification_receivers': receivers,
                 }
                 if f'student_report_enabled_{idx}' in form:
@@ -992,8 +988,7 @@ def settings_view():
         new_config['schedule_day_offset'] = int(form.get('schedule_day_offset', config.get('schedule_day_offset', 1)))
         new_config['schedule_retention_days'] = int(form.get('schedule_retention_days', config.get('schedule_retention_days', 30)))
         new_config['one_summary_message'] = (form.get('one_summary_message', '1') == '1')
-        new_config['do_not_send_first_parse'] = 'do_not_send_first_parse' in form
-        new_config['work-in-loop'] = True if 'collection_mode' in form else ('work_in_loop' in form if 'work_in_loop' in form else config.get('work-in-loop', True))
+        new_config['work_in_loop'] = True if 'collection_mode' in form else ('work_in_loop' in form if 'work_in_loop' in form else config.get('work_in_loop', True))
         new_config['send_error_notifications'] = 'send_error_notifications' in form
         new_config['mail'] = mail_cfg
         new_config['web'] = dict(existing_web)
@@ -1080,10 +1075,10 @@ def start_background_collector(
                         time.sleep(5)
                         continue
 
-                    work_in_loop_val = cfg.get('work-in-loop', cfg.get('work_in_loop', True))
+                    work_in_loop_val = cfg.get('work_in_loop', True)
                     if not work_in_loop_val:
                         logger.info(
-                            "⏰ [BackgroundCollector] Harmonogram w tle jest wyłączony w konfiguracji (work-in-loop: false). "
+                            "⏰ [BackgroundCollector] Harmonogram w tle jest wyłączony w konfiguracji (work_in_loop: false). "
                             "Wątek czuwa i oczekuje na ewentualną zmianę konfiguracji w panelu WWW..."
                         )
                         from librus2mail.config_watcher import sleep_with_config_watch
@@ -1268,13 +1263,13 @@ def main():
     effective_host = args.host or cfg_web.get('host') or '0.0.0.0'
     effective_port = args.port or int(cfg_web.get('port', 5000))
 
-    is_loop_enabled = cfg_app.get('work-in-loop', cfg_app.get('work_in_loop', True)) if isinstance(cfg_app, (dict, collections.abc.Mapping)) else True
+    is_loop_enabled = cfg_app.get('work_in_loop', True) if isinstance(cfg_app, (dict, collections.abc.Mapping)) else True
 
     auth_status = "WYŁĄCZONA (--no-auth)" if args.no_auth or not app.config.get('WEB_PASSWORD') else "WŁĄCZONA (wymagane hasło rodzica)"
     if not run_scheduler:
         scheduler_status = "WYŁĄCZONY (--no-collector)"
     elif not is_loop_enabled:
-        scheduler_status = "WYŁĄCZONY (work-in-loop: false w config.yaml)"
+        scheduler_status = "WYŁĄCZONY (work_in_loop: false w config.yaml)"
     else:
         scheduler_status = "AKTYWNY (wątek w tle)"
 

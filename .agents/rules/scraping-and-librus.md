@@ -32,4 +32,4 @@
 
 6. **State & Known Items Tracking**:
    - `__known_messages` and `__known_notifications` prevent re-sending identical items.
-   - `do_not_send_first_parse` (`dry-parse`): On initial launch, existing messages are indexed into `known` without firing email notifications.
+   - Baseline initial run: On initial launch, existing messages are indexed into `known` without firing email notifications.

@@ -20,12 +20,6 @@ FIELD_LAST_PROGRESS_REPORT_DATES = "last_progress_report_dates"
 FIELD_TIMETABLE_LAST_SYNC = "timetable_last_sync"
 FIELD_SCHEDULE_LAST_SYNC = "schedule_last_sync"
 
-# Historyczne aliasy kluczy dla 100% kompatybilności wstecznej:
-LEGACY_LAST_COLLECT_TIME = "last_updated"
-LEGACY_LAST_NOTIFY_TIME = "last_update_create"
-LEGACY_TIMETABLE_LAST_SYNC = "last_timetable_sync"
-LEGACY_SCHEDULE_LAST_SYNC = "last_schedule_sync"
-
 
 def read_json_safe(path: Path | str) -> dict[str, Any]:
     """Bezpiecznie wczytuje dane z pliku JSON; jeśli plik nie istnieje lub jest uszkodzony, zwraca pusty słownik."""
@@ -363,7 +357,6 @@ class FileStorage(BaseStorage):
         data['librus_login'] = str(user_login)
         now_iso = datetime.now().isoformat()
         data[FIELD_LAST_COLLECT_TIME] = now_iso
-        data[LEGACY_LAST_COLLECT_TIME] = now_iso
         data['known_messages'] = sorted(list(known_messages))
         data['known_notifications'] = sorted(list(known_notifications))
         data['known_grades'] = sorted(list(known_grades))
@@ -376,7 +369,6 @@ class FileStorage(BaseStorage):
         data['librus_login'] = str(user_login)
         now_iso = datetime.now().isoformat()
         data[FIELD_LAST_COLLECT_TIME] = now_iso
-        data[LEGACY_LAST_COLLECT_TIME] = now_iso
         raw_history = data.get('grades_history', {})
         if isinstance(raw_history, list):
             grades_history = {str(g.get('id', '')): g for g in raw_history if g.get('id')}
@@ -610,7 +602,7 @@ class FileStorage(BaseStorage):
         """Zwraca znacznik czasu (ISO) ostatniej synchronizacji danych z Librusa."""
         path = self._get_file_path(user_login)
         data = read_json_safe(path)
-        return data.get(FIELD_LAST_COLLECT_TIME) or data.get(LEGACY_LAST_COLLECT_TIME)
+        return data.get(FIELD_LAST_COLLECT_TIME)
 
     def save_last_collect_time(self, user_login: str, date_iso: str) -> None:
         """Zapisuje znacznik czasu (ISO) ostatniej synchronizacji danych z Librusa."""
@@ -618,7 +610,6 @@ class FileStorage(BaseStorage):
         data = read_json_safe(path)
         data['librus_login'] = str(user_login)
         data[FIELD_LAST_COLLECT_TIME] = date_iso
-        data[LEGACY_LAST_COLLECT_TIME] = date_iso
         write_json_atomic(path, data)
         logger.debug(f"Zapisano last_collect_time do {path}")
 
@@ -626,7 +617,7 @@ class FileStorage(BaseStorage):
         """Zwraca znacznik czasu (ISO) ostatniego wysłanego/wygenerowanego powiadomienia."""
         path = self._get_file_path(user_login)
         data = read_json_safe(path)
-        return data.get(FIELD_LAST_NOTIFY_TIME) or data.get(LEGACY_LAST_NOTIFY_TIME)
+        return data.get(FIELD_LAST_NOTIFY_TIME)
 
     def save_last_notify_time(self, user_login: str, date_iso: str) -> None:
         """Zapisuje znacznik czasu (ISO) ostatniego wysłanego/wygenerowanego powiadomienia."""
@@ -634,7 +625,6 @@ class FileStorage(BaseStorage):
         data = read_json_safe(path)
         data['librus_login'] = str(user_login)
         data[FIELD_LAST_NOTIFY_TIME] = date_iso
-        data[LEGACY_LAST_NOTIFY_TIME] = date_iso
         write_json_atomic(path, data)
         logger.debug(f"Zapisano last_notify_time do {path}")
 
@@ -760,14 +750,13 @@ class FileStorage(BaseStorage):
     def get_last_timetable_sync(self, user_login: str) -> str | None:
         path = self._get_file_path(user_login)
         data = read_json_safe(path)
-        return data.get(FIELD_TIMETABLE_LAST_SYNC) or data.get(LEGACY_TIMETABLE_LAST_SYNC)
+        return data.get(FIELD_TIMETABLE_LAST_SYNC)
 
     def save_last_timetable_sync(self, user_login: str, date_iso: str) -> None:
         path = self._get_file_path(user_login)
         data = read_json_safe(path)
         data['librus_login'] = str(user_login)
         data[FIELD_TIMETABLE_LAST_SYNC] = date_iso
-        data[LEGACY_TIMETABLE_LAST_SYNC] = date_iso
         write_json_atomic(path, data)
 
     def mark_timetable_entries_notified(self, user_login: str, entry_ids: list[str], notified_at_iso: str | None = None) -> None:
@@ -861,27 +850,18 @@ class FileStorage(BaseStorage):
     def get_last_schedule_sync(self, user_login: str) -> str | None:
         path = self._get_file_path(user_login)
         data = read_json_safe(path)
-        return data.get(FIELD_SCHEDULE_LAST_SYNC) or data.get(LEGACY_SCHEDULE_LAST_SYNC)
+        return data.get(FIELD_SCHEDULE_LAST_SYNC)
 
     def save_last_schedule_sync(self, user_login: str, date_iso: str) -> None:
         path = self._get_file_path(user_login)
         data = read_json_safe(path)
         data['librus_login'] = str(user_login)
         data[FIELD_SCHEDULE_LAST_SYNC] = date_iso
-        data[LEGACY_SCHEDULE_LAST_SYNC] = date_iso
         write_json_atomic(path, data)
 
 
 def create_storage(storage_dir: str | Path = 'storage', *args, **kwargs) -> FileStorage:
-    """
-    Tworzy trwałą pamięć stanu opartą na plikach JSON (FileStorage).
-    Dla wstecznej kompatybilności ignoruje dawny parametr storage_type.
-    """
-    target_dir = kwargs.get('storage_dir')
-    if not target_dir:
-        if isinstance(storage_dir, str) and storage_dir.upper() in ('FILES', 'RAM'):
-            target_dir = args[0] if args else 'storage'
-        else:
-            target_dir = storage_dir or 'storage'
+    """Tworzy trwałą pamięć stanu opartą na plikach JSON (FileStorage)."""
+    target_dir = kwargs.get('storage_dir') or storage_dir or 'storage'
     return FileStorage(storage_dir=target_dir)
 

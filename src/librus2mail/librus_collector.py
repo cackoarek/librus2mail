@@ -245,7 +245,7 @@ class LibrusCollector:
     def collect_all(self, users: list[dict]) -> dict[str, dict[str, Any]]:
         """Pobiera dane dla wszystkich przekazanych kont uczniów."""
         collected = {}
-        raw_delay = self.config.get('delay_between_users_s', self.config.get('user_delay_s', 10))
+        raw_delay = self.config.get('delay_between_users_s', 10)
         try:
             delay = float(raw_delay)
         except (ValueError, TypeError):
@@ -325,9 +325,9 @@ def run_collector(
     elif work_in_loop is not None:
         effective_work_in_loop = work_in_loop
     else:
-        effective_work_in_loop = config.get('work-in-loop', config.get('work_in_loop', True))
+        effective_work_in_loop = config.get('work_in_loop', True)
 
-    logger.info(f"Tryb pracy w pętli (work-in-loop): {effective_work_in_loop}")
+    logger.info(f"Tryb pracy w pętli (work_in_loop): {effective_work_in_loop}")
 
     # Lista użytkowników
     users = config.get('librus_users', [])
@@ -394,10 +394,7 @@ def run_collector(
 
     for idx, user in enumerate(users):
         user['id'] = idx
-        if storage.has_existing_data(str(user.get('librus_login'))):
-            user['dry-parse'] = False
-        else:
-            user['dry-parse'] = user.get('do_not_send_first_parse', True)
+        user['dry-parse'] = not storage.has_existing_data(str(user.get('librus_login')))
 
     collector = LibrusCollector(config, storage=storage)
     notifier = UpdatesNotifier(config, storage=storage)
@@ -464,7 +461,7 @@ def run_collector(
             if is_simulation:
                 logger.info("Zakończono symulację / pojedynczy przebieg.")
             else:
-                logger.info("Zakończono pojedynczy przebieg (work-in-loop: false). Koniec pracy.")
+                logger.info("Zakończono pojedynczy przebieg (work_in_loop: false). Koniec pracy.")
             break
 
         sleep_s = scheduler.calculate_next_wait_seconds(now=datetime.now())
@@ -481,10 +478,7 @@ def run_collector(
                     new_users = config.get('librus_users', [])
                     for idx, user in enumerate(new_users):
                         user['id'] = idx
-                        if storage.has_existing_data(str(user.get('librus_login'))):
-                            user['dry-parse'] = False
-                        else:
-                            user['dry-parse'] = user.get('do_not_send_first_parse', True)
+                        user['dry-parse'] = not storage.has_existing_data(str(user.get('librus_login')))
                     users = new_users
                     collector.config = config
                     notifier.config = config
@@ -563,13 +557,13 @@ def main():
         '--once', '--no-loop',
         dest='once',
         action='store_true',
-        help="Wymuś pojedyncze wykonanie i zakończenie procesu (nadpisuje work-in-loop z konfiguracji)"
+        help="Wymuś pojedyncze wykonanie i zakończenie procesu (nadpisuje work_in_loop z konfiguracji)"
     )
     parser.add_argument(
         '--loop',
         dest='loop',
         action='store_true',
-        help="Wymuś działanie w nieskończonej pętli z interwałem wait_time_s (nadpisuje work-in-loop z konfiguracji)"
+        help="Wymuś działanie w nieskończonej pętli z interwałem wait_time_s (nadpisuje work_in_loop z konfiguracji)"
     )
     parser.add_argument(
         '--summary',

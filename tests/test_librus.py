@@ -384,17 +384,13 @@ class TestLibrus(unittest.TestCase):
     def test_work_in_loop_config_handling(self):
         # Domyślnie True
         cfg_default = {}
-        self.assertTrue(cfg_default.get('work-in-loop', cfg_default.get('work_in_loop', True)))
+        self.assertTrue(cfg_default.get('work_in_loop', True))
 
-        # Wyłączona pętla (work-in-loop: false)
-        cfg_disabled_hyphen = {'work-in-loop': False}
-        self.assertFalse(cfg_disabled_hyphen.get('work-in-loop', cfg_disabled_hyphen.get('work_in_loop', True)))
+        # Wyłączona pętla (work_in_loop: false)
+        cfg_disabled = {'work_in_loop': False}
+        self.assertFalse(cfg_disabled.get('work_in_loop', True))
 
-        # Wyłączona pętla (work_in_loop: false z podkreśleniem)
-        cfg_disabled_underscore = {'work_in_loop': False}
-        self.assertFalse(cfg_disabled_underscore.get('work-in-loop', cfg_disabled_underscore.get('work_in_loop', True)))
-
-        # Weryfikacja wykonania w run_collector z work-in-loop: false
+        # Weryfikacja wykonania w run_collector z work_in_loop: false
         import tempfile
 
         import yaml
@@ -405,7 +401,7 @@ class TestLibrus(unittest.TestCase):
             cfg_file = os.path.join(tmp_dir, "config.yaml")
             with open(cfg_file, "w", encoding="utf-8") as f:
                 yaml.dump({
-                    'work-in-loop': False,
+                    'work_in_loop': False,
                     'storage_dir': tmp_dir,
                     'librus_users': [],
                     'mail': {'use_gmail': False, 'login': 'a', 'password': 'b'},
@@ -413,10 +409,10 @@ class TestLibrus(unittest.TestCase):
             # Powinno wykonać 1 przebieg i zakończyć działanie bez zawieszenia w pętli
             run_collector(config_path=cfg_file, storage_dir=tmp_dir, offline=True)
 
-            # Test z flagą once=True nadpisującą work-in-loop: true
+            # Test z flagą once=True nadpisującą work_in_loop: true
             with open(cfg_file, "w", encoding="utf-8") as f:
                 yaml.dump({
-                    'work-in-loop': True,
+                    'work_in_loop': True,
                     'storage_dir': tmp_dir,
                     'librus_users': [],
                     'mail': {'use_gmail': False, 'login': 'a', 'password': 'b'},
@@ -1505,18 +1501,18 @@ class TestLibrus(unittest.TestCase):
             storage.save_last_collect_time(login, collect_iso)
             self.assertEqual(storage.get_last_collect_time(login), collect_iso)
 
-            # Save and verify last_notify_time / last_update_create
+            # Save and verify last_notify_time
             notify_iso = "2026-09-18T12:30:00"
             storage.save_last_notify_time(login, notify_iso)
             self.assertEqual(storage.get_last_notify_time(login), notify_iso)
 
-            # Check backward/alias compatibility: last_update_create in raw JSON
+            # Check canonical keys in raw JSON
             file_path = os.path.join(temp_dir, f"{login}.json")
             with open(file_path, encoding='utf-8') as f:
                 data = json.load(f)
             self.assertEqual(data.get('last_collect_time'), collect_iso)
             self.assertEqual(data.get('last_notify_time'), notify_iso)
-            self.assertEqual(data.get('last_update_create'), notify_iso)
+            self.assertNotIn('last_update_create', data)
 
     def test_updates_notifier_watermark_flow(self):
         import tempfile
@@ -1703,7 +1699,7 @@ class TestLibrus(unittest.TestCase):
         config = {
             'librus_users': [{'librus_login': '111', 'librus_login_name': 'Uczeń 1'}],
             'storage_dir': 'storage',
-            'work-in-loop': False,
+            'work_in_loop': False,
         }
         with tempfile.TemporaryDirectory() as tmpdir:
             cfg_file = os.path.join(tmpdir, 'config.yaml')

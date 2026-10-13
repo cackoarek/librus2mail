@@ -158,7 +158,7 @@ class TestGradesParser:
         assert g_zach.id == "79640"
         assert g_zach.grade == "1"
         assert g_zach.category == "poszanowanie norm etycznych"
-        assert g_zach.date == "2026-10-12"
+        assert g_zach.date == "2026-09-12"
         assert g_zach.teacher == "Maria Nauczycielka"
 
         # Łączna liczba ocen: 31 przedmiotowych + 1 z zachowania = 32

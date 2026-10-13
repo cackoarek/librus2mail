@@ -5,7 +5,7 @@ on:
     # Automatyczny build po każdym push do main (obraz :latest + :sha-*)
     branches: [ main ]
     paths:
-      - 'Dockerfile'
+      - 'docker/Dockerfile'
       - 'src/**'
       - 'pyproject.toml'
       - 'requirements.txt'
@@ -19,7 +19,7 @@ on:
   pull_request:
     branches: [ main ]
     paths:
-      - 'Dockerfile'
+      - 'docker/Dockerfile'
       - 'src/**'
       - 'pyproject.toml'
       - 'requirements.txt'
@@ -60,6 +60,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: docker/Dockerfile
           load: true
           tags: librus2mail:test
           cache-from: type=gha
@@ -84,6 +85,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: docker/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

@@ -123,14 +123,14 @@ librus2mail [opcje]
 
 | Flaga | Moduł | Opis działania |
 | :--- | :--- | :--- |
-| *(brak flagi)* | **Potok pełny** | Standardowy cykl: `Collector (pobranie) -> UpdatesNotifier (powiadomienia) -> sleep`. Szanuje `work-in-loop` z configu. |
+| *(brak flagi)* | **Potok pełny** | Standardowy cykl: `Collector (pobranie) -> UpdatesNotifier (powiadomienia) -> sleep`. Szanuje `work_in_loop` z configu. |
 | `--collect-only`, `--sync-only` | **Moduł 1** | Uruchamia wyłącznie pobieranie danych z Librusa i zapis do `storage/` bez wysyłania maili. |
 | `--notify-only` | **Moduł 2** | Uruchamia wyłącznie analizę bazy `storage/` i wysyłkę powiadomień (e-mail / terminal / HTML). Działa w 100% offline. |
 | `--report` | **Moduł 3** | Uruchamia generator raportu analitycznego postępów dla rodziców (`librus_progress_report.py`). |
 | `--student-report` | **Moduł 4** | Uruchamia generator motywacyjnego raportu dla ucznia (`librus_student_report.py`). |
 | `--summary` | **Format e-mail** | Wymusza wysłanie 1 zbiorczego e-maila ze wszystkimi nowościami (zamiast osobnych wiadomości, ogłoszeń i ocen). Nadpisuje `one_summary_message`. |
-| `--once`, `--no-loop` | **Sterowanie pętlą** | Wymusza pojedyncze wykonanie i natychmiastowe zakończenie procesu (nadpisuje `work-in-loop: true`). |
-| `--loop` | **Sterowanie pętlą** | Wymusza działanie w nieskończonej pętli z interwałem `wait_time_s` (nadpisuje `work-in-loop: false`). |
+| `--once`, `--no-loop` | **Sterowanie pętlą** | Wymusza pojedyncze wykonanie i natychmiastowe zakończenie procesu (nadpisuje `work_in_loop: true`). |
+| `--loop` | **Sterowanie pętlą** | Wymusza działanie w nieskończonej pętli z interwałem `wait_time_s` (nadpisuje `work_in_loop: false`). |
 
 ### 🚀 Praktyczne przykłady użycia
 
@@ -184,8 +184,8 @@ librus-collector [opcje]
 | `-u`, `--user <login/nazwa>` | opcja | `None` (wszyscy) | Zawęża pobieranie tylko do wskazanego ucznia. |
 | `--sync-only` | flaga | `False` | Tylko synchronizuje dane z Librusem do storage (bez powiadomień). |
 | `--offline` | flaga | `False` | Tryb testowy: symuluje pobieranie na podstawie lokalnego storage. |
-| `--once`, `--no-loop` | flaga | `False` | Wymusza 1 przebieg i zakończenie (nadpisuje `work-in-loop: true`). |
-| `--loop` | flaga | `False` | Wymusza nieskończoną pętlę (nadpisuje `work-in-loop: false`). |
+| `--once`, `--no-loop` | flaga | `False` | Wymusza 1 przebieg i zakończenie (nadpisuje `work_in_loop: true`). |
+| `--loop` | flaga | `False` | Wymusza nieskończoną pętlę (nadpisuje `work_in_loop: false`). |
 
 ### 🚀 Praktyczne przykłady użycia
 
@@ -233,7 +233,7 @@ librus-notifier [opcje]
 
 W pliku stanu ucznia (`storage/<login>.json`) utrzymywane są dwa kluczowe znaczniki czasowe:
 - `last_collect_time`: znacznik czasu ostatniej pomyślnej synchronizacji z portalem Librus (zapisywany przez `librus_collector.py`).
-- `last_notify_time` (alias `last_update_create`): znacznik czasu ostatniego faktycznie dostarczonego powiadomienia do rodzica (zapisywany przez `librus_updates_notifier.py`).
+- `last_notify_time`: znacznik czasu ostatniego faktycznie dostarczonego powiadomienia do rodzica (zapisywany przez `librus_updates_notifier.py`).
 
 **Jak skrypt określa okres nowości przy uruchomieniach nieregularnych:**
 1. **Tryb jawny (`--days N` / `--hours N`)**: Użytkownik decyduje wprost o oknie czasowym (np. `now - timedelta(days=N)`). Nadpisuje to wszelkie znaczniki.
@@ -242,7 +242,7 @@ W pliku stanu ucznia (`storage/<login>.json`) utrzymywane są dwa kluczowe znacz
    - Za "nowe" uznawane są wyłącznie wpisy dodane lub opublikowane **po** dacie `last_notify_time`.
    - Po wysłaniu wiadomości znacznik `last_notify_time` jest aktualizowany do bieżącej chwili.
    - **Ochrona podglądu**: Uruchomienie w trybie podglądu (`--dry-run` lub `-o / --save-html`) **nigdy nie przesuwa** znacznika `last_notify_time`.
-   - **Pierwszy start**: Jeśli brak jest znacznika `last_notify_time` oraz skonfigurowano `do_not_send_first_parse: true`, skrypt ustanawia punkt bazowy bez wysyłania powiadomień historycznych.
+   - **Pierwszy start**: Jeśli brak jest znacznika `last_notify_time`, skrypt automatycznie ustanawia punkt bazowy bez wysyłania powiadomień historycznych.
 
 ### 🚀 Praktyczne przykłady użycia
 
@@ -473,20 +473,22 @@ venv/bin/ruff check --fix .
 
 ### 🐳 Środowisko kontenerowe (Docker Compose)
 ```bash
-# 1. Budowa i uruchomienie usługi w tle:
-docker compose up -d --build
+# 1. Budowa i uruchomienie usługi w tle (z katalogu głównego):
+docker compose -f docker/docker-compose.yml up -d --build
+
+# (lub po przejściu do katalogu docker: cd docker && docker compose up -d --build)
 
 # 2. Podgląd logów na żywo:
-docker compose logs -f
+docker compose -f docker/docker-compose.yml logs -f collector
 
 # 3. Wywołanie podglądu powiadomień wewnątrz kontenera:
-docker compose exec librus2mail librus-notifier --days 7 --dry-run
+docker compose -f docker/docker-compose.yml exec collector librus-notifier --days 7 --dry-run
 
 # 4. Wywołanie raportu postępów wewnątrz kontenera:
-docker compose exec librus2mail librus-report --dry-run
+docker compose -f docker/docker-compose.yml run --rm report librus-report --dry-run
 
 # 5. Wywołanie raportu ucznia wewnątrz kontenera:
-docker compose exec librus2mail librus-student-report --dry-run
+docker compose -f docker/docker-compose.yml run --rm student-report librus-student-report --dry-run
 ```
 
 ### 🐧 Usługa systemowa Linux (`systemd`)

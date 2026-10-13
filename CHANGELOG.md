@@ -17,6 +17,11 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
   - Wzbogacenie modelu `AppSettings` o płaskie aliasy ENV (np. `LIBRUS_LOGIN`, `LIBRUS_PASSWORD`, `LIBRUS_MAIL_LOGIN`, `LIBRUS_SMTP_HOST`, `LIBRUS_WEB_PASSWORD`, `LIBRUS_SCHEDULE_MODE`).
   - Dodanie wzorcowego pliku [docker/.env.example](docker/.env.example) dla środowisk Docker.
   - Aktualizacja [docker/Dockerfile](docker/Dockerfile) (dodanie brakujących skryptów CLI, `EXPOSE 5000`) oraz [docker/docker-compose.yml](docker/docker-compose.yml) (usługa `student-report`, profile, obsługa `.env`).
+
+---
+
+## [2.2.0] – 2026-10-09
+
 - **Typowane modele obiektów domenowych (Issue #8 - Etap 2)**:
   - Wprowadzenie dedykowanych modeli Pydantic v2 dla obiektów domenowych: `Grade` (ocena), `Message` (wiadomość prywatna), `Announcement` / `Notification` (ogłoszenie szkolne), `TimetableEntry` (terminarz) oraz `ScheduleLesson` / `ScheduleEntry` (plan lekcji).
   - Obiekty domenowe implementują `collections.abc.MutableMapping` zapewniając pełną zgodność z dotychczasowym dostępem słownikowym (`obj['field']`, `obj.get('field')`), rozpakowywaniem `{**obj}` oraz szablonami Jinja2.
@@ -76,7 +81,6 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
   - Dostosowano typ pola loginu (`type="email"` dla Gmail, `type="text"` dla własnego serwera SMTP).
 
 ---
-
 ## [2.1.0] – 2026-10-07
 
 ### Dodane
@@ -238,7 +242,8 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ---
 
-[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/cackoarek/librus2mail/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/cackoarek/librus2mail/compare/v2.0.1...v2.1.0
 [2.0.1]: https://github.com/cackoarek/librus2mail/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/cackoarek/librus2mail/compare/v1.4.0...v2.0.0

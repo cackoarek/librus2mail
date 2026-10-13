@@ -9,6 +9,10 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ## [Unreleased]
 
+---
+
+## [2.3.0] – 2026-10-13
+
 - ** WERSJA NIEKOMPATYBILNA WSTECZNIE, konieczność zainstalowania aplikacji ponownie (np. poprzez nowy wbudowany konfigurator)
 - **Usprawnienia wdrożenia Docker & Docker Compose oraz 100% wsparcie zmiennych ENV**:
   - Dedykowany, wyczerpujący podręcznik wdrożenia kontenerowego [docker/docker-installation.md](docker/docker-installation.md) z pełną tabelą zmiennych środowiskowych, architekturą non-root oraz instrukcją troubleshooting.
@@ -19,7 +23,6 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
   - Aktualizacja [docker/Dockerfile](docker/Dockerfile) (dodanie brakujących skryptów CLI, `EXPOSE 5000`) oraz [docker/docker-compose.yml](docker/docker-compose.yml) (usługa `student-report`, profile, obsługa `.env`).
 
 ---
-
 ## [2.2.0] – 2026-10-09
 
 - **Typowane modele obiektów domenowych (Issue #8 - Etap 2)**:
@@ -242,7 +245,8 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ---
 
-[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v2.2.0...HEAD
+[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v2.3.0...HEAD
+[2.3.0]: https://github.com/cackoarek/librus2mail/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/cackoarek/librus2mail/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/cackoarek/librus2mail/compare/v2.0.1...v2.1.0
 [2.0.1]: https://github.com/cackoarek/librus2mail/compare/v2.0.0...v2.0.1

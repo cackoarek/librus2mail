@@ -688,27 +688,6 @@
                     duration: 900,
                     easing: 'easeOutQuart'
                 },
-                onClick: function(event, elements) {
-                    if (elements && elements.length > 0) {
-                        const el = elements[0];
-                        const idx = el.index;
-                        const item = validTimelineData[idx];
-                        if (item) {
-                            openEditGradeModal({
-                                id: item.id,
-                                subject: '{{ analytics.subject|e }}',
-                                grade: item.grade,
-                                weight: item.weight_raw || item.weight || '1',
-                                category: item.category,
-                                date: item.date_raw || item.date,
-                                teacher: item.teacher,
-                                is_custom: !!item.is_custom,
-                                original_grade: item.original_grade || '',
-                                original_weight: item.original_weight || ''
-                            });
-                        }
-                    }
-                },
                 scales: {
                     y: {
                         min: 1.0,
@@ -767,8 +746,7 @@
                                     return [
                                         '⭐ Ocena: ' + item.grade + ' (waga ' + item.weight + ')',
                                         '👨‍🏫 Nauczyciel: ' + item.teacher,
-                                        item.comment && item.comment !== '—' ? ('💬 ' + item.comment) : '',
-                                        item.is_custom ? '✏️ Waga/ocena skorygowana ręcznie' : '💡 Kliknij punkt, aby edytować ocenę/wagę'
+                                        item.comment && item.comment !== '—' ? ('💬 ' + item.comment) : ''
                                     ].filter(Boolean);
                                 }
                             }

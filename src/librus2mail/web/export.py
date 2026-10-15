@@ -19,6 +19,9 @@ def make_offline_friendly(html: str) -> str:
         ('href="/terminarz"', 'href="web_terminarz.html"'),
         ('href="/wiadomosci"', 'href="web_wiadomosci.html"'),
         ('href="/raporty/podsumowanie"', 'href="web_raporty_podsumowanie.html"'),
+        ('href="/raporty/szanse"', 'href="web_raporty_szanse.html"'),
+        ('href="/raporty/profil"', 'href="web_raporty_profil.html"'),
+        ('href="/raporty/stabilnosc"', 'href="web_raporty_stabilnosc.html"'),
         ('href="/raporty"', 'href="web_raporty_podsumowanie.html"'),
         ('href="/akcje"', 'href="web_akcje.html"'),
         ('href="/ustawienia"', 'href="web_ustawienia.html"'),
@@ -34,6 +37,11 @@ def make_offline_friendly(html: str) -> str:
     # Linki podstron raportów z parametrami (days, variant, date)
     html = re.sub(r'href="/\?date=[^"]*"', 'href="web_dashboard.html"', html)
     html = re.sub(r'href="/plan\?[^"]*"', 'href="web_plan.html"', html)
+    html = re.sub(r'href="/oceny\?[^"]*tab=optymalizator[^"]*"', 'href="web_oceny_optymalizator.html"', html)
+    html = re.sub(r'href="/oceny\?[^"]*tab=swiadectwo[^"]*"', 'href="web_oceny_swiadectwo.html"', html)
+    html = re.sub(r'href="/raporty/szanse(\?[^"]*)?"', 'href="web_raporty_szanse.html"', html)
+    html = re.sub(r'href="/raporty/profil(\?[^"]*)?"', 'href="web_raporty_profil.html"', html)
+    html = re.sub(r'href="/raporty/stabilnosc(\?[^"]*)?"', 'href="web_raporty_stabilnosc.html"', html)
     html = re.sub(r'href="/raporty/postepy(\?[^"]*)?"', 'href="web_raporty_postepy.html"', html)
     html = re.sub(r'href="/raporty/uczen\?[^"]*variant=kids[^"]*"', 'href="web_raporty_uczen_kids.html"', html)
     html = re.sub(r'href="/raporty/uczen\?[^"]*variant=youth[^"]*"', 'href="web_raporty_uczen_youth.html"', html)
@@ -127,14 +135,19 @@ def export_web_views(
         ('/', 'web_dashboard.html', "pulpit główny"),
         ('/plan', 'web_plan.html', "plan lekcji"),
         ('/oceny', 'web_oceny.html', "zestawienie ocen"),
+        ('/oceny?tab=swiadectwo', 'web_oceny_swiadectwo.html', "świadectwo z wyróżnieniem"),
+        ('/oceny?tab=optymalizator', 'web_oceny_optymalizator.html', "optymalizator celu"),
         ('/oceny/Matematyka', 'web_przedmiot_matematyka.html', "analiza przedmiotu (Matematyka)"),
         ('/terminarz', 'web_terminarz.html', "terminarz"),
         ('/wiadomosci', 'web_wiadomosci.html', "wiadomości"),
+        ('/raporty/podsumowanie', 'web_raporty_podsumowanie.html', "podsumowanie powiadomień"),
         ('/raporty/postepy', 'web_raporty_postepy.html', "raport postępów"),
         ('/raporty/uczen?variant=kids', 'web_raporty_uczen_kids.html', "raport ucznia (kids)"),
         ('/raporty/uczen?variant=teens', 'web_raporty_uczen_teens.html', "raport ucznia (teens)"),
         ('/raporty/uczen?variant=youth', 'web_raporty_uczen_youth.html', "raport ucznia (youth)"),
-        ('/raporty/podsumowanie', 'web_raporty_podsumowanie.html', "podsumowanie powiadomień"),
+        ('/raporty/szanse', 'web_raporty_szanse.html', "matryca szans i ryzyk"),
+        ('/raporty/profil', 'web_raporty_profil.html', "profil i balans ucznia"),
+        ('/raporty/stabilnosc', 'web_raporty_stabilnosc.html', "porównanie i stabilność przedmiotów"),
         ('/akcje', 'web_akcje.html', "centrum akcji"),
         ('/ustawienia', 'web_ustawienia.html', "ustawienia systemu"),
     ]

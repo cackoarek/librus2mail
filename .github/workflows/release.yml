@@ -443,13 +443,33 @@ jobs:
             </a>
 
             <a class="card" href="web_oceny.html">
-              <h3>📝 Oceny i kalkulator "Co jeśli?"</h3>
-              <p>Zestawienie ocen ucznia, średnie ważone per przedmiot oraz symulator wpływu nowej oceny.</p>
+              <h3>📝 Oceny i kalkulator ocen</h3>
+              <p>Zestawienie ocen ucznia, średnie ważone per przedmiot oraz status wliczenia do świadectwa.</p>
+            </a>
+
+            <a class="card" href="web_oceny_optymalizator.html">
+              <h3>🧮 Optymalizator Celu (NOWOŚĆ)</h3>
+              <p>Wieloprzedmiotowy optymalizator ROI: jak najmniejszym nakładem pracy podnieść średnią na świadectwo lub osiągnąć czerwony pasek.</p>
             </a>
 
             <a class="card" href="web_przedmiot_matematyka.html">
               <h3>📐 Szczegółowa analiza przedmiotu (Matematyka)</h3>
               <p>Wykres radarowy kompetencji, pasma progowe ocen 1–6, trajektoria średniej, lokomotywy i kotwice oraz stabilność i tempo.</p>
+            </a>
+
+            <a class="card" href="web_raporty_szanse.html">
+              <h3>🎯 Matryca Szans i Ryzyk (NOWOŚĆ)</h3>
+              <p>Wykrywanie Quick Wins (o krok od wyższej oceny), strefa obrony zagrożeń, bezpieczny bufor oraz interwencje naprawcze.</p>
+            </a>
+
+            <a class="card" href="web_raporty_profil.html">
+              <h3>🧭 Profil i Balans Ucznia (NOWOŚĆ)</h3>
+              <p>Wykres radarowy równowagi edukacyjnej w 4 filarach, analiza wszechstronności i możliwość kategoryzacji przedmiotów.</p>
+            </a>
+
+            <a class="card" href="web_raporty_stabilnosc.html">
+              <h3>📊 Porównanie i Stabilność Przedmiotów (NOWOŚĆ)</h3>
+              <p>Wskaźniki odchylenia standardowego, poziom zmienności, lokomotywy i kotwice średniej oraz wykres porównawczy.</p>
             </a>
 
             <a class="card" href="web_terminarz.html">

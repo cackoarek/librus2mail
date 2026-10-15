@@ -17,6 +17,13 @@ from .dom_parser import (
     parse_subjects_from_html,
     parse_timetable_html,
 )
+from .exceptions import (
+    LibrusAuthError,
+    LibrusError,
+    LibrusNetworkError,
+    LibrusParsingError,
+    NotLogged,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -31,13 +38,6 @@ TIMETABLE_URL = 'https://synergia.librus.pl/terminarz'
 PLAN_LEKCJI_URL = 'https://synergia.librus.pl/przegladaj_plan_lekcji'
 
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
-
-
-class NotLogged(Exception):
-    def __init__(self, message="Not logged into Librus"):
-        logger.error(f"Nie zalogowany: {message}")
-        self.message = message
-        super().__init__(self.message)
 
 
 class Librus:
@@ -118,10 +118,15 @@ class Librus:
             **self.__headers,
             'Referer': 'https://portal.librus.pl/'
         }
-        res = self.__session.get(PORTAL_RODZINA_URL, headers=init_headers)
+        try:
+            res = self.__session.get(PORTAL_RODZINA_URL, headers=init_headers)
+        except requests.RequestException as e:
+            logger.error(f"Inicjalizacja autoryzacji konta {self.__librus_login} nie powiodła się: {e}")
+            raise LibrusNetworkError(f"Błąd sieciowy przy inicjalizacji autoryzacji: {e}", request=getattr(e, 'request', None), response=getattr(e, 'response', None)) from e
+
         if res.status_code not in (200, 302):
             logger.error(f"Inicjalizacja autoryzacji konta {self.__librus_login}: {res.status_code} {res.reason}")
-            raise requests.HTTPError(f"HTTP {res.status_code}: {res.reason}", response=res)
+            raise LibrusNetworkError(f"HTTP {res.status_code}: {res.reason} przy inicjalizacji autoryzacji", response=res)
 
         login_target_url = res.url or OAUTH_DEFAULT_URL
 
@@ -138,10 +143,17 @@ class Librus:
             'login': self.__librus_login,
             'pass': self.__librus_password
         }
-        post_res = self.__session.post(login_target_url, data=login_payload, headers=post_headers)
+        try:
+            post_res = self.__session.post(login_target_url, data=login_payload, headers=post_headers)
+        except requests.RequestException as e:
+            logger.error(f"Wysyłanie formularza logowania dla {self.__librus_login} nie powiodło się: {e}")
+            raise LibrusNetworkError(f"Błąd sieciowy przy logowaniu: {e}", request=getattr(e, 'request', None), response=getattr(e, 'response', None)) from e
+
         if post_res.status_code != 200:
             logger.error(f"Logowanie nie powiodło się: {post_res.status_code} {post_res.reason}")
-            raise requests.HTTPError(f"HTTP {post_res.status_code}: {post_res.reason}", response=post_res)
+            if post_res.status_code in (401, 403):
+                raise LibrusAuthError(f"HTTP {post_res.status_code}: {post_res.reason} - brak dostępu do konta {self.__librus_login}")
+            raise LibrusNetworkError(f"HTTP {post_res.status_code}: {post_res.reason}", response=post_res)
 
         # Analiza odpowiedzi JSON
         try:
@@ -174,7 +186,11 @@ class Librus:
             **self.__headers,
             'Referer': login_target_url
         }
-        grant_res = self.__session.get(next_url, headers=grant_headers)
+        try:
+            grant_res = self.__session.get(next_url, headers=grant_headers)
+        except requests.RequestException as e:
+            logger.error(f"Błąd sieciowy podczas pobierania grantu dla {self.__librus_login}: {e}")
+            raise LibrusNetworkError(f"Błąd sieciowy podczas pobierania grantu: {e}", request=getattr(e, 'request', None), response=getattr(e, 'response', None)) from e
 
         # Sprawdzenie czy wylądowaliśmy na ekranie 2FA (wymaga potwierdzenia/pominięcia).
         # Uwaga: weryfikujemy wyłącznie grant_res.url (a nie next_url), ponieważ jeśli Librus nie wymaga 2FA,
@@ -205,7 +221,11 @@ class Librus:
                 'X-Requested-With': 'XMLHttpRequest',
                 **self.__generate_baner_header(),
             }
-            two_fa_res = self.__session.post(action_target, data=two_fa_payload, headers=two_fa_headers)
+            try:
+                two_fa_res = self.__session.post(action_target, data=two_fa_payload, headers=two_fa_headers)
+            except requests.RequestException as e:
+                logger.error(f"Błąd sieciowy podczas wysyłania 2FA dla {self.__librus_login}: {e}")
+                raise LibrusNetworkError(f"Błąd sieciowy podczas pomijania 2FA: {e}", request=getattr(e, 'request', None), response=getattr(e, 'response', None)) from e
             try:
                 two_fa_json = two_fa_res.json()
             except (ValueError, requests.JSONDecodeError):
@@ -216,7 +236,11 @@ class Librus:
                 if final_grant.startswith('/'):
                     final_grant = f"https://api.librus.pl{final_grant}"
                 logger.info("Pobieram docelowy grant autoryzacji")
-                grant_res = self.__session.get(final_grant, headers=grant_headers)
+                try:
+                    grant_res = self.__session.get(final_grant, headers=grant_headers)
+                except requests.RequestException as e:
+                    logger.error(f"Błąd sieciowy podczas pobierania grantu po 2FA dla {self.__librus_login}: {e}")
+                    raise LibrusNetworkError(f"Błąd sieciowy podczas pobierania grantu po 2FA: {e}", request=getattr(e, 'request', None), response=getattr(e, 'response', None)) from e
             elif 'code=' in two_fa_res.url and 'synergia.librus.pl' in two_fa_res.url:
                 logger.info("Pominięcie 2FA przekierowało bezpośrednio do Synergii")
                 grant_res = two_fa_res
@@ -240,10 +264,15 @@ class Librus:
 
         url = f"{MESSAGE_BODY_URL}{link}"
         logger.info(f"Pobieram treść wiadomość {link}")
-        res = self.__session.get(url, headers=self.__headers)
+        try:
+            res = self.__session.get(url, headers=self.__headers)
+        except requests.RequestException as e:
+            logger.error(f"Błąd sieciowy przy pobieraniu wiadomości {link}: {e}")
+            raise LibrusNetworkError(f"Błąd sieciowy przy pobieraniu wiadomości: {e}", request=getattr(e, 'request', None), response=getattr(e, 'response', None)) from e
+
         if res.status_code != 200:
             logger.error(f"Pobieranie treści wiadomości {link}: {res.status_code} {res.reason}")
-            raise requests.HTTPError(f"HTTP {res.status_code}: {res.reason}", response=res)
+            raise LibrusNetworkError(f"HTTP {res.status_code}: {res.reason} przy pobieraniu treści wiadomości", response=res)
 
         soup = BeautifulSoup(res.content, 'html.parser')
         message_body_elem = soup.find('div', attrs={'class': 'container-message-content'})
@@ -302,12 +331,18 @@ class Librus:
             return
 
         fetch_body_cb = (lambda link: self.__get_message_body(link)) if self.__do_read_messages else None
-        messages = parse_messages_html(
-            soup,
-            known_messages=self.__known_messages,
-            fetch_body_fn=fetch_body_cb,
-            do_read_messages=self.__do_read_messages,
-        )
+        try:
+            messages = parse_messages_html(
+                soup,
+                known_messages=self.__known_messages,
+                fetch_body_fn=fetch_body_cb,
+                do_read_messages=self.__do_read_messages,
+            )
+        except (LibrusError, requests.RequestException):
+            raise
+        except Exception as e:
+            logger.error(f"Błąd parsowania wiadomości: {e}", exc_info=True)
+            raise LibrusParsingError(f"Błąd parsowania wiadomości: {e}") from e
         self.messages = messages
         self.unread_count = sum(1 for m in messages if m.get('is_unread'))
 
@@ -381,10 +416,16 @@ class Librus:
             self.notifications = []
             return
 
-        self.notifications = parse_announcements_html(
-            soup,
-            known_notifications=self.__known_notifications,
-        )
+        try:
+            self.notifications = parse_announcements_html(
+                soup,
+                known_notifications=self.__known_notifications,
+            )
+        except (LibrusError, requests.RequestException):
+            raise
+        except Exception as e:
+            logger.error(f"Błąd parsowania ogłoszeń: {e}", exc_info=True)
+            raise LibrusParsingError(f"Błąd parsowania ogłoszeń: {e}") from e
 
     @property
     def do_read_grades(self) -> bool:
@@ -406,8 +447,15 @@ class Librus:
         logger.info("Pobieram oceny ucznia")
         soup = self.parse_page(GRADES_URL)
 
-        grades = parse_grades_html(soup)
-        subjects = parse_subjects_from_html(soup)
+        try:
+            grades = parse_grades_html(soup)
+            subjects = parse_subjects_from_html(soup)
+        except (LibrusError, requests.RequestException):
+            raise
+        except Exception as e:
+            logger.error(f"Błąd parsowania ocen: {e}", exc_info=True)
+            raise LibrusParsingError(f"Błąd parsowania ocen: {e}") from e
+
         if not grades:
             logger.warning("Nie znaleziono tabeli ocen")
         logger.info(f"Pobrano {len(grades)} ocen oraz {len(subjects)} przedmiotów")
@@ -436,15 +484,28 @@ class Librus:
         logger.info("Pobieram terminarz (sprawdziany i nieobecności)")
         if month and year:
             headers = {**self.__headers, 'Referer': TIMETABLE_URL}
-            res = self.__session.post(TIMETABLE_URL, data={'miesiac': str(month), 'rok': str(year)}, headers=headers)
+            try:
+                res = self.__session.post(TIMETABLE_URL, data={'miesiac': str(month), 'rok': str(year)}, headers=headers)
+            except requests.RequestException as e:
+                logger.error(f"Błąd sieciowy przy pobieraniu terminarza dla {month}/{year}: {e}")
+                raise LibrusNetworkError(f"Błąd sieciowy przy pobieraniu terminarza: {e}", request=getattr(e, 'request', None), response=getattr(e, 'response', None)) from e
+
             if res.status_code != 200:
                 logger.error(f"Pobieranie terminarza dla {month}/{year}: {res.status_code} {res.reason}")
-                raise requests.HTTPError(f"HTTP {res.status_code}: {res.reason}", response=res)
+                raise LibrusNetworkError(f"HTTP {res.status_code}: {res.reason} przy pobieraniu terminarza", response=res)
             soup = BeautifulSoup(res.content, 'html.parser')
-            entries = self._parse_timetable_soup(soup)
+            try:
+                entries = self._parse_timetable_soup(soup)
+            except Exception as e:
+                logger.error(f"Błąd parsowania terminarza: {e}", exc_info=True)
+                raise LibrusParsingError(f"Błąd parsowania terminarza: {e}") from e
         else:
             soup = self.parse_page(TIMETABLE_URL)
-            entries = self._parse_timetable_soup(soup)
+            try:
+                entries = self._parse_timetable_soup(soup)
+            except Exception as e:
+                logger.error(f"Błąd parsowania terminarza: {e}", exc_info=True)
+                raise LibrusParsingError(f"Błąd parsowania terminarza: {e}") from e
 
             # Jeśli jesteśmy pod koniec miesiąca (od 24. dnia), pobieramy również kolejny miesiąc
             if datetime.now().day >= 24:
@@ -463,7 +524,7 @@ class Librus:
                             if ne['id'] not in existing_ids:
                                 entries.append(ne)
                                 existing_ids.add(ne['id'])
-                except (requests.RequestException, NotLogged) as e:
+                except (requests.RequestException, LibrusError) as e:
                     logger.warning(f"Nie udało się pobrać terminarza na kolejny miesiąc: {e}")
 
         entries.sort(key=lambda e: (e.get('date', ''), e.get('lesson_no', '')))
@@ -505,16 +566,28 @@ class Librus:
                 res = self.__session.post(PLAN_LEKCJI_URL, data={'tydzien': week_str}, headers=headers)
                 if res.status_code == 200:
                     soup = BeautifulSoup(res.content, 'html.parser')
-                    w_entries = self._parse_schedule_soup(soup)
+                    try:
+                        w_entries = self._parse_schedule_soup(soup)
+                    except Exception as parse_err:
+                        logger.error(f"Błąd parsowania wycinka planu lekcji ({week_str}): {parse_err}", exc_info=True)
+                        raise LibrusParsingError(f"Błąd parsowania planu lekcji: {parse_err}") from parse_err
+
                     for item in w_entries:
                         eid = item.get('id') or f"{item.get('date')}_{item.get('lesson_no')}"
                         entries_by_id[eid] = item
-            except (requests.RequestException, NotLogged) as e:
+            except (requests.RequestException, LibrusError) as e:
+                if isinstance(e, LibrusParsingError):
+                    raise
                 logger.warning(f"POST do planu lekcji ({week_str}) nie powiódł się ({e})")
 
         if not entries_by_id:
             soup = self.parse_page(PLAN_LEKCJI_URL)
-            w_entries = self._parse_schedule_soup(soup)
+            try:
+                w_entries = self._parse_schedule_soup(soup)
+            except Exception as parse_err:
+                logger.error(f"Błąd parsowania planu lekcji: {parse_err}", exc_info=True)
+                raise LibrusParsingError(f"Błąd parsowania planu lekcji: {parse_err}") from parse_err
+
             for item in w_entries:
                 eid = item.get('id') or f"{item.get('date')}_{item.get('lesson_no')}"
                 entries_by_id[eid] = item
@@ -537,10 +610,15 @@ class Librus:
             **self.__headers,
             'Referer': 'https://synergia.librus.pl/'
         }
-        res = self.__session.get(url, headers=headers)
+        try:
+            res = self.__session.get(url, headers=headers)
+        except requests.RequestException as e:
+            logger.error(f"Błąd sieciowy podczas pobierania {url}: {e}")
+            raise LibrusNetworkError(f"Błąd sieciowy podczas pobierania {url}: {e}", request=getattr(e, 'request', None), response=getattr(e, 'response', None)) from e
+
         if res.status_code != 200:
             logger.error(f"Pobieranie strony {url}: {res.status_code} {res.reason}")
-            raise requests.HTTPError(f"HTTP {res.status_code}: {res.reason}", response=res)
+            raise LibrusNetworkError(f"HTTP {res.status_code}: {res.reason} przy pobieraniu {url}", response=res)
 
         soup = BeautifulSoup(res.content, 'html.parser')
 

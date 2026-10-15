@@ -135,3 +135,34 @@ class TestDateUtils:
         assert parse_date_safe(date(2026, 9, 16)) == date(2026, 9, 16)
         assert parse_date_safe(1789569600) == date(2026, 9, 16)
 
+    def test_parse_datetime_safe_warsaw_timezone_conversion_summer(self):
+        # W czasie letnim (CEST = UTC+2): 10:00 UTC -> 12:00 Warszawa
+        dt = parse_datetime_safe("2026-06-15T10:00:00Z")
+        assert dt == datetime(2026, 6, 15, 12, 0, 0)
+        assert dt.tzinfo is None
+
+    def test_parse_datetime_safe_warsaw_timezone_conversion_winter(self):
+        # W czasie zimowym (CET = UTC+1): 10:00 UTC -> 11:00 Warszawa
+        dt = parse_datetime_safe("2026-01-15T10:00:00Z")
+        assert dt == datetime(2026, 1, 15, 11, 0, 0)
+        assert dt.tzinfo is None
+
+    def test_parse_datetime_safe_aware_object_conversion(self):
+        # Przekazanie obiektu aware datetime z UTC
+        aware_dt = datetime(2026, 6, 15, 10, 0, tzinfo=timezone.utc)
+        naive = parse_datetime_safe(aware_dt, make_naive=True)
+        assert naive == datetime(2026, 6, 15, 12, 0, 0)
+        assert naive.tzinfo is None
+
+        aware_res = parse_datetime_safe(aware_dt, make_naive=False)
+        assert aware_res.hour == 12
+        assert str(aware_res.tzinfo) == "Europe/Warsaw"
+
+    def test_parse_datetime_safe_debug_logging_on_failure(self, caplog):
+        import logging
+        with caplog.at_level(logging.DEBUG):
+            res = parse_datetime_safe("bardzo_dziwna_wartosc_daty_12345")
+            assert res is None
+            assert "Nie udało się sparsować daty z wartości" in caplog.text
+            assert "bardzo_dziwna_wartosc_daty_12345" in caplog.text
+

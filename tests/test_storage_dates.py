@@ -74,7 +74,8 @@ class TestStorageDateNormalization:
         sorted_items = sort_items_descending(items)
         assert [x["id"] for x in sorted_items] == ["2", "4", "3", "1"]
 
-        assert parse_date_sort_key("2026-09-15T12:00:00Z") == datetime(2026, 9, 15, 12, 0, 0)
+        # W czasie letnim (wrzesień, CEST = UTC+2) 12:00Z to 14:00 czasu polskiego
+        assert parse_date_sort_key("2026-09-15T12:00:00Z") == datetime(2026, 9, 15, 14, 0, 0)
         assert parse_date_sort_key(None) == datetime.min
         assert parse_date_sort_key("") == datetime.min
 

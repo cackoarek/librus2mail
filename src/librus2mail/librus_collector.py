@@ -13,6 +13,8 @@ from datetime import datetime
 from time import sleep
 from typing import Any
 
+import requests
+
 from .base_logger import setup_logging
 from .config import read_config
 from .config_watcher import (
@@ -20,6 +22,11 @@ from .config_watcher import (
 )
 from .config_watcher import (
     sleep_with_config_watch as _sleep_with_config_watch,
+)
+from .exceptions import (
+    LibrusAuthError,
+    LibrusNetworkError,
+    LibrusParsingError,
 )
 from .librus import Librus
 from .mail_sender import MailSender
@@ -112,6 +119,10 @@ class LibrusCollector:
                     librus.login()
                     login_success = True
                     break
+                except LibrusAuthError as auth_err:
+                    logger.error(f"{name} ({login}): Błąd autoryzacji ({auth_err}). Przerywam próby logowania.")
+                    last_login_err = auth_err
+                    break
                 except Exception as log_err:
                     last_login_err = log_err
                     if attempt < max_login_retries:
@@ -194,51 +205,65 @@ class LibrusCollector:
                 'new_notifications': new_notifs,
                 'new_grades': new_grades,
             }
+        except (LibrusNetworkError, requests.RequestException) as e:
+            logger.warning(f"{name} ({login}): Problem sieciowy na etapie '{step}': {e}")
+            return self._handle_collect_error(e, step, login, name, user_config)
+        except LibrusAuthError as e:
+            logger.error(f"{name} ({login}): Błąd autoryzacji na etapie '{step}': {e}")
+            return self._handle_collect_error(e, step, login, name, user_config)
+        except LibrusParsingError as e:
+            logger.error(f"{name} ({login}): Błąd parsowania HTML na etapie '{step}': {e}", exc_info=True)
+            return self._handle_collect_error(e, step, login, name, user_config)
         except Exception as e:
-            logger.error(f"Błąd podczas pobierania danych dla {login} na etapie '{step}': {e}", exc_info=True)
-            tb_str = traceback.format_exc()
+            logger.error(f"{name} ({login}): Błąd podczas pobierania danych na etapie '{step}': {e}", exc_info=True)
+            return self._handle_collect_error(e, step, login, name, user_config)
 
-            send_errors = self.config.get(
-                'send_error_notifications', self.config.get('end_error_notifications', True)
-            ) and user_config.get('send_error_notifications', True)
+    def _handle_collect_error(
+        self, e: Exception, step: str, login: str, name: str, user_config: dict[str, Any]
+    ) -> dict[str, Any]:
+        tb_str = traceback.format_exc()
 
-            error_sent = False
-            if send_errors:
-                try:
-                    sender = self.get_or_create_mail_sender()
-                    if sender:
-                        cooldown = self.config.get('error_cooldown_s', 3600)
-                        error_sent = sender.send_error_notification(
-                            user_config=user_config,
-                            error=e,
-                            step_name=step,
-                            details=tb_str,
-                            storage=self.storage,
-                            cooldown_s=cooldown,
-                        )
-                except Exception as mail_err:
-                    logger.error(f"Błąd podczas wysyłania powiadomienia o błędzie dla {login}: {mail_err}")
+        send_errors = self.config.get(
+            'send_error_notifications', True
+        ) and user_config.get('send_error_notifications', True)
 
-            if not error_sent and hasattr(self.storage, 'save_last_error'):
-                last_err = self.storage.get_last_error(login)
-                err_str = f"{type(e).__name__}: {str(e)}"
-                if not last_err or last_err.get('error') != err_str:
-                    self.storage.save_last_error(login, err_str, step=step)
+        error_sent = False
+        if send_errors:
+            try:
+                sender = self.get_or_create_mail_sender()
+                if sender:
+                    cooldown = self.config.get('error_cooldown_s', 3600)
+                    error_sent = sender.send_error_notification(
+                        user_config=user_config,
+                        error=e,
+                        step_name=step,
+                        details=tb_str,
+                        storage=self.storage,
+                        cooldown_s=cooldown,
+                    )
+            except Exception as mail_err:
+                logger.error(f"Błąd podczas wysyłania powiadomienia o błędzie dla {login}: {mail_err}")
 
-            return {
-                'success': False,
-                'login': login,
-                'name': name,
-                'user_config': user_config,
-                'error': str(e),
-                'step': step,
-                'messages': [],
-                'notifications': [],
-                'grades': [],
-                'new_messages': [],
-                'new_notifications': [],
-                'new_grades': [],
-            }
+        if not error_sent and hasattr(self.storage, 'save_last_error'):
+            last_err = self.storage.get_last_error(login)
+            err_str = f"{type(e).__name__}: {str(e)}"
+            if not last_err or last_err.get('error') != err_str:
+                self.storage.save_last_error(login, err_str, step=step)
+
+        return {
+            'success': False,
+            'login': login,
+            'name': name,
+            'user_config': user_config,
+            'error': str(e),
+            'step': step,
+            'messages': [],
+            'notifications': [],
+            'grades': [],
+            'new_messages': [],
+            'new_notifications': [],
+            'new_grades': [],
+        }
 
     def collect_all(self, users: list[dict]) -> dict[str, dict[str, Any]]:
         """Pobiera dane dla wszystkich przekazanych kont uczniów."""

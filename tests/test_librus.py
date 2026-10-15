@@ -8,6 +8,12 @@ from unittest.mock import MagicMock, patch
 
 import yaml
 
+from librus2mail import (
+    LibrusAuthError,
+    LibrusError,
+    LibrusNetworkError,
+    LibrusParsingError,
+)
 from librus2mail.librus import Librus, NotLogged
 from librus2mail.librus_collector import LibrusCollector, run_collector
 from librus2mail.updates_notifier import UpdatesNotifier
@@ -2677,6 +2683,58 @@ class TestLibrus(unittest.TestCase):
         finally:
             if os.path.exists(cfg_file):
                 os.remove(cfg_file)
+
+    def test_parse_page_network_error_raises_librus_network_error(self):
+        """Weryfikuje, że błąd połączenia lub kod 5xx rzuca LibrusNetworkError dziedziczący po RequestException."""
+        import requests
+        with patch.object(self.librus._Librus__session, 'get', side_effect=requests.ConnectionError("Brak połączenia")):
+            with self.assertRaises(LibrusNetworkError) as ctx:
+                self.librus.parse_page("https://synergia.librus.pl/wiadomosci")
+            self.assertIsInstance(ctx.exception, LibrusError)
+            self.assertIsInstance(ctx.exception, requests.RequestException)
+
+    def test_login_network_error_raises_librus_network_error(self):
+        """Weryfikuje, że błąd sieci podczas logowania rzuca LibrusNetworkError."""
+        import requests
+        with patch('requests.Session.get', side_effect=requests.Timeout("Timeout")):
+            with self.assertRaises(LibrusNetworkError):
+                self.librus.login()
+
+    def test_login_auth_error_aborts_collector_retry_immediately(self):
+        """Weryfikuje, że błąd autoryzacji (LibrusAuthError / NotLogged) przerywa pętlę retry bez ponawiania."""
+        config = {
+            'storage_dir': 'storage',
+            'login_retries': 3,
+            'login_retry_delay_s': 0,
+        }
+        collector = LibrusCollector(config, storage=MagicMock())
+        user_cfg = {
+            'librus_login': '12345',
+            'librus_login_name': 'Janek',
+            'read_messages': False,
+            'read_grades': False,
+        }
+        with patch('librus2mail.librus_collector.Librus') as mock_librus_cls:
+            mock_inst = MagicMock()
+            mock_inst.login.side_effect = NotLogged("Niepoprawny login lub hasło")
+            mock_librus_cls.return_value = mock_inst
+
+            res = collector.collect_user(user_cfg)
+            self.assertFalse(res['success'])
+            self.assertIsInstance(mock_inst.login.side_effect, LibrusAuthError)
+            # Próba powinna nastąpić tylko 1 raz, bez ponawiania błędnego logowania
+            self.assertEqual(mock_inst.login.call_count, 1)
+
+    def test_parsing_error_in_fetch_grades_raises_librus_parsing_error(self):
+        """Weryfikuje, że nieoczekiwany błąd parsowania DOM rzuca LibrusParsingError."""
+        self.librus.logged = True
+        with patch.object(self.librus, 'parse_page') as mock_parse, \
+             patch('librus2mail.librus.parse_grades_html', side_effect=KeyError("Brak klucza w tabeli")):
+            from bs4 import BeautifulSoup
+            mock_parse.return_value = BeautifulSoup("<html></html>", 'html.parser')
+            with self.assertRaises(LibrusParsingError) as ctx:
+                self.librus.fetch_grades()
+            self.assertIsInstance(ctx.exception, LibrusError)
 
 
 if __name__ == '__main__':

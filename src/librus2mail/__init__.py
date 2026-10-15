@@ -24,8 +24,15 @@ from .domain_models import (
     ScheduleLesson,
     TimetableEntry,
 )
+from .exceptions import (
+    LibrusAuthError,
+    LibrusError,
+    LibrusNetworkError,
+    LibrusParsingError,
+    NotLogged,
+)
 from .gmail_sender import GmailSender
-from .librus import Librus, NotLogged
+from .librus import Librus
 from .librus_collector import (
     LibrusCollector,
     calculate_next_wait_seconds,
@@ -69,6 +76,10 @@ __all__ = [
     "ScheduleEntry",
     "GmailSender",
     "Librus",
+    "LibrusError",
+    "LibrusNetworkError",
+    "LibrusAuthError",
+    "LibrusParsingError",
     "NotLogged",
     "run_collector",
     "LibrusCollector",

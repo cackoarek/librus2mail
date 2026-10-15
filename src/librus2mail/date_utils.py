@@ -4,9 +4,15 @@ Narzędzia do bezpiecznego i elastycznego parsowania oraz formatowania dat i zna
 
 from __future__ import annotations
 
+import logging
 import re
 from datetime import date, datetime
 from typing import Any
+from zoneinfo import ZoneInfo
+
+logger = logging.getLogger(__name__)
+
+WARSAW_TZ = ZoneInfo("Europe/Warsaw")
 
 CANONICAL_DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 CANONICAL_DATE_FORMAT = "%Y-%m-%d"
@@ -63,8 +69,11 @@ def parse_datetime_safe(val: Any, make_naive: bool = True) -> datetime | None:
             return None
 
     if isinstance(val, datetime):
-        if make_naive and val.tzinfo is not None:
-            return val.replace(tzinfo=None)
+        if val.tzinfo is not None:
+            val = val.astimezone(WARSAW_TZ)
+            if make_naive:
+                return val.replace(tzinfo=None)
+            return val
         return val
 
     if isinstance(val, date):
@@ -93,8 +102,10 @@ def parse_datetime_safe(val: Any, make_naive: bool = True) -> datetime | None:
 
     try:
         dt = datetime.fromisoformat(normalized_iso)
-        if make_naive and dt.tzinfo is not None:
-            dt = dt.replace(tzinfo=None)
+        if dt.tzinfo is not None:
+            dt = dt.astimezone(WARSAW_TZ)
+            if make_naive:
+                dt = dt.replace(tzinfo=None)
         return dt
     except (ValueError, TypeError):
         pass
@@ -130,6 +141,7 @@ def parse_datetime_safe(val: Any, make_naive: bool = True) -> datetime | None:
         except ValueError:
             pass
 
+    logger.debug("Nie udało się sparsować daty z wartości: %r", val_str[:50])
     return None
 
 

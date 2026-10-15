@@ -11,6 +11,19 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ---
 
+## [2.5.0] – 2026-10-15
+
+### Dodane
+- example reports, github pages
+- 4 new raports
+
+### Naprawione
+- grades count fix
+
+### Zmienione
+- better exception handling and date parsing
+
+---
 ## [2.4.0] – 2026-10-15
 
 - **WERSJA NIEKOMPATYBILNA WSTECZNIE**, konieczność zainstalowania aplikacji ponownie (np. poprzez nowy wbudowany konfigurator)
@@ -259,7 +272,8 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ---
 
-[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v2.4.0...HEAD
+[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v2.5.0...HEAD
+[2.5.0]: https://github.com/cackoarek/librus2mail/compare/v2.4.0...v2.5.0
 [2.4.0]: https://github.com/cackoarek/librus2mail/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/cackoarek/librus2mail/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/cackoarek/librus2mail/compare/v2.1.0...v2.2.0

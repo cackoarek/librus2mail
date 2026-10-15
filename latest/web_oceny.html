@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="79eaf36677de94b19595b8cf6e1e5c21e6431fba36a1ecf2ba45f9556487d352">
     <title>Oceny - Jan Kowalski (8979296) - Librus2mail</title>
     <!-- Favicon z logo Librus2mail (gradient indigo-sky + 🏫) -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%25%22%20y1%3D%22100%25%22%20x2%3D%22100%25%22%20y2%3D%220%25%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%234f46e5%22/%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%230ea5e9%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2216%22%20fill%3D%22url%28%23g%29%22/%3E%3Ctext%20x%3D%2232%22%20y%3D%2234%22%20font-size%3D%2234%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%F0%9F%8F%AB%3C/text%3E%3C/svg%3E">
@@ -10,6 +11,25 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- HTMX CDN -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script>
+        // Automatyczne dołączanie tokenu CSRF do wszystkich zapytań fetch
+        (function() {
+            const _origFetch = window.fetch;
+            window.fetch = function(url, options) {
+                options = options || {};
+                options.headers = options.headers || {};
+                const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                if (token) {
+                    if (options.headers instanceof Headers) {
+                        if (!options.headers.has('X-CSRFToken')) options.headers.set('X-CSRFToken', token);
+                    } else if (!options.headers['X-CSRFToken'] && !options.headers['x-csrftoken']) {
+                        options.headers['X-CSRFToken'] = token;
+                    }
+                }
+                return _origFetch(url, options);
+            };
+        })();
+    </script>
     <!-- Inter Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,7 +42,7 @@
     </style>
     
 </head>
-<body class="h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white">
+<body class="h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white" hx-headers='{"X-CSRFToken": "79eaf36677de94b19595b8cf6e1e5c21e6431fba36a1ecf2ba45f9556487d352"}'>
 
     <!-- Pasek nawigacyjny -->
     <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
@@ -184,7 +204,7 @@
             <span class="p-2 rounded-xl bg-indigo-50 text-indigo-600 text-sm">📈</span>
         </div>
         <div class="mt-3 flex items-baseline gap-2">
-            <span class="text-3xl font-extrabold text-slate-900">4.55</span>
+            <span class="text-3xl font-extrabold text-slate-900">4.54</span>
             <span class="text-xs font-semibold text-slate-500">ze wszystkich</span>
         </div>
     </div>
@@ -195,7 +215,7 @@
             <span class="p-2 rounded-xl bg-emerald-50 text-emerald-600 text-sm">📝</span>
         </div>
         <div class="mt-3 flex items-baseline gap-2">
-            <span class="text-3xl font-extrabold text-slate-900">39</span>
+            <span class="text-3xl font-extrabold text-slate-900">43</span>
             <span class="text-xs font-semibold text-slate-500">wpisów</span>
         </div>
     </div>
@@ -261,8 +281,8 @@
             <!-- Pasek przedmiotu -->
             <div class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/50 border-b border-slate-100">
                 <div>
-                    <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                        <span>Biologia</span>
+                    <h3 class="text-base font-extrabold text-slate-900">
+                        Biologia
                     </h3>
                     <div class="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-500">
                         <span>Liczba ocen: <strong>3</strong> (suma wag: 3.0)</span>
@@ -282,19 +302,31 @@
                     </div>
                 </div>
 
-                <!-- Średnia ważona z odznaką -->
-                <div class="text-right flex items-center sm:block justify-between sm:justify-end">
-                    <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
-                    <span class="text-xl font-extrabold
-                         text-emerald-600
-                        ">
-                        5.0
-                    </span>
+                <!-- Średnia ważona z odznaką oraz odseparowany przycisk do analizy -->
+                <div class="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
+                    <div class="text-right">
+                        <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
+                        <span class="text-xl font-extrabold
+                             text-emerald-600
+                            ">
+                            5.0
+                        </span>
+                    </div>
+
+                    <!-- Widoczne odseparowanie od średniej -->
+                    <div class="h-8 w-[1px] bg-slate-200 hidden sm:block"></div>
+
+                    <a href="/przedmiot/Biologia"
+                       class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-900 border border-indigo-200/80 transition-all shadow-2xs hover:shadow-xs group cursor-pointer"
+                       title="Zobacz pełne statystyki, cele oceny, analizę ryzyka i wykres trajektorii">
+                        <span>📊 Wykres & analiza</span>
+                        <span class="group-hover:translate-x-0.5 transition-transform font-extrabold">&rarr;</span>
+                    </a>
                 </div>
             </div>
 
-            <!-- Karty / Pigułki ocen -->
-            <div class="p-4 sm:p-5">
+            <!-- Karty / Pigułki ocen (wewnątrz tego samego zaokrąglonego kafelka) -->
+            <div class="p-4 sm:p-5 bg-white">
                 <div class="flex flex-wrap gap-2.5">
                     
                     
@@ -405,8 +437,8 @@
             <!-- Pasek przedmiotu -->
             <div class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/50 border-b border-slate-100">
                 <div>
-                    <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                        <span>Chemia</span>
+                    <h3 class="text-base font-extrabold text-slate-900">
+                        Chemia
                     </h3>
                     <div class="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-500">
                         <span>Liczba ocen: <strong>1</strong> (suma wag: 2.0)</span>
@@ -426,19 +458,31 @@
                     </div>
                 </div>
 
-                <!-- Średnia ważona z odznaką -->
-                <div class="text-right flex items-center sm:block justify-between sm:justify-end">
-                    <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
-                    <span class="text-xl font-extrabold
-                         text-emerald-600
-                        ">
-                        5.0
-                    </span>
+                <!-- Średnia ważona z odznaką oraz odseparowany przycisk do analizy -->
+                <div class="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
+                    <div class="text-right">
+                        <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
+                        <span class="text-xl font-extrabold
+                             text-emerald-600
+                            ">
+                            5.0
+                        </span>
+                    </div>
+
+                    <!-- Widoczne odseparowanie od średniej -->
+                    <div class="h-8 w-[1px] bg-slate-200 hidden sm:block"></div>
+
+                    <a href="/przedmiot/Chemia"
+                       class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-900 border border-indigo-200/80 transition-all shadow-2xs hover:shadow-xs group cursor-pointer"
+                       title="Zobacz pełne statystyki, cele oceny, analizę ryzyka i wykres trajektorii">
+                        <span>📊 Wykres & analiza</span>
+                        <span class="group-hover:translate-x-0.5 transition-transform font-extrabold">&rarr;</span>
+                    </a>
                 </div>
             </div>
 
-            <!-- Karty / Pigułki ocen -->
-            <div class="p-4 sm:p-5">
+            <!-- Karty / Pigułki ocen (wewnątrz tego samego zaokrąglonego kafelka) -->
+            <div class="p-4 sm:p-5 bg-white">
                 <div class="flex flex-wrap gap-2.5">
                     
                     
@@ -484,8 +528,8 @@
             <!-- Pasek przedmiotu -->
             <div class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/50 border-b border-slate-100">
                 <div>
-                    <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                        <span>Fizyka</span>
+                    <h3 class="text-base font-extrabold text-slate-900">
+                        Fizyka
                     </h3>
                     <div class="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-500">
                         <span>Liczba ocen: <strong>4</strong> (suma wag: 5.0)</span>
@@ -505,19 +549,31 @@
                     </div>
                 </div>
 
-                <!-- Średnia ważona z odznaką -->
-                <div class="text-right flex items-center sm:block justify-between sm:justify-end">
-                    <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
-                    <span class="text-xl font-extrabold
-                         text-sky-600
-                        ">
-                        3.8
-                    </span>
+                <!-- Średnia ważona z odznaką oraz odseparowany przycisk do analizy -->
+                <div class="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
+                    <div class="text-right">
+                        <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
+                        <span class="text-xl font-extrabold
+                             text-sky-600
+                            ">
+                            3.8
+                        </span>
+                    </div>
+
+                    <!-- Widoczne odseparowanie od średniej -->
+                    <div class="h-8 w-[1px] bg-slate-200 hidden sm:block"></div>
+
+                    <a href="/przedmiot/Fizyka"
+                       class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-900 border border-indigo-200/80 transition-all shadow-2xs hover:shadow-xs group cursor-pointer"
+                       title="Zobacz pełne statystyki, cele oceny, analizę ryzyka i wykres trajektorii">
+                        <span>📊 Wykres & analiza</span>
+                        <span class="group-hover:translate-x-0.5 transition-transform font-extrabold">&rarr;</span>
+                    </a>
                 </div>
             </div>
 
-            <!-- Karty / Pigułki ocen -->
-            <div class="p-4 sm:p-5">
+            <!-- Karty / Pigułki ocen (wewnątrz tego samego zaokrąglonego kafelka) -->
+            <div class="p-4 sm:p-5 bg-white">
                 <div class="flex flex-wrap gap-2.5">
                     
                     
@@ -661,8 +717,8 @@
             <!-- Pasek przedmiotu -->
             <div class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/50 border-b border-slate-100">
                 <div>
-                    <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                        <span>Geografia</span>
+                    <h3 class="text-base font-extrabold text-slate-900">
+                        Geografia
                     </h3>
                     <div class="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-500">
                         <span>Liczba ocen: <strong>4</strong> (suma wag: 8.0)</span>
@@ -682,19 +738,31 @@
                     </div>
                 </div>
 
-                <!-- Średnia ważona z odznaką -->
-                <div class="text-right flex items-center sm:block justify-between sm:justify-end">
-                    <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
-                    <span class="text-xl font-extrabold
-                         text-sky-600
-                        ">
-                        4.12
-                    </span>
+                <!-- Średnia ważona z odznaką oraz odseparowany przycisk do analizy -->
+                <div class="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
+                    <div class="text-right">
+                        <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
+                        <span class="text-xl font-extrabold
+                             text-sky-600
+                            ">
+                            4.12
+                        </span>
+                    </div>
+
+                    <!-- Widoczne odseparowanie od średniej -->
+                    <div class="h-8 w-[1px] bg-slate-200 hidden sm:block"></div>
+
+                    <a href="/przedmiot/Geografia"
+                       class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-900 border border-indigo-200/80 transition-all shadow-2xs hover:shadow-xs group cursor-pointer"
+                       title="Zobacz pełne statystyki, cele oceny, analizę ryzyka i wykres trajektorii">
+                        <span>📊 Wykres & analiza</span>
+                        <span class="group-hover:translate-x-0.5 transition-transform font-extrabold">&rarr;</span>
+                    </a>
                 </div>
             </div>
 
-            <!-- Karty / Pigułki ocen -->
-            <div class="p-4 sm:p-5">
+            <!-- Karty / Pigułki ocen (wewnątrz tego samego zaokrąglonego kafelka) -->
+            <div class="p-4 sm:p-5 bg-white">
                 <div class="flex flex-wrap gap-2.5">
                     
                     
@@ -839,8 +907,8 @@
             <!-- Pasek przedmiotu -->
             <div class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/50 border-b border-slate-100">
                 <div>
-                    <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                        <span>Historia</span>
+                    <h3 class="text-base font-extrabold text-slate-900">
+                        Historia
                     </h3>
                     <div class="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-500">
                         <span>Liczba ocen: <strong>5</strong> (suma wag: 9.0)</span>
@@ -860,19 +928,31 @@
                     </div>
                 </div>
 
-                <!-- Średnia ważona z odznaką -->
-                <div class="text-right flex items-center sm:block justify-between sm:justify-end">
-                    <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
-                    <span class="text-xl font-extrabold
-                         text-amber-600
-                        ">
-                        2.78
-                    </span>
+                <!-- Średnia ważona z odznaką oraz odseparowany przycisk do analizy -->
+                <div class="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
+                    <div class="text-right">
+                        <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
+                        <span class="text-xl font-extrabold
+                             text-amber-600
+                            ">
+                            2.78
+                        </span>
+                    </div>
+
+                    <!-- Widoczne odseparowanie od średniej -->
+                    <div class="h-8 w-[1px] bg-slate-200 hidden sm:block"></div>
+
+                    <a href="/przedmiot/Historia"
+                       class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-900 border border-indigo-200/80 transition-all shadow-2xs hover:shadow-xs group cursor-pointer"
+                       title="Zobacz pełne statystyki, cele oceny, analizę ryzyka i wykres trajektorii">
+                        <span>📊 Wykres & analiza</span>
+                        <span class="group-hover:translate-x-0.5 transition-transform font-extrabold">&rarr;</span>
+                    </a>
                 </div>
             </div>
 
-            <!-- Karty / Pigułki ocen -->
-            <div class="p-4 sm:p-5">
+            <!-- Karty / Pigułki ocen (wewnątrz tego samego zaokrąglonego kafelka) -->
+            <div class="p-4 sm:p-5 bg-white">
                 <div class="flex flex-wrap gap-2.5">
                     
                     
@@ -1050,8 +1130,8 @@
             <!-- Pasek przedmiotu -->
             <div class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/50 border-b border-slate-100">
                 <div>
-                    <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                        <span>Informatyka</span>
+                    <h3 class="text-base font-extrabold text-slate-900">
+                        Informatyka
                     </h3>
                     <div class="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-500">
                         <span>Liczba ocen: <strong>3</strong> (suma wag: 3.0)</span>
@@ -1071,19 +1151,31 @@
                     </div>
                 </div>
 
-                <!-- Średnia ważona z odznaką -->
-                <div class="text-right flex items-center sm:block justify-between sm:justify-end">
-                    <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
-                    <span class="text-xl font-extrabold
-                         text-sky-600
-                        ">
-                        4.33
-                    </span>
+                <!-- Średnia ważona z odznaką oraz odseparowany przycisk do analizy -->
+                <div class="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
+                    <div class="text-right">
+                        <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
+                        <span class="text-xl font-extrabold
+                             text-sky-600
+                            ">
+                            4.33
+                        </span>
+                    </div>
+
+                    <!-- Widoczne odseparowanie od średniej -->
+                    <div class="h-8 w-[1px] bg-slate-200 hidden sm:block"></div>
+
+                    <a href="/przedmiot/Informatyka"
+                       class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-900 border border-indigo-200/80 transition-all shadow-2xs hover:shadow-xs group cursor-pointer"
+                       title="Zobacz pełne statystyki, cele oceny, analizę ryzyka i wykres trajektorii">
+                        <span>📊 Wykres & analiza</span>
+                        <span class="group-hover:translate-x-0.5 transition-transform font-extrabold">&rarr;</span>
+                    </a>
                 </div>
             </div>
 
-            <!-- Karty / Pigułki ocen -->
-            <div class="p-4 sm:p-5">
+            <!-- Karty / Pigułki ocen (wewnątrz tego samego zaokrąglonego kafelka) -->
+            <div class="p-4 sm:p-5 bg-white">
                 <div class="flex flex-wrap gap-2.5">
                     
                     
@@ -1194,8 +1286,8 @@
             <!-- Pasek przedmiotu -->
             <div class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/50 border-b border-slate-100">
                 <div>
-                    <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                        <span>Język angielski</span>
+                    <h3 class="text-base font-extrabold text-slate-900">
+                        Język angielski
                     </h3>
                     <div class="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-500">
                         <span>Liczba ocen: <strong>5</strong> (suma wag: 7.0)</span>
@@ -1215,19 +1307,31 @@
                     </div>
                 </div>
 
-                <!-- Średnia ważona z odznaką -->
-                <div class="text-right flex items-center sm:block justify-between sm:justify-end">
-                    <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
-                    <span class="text-xl font-extrabold
-                         text-sky-600
-                        ">
-                        4.57
-                    </span>
+                <!-- Średnia ważona z odznaką oraz odseparowany przycisk do analizy -->
+                <div class="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
+                    <div class="text-right">
+                        <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
+                        <span class="text-xl font-extrabold
+                             text-sky-600
+                            ">
+                            4.57
+                        </span>
+                    </div>
+
+                    <!-- Widoczne odseparowanie od średniej -->
+                    <div class="h-8 w-[1px] bg-slate-200 hidden sm:block"></div>
+
+                    <a href="/przedmiot/J%C4%99zyk%20angielski"
+                       class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-900 border border-indigo-200/80 transition-all shadow-2xs hover:shadow-xs group cursor-pointer"
+                       title="Zobacz pełne statystyki, cele oceny, analizę ryzyka i wykres trajektorii">
+                        <span>📊 Wykres & analiza</span>
+                        <span class="group-hover:translate-x-0.5 transition-transform font-extrabold">&rarr;</span>
+                    </a>
                 </div>
             </div>
 
-            <!-- Karty / Pigułki ocen -->
-            <div class="p-4 sm:p-5">
+            <!-- Karty / Pigułki ocen (wewnątrz tego samego zaokrąglonego kafelka) -->
+            <div class="p-4 sm:p-5 bg-white">
                 <div class="flex flex-wrap gap-2.5">
                     
                     
@@ -1404,8 +1508,8 @@
             <!-- Pasek przedmiotu -->
             <div class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/50 border-b border-slate-100">
                 <div>
-                    <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                        <span>Język polski</span>
+                    <h3 class="text-base font-extrabold text-slate-900">
+                        Język polski
                     </h3>
                     <div class="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-500">
                         <span>Liczba ocen: <strong>4</strong> (suma wag: 6.0)</span>
@@ -1425,19 +1529,31 @@
                     </div>
                 </div>
 
-                <!-- Średnia ważona z odznaką -->
-                <div class="text-right flex items-center sm:block justify-between sm:justify-end">
-                    <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
-                    <span class="text-xl font-extrabold
-                         text-sky-600
-                        ">
-                        4.33
-                    </span>
+                <!-- Średnia ważona z odznaką oraz odseparowany przycisk do analizy -->
+                <div class="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
+                    <div class="text-right">
+                        <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
+                        <span class="text-xl font-extrabold
+                             text-sky-600
+                            ">
+                            4.33
+                        </span>
+                    </div>
+
+                    <!-- Widoczne odseparowanie od średniej -->
+                    <div class="h-8 w-[1px] bg-slate-200 hidden sm:block"></div>
+
+                    <a href="/przedmiot/J%C4%99zyk%20polski"
+                       class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-900 border border-indigo-200/80 transition-all shadow-2xs hover:shadow-xs group cursor-pointer"
+                       title="Zobacz pełne statystyki, cele oceny, analizę ryzyka i wykres trajektorii">
+                        <span>📊 Wykres & analiza</span>
+                        <span class="group-hover:translate-x-0.5 transition-transform font-extrabold">&rarr;</span>
+                    </a>
                 </div>
             </div>
 
-            <!-- Karty / Pigułki ocen -->
-            <div class="p-4 sm:p-5">
+            <!-- Karty / Pigułki ocen (wewnątrz tego samego zaokrąglonego kafelka) -->
+            <div class="p-4 sm:p-5 bg-white">
                 <div class="flex flex-wrap gap-2.5">
                     
                     
@@ -1582,11 +1698,11 @@
             <!-- Pasek przedmiotu -->
             <div class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/50 border-b border-slate-100">
                 <div>
-                    <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                        <span>Matematyka</span>
+                    <h3 class="text-base font-extrabold text-slate-900">
+                        Matematyka
                     </h3>
                     <div class="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-500">
-                        <span>Liczba ocen: <strong>5</strong> (suma wag: 8.0)</span>
+                        <span>Liczba ocen: <strong>9</strong> (suma wag: 15.0)</span>
                         <span class="text-slate-300 hidden sm:inline">•</span>
 
                         <!-- Interaktywna pigułka statusu świadectwa (Styl Linear / Notion) -->
@@ -1603,21 +1719,66 @@
                     </div>
                 </div>
 
-                <!-- Średnia ważona z odznaką -->
-                <div class="text-right flex items-center sm:block justify-between sm:justify-end">
-                    <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
-                    <span class="text-xl font-extrabold
-                         text-sky-600
-                        ">
-                        4.62
-                    </span>
+                <!-- Średnia ważona z odznaką oraz odseparowany przycisk do analizy -->
+                <div class="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
+                    <div class="text-right">
+                        <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
+                        <span class="text-xl font-extrabold
+                             text-sky-600
+                            ">
+                            4.6
+                        </span>
+                    </div>
+
+                    <!-- Widoczne odseparowanie od średniej -->
+                    <div class="h-8 w-[1px] bg-slate-200 hidden sm:block"></div>
+
+                    <a href="web_przedmiot_matematyka.html"
+                       class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-900 border border-indigo-200/80 transition-all shadow-2xs hover:shadow-xs group cursor-pointer"
+                       title="Zobacz pełne statystyki, cele oceny, analizę ryzyka i wykres trajektorii">
+                        <span>📊 Wykres & analiza</span>
+                        <span class="group-hover:translate-x-0.5 transition-transform font-extrabold">&rarr;</span>
+                    </a>
                 </div>
             </div>
 
-            <!-- Karty / Pigułki ocen -->
-            <div class="p-4 sm:p-5">
+            <!-- Karty / Pigułki ocen (wewnątrz tego samego zaokrąglonego kafelka) -->
+            <div class="p-4 sm:p-5 bg-white">
                 <div class="flex flex-wrap gap-2.5">
                     
+                    
+                    <div onclick="openEditGradeModal({
+                            id: '1043',
+                            subject: 'Matematyka',
+                            grade: '5',
+                            weight: '2',
+                            category: 'Projekt',
+                            date: '2026-09-18 (pt.)',
+                            teacher: 'Renata Matyk',
+                            is_custom: false,
+                            original_grade: '',
+                            original_weight: ''
+                         })"
+                         class="group relative inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-400 hover:shadow-md shadow-xs transition-all cursor-pointer"
+                         title="Kliknij, aby edytować ocenę lub wagę">
+                        <!-- Odznaka oceny -->
+                        <span class="w-7 h-7 rounded-lg flex items-center justify-center font-extrabold text-sm
+                             bg-emerald-100 text-emerald-800
+                            ">
+                            5
+                        </span>
+
+                        <!-- Szczegóły: Kategoria & Waga -->
+                        <div class="text-left">
+                            <div class="text-xs font-bold text-slate-800 truncate max-w-[140px] sm:max-w-[200px] flex items-center gap-1" title="Projekt">
+                                <span>Projekt</span>
+                                
+                            </div>
+                            <div class="text-[10px] text-slate-400 font-medium">
+                                waga: <strong class="text-slate-600">2</strong> • 2026-09-18 (pt.)
+                            </div>
+                        </div>
+                    </div>
                     
                     <div onclick="openEditGradeModal({
                             id: '1005',
@@ -1718,6 +1879,72 @@
                     </div>
                     
                     <div onclick="openEditGradeModal({
+                            id: '1042',
+                            subject: 'Matematyka',
+                            grade: '3+',
+                            weight: '2',
+                            category: 'Kartkówka',
+                            date: '2026-09-11 (pt.)',
+                            teacher: 'Renata Matyk',
+                            is_custom: false,
+                            original_grade: '',
+                            original_weight: ''
+                         })"
+                         class="group relative inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-400 hover:shadow-md shadow-xs transition-all cursor-pointer"
+                         title="Kliknij, aby edytować ocenę lub wagę">
+                        <!-- Odznaka oceny -->
+                        <span class="w-7 h-7 rounded-lg flex items-center justify-center font-extrabold text-sm
+                             bg-amber-100 text-amber-800
+                            ">
+                            3+
+                        </span>
+
+                        <!-- Szczegóły: Kategoria & Waga -->
+                        <div class="text-left">
+                            <div class="text-xs font-bold text-slate-800 truncate max-w-[140px] sm:max-w-[200px] flex items-center gap-1" title="Kartkówka">
+                                <span>Kartkówka</span>
+                                
+                            </div>
+                            <div class="text-[10px] text-slate-400 font-medium">
+                                waga: <strong class="text-slate-600">2</strong> • 2026-09-11 (pt.)
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div onclick="openEditGradeModal({
+                            id: '1041',
+                            subject: 'Matematyka',
+                            grade: '6',
+                            weight: '1',
+                            category: 'Praca na lekcji',
+                            date: '2026-09-10 (czw.)',
+                            teacher: 'Renata Matyk',
+                            is_custom: false,
+                            original_grade: '',
+                            original_weight: ''
+                         })"
+                         class="group relative inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-400 hover:shadow-md shadow-xs transition-all cursor-pointer"
+                         title="Kliknij, aby edytować ocenę lub wagę">
+                        <!-- Odznaka oceny -->
+                        <span class="w-7 h-7 rounded-lg flex items-center justify-center font-extrabold text-sm
+                             bg-emerald-100 text-emerald-800
+                            ">
+                            6
+                        </span>
+
+                        <!-- Szczegóły: Kategoria & Waga -->
+                        <div class="text-left">
+                            <div class="text-xs font-bold text-slate-800 truncate max-w-[140px] sm:max-w-[200px] flex items-center gap-1" title="Praca na lekcji">
+                                <span>Praca na lekcji</span>
+                                
+                            </div>
+                            <div class="text-[10px] text-slate-400 font-medium">
+                                waga: <strong class="text-slate-600">1</strong> • 2026-09-10 (czw.)
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div onclick="openEditGradeModal({
                             id: '1002',
                             subject: 'Matematyka',
                             grade: '5',
@@ -1746,6 +1973,39 @@
                             </div>
                             <div class="text-[10px] text-slate-400 font-medium">
                                 waga: <strong class="text-slate-600">1</strong> • 2026-09-08 (wt.)
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div onclick="openEditGradeModal({
+                            id: '1040',
+                            subject: 'Matematyka',
+                            grade: '4+',
+                            weight: '2',
+                            category: 'Odpowiedź',
+                            date: '2026-09-07 (pon.)',
+                            teacher: 'Renata Matyk',
+                            is_custom: false,
+                            original_grade: '',
+                            original_weight: ''
+                         })"
+                         class="group relative inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-400 hover:shadow-md shadow-xs transition-all cursor-pointer"
+                         title="Kliknij, aby edytować ocenę lub wagę">
+                        <!-- Odznaka oceny -->
+                        <span class="w-7 h-7 rounded-lg flex items-center justify-center font-extrabold text-sm
+                             bg-sky-100 text-sky-800
+                            ">
+                            4+
+                        </span>
+
+                        <!-- Szczegóły: Kategoria & Waga -->
+                        <div class="text-left">
+                            <div class="text-xs font-bold text-slate-800 truncate max-w-[140px] sm:max-w-[200px] flex items-center gap-1" title="Odpowiedź">
+                                <span>Odpowiedź</span>
+                                
+                            </div>
+                            <div class="text-[10px] text-slate-400 font-medium">
+                                waga: <strong class="text-slate-600">2</strong> • 2026-09-07 (pon.)
                             </div>
                         </div>
                     </div>
@@ -1792,8 +2052,8 @@
             <!-- Pasek przedmiotu -->
             <div class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/50 border-b border-slate-100">
                 <div>
-                    <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                        <span>Muzyka</span>
+                    <h3 class="text-base font-extrabold text-slate-900">
+                        Muzyka
                     </h3>
                     <div class="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-500">
                         <span>Liczba ocen: <strong>1</strong> (suma wag: 1.0)</span>
@@ -1813,19 +2073,31 @@
                     </div>
                 </div>
 
-                <!-- Średnia ważona z odznaką -->
-                <div class="text-right flex items-center sm:block justify-between sm:justify-end">
-                    <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
-                    <span class="text-xl font-extrabold
-                         text-emerald-600
-                        ">
-                        6.0
-                    </span>
+                <!-- Średnia ważona z odznaką oraz odseparowany przycisk do analizy -->
+                <div class="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
+                    <div class="text-right">
+                        <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
+                        <span class="text-xl font-extrabold
+                             text-emerald-600
+                            ">
+                            6.0
+                        </span>
+                    </div>
+
+                    <!-- Widoczne odseparowanie od średniej -->
+                    <div class="h-8 w-[1px] bg-slate-200 hidden sm:block"></div>
+
+                    <a href="/przedmiot/Muzyka"
+                       class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-900 border border-indigo-200/80 transition-all shadow-2xs hover:shadow-xs group cursor-pointer"
+                       title="Zobacz pełne statystyki, cele oceny, analizę ryzyka i wykres trajektorii">
+                        <span>📊 Wykres & analiza</span>
+                        <span class="group-hover:translate-x-0.5 transition-transform font-extrabold">&rarr;</span>
+                    </a>
                 </div>
             </div>
 
-            <!-- Karty / Pigułki ocen -->
-            <div class="p-4 sm:p-5">
+            <!-- Karty / Pigułki ocen (wewnątrz tego samego zaokrąglonego kafelka) -->
+            <div class="p-4 sm:p-5 bg-white">
                 <div class="flex flex-wrap gap-2.5">
                     
                     
@@ -1871,8 +2143,8 @@
             <!-- Pasek przedmiotu -->
             <div class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/50 border-b border-slate-100">
                 <div>
-                    <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                        <span>Plastyka</span>
+                    <h3 class="text-base font-extrabold text-slate-900">
+                        Plastyka
                     </h3>
                     <div class="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-500">
                         <span>Liczba ocen: <strong>1</strong> (suma wag: 1.0)</span>
@@ -1892,19 +2164,31 @@
                     </div>
                 </div>
 
-                <!-- Średnia ważona z odznaką -->
-                <div class="text-right flex items-center sm:block justify-between sm:justify-end">
-                    <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
-                    <span class="text-xl font-extrabold
-                         text-emerald-600
-                        ">
-                        5.0
-                    </span>
+                <!-- Średnia ważona z odznaką oraz odseparowany przycisk do analizy -->
+                <div class="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
+                    <div class="text-right">
+                        <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
+                        <span class="text-xl font-extrabold
+                             text-emerald-600
+                            ">
+                            5.0
+                        </span>
+                    </div>
+
+                    <!-- Widoczne odseparowanie od średniej -->
+                    <div class="h-8 w-[1px] bg-slate-200 hidden sm:block"></div>
+
+                    <a href="/przedmiot/Plastyka"
+                       class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-900 border border-indigo-200/80 transition-all shadow-2xs hover:shadow-xs group cursor-pointer"
+                       title="Zobacz pełne statystyki, cele oceny, analizę ryzyka i wykres trajektorii">
+                        <span>📊 Wykres & analiza</span>
+                        <span class="group-hover:translate-x-0.5 transition-transform font-extrabold">&rarr;</span>
+                    </a>
                 </div>
             </div>
 
-            <!-- Karty / Pigułki ocen -->
-            <div class="p-4 sm:p-5">
+            <!-- Karty / Pigułki ocen (wewnątrz tego samego zaokrąglonego kafelka) -->
+            <div class="p-4 sm:p-5 bg-white">
                 <div class="flex flex-wrap gap-2.5">
                     
                     
@@ -1950,8 +2234,8 @@
             <!-- Pasek przedmiotu -->
             <div class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/50 border-b border-slate-100">
                 <div>
-                    <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                        <span>Wychowanie fizyczne</span>
+                    <h3 class="text-base font-extrabold text-slate-900">
+                        Wychowanie fizyczne
                     </h3>
                     <div class="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-500">
                         <span>Liczba ocen: <strong>3</strong> (suma wag: 2.0)</span>
@@ -1971,19 +2255,31 @@
                     </div>
                 </div>
 
-                <!-- Średnia ważona z odznaką -->
-                <div class="text-right flex items-center sm:block justify-between sm:justify-end">
-                    <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
-                    <span class="text-xl font-extrabold
-                         text-emerald-600
-                        ">
-                        5.0
-                    </span>
+                <!-- Średnia ważona z odznaką oraz odseparowany przycisk do analizy -->
+                <div class="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
+                    <div class="text-right">
+                        <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
+                        <span class="text-xl font-extrabold
+                             text-emerald-600
+                            ">
+                            5.0
+                        </span>
+                    </div>
+
+                    <!-- Widoczne odseparowanie od średniej -->
+                    <div class="h-8 w-[1px] bg-slate-200 hidden sm:block"></div>
+
+                    <a href="/przedmiot/Wychowanie%20fizyczne"
+                       class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-900 border border-indigo-200/80 transition-all shadow-2xs hover:shadow-xs group cursor-pointer"
+                       title="Zobacz pełne statystyki, cele oceny, analizę ryzyka i wykres trajektorii">
+                        <span>📊 Wykres & analiza</span>
+                        <span class="group-hover:translate-x-0.5 transition-transform font-extrabold">&rarr;</span>
+                    </a>
                 </div>
             </div>
 
-            <!-- Karty / Pigułki ocen -->
-            <div class="p-4 sm:p-5">
+            <!-- Karty / Pigułki ocen (wewnątrz tego samego zaokrąglonego kafelka) -->
+            <div class="p-4 sm:p-5 bg-white">
                 <div class="flex flex-wrap gap-2.5">
                     
                     
@@ -2624,7 +2920,7 @@
                         <td class="py-3.5 px-4 sm:px-6 text-center">
                             
                             <span class="inline-flex items-center justify-center min-w-[28px] h-7 px-2 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold">
-                                4
+                                8
                             </span>
                             
                         </td>
@@ -2635,7 +2931,7 @@
                             <span class="font-extrabold text-base
                                  text-sky-600
                                 ">
-                                4.62
+                                4.60
                             </span>
                             
                         </td>
@@ -2930,7 +3226,7 @@
                     
                     <option value="Język polski">Język polski (śr. 4.33)</option>
                     
-                    <option value="Matematyka">Matematyka (śr. 4.62)</option>
+                    <option value="Matematyka">Matematyka (śr. 4.6)</option>
                     
                     <option value="Muzyka">Muzyka (śr. 6.0)</option>
                     
@@ -3056,7 +3352,7 @@
             <div class="p-3 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between">
                 <span class="text-xs font-bold text-slate-700 truncate max-w-[180px]" title="Matematyka">Matematyka</span>
                 <span class="text-sm font-extrabold  text-sky-600 ">
-                    4.62
+                    4.6
                 </span>
             </div>
             
@@ -3086,7 +3382,9 @@
     
 </div>
 
-<!-- Modal Edycji Oceny i Wagi -->
+<!-- ========================================================================= -->
+<!-- WSPÓLNY MODAL EDYCJI OCENY I WAGI (DLA WIDOKU OCEN ORAZ ANALIZY PRZEDMIOTU) -->
+<!-- ========================================================================= -->
 <div id="edit-grade-modal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 hidden" onclick="handleEditModalBackdropClick(event)">
     <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 transform transition-all relative" onclick="event.stopPropagation()">
         <!-- Header -->
@@ -3098,7 +3396,7 @@
                 </h3>
                 <p id="modal-grade-subject" class="text-xs text-indigo-600 font-semibold mt-0.5">Przedmiot</p>
             </div>
-            <button type="button" onclick="closeEditGradeModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer text-lg leading-none">
+            <button type="button" onclick="closeEditGradeModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer text-lg leading-none" title="Zamknij">
                 ✕
             </button>
         </div>
@@ -3128,6 +3426,7 @@
 
         <!-- Formularz edycji -->
         <form id="edit-grade-form" onsubmit="submitEditGrade(event)" class="space-y-4">
+            <input type="hidden" name="csrf_token" value="79eaf36677de94b19595b8cf6e1e5c21e6431fba36a1ecf2ba45f9556487d352">
             <input type="hidden" id="modal-grade-id" name="grade_id" value="">
 
             <div>
@@ -3208,45 +3507,18 @@
     </div>
 </div>
 
-<!-- Skrypt obsługi zakładek oraz modala edycji -->
 <script>
-function switchGradesTab(tabId) {
-    document.querySelectorAll('.grades-tab-pane').forEach(el => el.classList.add('hidden'));
-
-    document.querySelectorAll('.grades-tab-btn').forEach(btn => {
-        btn.classList.remove('bg-white', 'text-indigo-700', 'shadow-sm');
-        btn.classList.add('text-slate-600', 'hover:text-slate-900', 'hover:bg-white/50');
-    });
-
-    const pane = document.getElementById('grades-pane-' + tabId);
-    if (pane) {
-        pane.classList.remove('hidden');
-    }
-
-    const btn = document.getElementById('grades-tab-btn-' + tabId);
-    if (btn) {
-        btn.classList.remove('text-slate-600', 'hover:text-slate-900', 'hover:bg-white/50');
-        btn.classList.add('bg-white', 'text-indigo-700', 'shadow-sm');
-    }
-
-    if (window.history && window.history.replaceState) {
-        const url = new URL(window.location);
-        url.searchParams.set('tab', tabId);
-        window.history.replaceState(null, '', url);
-    }
-}
-
 let currentEditingGrade = null;
 
 function openEditGradeModal(gradeData) {
     currentEditingGrade = gradeData;
     document.getElementById('modal-grade-id').value = gradeData.id;
-    document.getElementById('modal-grade-subject').innerText = gradeData.subject;
+    document.getElementById('modal-grade-subject').innerText = gradeData.subject || 'Przedmiot';
     document.getElementById('modal-grade-category').innerText = gradeData.category || '-';
     
     let teacherDate = [];
     if (gradeData.date) teacherDate.push(gradeData.date);
-    if (gradeData.teacher) teacherDate.push(gradeData.teacher);
+    if (gradeData.teacher && gradeData.teacher !== '—') teacherDate.push(gradeData.teacher);
     document.getElementById('modal-grade-teacher-date').innerText = teacherDate.join(' • ') || '-';
     
     // Ustawienie wartości oceny
@@ -3261,7 +3533,7 @@ function openEditGradeModal(gradeData) {
         }
     }
     if (!found) {
-        customInputEl.value = gradeData.grade;
+        customInputEl.value = gradeData.grade || '';
     } else {
         customInputEl.value = '';
     }
@@ -3330,7 +3602,12 @@ async function submitEditGrade(event) {
         });
         const data = await resp.json();
         if (resp.ok && data.success) {
-            window.location.search = '?tab=oceny';
+            // Jeśli jesteśmy w widoku szczegółowym przedmiotu, odświeżamy bieżącą stronę
+            if (window.location.pathname.includes('/oceny/') || window.location.pathname.includes('/przedmiot/')) {
+                window.location.reload();
+            } else {
+                window.location.search = '?tab=oceny';
+            }
         } else {
             errorEl.innerText = data.message || 'Wystąpił błąd podczas zapisywania oceny.';
             errorEl.classList.remove('hidden');
@@ -3362,7 +3639,11 @@ async function resetEditGrade() {
         });
         const data = await resp.json();
         if (resp.ok && data.success) {
-            window.location.search = '?tab=oceny';
+            if (window.location.pathname.includes('/oceny/') || window.location.pathname.includes('/przedmiot/')) {
+                window.location.reload();
+            } else {
+                window.location.search = '?tab=oceny';
+            }
         } else {
             errorEl.innerText = data.message || 'Wystąpił błąd podczas resetowania oceny.';
             errorEl.classList.remove('hidden');
@@ -3370,6 +3651,35 @@ async function resetEditGrade() {
     } catch (err) {
         errorEl.innerText = 'Błąd połączenia z serwerem: ' + err;
         errorEl.classList.remove('hidden');
+    }
+}
+</script>
+
+<!-- Skrypt obsługi zakładek widoku ocen -->
+<script>
+function switchGradesTab(tabId) {
+    document.querySelectorAll('.grades-tab-pane').forEach(el => el.classList.add('hidden'));
+
+    document.querySelectorAll('.grades-tab-btn').forEach(btn => {
+        btn.classList.remove('bg-white', 'text-indigo-700', 'shadow-sm');
+        btn.classList.add('text-slate-600', 'hover:text-slate-900', 'hover:bg-white/50');
+    });
+
+    const pane = document.getElementById('grades-pane-' + tabId);
+    if (pane) {
+        pane.classList.remove('hidden');
+    }
+
+    const btn = document.getElementById('grades-tab-btn-' + tabId);
+    if (btn) {
+        btn.classList.remove('text-slate-600', 'hover:text-slate-900', 'hover:bg-white/50');
+        btn.classList.add('bg-white', 'text-indigo-700', 'shadow-sm');
+    }
+
+    if (window.history && window.history.replaceState) {
+        const url = new URL(window.location);
+        url.searchParams.set('tab', tabId);
+        window.history.replaceState(null, '', url);
     }
 }
 
@@ -3419,7 +3729,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500">
         <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div class="flex items-center gap-2 font-medium">
-                <span>🏫 Librus2mail v2.3.0</span>
+                <span>🏫 Librus2mail v2.4.0</span>
                 <span>•</span>
                 <span>Prywatny Dashboard Rodzica</span>
             </div>

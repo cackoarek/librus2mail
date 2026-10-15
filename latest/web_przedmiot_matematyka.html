@@ -1,0 +1,2417 @@
+<!DOCTYPE html>
+<html lang="pl" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="79eaf36677de94b19595b8cf6e1e5c21e6431fba36a1ecf2ba45f9556487d352">
+    <title>Analiza przedmiotu: Matematyka - Librus2mail - Librus2mail</title>
+    <!-- Favicon z logo Librus2mail (gradient indigo-sky + 🏫) -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%25%22%20y1%3D%22100%25%22%20x2%3D%22100%25%22%20y2%3D%220%25%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%234f46e5%22/%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%230ea5e9%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2216%22%20fill%3D%22url%28%23g%29%22/%3E%3Ctext%20x%3D%2232%22%20y%3D%2234%22%20font-size%3D%2234%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%F0%9F%8F%AB%3C/text%3E%3C/svg%3E">
+    <!-- TailwindCSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- HTMX CDN -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script>
+        // Automatyczne dołączanie tokenu CSRF do wszystkich zapytań fetch
+        (function() {
+            const _origFetch = window.fetch;
+            window.fetch = function(url, options) {
+                options = options || {};
+                options.headers = options.headers || {};
+                const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                if (token) {
+                    if (options.headers instanceof Headers) {
+                        if (!options.headers.has('X-CSRFToken')) options.headers.set('X-CSRFToken', token);
+                    } else if (!options.headers['X-CSRFToken'] && !options.headers['x-csrftoken']) {
+                        options.headers['X-CSRFToken'] = token;
+                    }
+                }
+                return _origFetch(url, options);
+            };
+        })();
+    </script>
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+        .htmx-indicator { display: none; }
+        .htmx-request .htmx-indicator { display: inline-flex; }
+        .htmx-request.htmx-indicator { display: inline-flex; }
+    </style>
+    
+<!-- Chart.js do renderowania trajektorii ocen i średniej kroczącej -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+</head>
+<body class="h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white" hx-headers='{"X-CSRFToken": "79eaf36677de94b19595b8cf6e1e5c21e6431fba36a1ecf2ba45f9556487d352"}'>
+
+    <!-- Pasek nawigacyjny -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Lewa strona: Logo + Menu -->
+                <div class="flex items-center gap-8">
+                    <a href="web_dashboard.html" class="flex items-center gap-3 group">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-sky-500 flex items-center justify-center text-white text-xl shadow-md shadow-indigo-100 group-hover:scale-105 transition-transform">
+                            🏫
+                        </div>
+                        <div>
+                            <span class="font-extrabold text-lg text-slate-900 tracking-tight flex items-center gap-1.5">
+                                Librus<span class="text-indigo-600">2mail</span>
+                            </span>
+                            <span class="block text-[10px] uppercase font-bold text-slate-400 tracking-wider">Web Dashboard</span>
+                        </div>
+                    </a>
+
+                    <!-- Nawigacja Desktop -->
+                    
+                    <nav class="hidden md:flex items-center gap-1">
+                        <a href="web_dashboard.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📊 Pulpit
+                        </a>
+                        <a href="web_plan.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📅 Plan lekcji
+                        </a>
+                        <a href="web_oceny.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📝 Oceny
+                        </a>
+                        <a href="web_terminarz.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            🔔 Terminarz
+                        </a>
+                        <a href="web_wiadomosci.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            ✉️ Wiadomości
+                        </a>
+                        <a href="web_raporty_podsumowanie.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📈 Raporty
+                        </a>
+                        <a href="web_akcje.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            ⚡ Akcje CLI
+                        </a>
+                        <a href="web_ustawienia.html"
+                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            ⚙️ Ustawienia
+                        </a>
+                    </nav>
+                    
+                </div>
+
+                <!-- Prawa strona: Przełącznik ucznia + Auth -->
+                <div class="flex items-center gap-3">
+                    
+                        
+                        <div class="relative inline-block text-left">
+                            <select onchange="window.location.href='/student/' + this.value + '?next=' + encodeURIComponent(window.location.pathname + window.location.search)"
+                                    class="bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold rounded-lg px-3 py-2 pr-8 focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
+                                
+                                <option value="8912345" >
+                                    👤 Jan Kowalski (klasa 5A) (8912345)
+                                </option>
+                                
+                                <option value="8976543" >
+                                    👤 Anna Kowalska (Liceum 2A) (8976543)
+                                </option>
+                                
+                                <option value="8979296" selected>
+                                    👤 Jan Kowalski (8979296)
+                                </option>
+                                
+                            </select>
+                        </div>
+                        
+
+                        
+                        <a href="web_login.html"
+                           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors"
+                           title="Wyloguj rodzica">
+                            🔒 Wyloguj
+                        </a>
+                        
+                    
+
+                    
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobilny pasek skrótów -->
+        
+        <div class="md:hidden border-t border-slate-100 bg-slate-50 px-2 py-1.5 overflow-x-auto flex gap-1 scrollbar-none">
+            <a href="web_dashboard.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📊 Pulpit</a>
+            <a href="web_plan.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📅 Plan</a>
+            <a href="web_oceny.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📝 Oceny</a>
+            <a href="web_terminarz.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">🔔 Terminarz</a>
+            <a href="web_wiadomosci.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">✉️ Wiadomości</a>
+            <a href="web_raporty_podsumowanie.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📈 Raporty</a>
+            <a href="web_akcje.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">⚡ Akcje</a>
+            <a href="web_ustawienia.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">⚙️ Ustawienia</a>
+        </div>
+        
+    </header>
+
+    <!-- Komunikaty Flash -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 w-full">
+        
+            
+        
+    </div>
+
+    <!-- Główna zawartość -->
+    <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
+        
+<div class="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+
+    <!-- Breadcrumbs & Pasek nawigacji powrotnej -->
+    <div class="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-slate-200">
+        <nav class="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-500">
+            <a href="web_dashboard.html" class="hover:text-indigo-600 transition-colors">Pulpit</a>
+            <span class="text-slate-300">/</span>
+            <a href="web_oceny.html" class="hover:text-indigo-600 transition-colors">Oceny</a>
+            <span class="text-slate-300">/</span>
+            <span class="text-slate-900 font-bold">Matematyka</span>
+        </nav>
+        <a href="web_oceny.html"
+           class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 hover:text-indigo-600 hover:border-slate-300 transition-all shadow-2xs">
+            <span>&larr;</span>
+            <span>Wróć do wszystkich ocen</span>
+        </a>
+    </div>
+
+    <!-- Nagłówek przedmiotu z głównym statusem -->
+    <div class="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-5 relative overflow-hidden">
+        <div class="absolute -right-8 -bottom-8 text-8xl opacity-5 select-none pointer-events-none">📚</div>
+        
+        <div>
+            <div class="flex flex-wrap items-center gap-2.5 mb-2">
+                <span class="px-3 py-1 rounded-full text-xs font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-100 flex items-center gap-1.5">
+                    <span>📖</span>
+                    <span>Przedmiot szkolny</span>
+                </span>
+                
+                <span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                    <span>🎓</span>
+                    <span>Wliczany do średniej świadectwa</span>
+                </span>
+                
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
+                <span>Matematyka</span>
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1 flex items-center gap-2">
+                <span>Profil ucznia: <strong></strong></span>
+                <span class="text-slate-300">•</span>
+                <span>Łącznie ocen: <strong>9</strong></span>
+                <span class="text-slate-300">•</span>
+                <span>Suma wag: <strong>15.0</strong></span>
+            </p>
+        </div>
+
+        <!-- Główny widget proponowanej oceny i trendu -->
+        <div class="flex items-center gap-4 bg-slate-50/80 p-4 rounded-2xl border border-slate-100 self-start md:self-auto">
+            <div class="text-right">
+                <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Proponowana ocena</span>
+                <div class="flex items-baseline justify-end gap-1.5 mt-0.5">
+                    
+                    <span class="text-2xl font-black text-indigo-700">4</span>
+                    <span class="text-xs font-bold text-slate-600">(dobry)</span>
+                    
+                </div>
+            </div>
+            <div class="h-10 w-[1px] bg-slate-200"></div>
+            <div>
+                <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Dynamika ocen</span>
+                <span class="inline-flex items-center gap-1 text-xs font-extrabold mt-1
+                     text-slate-600 "
+                    title="Średnia ustabilizowana">
+                    <span class="text-base leading-none">➡</span>
+                    <span>Średnia ustabilizowana</span>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- SEKCJA 1: STATYSTYKI OCEN (KAFELKI KPI)                                   -->
+    <!-- ========================================================================= -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-3.5">
+        <!-- Średnia ważona -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-xs">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <span>Śr. ważona</span>
+                <span>⚖️</span>
+            </div>
+            <div class="mt-2 text-2xl font-black
+                 text-indigo-600
+                ">
+                4.60
+            </div>
+            <span class="text-[10px] text-slate-500 font-medium mt-0.5 block truncate">kluczowa dla oceny</span>
+        </div>
+
+        <!-- Średnia arytmetyczna -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-xs">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <span>Śr. zwykła</span>
+                <span>🔢</span>
+            </div>
+            <div class="mt-2 text-2xl font-black text-slate-800">
+                4.75
+            </div>
+            <span class="text-[10px] text-slate-500 font-medium mt-0.5 block truncate">arytmetyczna</span>
+        </div>
+
+        <!-- Liczba ocen i suma wag -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-xs">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <span>Oceny / Wagi</span>
+                <span>📝</span>
+            </div>
+            <div class="mt-2 text-2xl font-black text-slate-800">
+                8 <span class="text-xs font-semibold text-slate-400">/ 15.0</span>
+            </div>
+            <span class="text-[10px] text-slate-500 font-medium mt-0.5 block truncate">oceny / suma wag</span>
+        </div>
+
+        <!-- Najwyższa ocena -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-xs">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <span>Najwyższa</span>
+                <span>⭐</span>
+            </div>
+            <div class="mt-2 text-2xl font-black text-emerald-600">
+                6.0
+            </div>
+            <span class="text-[10px] text-slate-500 font-medium mt-0.5 block truncate">maksimum (MAX)</span>
+        </div>
+
+        <!-- Najniższa ocena -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-xs">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <span>Najniższa</span>
+                <span>⚠️</span>
+            </div>
+            <div class="mt-2 text-2xl font-black  text-slate-800 ">
+                3.5
+            </div>
+            <span class="text-[10px] text-slate-500 font-medium mt-0.5 block truncate">minimum (MIN)</span>
+        </div>
+
+        <!-- Mediana -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-xs">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <span>Mediana</span>
+                <span>🎯</span>
+            </div>
+            <div class="mt-2 text-2xl font-black text-slate-800">
+                5.0
+            </div>
+            <span class="text-[10px] text-slate-500 font-medium mt-0.5 block truncate">środkowy wynik</span>
+        </div>
+
+        <!-- Stabilność formy (Volatility Score) -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-xs cursor-help group transition-colors hover:border-indigo-300"
+             title="Wskaźnik stabilności formy (62% – Umiarkowana):
+Mierzy systematyczność i przewidywalność wyników ucznia na podstawie matematycznego odchylenia standardowego (stdev: 0.76).
+
+• Skala 0–100%: Im wyższy wskaźnik, tym równiejsze oceny bez niespodziewanych potknięć.
+• Wyniki powyżej 80% oznaczają stabilną formę i stały poziom wiedzy, natomiast poniżej 60% wskazują na duży rozrzut między sukcesami a wpadkami (formę w kratkę).
+
+Diagnoza: Dobra, zrównoważona forma z pojedynczymi wahaniami (sporadyczne słabsze lub wybitne oceny).">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <span class="group-hover:text-indigo-600 transition-colors">Stabilność</span>
+                <span>📐</span>
+            </div>
+            <div class="mt-2 text-2xl font-black
+                 text-indigo-600
+                ">
+                62%
+            </div>
+            <span class="text-[10px] text-slate-500 font-medium mt-0.5 block truncate">
+                Umiarkowana (62%)
+            </span>
+        </div>
+
+        <!-- Tempo ocen (Pacing & Velocity) -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-xs" title="Do końca I semestru (styczeń) pozostało ok. 107 dni">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <span>Tempo ocen</span>
+                <span>⏱️</span>
+            </div>
+            <div class="mt-2 text-2xl font-black text-slate-800">
+                
+                <span class="text-lg text-slate-400 font-normal">co </span>1.8<span class="text-xs font-bold text-slate-500"> d.</span>
+                
+            </div>
+            <span class="text-[10px] text-slate-500 font-medium mt-0.5 block truncate">
+                
+                ok. 27 ocen do końca
+                
+            </span>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- SEKCJA 2: STRATEGIA OCENY — CEL PODWYŻSZENIA VS RYZYKO SPADKU              -->
+    <!-- ========================================================================= -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        
+        <!-- KARTA A: SZANSA NA WYŻSZĄ OCENĘ (TARGET ANALYSIS) -->
+        <div class="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-base">🎯</span>
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900">Szansa na podwyższenie oceny</h3>
+                            <span class="text-xs text-slate-500">Analiza możliwości zdobycia wyższego stopnia</span>
+                        </div>
+                    </div>
+                    
+                    <span class="px-2.5 py-1 rounded-lg text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        Cel: 5 (bardzo dobry)
+                    </span>
+                    
+                </div>
+
+                
+                <div class="mt-4 space-y-3.5">
+                    <!-- Pasek dystansu do celu -->
+                    <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+                        <div>
+                            <span class="text-xs text-slate-500 font-semibold block">Dystans do progu oceny 5:</span>
+                            <span class="text-xs text-slate-400">Próg od: <strong>4.75</strong> (bieżąca średnia: 4.60)</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-lg font-black text-indigo-700">Brakuje 0.15 pkt</span>
+                            <span class="block text-[10px] font-bold text-slate-500 uppercase">Realny cel (wymaga b. dobrej oceny ze sprawdzianu)</span>
+                        </div>
+                    </div>
+
+                    <!-- Gotowe scenariusze co potrzeba zdobyć -->
+                    <div>
+                        <span class="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-2">Scenariusze osiągnięcia celu:</span>
+                        
+                        <div class="space-y-2">
+                            
+                            <div class="p-2.5 rounded-xl bg-slate-50/70 border border-slate-100 flex items-center justify-between text-xs hover:bg-slate-100 transition-colors">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-emerald-500 font-bold">✔</span>
+                                    <span class="font-semibold text-slate-800">1x ocena 6 (celujący) przy wadze 2</span>
+                                </div>
+                                <span class="text-[11px] font-bold text-slate-500">nowa śr: <strong class="text-indigo-600">4.75</strong></span>
+                            </div>
+                            
+                            <div class="p-2.5 rounded-xl bg-slate-50/70 border border-slate-100 flex items-center justify-between text-xs hover:bg-slate-100 transition-colors">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-emerald-500 font-bold">✔</span>
+                                    <span class="font-semibold text-slate-800">1x ocena 5+ lub 6 przy wadze 3</span>
+                                </div>
+                                <span class="text-[11px] font-bold text-slate-500">nowa śr: <strong class="text-indigo-600">4.75</strong></span>
+                            </div>
+                            
+                            <div class="p-2.5 rounded-xl bg-slate-50/70 border border-slate-100 flex items-center justify-between text-xs hover:bg-slate-100 transition-colors">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-emerald-500 font-bold">✔</span>
+                                    <span class="font-semibold text-slate-800">1x ocena 5+ lub 6 przy wadze 4</span>
+                                </div>
+                                <span class="text-[11px] font-bold text-slate-500">nowa śr: <strong class="text-indigo-600">4.75</strong></span>
+                            </div>
+                            
+                        </div>
+                        
+                    </div>
+                </div>
+                
+            </div>
+            
+            <div class="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-400">
+                Wskazówka: Najszybszy skok średniej dają prace klasowe i sprawdziany o wadze 3 i 4.
+            </div>
+        </div>
+
+        <!-- KARTA B: MARGINES BEZPIECZEŃSTWA I RYZYKO SPADKU (RISK ANALYSIS) -->
+        <div class="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-base">🛡️</span>
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900">Margines bezpieczeństwa & ryzyko</h3>
+                            <span class="text-xs text-slate-500">Bufor punktowy przed obniżeniem stopnia</span>
+                        </div>
+                    </div>
+                    
+                    <span class="px-2.5 py-1 rounded-lg text-xs font-extrabold
+                         bg-emerald-50 text-emerald-700 border border-emerald-200 ">
+                        Stabilny margines bezpieczeństwa
+                    </span>
+                    
+                </div>
+
+                
+                <div class="mt-4 space-y-3.5">
+                    <!-- Bufor punktowy -->
+                    <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+                        <div>
+                            <span class="text-xs text-slate-500 font-semibold block">Margines nad dolnym progiem stopnia:</span>
+                            <span class="text-xs text-slate-400">Próg bieżącej oceny to: <strong>3.75</strong></span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-lg font-black
+                                 text-emerald-600 ">
+                                +0.85 pkt
+                            </span>
+                            <span class="block text-[10px] font-bold text-slate-500 uppercase">bufor ochronny</span>
+                        </div>
+                    </div>
+
+                    <!-- Symulacje niepomyślnych ocen -->
+                    <div>
+                        <span class="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-2">Odporność na słabsze oceny (symulacja):</span>
+                        <div class="space-y-2">
+                            
+                            <div class="p-2.5 rounded-xl bg-slate-50/70 border border-slate-100 flex items-center justify-between text-xs hover:bg-slate-100 transition-colors">
+                                <span class="font-semibold text-slate-800">Ocena 1 z wagą 1 obniży średnią do 4.38 (nadal bezpieczna ocena 4)</span>
+                                <span class="text-[11px] font-bold text-slate-500">
+                                    -0.22 pkt
+                                </span>
+                            </div>
+                            
+                            <div class="p-2.5 rounded-xl bg-slate-50/70 border border-slate-100 flex items-center justify-between text-xs hover:bg-slate-100 transition-colors">
+                                <span class="font-semibold text-slate-800">Ocena 1 z wagą 3 obniży średnią do 4.0 (nadal bezpieczna ocena 4)</span>
+                                <span class="text-[11px] font-bold text-rose-600">
+                                    -0.60 pkt
+                                </span>
+                            </div>
+                            
+                            <div class="p-2.5 rounded-xl bg-slate-50/70 border border-slate-100 flex items-center justify-between text-xs hover:bg-slate-100 transition-colors">
+                                <span class="font-semibold text-slate-800">Ocena 2 z wagą 2 obniży średnią do 4.29 (nadal bezpieczna ocena 4)</span>
+                                <span class="text-[11px] font-bold text-rose-600">
+                                    -0.31 pkt
+                                </span>
+                            </div>
+                            
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-400">
+                Wskazówka: Ocena ze sprawdzianu o wadze 3 wpływa na średnią trzykrotnie silniej niż zwykła kartkówka.
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- SEKCJA 3: WPŁYW OCEN NA ŚREDNIĄ (LOKOMOTYWY 🚀 I KOTWICE ⚓)                 -->
+    <!-- ========================================================================= -->
+    <div class="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+            <div>
+                <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <span>⚡</span>
+                    <span>Wpływ pojedynczych ocen na średnią ważoną</span>
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Oceny, które najbardziej zaważyły na obecnym wyniku (dźwignia w górę vs spadek) oraz kalkulator zysku z poprawy.
+                </p>
+            </div>
+            <span class="text-xs font-semibold px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-xl text-slate-600 self-start sm:self-auto">
+                Bieżąca średnia: <strong class="text-indigo-600">4.60</strong>
+            </span>
+        </div>
+
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <!-- Kolumna 1: Lokomotywy (Boosters) -->
+            <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50/40 p-5 sm:p-6 space-y-3.5">
+                <div class="flex flex-wrap items-center justify-between gap-2.5 pb-3 pt-1 border-b border-emerald-200/70">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <span class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-base shrink-0 shadow-2xs">🚀</span>
+                        <span class="text-xs sm:text-sm font-extrabold text-emerald-900 tracking-wide uppercase">
+                            Lokomotywy średniej <span class="font-bold text-emerald-700 normal-case">(Top sukcesy)</span>
+                        </span>
+                    </div>
+                    <span class="text-[11px] font-extrabold text-emerald-800 bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-lg shrink-0 shadow-2xs">
+                        Dźwignia w górę
+                    </span>
+                </div>
+
+                
+                <div class="space-y-2.5">
+                    
+                    <div class="bg-white/90 border border-emerald-100 rounded-xl p-3 flex items-center justify-between gap-3 shadow-2xs">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <span class="w-8 h-8 rounded-lg bg-emerald-500 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-xs">
+                                6
+                            </span>
+                            <div class="min-w-0">
+                                <div class="text-xs font-bold text-slate-800 truncate" title="Praca na lekcji">
+                                    Praca na lekcji
+                                </div>
+                                <div class="text-[11px] text-slate-400 truncate">
+                                    Waga: <strong class="text-slate-600">1.0</strong> • 2026-09-10
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <span class="text-sm font-black text-emerald-600 block">
+                                +0.10 pkt
+                            </span>
+                            <span class="text-[10px] text-slate-400 block" title="Średnia, gdyby nie ta ocena: 4.5">
+                                bez niej: 4.50
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white/90 border border-emerald-100 rounded-xl p-3 flex items-center justify-between gap-3 shadow-2xs">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <span class="w-8 h-8 rounded-lg bg-emerald-500 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-xs">
+                                5
+                            </span>
+                            <div class="min-w-0">
+                                <div class="text-xs font-bold text-slate-800 truncate" title="Sprawdzian">
+                                    Sprawdzian
+                                </div>
+                                <div class="text-[11px] text-slate-400 truncate">
+                                    Waga: <strong class="text-slate-600">3.0</strong> • 2026-09-15
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <span class="text-sm font-black text-emerald-600 block">
+                                +0.10 pkt
+                            </span>
+                            <span class="text-[10px] text-slate-400 block" title="Średnia, gdyby nie ta ocena: 4.5">
+                                bez niej: 4.50
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white/90 border border-emerald-100 rounded-xl p-3 flex items-center justify-between gap-3 shadow-2xs">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <span class="w-8 h-8 rounded-lg bg-emerald-500 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-xs">
+                                5
+                            </span>
+                            <div class="min-w-0">
+                                <div class="text-xs font-bold text-slate-800 truncate" title="Projekt">
+                                    Projekt
+                                </div>
+                                <div class="text-[11px] text-slate-400 truncate">
+                                    Waga: <strong class="text-slate-600">2.0</strong> • 2026-09-18
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <span class="text-sm font-black text-emerald-600 block">
+                                +0.06 pkt
+                            </span>
+                            <span class="text-[10px] text-slate-400 block" title="Średnia, gdyby nie ta ocena: 4.54">
+                                bez niej: 4.54
+                            </span>
+                        </div>
+                    </div>
+                    
+                </div>
+                
+            </div>
+
+            <!-- Kolumna 2: Kotwice (Draggers) -->
+            <div class="rounded-2xl border border-rose-200/80 bg-rose-50/40 p-5 sm:p-6 space-y-3.5">
+                <div class="flex flex-wrap items-center justify-between gap-2.5 pb-3 pt-1 border-b border-rose-200/70">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <span class="w-8 h-8 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center text-base shrink-0 shadow-2xs">⚓</span>
+                        <span class="text-xs sm:text-sm font-extrabold text-rose-900 tracking-wide uppercase">
+                            Kotwice średniej <span class="font-bold text-rose-700 normal-case">(Najbardziej kosztowne)</span>
+                        </span>
+                    </div>
+                    <span class="text-[11px] font-extrabold text-rose-800 bg-rose-100 border border-rose-200 px-2.5 py-1 rounded-lg shrink-0 shadow-2xs">
+                        Ściągają w dół
+                    </span>
+                </div>
+
+                
+                <div class="space-y-2.5">
+                    
+                    <div class="bg-white/90 border border-rose-100 rounded-xl p-3 flex flex-col gap-2 shadow-2xs">
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-2.5 min-w-0">
+                                <span class="w-8 h-8 rounded-lg bg-rose-500 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-xs">
+                                    3+
+                                </span>
+                                <div class="min-w-0">
+                                    <div class="text-xs font-bold text-slate-800 truncate" title="Kartkówka">
+                                        Kartkówka
+                                    </div>
+                                    <div class="text-[11px] text-slate-400 truncate">
+                                        Waga: <strong class="text-slate-600">2.0</strong> • 2026-09-11
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <span class="text-sm font-black text-rose-600 block">
+                                    -0.17 pkt
+                                </span>
+                                <span class="text-[10px] text-slate-400 block" title="Średnia, gdyby nie ta ocena: 4.77">
+                                    bez niej: 4.77
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Zysk z poprawki -->
+                        
+                        <div class="pt-2 border-t border-rose-100/70 flex items-center justify-between text-[11px] text-slate-600 bg-rose-50/60 rounded-lg px-2.5 py-1.5">
+                            <span class="font-medium">💡 Poprawa na <strong>5 (bdb)</strong>:</span>
+                            <span class="font-extrabold text-emerald-700">
+                                +0.20 pkt &rarr; śr. 4.80
+                            </span>
+                        </div>
+                        
+                    </div>
+                    
+                    <div class="bg-white/90 border border-rose-100 rounded-xl p-3 flex flex-col gap-2 shadow-2xs">
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-2.5 min-w-0">
+                                <span class="w-8 h-8 rounded-lg bg-rose-500 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-xs">
+                                    4
+                                </span>
+                                <div class="min-w-0">
+                                    <div class="text-xs font-bold text-slate-800 truncate" title="Sprawdzian">
+                                        Sprawdzian
+                                    </div>
+                                    <div class="text-[11px] text-slate-400 truncate">
+                                        Waga: <strong class="text-slate-600">3.0</strong> • 2026-09-04
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <span class="text-sm font-black text-rose-600 block">
+                                    -0.15 pkt
+                                </span>
+                                <span class="text-[10px] text-slate-400 block" title="Średnia, gdyby nie ta ocena: 4.75">
+                                    bez niej: 4.75
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Zysk z poprawki -->
+                        
+                    </div>
+                    
+                    <div class="bg-white/90 border border-rose-100 rounded-xl p-3 flex flex-col gap-2 shadow-2xs">
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-2.5 min-w-0">
+                                <span class="w-8 h-8 rounded-lg bg-rose-500 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-xs">
+                                    4+
+                                </span>
+                                <div class="min-w-0">
+                                    <div class="text-xs font-bold text-slate-800 truncate" title="Odpowiedź">
+                                        Odpowiedź
+                                    </div>
+                                    <div class="text-[11px] text-slate-400 truncate">
+                                        Waga: <strong class="text-slate-600">2.0</strong> • 2026-09-07
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <span class="text-sm font-black text-rose-600 block">
+                                    -0.02 pkt
+                                </span>
+                                <span class="text-[10px] text-slate-400 block" title="Średnia, gdyby nie ta ocena: 4.62">
+                                    bez niej: 4.62
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Zysk z poprawki -->
+                        
+                    </div>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- SEKCJA 4: SKUTECZNOŚĆ WG KATEGORII PRAC & WYKRES RADAROWY                    -->
+    <!-- ========================================================================= -->
+    <div class="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+            <div>
+                <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <span>🕸️</span>
+                    <span>Skuteczność wg formy sprawdzania wiedzy (Kategorie prac)</span>
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Porównanie wyników ze sprawdzianów, kartkówek, odpowiedzi ustnych i prac domowych.
+                </p>
+            </div>
+            
+            <span class="text-xs font-semibold px-2.5 py-1 bg-indigo-50 border border-indigo-100 rounded-xl text-indigo-700 self-start sm:self-auto">
+                Najsilniejszy obszar: <strong>Praca na lekcji</strong> (6.0)
+            </span>
+            
+        </div>
+
+        
+        <div class="p-3.5 rounded-2xl bg-indigo-50/70 border border-indigo-100 text-xs text-indigo-900 flex items-center gap-2.5 font-medium">
+            <span class="text-base">💡</span>
+            <span>Wyraźna dysproporcja: najlepsze wyniki w &#39;Praca na lekcji&#39; (śr. 6.0), a największe wyzwanie to &#39;Kartkówka&#39; (śr. 4.0). Różnica wynosi aż 2.0 pkt.</span>
+        </div>
+        
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+            <!-- Wykres radarowy / adaptacyjny słupkowy Chart.js -->
+            <div class="lg:col-span-5 h-[280px] sm:h-[310px] w-full flex flex-col items-center justify-center relative">
+                
+                <div class="w-full h-full relative">
+                    <canvas id="categoryRadarChart"></canvas>
+                </div>
+                
+                
+            </div>
+
+            <!-- Tabela / lista szczegółowa kategorii -->
+            <div class="lg:col-span-7 space-y-2.5">
+                
+                <div class="p-3 rounded-2xl border border-slate-200/90 bg-slate-50/50 hover:bg-white hover:shadow-xs transition-all flex flex-col gap-1.5">
+                    <div class="flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2">
+                            <span class="font-extrabold text-slate-800">Sprawdzian</span>
+                            <span class="text-[11px] text-slate-400">(2 oceny, suma wag: 6.0)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[11px] text-slate-500 font-semibold">40.0% wagi</span>
+                            <span class="px-2 py-0.5 rounded-lg text-xs font-black
+                                 bg-indigo-100 text-indigo-800
+                                ">
+                                4.50
+                            </span>
+                        </div>
+                    </div>
+                    <!-- Pasek postępu średniej w skali 1-6 -->
+                    <div class="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
+                        
+                        <div class="h-full rounded-full transition-all duration-500
+                             bg-indigo-500
+                            "
+                            style="width: 70.0%;"></div>
+                        
+                    </div>
+                </div>
+                
+                <div class="p-3 rounded-2xl border border-slate-200/90 bg-slate-50/50 hover:bg-white hover:shadow-xs transition-all flex flex-col gap-1.5">
+                    <div class="flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2">
+                            <span class="font-extrabold text-slate-800">Kartkówka</span>
+                            <span class="text-[11px] text-slate-400">(2 oceny, suma wag: 3.0)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[11px] text-slate-500 font-semibold">20.0% wagi</span>
+                            <span class="px-2 py-0.5 rounded-lg text-xs font-black
+                                 bg-indigo-100 text-indigo-800
+                                ">
+                                4.00
+                            </span>
+                        </div>
+                    </div>
+                    <!-- Pasek postępu średniej w skali 1-6 -->
+                    <div class="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
+                        
+                        <div class="h-full rounded-full transition-all duration-500
+                             bg-indigo-500
+                            "
+                            style="width: 60.0%;"></div>
+                        
+                    </div>
+                </div>
+                
+                <div class="p-3 rounded-2xl border border-slate-200/90 bg-slate-50/50 hover:bg-white hover:shadow-xs transition-all flex flex-col gap-1.5">
+                    <div class="flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2">
+                            <span class="font-extrabold text-slate-800">Odpowiedź</span>
+                            <span class="text-[11px] text-slate-400">(2 oceny, suma wag: 2.0)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[11px] text-slate-500 font-semibold">13.3% wagi</span>
+                            <span class="px-2 py-0.5 rounded-lg text-xs font-black
+                                 bg-indigo-100 text-indigo-800
+                                ">
+                                4.50
+                            </span>
+                        </div>
+                    </div>
+                    <!-- Pasek postępu średniej w skali 1-6 -->
+                    <div class="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
+                        
+                        <div class="h-full rounded-full transition-all duration-500
+                             bg-indigo-500
+                            "
+                            style="width: 70.0%;"></div>
+                        
+                    </div>
+                </div>
+                
+                <div class="p-3 rounded-2xl border border-slate-200/90 bg-slate-50/50 hover:bg-white hover:shadow-xs transition-all flex flex-col gap-1.5">
+                    <div class="flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2">
+                            <span class="font-extrabold text-slate-800">Projekt</span>
+                            <span class="text-[11px] text-slate-400">(1 ocena, suma wag: 2.0)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[11px] text-slate-500 font-semibold">13.3% wagi</span>
+                            <span class="px-2 py-0.5 rounded-lg text-xs font-black
+                                 bg-emerald-100 text-emerald-800
+                                ">
+                                5.00
+                            </span>
+                        </div>
+                    </div>
+                    <!-- Pasek postępu średniej w skali 1-6 -->
+                    <div class="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
+                        
+                        <div class="h-full rounded-full transition-all duration-500
+                             bg-emerald-500
+                            "
+                            style="width: 80.0%;"></div>
+                        
+                    </div>
+                </div>
+                
+                <div class="p-3 rounded-2xl border border-slate-200/90 bg-slate-50/50 hover:bg-white hover:shadow-xs transition-all flex flex-col gap-1.5">
+                    <div class="flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2">
+                            <span class="font-extrabold text-slate-800">Zadanie domowe</span>
+                            <span class="text-[11px] text-slate-400">(1 ocena, suma wag: 1.0)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[11px] text-slate-500 font-semibold">6.7% wagi</span>
+                            <span class="px-2 py-0.5 rounded-lg text-xs font-black
+                                 bg-emerald-100 text-emerald-800
+                                ">
+                                5.00
+                            </span>
+                        </div>
+                    </div>
+                    <!-- Pasek postępu średniej w skali 1-6 -->
+                    <div class="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
+                        
+                        <div class="h-full rounded-full transition-all duration-500
+                             bg-emerald-500
+                            "
+                            style="width: 80.0%;"></div>
+                        
+                    </div>
+                </div>
+                
+                <div class="p-3 rounded-2xl border border-slate-200/90 bg-slate-50/50 hover:bg-white hover:shadow-xs transition-all flex flex-col gap-1.5">
+                    <div class="flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2">
+                            <span class="font-extrabold text-slate-800">Praca na lekcji</span>
+                            <span class="text-[11px] text-slate-400">(1 ocena, suma wag: 1.0)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[11px] text-slate-500 font-semibold">6.7% wagi</span>
+                            <span class="px-2 py-0.5 rounded-lg text-xs font-black
+                                 bg-emerald-100 text-emerald-800
+                                ">
+                                6.00
+                            </span>
+                        </div>
+                    </div>
+                    <!-- Pasek postępu średniej w skali 1-6 -->
+                    <div class="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
+                        
+                        <div class="h-full rounded-full transition-all duration-500
+                             bg-emerald-500
+                            "
+                            style="width: 100.0%;"></div>
+                        
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- INTERAKTYWNY MINI-SYMULATOR OCEN DLA TEGO PRZEDMIOTU                       -->
+    <!-- ========================================================================= -->
+    <div class="bg-gradient-to-tr from-slate-900 to-indigo-950 text-white rounded-3xl p-5 sm:p-6 shadow-md">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-indigo-900/60">
+            <div>
+                <h3 class="text-base font-bold flex items-center gap-2">
+                    <span>🔮</span>
+                    <span>Interaktywny symulator nowej oceny z przedmiotu Matematyka</span>
+                </h3>
+                <p class="text-xs text-indigo-200/80 mt-0.5">
+                    Sprawdź natychmiast jak dowolna planowana ocena (lub ewentualna wpadka) wpłynie na średnią ważoną i końcowy stopień.
+                </p>
+            </div>
+            <div class="text-xs font-semibold px-3 py-1 bg-indigo-800/40 border border-indigo-700/50 rounded-xl text-indigo-200">
+                Bieżąca średnia: <strong class="text-white">4.60</strong>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-5">
+            <!-- Wybór oceny -->
+            <div>
+                <label for="sim-grade-select" class="block text-xs font-bold uppercase tracking-wider text-indigo-300 mb-2">Symulowana ocena:</label>
+                <select id="sim-grade-select" onchange="runSubjectSimulation()"
+                        class="w-full bg-slate-800/80 border border-indigo-700/60 rounded-xl px-3.5 py-2.5 text-sm font-bold text-white focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                    <option value="6.0">6 (celujący)</option>
+                    <option value="5.5">5+ (bardzo dobry plus)</option>
+                    <option value="5.0" selected>5 (bardzo dobry)</option>
+                    <option value="4.75">5- (bardzo dobry minus)</option>
+                    <option value="4.5">4+ (dobry plus)</option>
+                    <option value="4.0">4 (dobry)</option>
+                    <option value="3.75">4- (dobry minus)</option>
+                    <option value="3.5">3+ (dostateczny plus)</option>
+                    <option value="3.0">3 (dostateczny)</option>
+                    <option value="2.5">2+ (dopuszczający plus)</option>
+                    <option value="2.0">2 (dopuszczający)</option>
+                    <option value="1.0">1 (niedostateczny)</option>
+                </select>
+            </div>
+
+            <!-- Wybór wagi -->
+            <div>
+                <label for="sim-weight-select" class="block text-xs font-bold uppercase tracking-wider text-indigo-300 mb-2">Waga oceny:</label>
+                <select id="sim-weight-select" onchange="runSubjectSimulation()"
+                        class="w-full bg-slate-800/80 border border-indigo-700/60 rounded-xl px-3.5 py-2.5 text-sm font-bold text-white focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                    <option value="1.0">Waga 1 (kartkówka, zadanie domowe, aktywność)</option>
+                    <option value="2.0">Waga 2 (odpowiedź ustna, większy test)</option>
+                    <option value="3.0" selected>Waga 3 (sprawdzian, praca klasowa)</option>
+                    <option value="4.0">Waga 4 (duży projekt, egzamin próbny)</option>
+                </select>
+            </div>
+
+            <!-- Wynik symulacji -->
+            <div class="bg-indigo-900/40 border border-indigo-700/50 rounded-2xl p-4 flex items-center justify-between">
+                <div>
+                    <span class="block text-[11px] uppercase font-bold text-indigo-300 tracking-wider">Nowa średnia:</span>
+                    <span id="sim-result-avg" class="text-3xl font-black text-white mt-0.5 block">—</span>
+                    <span id="sim-result-diff" class="text-xs font-bold text-emerald-400 block mt-0.5">+0.00 pkt</span>
+                </div>
+                <div class="text-right">
+                    <span class="block text-[11px] uppercase font-bold text-indigo-300 tracking-wider">Proponowana:</span>
+                    <span id="sim-result-grade" class="text-xl font-extrabold text-indigo-200 mt-0.5 block">—</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- SEKCJA 3: DZIAŁ RAPORTÓW (WIZUALIZACJA: TRAJEKTORIA OCEN & ŚREDNIA)        -->
+    <!-- ========================================================================= -->
+    <div class="space-y-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>📈</span>
+                    <span>Dział raportów: Trajektoria ocen w czasie ze średnią kroczącą</span>
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Wielkość kropki odzwierciedla wagę pracy, wysokość jej ocenę. Fioletowa linia prezentuje dynamiczną średnią kroczącą po każdej ocenie.
+                </p>
+            </div>
+            <div class="hidden sm:flex items-center gap-3 text-xs font-semibold text-slate-500">
+                <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> 5-6 (b. dobre)</span>
+                <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> 4 (dobre)</span>
+                <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span> 3 (dostateczne)</span>
+                <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span> 1-2 (słabe)</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-5">
+            
+            <!-- Główny wykres czasu i średniej kroczącej (Chart.js) -->
+            <div class="lg:col-span-3 bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm">
+                
+                <div class="relative h-[320px] sm:h-[360px] w-full">
+                    <canvas id="timelineChart"></canvas>
+                </div>
+                <div class="flex flex-wrap items-center justify-between gap-2 mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-400">
+                    <span>Oś X: Chronologiczna kolejność wystawiania ocen ze szkoły</span>
+                    <span>Wielkość punktu: <strong>Waga 1 (mały) &rarr; Waga 3/4 (duży)</strong></span>
+                    <span>Linia fioletowa: <strong>Średnia krocząca (bieżąca na dany dzień)</strong></span>
+                </div>
+                
+            </div>
+
+            <!-- Mini-histogram rozkładu ocen -->
+            <div class="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col justify-between">
+                <div>
+                    <h3 class="text-sm font-bold text-slate-900 flex items-center justify-between pb-3 border-b border-slate-100">
+                        <span>📊 Rozkład ocen (Histogram)</span>
+                        <span class="text-xs text-slate-400 font-semibold">8 ocen</span>
+                    </h3>
+
+                    <div class="mt-4 space-y-2.5">
+                        
+                        <div>
+                            <div class="flex items-center justify-between text-xs font-bold text-slate-700 mb-1">
+                                <span class="flex items-center gap-1.5">
+                                    <span class="w-5 text-center px-1 py-0.5 rounded-md
+                                         bg-rose-100 text-rose-800 ">
+                                        1
+                                    </span>
+                                    <span class="text-slate-500 font-medium">ocena 1</span>
+                                </span>
+                                <span>0 <span class="text-slate-400 font-normal">(0.0%)</span></span>
+                            </div>
+                            <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                                <div class="h-full rounded-full transition-all duration-500
+                                     bg-rose-500 "
+                                    style="width: 0.0%;"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex items-center justify-between text-xs font-bold text-slate-700 mb-1">
+                                <span class="flex items-center gap-1.5">
+                                    <span class="w-5 text-center px-1 py-0.5 rounded-md
+                                         bg-rose-100 text-rose-800 ">
+                                        2
+                                    </span>
+                                    <span class="text-slate-500 font-medium">ocena 2</span>
+                                </span>
+                                <span>0 <span class="text-slate-400 font-normal">(0.0%)</span></span>
+                            </div>
+                            <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                                <div class="h-full rounded-full transition-all duration-500
+                                     bg-rose-500 "
+                                    style="width: 0.0%;"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex items-center justify-between text-xs font-bold text-slate-700 mb-1">
+                                <span class="flex items-center gap-1.5">
+                                    <span class="w-5 text-center px-1 py-0.5 rounded-md
+                                         bg-amber-100 text-amber-800
+                                        ">
+                                        3
+                                    </span>
+                                    <span class="text-slate-500 font-medium">ocena 3</span>
+                                </span>
+                                <span>0 <span class="text-slate-400 font-normal">(0.0%)</span></span>
+                            </div>
+                            <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                                <div class="h-full rounded-full transition-all duration-500
+                                     bg-amber-500
+                                    "
+                                    style="width: 0.0%;"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex items-center justify-between text-xs font-bold text-slate-700 mb-1">
+                                <span class="flex items-center gap-1.5">
+                                    <span class="w-5 text-center px-1 py-0.5 rounded-md
+                                         bg-blue-100 text-blue-800
+                                        ">
+                                        4
+                                    </span>
+                                    <span class="text-slate-500 font-medium">ocena 4</span>
+                                </span>
+                                <span>3 <span class="text-slate-400 font-normal">(37.5%)</span></span>
+                            </div>
+                            <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                                <div class="h-full rounded-full transition-all duration-500
+                                     bg-blue-500
+                                    "
+                                    style="width: 37.5%;"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex items-center justify-between text-xs font-bold text-slate-700 mb-1">
+                                <span class="flex items-center gap-1.5">
+                                    <span class="w-5 text-center px-1 py-0.5 rounded-md
+                                         bg-emerald-100 text-emerald-800
+                                        ">
+                                        5
+                                    </span>
+                                    <span class="text-slate-500 font-medium">ocena 5</span>
+                                </span>
+                                <span>4 <span class="text-slate-400 font-normal">(50.0%)</span></span>
+                            </div>
+                            <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                                <div class="h-full rounded-full transition-all duration-500
+                                     bg-emerald-500
+                                    "
+                                    style="width: 50.0%;"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex items-center justify-between text-xs font-bold text-slate-700 mb-1">
+                                <span class="flex items-center gap-1.5">
+                                    <span class="w-5 text-center px-1 py-0.5 rounded-md
+                                         bg-emerald-100 text-emerald-800
+                                        ">
+                                        6
+                                    </span>
+                                    <span class="text-slate-500 font-medium">ocena 6</span>
+                                </span>
+                                <span>1 <span class="text-slate-400 font-normal">(12.5%)</span></span>
+                            </div>
+                            <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                                <div class="h-full rounded-full transition-all duration-500
+                                     bg-emerald-500
+                                    "
+                                    style="width: 12.5%;"></div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+
+                <div class="mt-5 pt-3 border-t border-slate-100 text-[11px] text-slate-400">
+                    Rozkład odzwierciedla częstotliwość poszczególnych stopni w całym semestrze.
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- SEKCJA 4: SZCZEGÓŁOWA HISTORIA WSZYSTKICH OCEN Z TEGO PRZEDMIOTU          -->
+    <!-- ========================================================================= -->
+    <div class="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+            <div>
+                <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <span>📋</span>
+                    <span>Wszystkie oceny cząstkowe z przedmiotu (9)</span>
+                </h3>
+                <span class="text-xs text-slate-500">Uporządkowane chronologicznie od najnowszych do najstarszych</span>
+            </div>
+            <div class="text-xs text-slate-400 font-medium">
+                Pulpit rodzica Librus2mail
+            </div>
+        </div>
+
+        
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                    <tr class="border-b border-slate-200 text-slate-400 font-extrabold uppercase text-[10px] tracking-wider">
+                        <th class="py-3 px-3">Data</th>
+                        <th class="py-3 px-3">Ocena</th>
+                        <th class="py-3 px-3">Waga</th>
+                        <th class="py-3 px-3">Średnia po ocenie</th>
+                        <th class="py-3 px-3">Kategoria / Tytuł</th>
+                        <th class="py-3 px-3">Nauczyciel</th>
+                        <th class="py-3 px-3">Komentarz</th>
+                        <th class="py-3 px-3 text-right">Akcja</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-slate-700">
+                    
+                    <tr onclick="openEditGradeModal({
+                            id: '1043',
+                            subject: 'Matematyka',
+                            grade: '5',
+                            weight: '2',
+                            category: 'Projekt',
+                            date: '2026-09-18 (pt.)',
+                            teacher: 'Renata Matyk',
+                            is_custom: false,
+                            original_grade: '',
+                            original_weight: ''
+                        })"
+                        class="hover:bg-slate-50 transition-colors cursor-pointer group "
+                        title="Kliknij, aby edytować ocenę lub wagę">
+                        <td class="py-3 px-3 font-semibold text-slate-600 whitespace-nowrap">
+                            2026-09-18 (pt.)
+                        </td>
+                        <td class="py-3 px-3">
+                            <div class="inline-flex items-center gap-1.5">
+                                <span class="inline-flex items-center justify-center min-w-[28px] h-7 px-2 rounded-lg font-black text-xs
+                                     bg-emerald-100 text-emerald-800 border border-emerald-200
+                                    ">
+                                    5
+                                </span>
+                                
+                            </div>
+                        </td>
+                        <td class="py-3 px-3">
+                            <span class="font-bold text-slate-900">
+                                2
+                            </span>
+                            
+                        </td>
+                        <td class="py-3 px-3 font-extrabold text-indigo-700">
+                            4.60
+                        </td>
+                        <td class="py-3 px-3 font-semibold text-slate-800">
+                            Projekt
+                        </td>
+                        <td class="py-3 px-3 text-slate-500 whitespace-nowrap">
+                            Renata Matyk
+                        </td>
+                        <td class="py-3 px-3 text-slate-500 italic max-w-xs truncate" title="plakat: geometria i symetria w architekturze">
+                            plakat: geometria i symetria w architekturze
+                        </td>
+                        <td class="py-3 px-3 text-right whitespace-nowrap">
+                            <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-slate-600 bg-white border border-slate-200 rounded-lg group-hover:border-indigo-400 group-hover:text-indigo-600 group-hover:bg-indigo-50/50 transition-all shadow-2xs">
+                                <span>✏️</span>
+                                <span>Edytuj</span>
+                            </button>
+                        </td>
+                    </tr>
+                    
+                    <tr onclick="openEditGradeModal({
+                            id: '1005',
+                            subject: 'Matematyka',
+                            grade: '5',
+                            weight: '1',
+                            category: 'Zadanie domowe',
+                            date: '2026-09-17 (czw.)',
+                            teacher: 'Renata Matyk',
+                            is_custom: false,
+                            original_grade: '',
+                            original_weight: ''
+                        })"
+                        class="hover:bg-slate-50 transition-colors cursor-pointer group "
+                        title="Kliknij, aby edytować ocenę lub wagę">
+                        <td class="py-3 px-3 font-semibold text-slate-600 whitespace-nowrap">
+                            2026-09-17 (czw.)
+                        </td>
+                        <td class="py-3 px-3">
+                            <div class="inline-flex items-center gap-1.5">
+                                <span class="inline-flex items-center justify-center min-w-[28px] h-7 px-2 rounded-lg font-black text-xs
+                                     bg-emerald-100 text-emerald-800 border border-emerald-200
+                                    ">
+                                    5
+                                </span>
+                                
+                            </div>
+                        </td>
+                        <td class="py-3 px-3">
+                            <span class="font-bold text-slate-900">
+                                1
+                            </span>
+                            
+                        </td>
+                        <td class="py-3 px-3 font-extrabold text-indigo-700">
+                            4.54
+                        </td>
+                        <td class="py-3 px-3 font-semibold text-slate-800">
+                            Zadanie domowe
+                        </td>
+                        <td class="py-3 px-3 text-slate-500 whitespace-nowrap">
+                            Renata Matyk
+                        </td>
+                        <td class="py-3 px-3 text-slate-500 italic max-w-xs truncate" title="zadanie z gwiazdką wykonane bezbłędnie">
+                            zadanie z gwiazdką wykonane bezbłędnie
+                        </td>
+                        <td class="py-3 px-3 text-right whitespace-nowrap">
+                            <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-slate-600 bg-white border border-slate-200 rounded-lg group-hover:border-indigo-400 group-hover:text-indigo-600 group-hover:bg-indigo-50/50 transition-all shadow-2xs">
+                                <span>✏️</span>
+                                <span>Edytuj</span>
+                            </button>
+                        </td>
+                    </tr>
+                    
+                    <tr onclick="openEditGradeModal({
+                            id: '1004',
+                            subject: 'Matematyka',
+                            grade: '+',
+                            weight: '-',
+                            category: 'Odpowiedź',
+                            date: '2026-09-16 (śr.)',
+                            teacher: 'Renata Matyk',
+                            is_custom: false,
+                            original_grade: '',
+                            original_weight: ''
+                        })"
+                        class="hover:bg-slate-50 transition-colors cursor-pointer group "
+                        title="Kliknij, aby edytować ocenę lub wagę">
+                        <td class="py-3 px-3 font-semibold text-slate-600 whitespace-nowrap">
+                            2026-09-16 (śr.)
+                        </td>
+                        <td class="py-3 px-3">
+                            <div class="inline-flex items-center gap-1.5">
+                                <span class="inline-flex items-center justify-center min-w-[28px] h-7 px-2 rounded-lg font-black text-xs
+                                     bg-slate-100 text-slate-700 border border-slate-200 ">
+                                    +
+                                </span>
+                                
+                            </div>
+                        </td>
+                        <td class="py-3 px-3">
+                            <span class="font-bold text-slate-900">
+                                -
+                            </span>
+                            
+                        </td>
+                        <td class="py-3 px-3 font-extrabold text-indigo-700">
+                            —
+                        </td>
+                        <td class="py-3 px-3 font-semibold text-slate-800">
+                            Odpowiedź
+                        </td>
+                        <td class="py-3 px-3 text-slate-500 whitespace-nowrap">
+                            Renata Matyk
+                        </td>
+                        <td class="py-3 px-3 text-slate-500 italic max-w-xs truncate" title="aktywność przy tablicy">
+                            aktywność przy tablicy
+                        </td>
+                        <td class="py-3 px-3 text-right whitespace-nowrap">
+                            <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-slate-600 bg-white border border-slate-200 rounded-lg group-hover:border-indigo-400 group-hover:text-indigo-600 group-hover:bg-indigo-50/50 transition-all shadow-2xs">
+                                <span>✏️</span>
+                                <span>Edytuj</span>
+                            </button>
+                        </td>
+                    </tr>
+                    
+                    <tr onclick="openEditGradeModal({
+                            id: '1003',
+                            subject: 'Matematyka',
+                            grade: '5',
+                            weight: '3',
+                            category: 'Sprawdzian',
+                            date: '2026-09-15 (wt.)',
+                            teacher: 'Renata Matyk',
+                            is_custom: false,
+                            original_grade: '',
+                            original_weight: ''
+                        })"
+                        class="hover:bg-slate-50 transition-colors cursor-pointer group "
+                        title="Kliknij, aby edytować ocenę lub wagę">
+                        <td class="py-3 px-3 font-semibold text-slate-600 whitespace-nowrap">
+                            2026-09-15 (wt.)
+                        </td>
+                        <td class="py-3 px-3">
+                            <div class="inline-flex items-center gap-1.5">
+                                <span class="inline-flex items-center justify-center min-w-[28px] h-7 px-2 rounded-lg font-black text-xs
+                                     bg-emerald-100 text-emerald-800 border border-emerald-200
+                                    ">
+                                    5
+                                </span>
+                                
+                            </div>
+                        </td>
+                        <td class="py-3 px-3">
+                            <span class="font-bold text-slate-900">
+                                3
+                            </span>
+                            
+                        </td>
+                        <td class="py-3 px-3 font-extrabold text-indigo-700">
+                            4.50
+                        </td>
+                        <td class="py-3 px-3 font-semibold text-slate-800">
+                            Sprawdzian
+                        </td>
+                        <td class="py-3 px-3 text-slate-500 whitespace-nowrap">
+                            Renata Matyk
+                        </td>
+                        <td class="py-3 px-3 text-slate-500 italic max-w-xs truncate" title="-">
+                            -
+                        </td>
+                        <td class="py-3 px-3 text-right whitespace-nowrap">
+                            <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-slate-600 bg-white border border-slate-200 rounded-lg group-hover:border-indigo-400 group-hover:text-indigo-600 group-hover:bg-indigo-50/50 transition-all shadow-2xs">
+                                <span>✏️</span>
+                                <span>Edytuj</span>
+                            </button>
+                        </td>
+                    </tr>
+                    
+                    <tr onclick="openEditGradeModal({
+                            id: '1042',
+                            subject: 'Matematyka',
+                            grade: '3+',
+                            weight: '2',
+                            category: 'Kartkówka',
+                            date: '2026-09-11 (pt.)',
+                            teacher: 'Renata Matyk',
+                            is_custom: false,
+                            original_grade: '',
+                            original_weight: ''
+                        })"
+                        class="hover:bg-slate-50 transition-colors cursor-pointer group "
+                        title="Kliknij, aby edytować ocenę lub wagę">
+                        <td class="py-3 px-3 font-semibold text-slate-600 whitespace-nowrap">
+                            2026-09-11 (pt.)
+                        </td>
+                        <td class="py-3 px-3">
+                            <div class="inline-flex items-center gap-1.5">
+                                <span class="inline-flex items-center justify-center min-w-[28px] h-7 px-2 rounded-lg font-black text-xs
+                                     bg-amber-100 text-amber-800 border border-amber-200
+                                    ">
+                                    3+
+                                </span>
+                                
+                            </div>
+                        </td>
+                        <td class="py-3 px-3">
+                            <span class="font-bold text-slate-900">
+                                2
+                            </span>
+                            
+                        </td>
+                        <td class="py-3 px-3 font-extrabold text-indigo-700">
+                            4.33
+                        </td>
+                        <td class="py-3 px-3 font-semibold text-slate-800">
+                            Kartkówka
+                        </td>
+                        <td class="py-3 px-3 text-slate-500 whitespace-nowrap">
+                            Renata Matyk
+                        </td>
+                        <td class="py-3 px-3 text-slate-500 italic max-w-xs truncate" title="kolejność działań i nawiasy kwadratowe">
+                            kolejność działań i nawiasy kwadratowe
+                        </td>
+                        <td class="py-3 px-3 text-right whitespace-nowrap">
+                            <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-slate-600 bg-white border border-slate-200 rounded-lg group-hover:border-indigo-400 group-hover:text-indigo-600 group-hover:bg-indigo-50/50 transition-all shadow-2xs">
+                                <span>✏️</span>
+                                <span>Edytuj</span>
+                            </button>
+                        </td>
+                    </tr>
+                    
+                    <tr onclick="openEditGradeModal({
+                            id: '1041',
+                            subject: 'Matematyka',
+                            grade: '6',
+                            weight: '1',
+                            category: 'Praca na lekcji',
+                            date: '2026-09-10 (czw.)',
+                            teacher: 'Renata Matyk',
+                            is_custom: false,
+                            original_grade: '',
+                            original_weight: ''
+                        })"
+                        class="hover:bg-slate-50 transition-colors cursor-pointer group "
+                        title="Kliknij, aby edytować ocenę lub wagę">
+                        <td class="py-3 px-3 font-semibold text-slate-600 whitespace-nowrap">
+                            2026-09-10 (czw.)
+                        </td>
+                        <td class="py-3 px-3">
+                            <div class="inline-flex items-center gap-1.5">
+                                <span class="inline-flex items-center justify-center min-w-[28px] h-7 px-2 rounded-lg font-black text-xs
+                                     bg-emerald-100 text-emerald-800 border border-emerald-200
+                                    ">
+                                    6
+                                </span>
+                                
+                            </div>
+                        </td>
+                        <td class="py-3 px-3">
+                            <span class="font-bold text-slate-900">
+                                1
+                            </span>
+                            
+                        </td>
+                        <td class="py-3 px-3 font-extrabold text-indigo-700">
+                            4.57
+                        </td>
+                        <td class="py-3 px-3 font-semibold text-slate-800">
+                            Praca na lekcji
+                        </td>
+                        <td class="py-3 px-3 text-slate-500 whitespace-nowrap">
+                            Renata Matyk
+                        </td>
+                        <td class="py-3 px-3 text-slate-500 italic max-w-xs truncate" title="rozwiązanie zadania z gwiazdką na tablicy">
+                            rozwiązanie zadania z gwiazdką na tablicy
+                        </td>
+                        <td class="py-3 px-3 text-right whitespace-nowrap">
+                            <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-slate-600 bg-white border border-slate-200 rounded-lg group-hover:border-indigo-400 group-hover:text-indigo-600 group-hover:bg-indigo-50/50 transition-all shadow-2xs">
+                                <span>✏️</span>
+                                <span>Edytuj</span>
+                            </button>
+                        </td>
+                    </tr>
+                    
+                    <tr onclick="openEditGradeModal({
+                            id: '1002',
+                            subject: 'Matematyka',
+                            grade: '5',
+                            weight: '1',
+                            category: 'Kartkówka',
+                            date: '2026-09-08 (wt.)',
+                            teacher: 'Renata Matyk',
+                            is_custom: false,
+                            original_grade: '',
+                            original_weight: ''
+                        })"
+                        class="hover:bg-slate-50 transition-colors cursor-pointer group "
+                        title="Kliknij, aby edytować ocenę lub wagę">
+                        <td class="py-3 px-3 font-semibold text-slate-600 whitespace-nowrap">
+                            2026-09-08 (wt.)
+                        </td>
+                        <td class="py-3 px-3">
+                            <div class="inline-flex items-center gap-1.5">
+                                <span class="inline-flex items-center justify-center min-w-[28px] h-7 px-2 rounded-lg font-black text-xs
+                                     bg-emerald-100 text-emerald-800 border border-emerald-200
+                                    ">
+                                    5
+                                </span>
+                                
+                            </div>
+                        </td>
+                        <td class="py-3 px-3">
+                            <span class="font-bold text-slate-900">
+                                1
+                            </span>
+                            
+                        </td>
+                        <td class="py-3 px-3 font-extrabold text-indigo-700">
+                            4.33
+                        </td>
+                        <td class="py-3 px-3 font-semibold text-slate-800">
+                            Kartkówka
+                        </td>
+                        <td class="py-3 px-3 text-slate-500 whitespace-nowrap">
+                            Renata Matyk
+                        </td>
+                        <td class="py-3 px-3 text-slate-500 italic max-w-xs truncate" title="rachunki pamięciowe (kolejność działań)">
+                            rachunki pamięciowe (kolejność działań)
+                        </td>
+                        <td class="py-3 px-3 text-right whitespace-nowrap">
+                            <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-slate-600 bg-white border border-slate-200 rounded-lg group-hover:border-indigo-400 group-hover:text-indigo-600 group-hover:bg-indigo-50/50 transition-all shadow-2xs">
+                                <span>✏️</span>
+                                <span>Edytuj</span>
+                            </button>
+                        </td>
+                    </tr>
+                    
+                    <tr onclick="openEditGradeModal({
+                            id: '1040',
+                            subject: 'Matematyka',
+                            grade: '4+',
+                            weight: '2',
+                            category: 'Odpowiedź',
+                            date: '2026-09-07 (pon.)',
+                            teacher: 'Renata Matyk',
+                            is_custom: false,
+                            original_grade: '',
+                            original_weight: ''
+                        })"
+                        class="hover:bg-slate-50 transition-colors cursor-pointer group "
+                        title="Kliknij, aby edytować ocenę lub wagę">
+                        <td class="py-3 px-3 font-semibold text-slate-600 whitespace-nowrap">
+                            2026-09-07 (pon.)
+                        </td>
+                        <td class="py-3 px-3">
+                            <div class="inline-flex items-center gap-1.5">
+                                <span class="inline-flex items-center justify-center min-w-[28px] h-7 px-2 rounded-lg font-black text-xs
+                                     bg-indigo-100 text-indigo-800 border border-indigo-200
+                                    ">
+                                    4+
+                                </span>
+                                
+                            </div>
+                        </td>
+                        <td class="py-3 px-3">
+                            <span class="font-bold text-slate-900">
+                                2
+                            </span>
+                            
+                        </td>
+                        <td class="py-3 px-3 font-extrabold text-indigo-700">
+                            4.20
+                        </td>
+                        <td class="py-3 px-3 font-semibold text-slate-800">
+                            Odpowiedź
+                        </td>
+                        <td class="py-3 px-3 text-slate-500 whitespace-nowrap">
+                            Renata Matyk
+                        </td>
+                        <td class="py-3 px-3 text-slate-500 italic max-w-xs truncate" title="własności liczb naturalnych i podzielność">
+                            własności liczb naturalnych i podzielność
+                        </td>
+                        <td class="py-3 px-3 text-right whitespace-nowrap">
+                            <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-slate-600 bg-white border border-slate-200 rounded-lg group-hover:border-indigo-400 group-hover:text-indigo-600 group-hover:bg-indigo-50/50 transition-all shadow-2xs">
+                                <span>✏️</span>
+                                <span>Edytuj</span>
+                            </button>
+                        </td>
+                    </tr>
+                    
+                    <tr onclick="openEditGradeModal({
+                            id: '1001',
+                            subject: 'Matematyka',
+                            grade: '4',
+                            weight: '3',
+                            category: 'Sprawdzian',
+                            date: '2026-09-04 (pt.)',
+                            teacher: 'Renata Matyk',
+                            is_custom: false,
+                            original_grade: '',
+                            original_weight: ''
+                        })"
+                        class="hover:bg-slate-50 transition-colors cursor-pointer group "
+                        title="Kliknij, aby edytować ocenę lub wagę">
+                        <td class="py-3 px-3 font-semibold text-slate-600 whitespace-nowrap">
+                            2026-09-04 (pt.)
+                        </td>
+                        <td class="py-3 px-3">
+                            <div class="inline-flex items-center gap-1.5">
+                                <span class="inline-flex items-center justify-center min-w-[28px] h-7 px-2 rounded-lg font-black text-xs
+                                     bg-indigo-100 text-indigo-800 border border-indigo-200
+                                    ">
+                                    4
+                                </span>
+                                
+                            </div>
+                        </td>
+                        <td class="py-3 px-3">
+                            <span class="font-bold text-slate-900">
+                                3
+                            </span>
+                            
+                        </td>
+                        <td class="py-3 px-3 font-extrabold text-indigo-700">
+                            4.00
+                        </td>
+                        <td class="py-3 px-3 font-semibold text-slate-800">
+                            Sprawdzian
+                        </td>
+                        <td class="py-3 px-3 text-slate-500 whitespace-nowrap">
+                            Renata Matyk
+                        </td>
+                        <td class="py-3 px-3 text-slate-500 italic max-w-xs truncate" title="-">
+                            -
+                        </td>
+                        <td class="py-3 px-3 text-right whitespace-nowrap">
+                            <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-slate-600 bg-white border border-slate-200 rounded-lg group-hover:border-indigo-400 group-hover:text-indigo-600 group-hover:bg-indigo-50/50 transition-all shadow-2xs">
+                                <span>✏️</span>
+                                <span>Edytuj</span>
+                            </button>
+                        </td>
+                    </tr>
+                    
+                </tbody>
+            </table>
+        </div>
+        
+    </div>
+
+</div>
+
+<!-- ========================================================================= -->
+<!-- SKRYPTY JAVASCRIPT: CHART.JS WYKRES TRAJEKTORII & MINI-SYMULATOR          -->
+<!-- ========================================================================= -->
+<script>
+    // Dane przekazane z backendu do wykresu Chart.js
+    const timelineData = [{"category": "Sprawdzian", "comment": "-", "date": "2026-09-04", "date_raw": "2026-09-04 (pt.)", "grade": "4", "id": "1001", "index": 1, "is_custom": false, "numeric_grade": 4.0, "original_grade": "", "original_weight": "", "running_average": 4.0, "subject": "Matematyka", "teacher": "Renata Matyk", "weight": 3.0, "weight_raw": "3"}, {"category": "Odpowied\u017a", "comment": "w\u0142asno\u015bci liczb naturalnych i podzielno\u015b\u0107", "date": "2026-09-07", "date_raw": "2026-09-07 (pon.)", "grade": "4+", "id": "1040", "index": 2, "is_custom": false, "numeric_grade": 4.5, "original_grade": "", "original_weight": "", "running_average": 4.2, "subject": "Matematyka", "teacher": "Renata Matyk", "weight": 2.0, "weight_raw": "2"}, {"category": "Kartk\u00f3wka", "comment": "rachunki pami\u0119ciowe (kolejno\u015b\u0107 dzia\u0142a\u0144)", "date": "2026-09-08", "date_raw": "2026-09-08 (wt.)", "grade": "5", "id": "1002", "index": 3, "is_custom": false, "numeric_grade": 5.0, "original_grade": "", "original_weight": "", "running_average": 4.33, "subject": "Matematyka", "teacher": "Renata Matyk", "weight": 1.0, "weight_raw": "1"}, {"category": "Praca na lekcji", "comment": "rozwi\u0105zanie zadania z gwiazdk\u0105 na tablicy", "date": "2026-09-10", "date_raw": "2026-09-10 (czw.)", "grade": "6", "id": "1041", "index": 4, "is_custom": false, "numeric_grade": 6.0, "original_grade": "", "original_weight": "", "running_average": 4.57, "subject": "Matematyka", "teacher": "Renata Matyk", "weight": 1.0, "weight_raw": "1"}, {"category": "Kartk\u00f3wka", "comment": "kolejno\u015b\u0107 dzia\u0142a\u0144 i nawiasy kwadratowe", "date": "2026-09-11", "date_raw": "2026-09-11 (pt.)", "grade": "3+", "id": "1042", "index": 5, "is_custom": false, "numeric_grade": 3.5, "original_grade": "", "original_weight": "", "running_average": 4.33, "subject": "Matematyka", "teacher": "Renata Matyk", "weight": 2.0, "weight_raw": "2"}, {"category": "Sprawdzian", "comment": "-", "date": "2026-09-15", "date_raw": "2026-09-15 (wt.)", "grade": "5", "id": "1003", "index": 6, "is_custom": false, "numeric_grade": 5.0, "original_grade": "", "original_weight": "", "running_average": 4.5, "subject": "Matematyka", "teacher": "Renata Matyk", "weight": 3.0, "weight_raw": "3"}, {"category": "Odpowied\u017a", "comment": "aktywno\u015b\u0107 przy tablicy", "date": "2026-09-16", "date_raw": "2026-09-16 (\u015br.)", "grade": "+", "id": "1004", "index": 7, "is_custom": false, "numeric_grade": null, "original_grade": "", "original_weight": "", "running_average": null, "subject": "Matematyka", "teacher": "Renata Matyk", "weight": 1.0, "weight_raw": "-"}, {"category": "Zadanie domowe", "comment": "zadanie z gwiazdk\u0105 wykonane bezb\u0142\u0119dnie", "date": "2026-09-17", "date_raw": "2026-09-17 (czw.)", "grade": "5", "id": "1005", "index": 8, "is_custom": false, "numeric_grade": 5.0, "original_grade": "", "original_weight": "", "running_average": 4.54, "subject": "Matematyka", "teacher": "Renata Matyk", "weight": 1.0, "weight_raw": "1"}, {"category": "Projekt", "comment": "plakat: geometria i symetria w architekturze", "date": "2026-09-18", "date_raw": "2026-09-18 (pt.)", "grade": "5", "id": "1043", "index": 9, "is_custom": false, "numeric_grade": 5.0, "original_grade": "", "original_weight": "", "running_average": 4.6, "subject": "Matematyka", "teacher": "Renata Matyk", "weight": 2.0, "weight_raw": "2"}];
+    const currentSumWeighted = 69.0;
+    const currentSumWeights = 15.0;
+    const currentAvg = 4.6;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        initTimelineChart();
+        initCategoryRadarChart();
+        runSubjectSimulation();
+    });
+
+    function initTimelineChart() {
+        const canvas = document.getElementById('timelineChart');
+        if (!canvas || !timelineData || timelineData.length === 0) return;
+
+        // Filtrujemy tylko oceny liczbowe do trajektorii wykresu
+        const validTimelineData = timelineData.filter(p => p.numeric_grade !== null && p.numeric_grade !== undefined);
+        if (validTimelineData.length === 0) return;
+
+        // Etykiety osi X (skrócona data mm-dd lub numer kolejny)
+        const labels = validTimelineData.map((p, idx) => {
+            return p.date ? p.date.substring(5) : ('#' + (idx + 1));
+        });
+
+        // Wartości średniej kroczącej i ocen cząstkowych jako płaskie tablice
+        const movingAverages = validTimelineData.map(p => p.running_average);
+        const gradesValues = validTimelineData.map(p => p.numeric_grade);
+
+        // Promienie punktów na podstawie wagi oceny
+        const pointRadii = validTimelineData.map(p => {
+            if (p.weight >= 4) return 13;
+            if (p.weight >= 3) return 10;
+            if (p.weight >= 2) return 8;
+            return 6;
+        });
+
+        const pointHoverRadii = validTimelineData.map(p => {
+            if (p.weight >= 4) return 16;
+            if (p.weight >= 3) return 13;
+            if (p.weight >= 2) return 11;
+            return 9;
+        });
+
+        // Kolorystyka punktów wg stopnia (zielony 5-6, niebieski 4, bursztyn 3, czerwień 1-2)
+        const bgColors = validTimelineData.map(p => {
+            if (p.numeric_grade >= 5) return 'rgba(16, 185, 129, 0.85)'; // szmaragd
+            if (p.numeric_grade >= 4) return 'rgba(37, 99, 235, 0.85)';  // czysty niebieski (Blue)
+            if (p.numeric_grade >= 3) return 'rgba(245, 158, 11, 0.85)'; // bursztyn
+            return 'rgba(239, 68, 68, 0.85)'; // czerwień
+        });
+
+        const borderColors = validTimelineData.map(p => {
+            if (p.numeric_grade >= 5) return 'rgb(5, 150, 105)';
+            if (p.numeric_grade >= 4) return 'rgb(29, 78, 216)';        // ciemny niebieski
+            if (p.numeric_grade >= 3) return 'rgb(217, 119, 6)';
+            return 'rgb(220, 38, 38)';
+        });
+
+        // Plugin rysujący kolorowe pasma progowe (Threshold Bands) oraz linie progów ocen 2, 3, 4, 5
+        const thresholdBandsPlugin = {
+            id: 'thresholdBands',
+            beforeDatasetsDraw(chart) {
+                const { ctx, chartArea: { top, bottom, left, right }, scales: { y } } = chart;
+                if (!y) return;
+
+                const bands = [
+                    { min: 4.75, max: 6.2, color: 'rgba(16, 185, 129, 0.08)' },
+                    { min: 3.75, max: 4.75, color: 'rgba(37, 99, 235, 0.07)' },
+                    { min: 2.75, max: 3.75, color: 'rgba(245, 158, 11, 0.07)' },
+                    { min: 1.75, max: 2.75, color: 'rgba(249, 115, 22, 0.07)' },
+                    { min: 1.0, max: 1.75, color: 'rgba(239, 68, 68, 0.08)' }
+                ];
+
+                ctx.save();
+                bands.forEach(b => {
+                    const yTop = y.getPixelForValue(Math.min(6.2, b.max));
+                    const yBottom = y.getPixelForValue(Math.max(1.0, b.min));
+                    const height = yBottom - yTop;
+                    if (height > 0) {
+                        ctx.fillStyle = b.color;
+                        ctx.fillRect(left, yTop, right - left, height);
+                    }
+                });
+
+                const lines = [
+                    { val: 4.75, text: 'próg 5 (4.75)', color: 'rgba(16, 185, 129, 0.55)' },
+                    { val: 3.75, text: 'próg 4 (3.75)', color: 'rgba(37, 99, 235, 0.55)' },
+                    { val: 2.75, text: 'próg 3 (2.75)', color: 'rgba(217, 119, 6, 0.55)' },
+                    { val: 1.75, text: 'próg 2 (1.75)', color: 'rgba(220, 38, 38, 0.55)' }
+                ];
+
+                lines.forEach(l => {
+                    const yPos = y.getPixelForValue(l.val);
+                    if (yPos >= top && yPos <= bottom) {
+                        ctx.strokeStyle = l.color;
+                        ctx.setLineDash([4, 4]);
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(left, yPos);
+                        ctx.lineTo(right, yPos);
+                        ctx.stroke();
+
+                        ctx.font = '600 9px Inter, sans-serif';
+                        ctx.fillStyle = l.color;
+                        ctx.textAlign = 'right';
+                        ctx.fillText(l.text, right - 6, yPos - 3);
+                    }
+                });
+                ctx.restore();
+            }
+        };
+
+        const ctx = canvas.getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            plugins: [thresholdBandsPlugin],
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Średnia krocząca (ważona)',
+                        data: movingAverages,
+                        borderColor: '#9333ea',                         // wyrazisty fiolet (Purple)
+                        backgroundColor: 'rgba(147, 51, 234, 0.12)',
+                        borderWidth: 3,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#7e22ce',               // głęboki fiolet
+                        pointHoverRadius: 6,
+                        tension: 0.35,
+                        fill: false,
+                        spanGaps: true,
+                        order: 1
+                    },
+                    {
+                        label: 'Oceny cząstkowe (wielkość = waga)',
+                        data: gradesValues,
+                        showLine: false,
+                        pointRadius: pointRadii,
+                        pointHoverRadius: pointHoverRadii,
+                        pointBackgroundColor: bgColors,
+                        pointBorderColor: borderColors,
+                        pointBorderWidth: 2,
+                        order: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 900,
+                    easing: 'easeOutQuart'
+                },
+                scales: {
+                    y: {
+                        min: 1.0,
+                        max: 6.2,
+                        ticks: {
+                            stepSize: 1,
+                            font: { family: 'Inter', weight: 'bold' }
+                        },
+                        grid: {
+                            color: '#f1f5f9'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            callback: function(val, index) {
+                                const item = validTimelineData[index];
+                                return item ? (item.date ? item.date.substring(5) : ('#' + (index+1))) : '';
+                            },
+                            font: { family: 'Inter', size: 10, weight: '600' },
+                            color: '#64748b'
+                        },
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            font: { family: 'Inter', size: 12, weight: 'bold' },
+                            usePointStyle: true,
+                            boxWidth: 8
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                        titleFont: { family: 'Inter', weight: 'bold', size: 13 },
+                        bodyFont: { family: 'Inter', size: 12 },
+                        padding: 12,
+                        cornerRadius: 12,
+                        callbacks: {
+                            title: function(items) {
+                                if (!items || items.length === 0) return '';
+                                const idx = items[0].dataIndex;
+                                const item = validTimelineData[idx];
+                                return item ? (item.date + ' • ' + item.category) : '';
+                            },
+                            label: function(ctx) {
+                                const item = validTimelineData[ctx.dataIndex];
+                                if (!item) return '';
+                                if (ctx.datasetIndex === 0) {
+                                    return '📊 Średnia po tej ocenie: ' + (item.running_average !== null && item.running_average !== undefined ? item.running_average.toFixed(2) : '—');
+                                } else {
+                                    return [
+                                        '⭐ Ocena: ' + item.grade + ' (waga ' + item.weight + ')',
+                                        '👨‍🏫 Nauczyciel: ' + item.teacher,
+                                        item.comment && item.comment !== '—' ? ('💬 ' + item.comment) : ''
+                                    ].filter(Boolean);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Wykres skuteczności wg kategorii prac (Radar dla >= 3 kategorii, Słupkowy dla 1-2 kategorii)
+    function initCategoryRadarChart() {
+        const canvas = document.getElementById('categoryRadarChart');
+        if (!canvas) return;
+
+        const labels = ["Sprawdzian", "Kartk\u00f3wka", "Odpowied\u017a", "Projekt", "Zadanie domowe", "Praca na lekcji"];
+        const dataValues = [4.5, 4.0, 4.5, 5.0, 5.0, 6.0];
+        if (!labels || labels.length === 0) return;
+
+        const ctx = canvas.getContext('2d');
+
+        if (labels.length >= 3) {
+            // Klasyczny wielokątny wykres radarowy
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Średnia ważona',
+                        data: dataValues,
+                        backgroundColor: 'rgba(99, 102, 241, 0.22)',
+                        borderColor: '#4f46e5',
+                        borderWidth: 2.5,
+                        pointBackgroundColor: '#4338ca',
+                        pointBorderColor: '#ffffff',
+                        pointHoverBackgroundColor: '#ffffff',
+                        pointHoverBorderColor: '#4338ca',
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            min: 1,
+                            max: 6,
+                            ticks: {
+                                stepSize: 1,
+                                backdropColor: 'transparent',
+                                font: { family: 'Inter', size: 10, weight: 'bold' }
+                            },
+                            pointLabels: {
+                                font: { family: 'Inter', size: 11, weight: 'bold' },
+                                color: '#334155'
+                            },
+                            grid: {
+                                color: '#e2e8f0'
+                            },
+                            angleLines: {
+                                color: '#f1f5f9'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                            titleFont: { family: 'Inter', weight: 'bold', size: 12 },
+                            padding: 10,
+                            cornerRadius: 10,
+                            callbacks: {
+                                label: function(ctx) {
+                                    return '⭐ Średnia ważona: ' + (ctx.raw !== null ? ctx.raw.toFixed(2) : '—');
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            // Adaptacyjny wykres słupkowy dla 1 lub 2 kategorii
+            const barColors = dataValues.map(v => {
+                if (v >= 4.75) return 'rgba(16, 185, 129, 0.85)';
+                if (v >= 3.75) return 'rgba(79, 70, 229, 0.85)';
+                if (v >= 2.75) return 'rgba(245, 158, 11, 0.85)';
+                return 'rgba(239, 68, 68, 0.85)';
+            });
+            const borderColors = dataValues.map(v => {
+                if (v >= 4.75) return '#059669';
+                if (v >= 3.75) return '#4338ca';
+                if (v >= 2.75) return '#d97706';
+                return '#dc2626';
+            });
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Średnia ważona',
+                        data: dataValues,
+                        backgroundColor: barColors,
+                        borderColor: borderColors,
+                        borderWidth: 1.5,
+                        borderRadius: 8,
+                        barThickness: labels.length === 1 ? 36 : 28,
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', // Poziome słupki dopasowane do nazw kategorii
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            min: 1,
+                            max: 6,
+                            ticks: {
+                                stepSize: 1,
+                                font: { family: 'Inter', size: 10, weight: 'bold' }
+                            },
+                            grid: {
+                                color: '#f1f5f9'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Średnia ważona w skali 1–6',
+                                font: { family: 'Inter', size: 10, weight: '600' },
+                                color: '#94a3b8'
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                font: { family: 'Inter', size: 11, weight: 'bold' },
+                                color: '#334155'
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                            titleFont: { family: 'Inter', weight: 'bold', size: 12 },
+                            padding: 10,
+                            cornerRadius: 10,
+                            callbacks: {
+                                label: function(ctx) {
+                                    return '⭐ Średnia ważona: ' + (ctx.raw !== null ? ctx.raw.toFixed(2) : '—');
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // Interaktywny mini-symulator ocen na żywo
+    function runSubjectSimulation() {
+        const gradeVal = parseFloat(document.getElementById('sim-grade-select').value);
+        const weightVal = parseFloat(document.getElementById('sim-weight-select').value);
+        
+        const newWeightTotal = currentSumWeights + weightVal;
+        const newSumWeighted = currentSumWeighted + (gradeVal * weightVal);
+        const newAvg = (newSumWeighted / newWeightTotal);
+        const diff = newAvg - currentAvg;
+
+        const avgEl = document.getElementById('sim-result-avg');
+        const diffEl = document.getElementById('sim-result-diff');
+        const gradeEl = document.getElementById('sim-result-grade');
+
+        avgEl.textContent = newAvg.toFixed(2);
+        
+        if (diff > 0) {
+            diffEl.textContent = "+" + diff.toFixed(2) + " pkt w górę";
+            diffEl.className = "text-xs font-bold text-emerald-400 block mt-0.5";
+        } else if (diff < 0) {
+            diffEl.textContent = diff.toFixed(2) + " pkt w dół";
+            diffEl.className = "text-xs font-bold text-rose-400 block mt-0.5";
+        } else {
+            diffEl.textContent = "brak zmiany średniej";
+            diffEl.className = "text-xs font-bold text-slate-300 block mt-0.5";
+        }
+
+        // Ustalenie stopnia
+        let propGrade = "1 (niedostateczny)";
+        if (newAvg >= 5.51) propGrade = "6 (celujący)";
+        else if (newAvg >= 4.75) propGrade = "5 (bardzo dobry)";
+        else if (newAvg >= 3.75) propGrade = "4 (dobry)";
+        else if (newAvg >= 2.75) propGrade = "3 (dostateczny)";
+        else if (newAvg >= 1.75) propGrade = "2 (dopuszczający)";
+
+        gradeEl.textContent = propGrade;
+    }
+</script>
+
+<!-- ========================================================================= -->
+<!-- WSPÓLNY MODAL EDYCJI OCENY I WAGI (DLA WIDOKU OCEN ORAZ ANALIZY PRZEDMIOTU) -->
+<!-- ========================================================================= -->
+<div id="edit-grade-modal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 hidden" onclick="handleEditModalBackdropClick(event)">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 transform transition-all relative" onclick="event.stopPropagation()">
+        <!-- Header -->
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div>
+                <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>✏️</span>
+                    <span>Edytuj ocenę lub wagę</span>
+                </h3>
+                <p id="modal-grade-subject" class="text-xs text-indigo-600 font-semibold mt-0.5">Przedmiot</p>
+            </div>
+            <button type="button" onclick="closeEditGradeModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer text-lg leading-none" title="Zamknij">
+                ✕
+            </button>
+        </div>
+
+        <!-- Metadane ze szkoły -->
+        <div class="my-4 p-3 bg-slate-50 border border-slate-200/80 rounded-xl space-y-1 text-xs text-slate-600">
+            <div class="flex justify-between">
+                <span class="text-slate-400">Kategoria:</span>
+                <span id="modal-grade-category" class="font-bold text-slate-700 text-right">-</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-slate-400">Data / Nauczyciel:</span>
+                <span id="modal-grade-teacher-date" class="font-medium text-slate-600 text-right">-</span>
+            </div>
+        </div>
+
+        <!-- Alert jeśli ocena była już modyfikowana -->
+        <div id="modal-grade-custom-alert" class="hidden mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+            <div class="font-bold flex items-center gap-1.5">
+                <span>⚠️</span>
+                <span>Ocena skorygowana ręcznie</span>
+            </div>
+            <div id="modal-grade-original-info" class="mt-1 text-amber-700">
+                Wartości z Librusa: ocena <strong>-</strong>, waga: <strong>-</strong>.
+            </div>
+        </div>
+
+        <!-- Formularz edycji -->
+        <form id="edit-grade-form" onsubmit="submitEditGrade(event)" class="space-y-4">
+            <input type="hidden" name="csrf_token" value="79eaf36677de94b19595b8cf6e1e5c21e6431fba36a1ecf2ba45f9556487d352">
+            <input type="hidden" id="modal-grade-id" name="grade_id" value="">
+
+            <div>
+                <label for="modal-input-grade" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Wartość oceny
+                </label>
+                <div class="grid grid-cols-2 gap-2">
+                    <select id="modal-input-grade" name="grade" class="px-3 py-2 text-sm font-bold text-slate-800 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                        <option value="6">6 (celujący)</option>
+                        <option value="6-">6-</option>
+                        <option value="5+">5+</option>
+                        <option value="5">5 (bardzo dobry)</option>
+                        <option value="5-">5-</option>
+                        <option value="4+">4+</option>
+                        <option value="4">4 (dobry)</option>
+                        <option value="4-">4-</option>
+                        <option value="3+">3+</option>
+                        <option value="3">3 (dostateczny)</option>
+                        <option value="3-">3-</option>
+                        <option value="2+">2+</option>
+                        <option value="2">2 (dopuszczający)</option>
+                        <option value="2-">2-</option>
+                        <option value="1+">1+</option>
+                        <option value="1">1 (niedostateczny)</option>
+                        <option value="np">np</option>
+                        <option value="+">+</option>
+                        <option value="-">-</option>
+                    </select>
+                    <input type="text" id="modal-input-grade-custom" placeholder="Wpisz inną..." class="px-3 py-2 text-sm text-slate-800 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" title="Wpisz niestandardową ocenę jeśli brak na liście">
+                </div>
+            </div>
+
+            <div>
+                <div class="flex items-center justify-between mb-1">
+                    <label for="modal-input-weight" class="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                        Waga oceny
+                    </label>
+                    <span class="text-[11px] text-slate-400">Szybki wybór:</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="number" id="modal-input-weight" name="weight" min="0" max="20" step="0.5" required
+                           class="w-24 px-3 py-2 text-sm font-bold text-slate-800 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                    
+                    <!-- Szybkie przyciski wag -->
+                    <div class="flex gap-1">
+                        <button type="button" onclick="setModalWeight(1)" class="px-2.5 py-1.5 text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg cursor-pointer">1</button>
+                        <button type="button" onclick="setModalWeight(2)" class="px-2.5 py-1.5 text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg cursor-pointer">2</button>
+                        <button type="button" onclick="setModalWeight(3)" class="px-2.5 py-1.5 text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg cursor-pointer">3</button>
+                        <button type="button" onclick="setModalWeight(4)" class="px-2.5 py-1.5 text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg cursor-pointer">4</button>
+                    </div>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-1">
+                    Korekta wagi dla sprawdzianów lub kartkówek błędnie oznaczonych przez nauczyciela.
+                </p>
+            </div>
+
+            <div id="modal-grade-error" class="hidden text-xs text-rose-600 bg-rose-50 border border-rose-200 p-2.5 rounded-xl"></div>
+
+            <!-- Stopka akcji -->
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                <button type="button" id="modal-btn-reset" onclick="resetEditGrade()"
+                        class="hidden px-3 py-2 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl transition-all cursor-pointer">
+                    🔄 Przywróć ze szkoły
+                </button>
+                <div class="flex items-center gap-2 ml-auto">
+                    <button type="button" onclick="closeEditGradeModal()"
+                            class="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-all cursor-pointer">
+                        Anuluj
+                    </button>
+                    <button type="submit" id="modal-btn-submit"
+                            class="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm shadow-indigo-100 transition-all cursor-pointer flex items-center gap-1.5">
+                        <span id="modal-spinner" class="hidden animate-spin">⏳</span>
+                        <span>Zapisz zmiany</span>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+let currentEditingGrade = null;
+
+function openEditGradeModal(gradeData) {
+    currentEditingGrade = gradeData;
+    document.getElementById('modal-grade-id').value = gradeData.id;
+    document.getElementById('modal-grade-subject').innerText = gradeData.subject || 'Przedmiot';
+    document.getElementById('modal-grade-category').innerText = gradeData.category || '-';
+    
+    let teacherDate = [];
+    if (gradeData.date) teacherDate.push(gradeData.date);
+    if (gradeData.teacher && gradeData.teacher !== '—') teacherDate.push(gradeData.teacher);
+    document.getElementById('modal-grade-teacher-date').innerText = teacherDate.join(' • ') || '-';
+    
+    // Ustawienie wartości oceny
+    const selectEl = document.getElementById('modal-input-grade');
+    const customInputEl = document.getElementById('modal-input-grade-custom');
+    let found = false;
+    for (let opt of selectEl.options) {
+        if (opt.value === gradeData.grade) {
+            selectEl.value = gradeData.grade;
+            found = true;
+            break;
+        }
+    }
+    if (!found) {
+        customInputEl.value = gradeData.grade || '';
+    } else {
+        customInputEl.value = '';
+    }
+
+    // Ustawienie wagi
+    document.getElementById('modal-input-weight').value = gradeData.weight || '1';
+
+    // Obsługa alertu i przycisku resetu jeśli ocena ma is_custom
+    const customAlert = document.getElementById('modal-grade-custom-alert');
+    const resetBtn = document.getElementById('modal-btn-reset');
+    const origInfo = document.getElementById('modal-grade-original-info');
+    
+    if (gradeData.is_custom) {
+        customAlert.classList.remove('hidden');
+        resetBtn.classList.remove('hidden');
+        origInfo.innerHTML = `Wartości ze szkoły (Librus): ocena <strong>${gradeData.original_grade || '-'}</strong>, waga: <strong>${gradeData.original_weight || '-'}</strong>.`;
+    } else {
+        customAlert.classList.add('hidden');
+        resetBtn.classList.add('hidden');
+    }
+
+    document.getElementById('modal-grade-error').classList.add('hidden');
+    document.getElementById('edit-grade-modal').classList.remove('hidden');
+}
+
+function closeEditGradeModal() {
+    document.getElementById('edit-grade-modal').classList.add('hidden');
+    currentEditingGrade = null;
+}
+
+function handleEditModalBackdropClick(event) {
+    if (event.target.id === 'edit-grade-modal') {
+        closeEditGradeModal();
+    }
+}
+
+function setModalWeight(val) {
+    document.getElementById('modal-input-weight').value = val;
+}
+
+async function submitEditGrade(event) {
+    event.preventDefault();
+    const errorEl = document.getElementById('modal-grade-error');
+    const spinner = document.getElementById('modal-spinner');
+    const submitBtn = document.getElementById('modal-btn-submit');
+
+    errorEl.classList.add('hidden');
+    spinner.classList.remove('hidden');
+    submitBtn.disabled = true;
+
+    const gradeId = document.getElementById('modal-grade-id').value;
+    const customGrade = document.getElementById('modal-input-grade-custom').value.trim();
+    const selectedGrade = document.getElementById('modal-input-grade').value;
+    const finalGrade = customGrade || selectedGrade;
+    const weight = document.getElementById('modal-input-weight').value;
+
+    const formData = new FormData();
+    formData.append('grade_id', gradeId);
+    formData.append('grade', finalGrade);
+    formData.append('weight', weight);
+
+    try {
+        const resp = await fetch('/api/grade/update', {
+            method: 'POST',
+            body: formData,
+        });
+        const data = await resp.json();
+        if (resp.ok && data.success) {
+            // Jeśli jesteśmy w widoku szczegółowym przedmiotu, odświeżamy bieżącą stronę
+            if (window.location.pathname.includes('/oceny/') || window.location.pathname.includes('/przedmiot/')) {
+                window.location.reload();
+            } else {
+                window.location.search = '?tab=oceny';
+            }
+        } else {
+            errorEl.innerText = data.message || 'Wystąpił błąd podczas zapisywania oceny.';
+            errorEl.classList.remove('hidden');
+            spinner.classList.add('hidden');
+            submitBtn.disabled = false;
+        }
+    } catch (err) {
+        errorEl.innerText = 'Błąd połączenia z serwerem: ' + err;
+        errorEl.classList.remove('hidden');
+        spinner.classList.add('hidden');
+        submitBtn.disabled = false;
+    }
+}
+
+async function resetEditGrade() {
+    if (!currentEditingGrade) return;
+    if (!confirm('Czy na pewno chcesz przywrócić oryginalną ocenę i wagę ze szkoły (z Librusa)?')) return;
+
+    const errorEl = document.getElementById('modal-grade-error');
+    errorEl.classList.add('hidden');
+
+    const formData = new FormData();
+    formData.append('grade_id', currentEditingGrade.id);
+
+    try {
+        const resp = await fetch('/api/grade/reset', {
+            method: 'POST',
+            body: formData,
+        });
+        const data = await resp.json();
+        if (resp.ok && data.success) {
+            if (window.location.pathname.includes('/oceny/') || window.location.pathname.includes('/przedmiot/')) {
+                window.location.reload();
+            } else {
+                window.location.search = '?tab=oceny';
+            }
+        } else {
+            errorEl.innerText = data.message || 'Wystąpił błąd podczas resetowania oceny.';
+            errorEl.classList.remove('hidden');
+        }
+    } catch (err) {
+        errorEl.innerText = 'Błąd połączenia z serwerem: ' + err;
+        errorEl.classList.remove('hidden');
+    }
+}
+</script>
+
+    </main>
+
+    <!-- Stopka -->
+    <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex items-center gap-2 font-medium">
+                <span>🏫 Librus2mail v2.4.0</span>
+                <span>•</span>
+                <span>Prywatny Dashboard Rodzica</span>
+            </div>
+            <div class="text-slate-400 text-[11px]">
+                Bezpieczny odczyt z lokalnej pamięci <code>storage/</code> • Stan na: 18.09.2026 00:00
+            </div>
+        </div>
+    </footer>
+
+    
+</body>
+</html>

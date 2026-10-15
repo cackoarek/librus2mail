@@ -9,6 +9,10 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ## [Unreleased]
 
+---
+
+## [2.4.0] – 2026-10-15
+
 - **WERSJA NIEKOMPATYBILNA WSTECZNIE**, konieczność zainstalowania aplikacji ponownie (np. poprzez nowy wbudowany konfigurator)
 - **Widok szczegółowy przedmiotu i zaawansowana analityka ocen w Panelu WWW (`/oceny/<przedmiot>`)**:
   - Dedykowany widok po kliknięciu na dowolny przedmiot w module ocen (`web/subject_detail.html` oraz endpointy `/oceny/<subject_name>` i `/przedmiot/<subject_name>`).
@@ -21,7 +25,6 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
   - Dodano 4 nowe testy jednostkowe i integracyjne w `tests/test_web.py`.
 
 ---
-
 ## [2.3.0] – 2026-10-13
 
 - ** WERSJA NIEKOMPATYBILNA WSTECZNIE, konieczność zainstalowania aplikacji ponownie (np. poprzez nowy wbudowany konfigurator)
@@ -256,7 +259,8 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ---
 
-[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v2.3.0...HEAD
+[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v2.4.0...HEAD
+[2.4.0]: https://github.com/cackoarek/librus2mail/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/cackoarek/librus2mail/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/cackoarek/librus2mail/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/cackoarek/librus2mail/compare/v2.0.1...v2.1.0

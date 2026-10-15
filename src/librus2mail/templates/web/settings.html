@@ -24,6 +24,7 @@
 
     <!-- Główny formularz ustawień -->
     <form method="POST" action="{{ url_for('web.settings_view') }}" class="mt-8 space-y-8">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
         <!-- ================================================================= -->
         <!-- SEKCJA 1: KONTA UCZNIÓW -->

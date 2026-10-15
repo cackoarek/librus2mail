@@ -42,6 +42,7 @@
 
         <!-- Formularz edycji -->
         <form id="edit-grade-form" onsubmit="submitEditGrade(event)" class="space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <input type="hidden" id="modal-grade-id" name="grade_id" value="">
 
             <div>

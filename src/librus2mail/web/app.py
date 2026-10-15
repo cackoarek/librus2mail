@@ -3,6 +3,7 @@
 import argparse
 import collections.abc
 import functools
+import hmac
 import importlib.metadata
 import logging
 import os
@@ -19,6 +20,7 @@ from flask import (
     Blueprint,
     Flask,
     Response,
+    abort,
     flash,
     jsonify,
     redirect,
@@ -36,7 +38,14 @@ from librus2mail.progress_report import run_progress_reports
 from librus2mail.student_report import run_student_reports
 from librus2mail.updates_notifier import run_notifier
 
-from .auth import LoginRateLimiter, auth_bp, is_auth_enabled, is_authenticated, login_required
+from .auth import (
+    LoginRateLimiter,
+    auth_bp,
+    get_client_ip,
+    is_auth_enabled,
+    is_authenticated,
+    login_required,
+)
 from .services import (
     build_daily_summary_html,
     build_progress_report_html,
@@ -117,6 +126,36 @@ def favicon_view():
     return Response(FAVICON_SVG, mimetype='image/svg+xml')
 
 
+def get_or_create_persistent_secret_key(storage_dir: str | Path) -> str:
+    """Zwraca lub tworzy trwały klucz SECRET_KEY zapisany w katalogu storage/."""
+    key_path = Path(storage_dir) / ".secret_key"
+    try:
+        if key_path.is_file():
+            content = key_path.read_text(encoding="utf-8").strip()
+            if len(content) >= 16:
+                return content
+        new_key = secrets.token_hex(32)
+        key_path.parent.mkdir(parents=True, exist_ok=True)
+        key_path.write_text(new_key, encoding="utf-8")
+        try:
+            os.chmod(key_path, 0o600)
+        except OSError:
+            pass
+        return new_key
+    except OSError as e:
+        logger.warning(f"Nie udało się zapisać trwałego klucza sesji w {key_path}: {e}")
+        return secrets.token_hex(32)
+
+
+def generate_csrf_token() -> str:
+    """Generuje i przechowuje token CSRF w bieżącej sesji użytkownika."""
+    token = session.get('_csrf_token')
+    if not token:
+        token = secrets.token_hex(32)
+        session['_csrf_token'] = token
+    return token
+
+
 def inject_common_context():
     """Wstrzykuje wspólne zmienne do wszystkich szablonów panelu webowego."""
     auth_enabled = is_auth_enabled()
@@ -134,6 +173,7 @@ def inject_common_context():
     active_student = next((s for s in students if s['login'] == active_login), (students[0] if students else None))
 
     now = getattr(request, 'app_actual_date', None) or datetime.now()
+    csrf_val = generate_csrf_token()
 
     return {
         'all_students': students,
@@ -143,6 +183,8 @@ def inject_common_context():
         'is_authenticated': authenticated,
         'now': now,
         'app_version': get_app_version(),
+        'csrf_token': csrf_val,
+        'get_csrf_token': generate_csrf_token,
     }
 
 
@@ -1143,6 +1185,9 @@ def create_app(
     lockout_duration_s: int | None = None,
     actual_date: datetime | str | None = None,
     run_collector_thread: bool = False,
+    enable_csrf: bool | None = None,
+    behind_proxy: bool | None = None,
+    trusted_proxies: set[str] | list[str] | None = None,
 ) -> Flask:
     """Fabryka aplikacji webowej Flask dla Librus2mail."""
     templates_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'templates')
@@ -1181,20 +1226,58 @@ def create_app(
     app.config['SESSION_COOKIE_SECURE'] = bool(cookie_secure)
 
     # Konfiguracja zaufanych serwerów proxy (ochrona przed spoofingiem nagłówków X-Forwarded-For)
-    raw_trusted = web_cfg.get('trusted_proxies')
-    if raw_trusted is None:
-        raw_trusted = os.environ.get('LIBRUS_WEB_TRUSTED_PROXIES')
-    if isinstance(raw_trusted, str):
-        trusted_proxies = {p.strip() for p in raw_trusted.split(',') if p.strip()}
-    elif isinstance(raw_trusted, (list, set, tuple)):
-        trusted_proxies = {str(p).strip() for p in raw_trusted if str(p).strip()}
+    if trusted_proxies is not None:
+        if isinstance(trusted_proxies, (set, list, tuple)):
+            eff_trusted = {str(p).strip() for p in trusted_proxies if str(p).strip()}
+        else:
+            eff_trusted = {str(trusted_proxies).strip()}
     else:
-        trusted_proxies = {'127.0.0.1', '::1', 'localhost'}
-    app.config['TRUSTED_PROXIES'] = trusted_proxies
+        raw_trusted = web_cfg.get('trusted_proxies')
+        if raw_trusted is None:
+            raw_trusted = os.environ.get('LIBRUS_WEB_TRUSTED_PROXIES')
+        if isinstance(raw_trusted, str):
+            eff_trusted = {p.strip() for p in raw_trusted.split(',') if p.strip()}
+        elif isinstance(raw_trusted, (list, set, tuple)):
+            eff_trusted = {str(p).strip() for p in raw_trusted if str(p).strip()}
+        else:
+            eff_trusted = {'127.0.0.1', '::1', 'localhost'}
+    app.config['TRUSTED_PROXIES'] = eff_trusted
+
+    # Konfiguracja ProxyFix (obsługa reverse proxy: Nginx, Traefik, Caddy, Docker)
+    eff_behind_proxy = (
+        behind_proxy
+        if behind_proxy is not None
+        else (
+            web_cfg.get('behind_proxy') is True
+            or os.environ.get('LIBRUS_WEB_BEHIND_PROXY', '').lower() in ('1', 'true', 'yes')
+        )
+    )
+    if eff_behind_proxy:
+        from werkzeug.middleware.proxy_fix import ProxyFix
+        proxy_depth = int(web_cfg.get('proxy_depth') or os.environ.get('LIBRUS_WEB_PROXY_DEPTH', 1))
+        app.wsgi_app = ProxyFix(
+            app.wsgi_app,
+            x_for=proxy_depth,
+            x_proto=proxy_depth,
+            x_host=proxy_depth,
+            x_port=proxy_depth,
+            x_prefix=proxy_depth,
+        )
 
     parsed_date = parse_datetime_safe(actual_date) if actual_date else None
 
-    app.config['SECRET_KEY'] = secret_key or web_cfg.get('secret_key') or os.environ.get('LIBRUS_WEB_SECRET_KEY') or secrets.token_hex(32)
+    # Trwały SECRET_KEY sesji (zabezpiecza przed wylogowaniem po restarcie procesu)
+    app.config['SECRET_KEY'] = (
+        secret_key
+        or web_cfg.get('secret_key')
+        or os.environ.get('LIBRUS_WEB_SECRET_KEY')
+        or get_or_create_persistent_secret_key(effective_storage)
+    )
+
+    # Ochrona przed atakami CSRF
+    eff_csrf = enable_csrf if enable_csrf is not None else web_cfg.get('enable_csrf', True)
+    app.config['CSRF_ENABLED'] = bool(eff_csrf)
+
     app.config['NO_AUTH'] = no_auth
     app.config['WEB_PASSWORD'] = effective_pwd
     app.config['APP_CONFIG'] = app_config
@@ -1216,6 +1299,42 @@ def create_app(
             allowed_prefixes = ('/setup', '/static', '/favicon', '/api/test-librus')
             if not request.path.startswith(allowed_prefixes):
                 return redirect(url_for('web.setup_view'))
+
+    @app.before_request
+    def verify_csrf_protection():
+        """Weryfikuje poprawność tokenu CSRF dla wszystkich żądań zmieniających stan (POST, PUT, DELETE)."""
+        if not app.config.get('CSRF_ENABLED', True):
+            return None
+        if request.method not in ('POST', 'PUT', 'DELETE', 'PATCH'):
+            return None
+
+        token = request.form.get('csrf_token')
+        if not token:
+            token = request.headers.get('X-CSRFToken') or request.headers.get('X-CSRF-Token')
+        if not token and request.is_json:
+            json_body = request.get_json(silent=True)
+            if isinstance(json_body, dict):
+                token = json_body.get('csrf_token')
+
+        expected_token = session.get('_csrf_token')
+        if not expected_token or not token or not hmac.compare_digest(str(token), str(expected_token)):
+            logger.warning(
+                f"Odrzucono żądanie {request.method} {request.path} z IP {get_client_ip(request)}: nieprawidłowy token CSRF."
+            )
+            if request.is_json or request.path.startswith('/api/'):
+                return jsonify({'success': False, 'error': 'Nieprawidłowy lub brakujący token CSRF.'}), 400
+            abort(400, description="Nieprawidłowy lub brakujący token CSRF. Odśwież stronę i spróbuj ponownie.")
+
+    @app.after_request
+    def inject_security_headers(response: Response) -> Response:
+        """Wstrzykuje standardowe nagłówki bezpieczeństwa HTTP (OWASP) do każdej odpowiedzi."""
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+        if request.is_secure:
+            response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        return response
 
     @app.template_filter('human_time')
     def human_time_filter(val):

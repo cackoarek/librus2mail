@@ -40,6 +40,7 @@
             {% endif %}
 
             <form method="POST" action="{{ url_for('auth.login', next=next) }}" class="space-y-5">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <div>
                     <label for="password" class="block text-xs font-bold uppercase tracking-wider text-slate-700">
                         Hasło dostępu rodzica

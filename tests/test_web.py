@@ -56,6 +56,7 @@ class TestWebDashboard(unittest.TestCase):
             'web': {
                 'password': 'SuperParentPassword',
                 'secret_key': 'test-secret-key-1234',
+                'enable_csrf': False,
             },
             'storage_dir': self.storage_dir,
         }
@@ -909,7 +910,7 @@ class TestWebDashboard(unittest.TestCase):
         """Weryfikuje wypełnienie kreatora /setup, zapisanie pliku config.yaml i odblokowanie aplikacji."""
         new_config_path = os.path.join(self.temp_dir, 'fresh_config.yaml')
         # Plik początkowo nie istnieje
-        app = create_app(config_path=new_config_path, storage_dir=self.storage_dir, no_auth=True)
+        app = create_app(config_path=new_config_path, storage_dir=self.storage_dir, no_auth=True, enable_csrf=False)
         client = app.test_client()
 
         # Użytkownik przesyła formularz kreatora
@@ -1120,7 +1121,7 @@ class TestWebDashboard(unittest.TestCase):
         """Weryfikuje konfigurację wysyłki Gmail przez OAuth2 w /setup oraz /ustawienia."""
         import yaml
         new_config_path = os.path.join(self.temp_dir, 'oauth_config.yaml')
-        app = create_app(config_path=new_config_path, storage_dir=self.storage_dir, no_auth=True)
+        app = create_app(config_path=new_config_path, storage_dir=self.storage_dir, no_auth=True, enable_csrf=False)
         client = app.test_client()
 
         # 1. Przesłanie formularza kreatora /setup z Gmail OAuth2

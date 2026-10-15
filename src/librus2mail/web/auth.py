@@ -2,6 +2,7 @@
 
 import collections.abc
 import functools
+import ipaddress
 import logging
 import threading
 from collections import defaultdict
@@ -14,6 +15,27 @@ logger = logging.getLogger(__name__)
 auth_bp = Blueprint('auth', __name__)
 
 DEFAULT_TRUSTED_PROXIES = frozenset({'127.0.0.1', '::1', 'localhost'})
+
+
+def is_ip_trusted(ip_str: str, trusted_proxies: collections.abc.Container[str]) -> bool:
+    """Sprawdza, czy dany adres IP znajduje się na liście zaufanych (obsługuje dokładne IP oraz podsieci CIDR)."""
+    if '*' in trusted_proxies or ip_str in trusted_proxies:
+        return True
+
+    try:
+        client_obj = ipaddress.ip_address(ip_str)
+    except ValueError:
+        return False
+
+    for item in trusted_proxies:
+        if '/' in item:
+            try:
+                network = ipaddress.ip_network(item, strict=False)
+                if client_obj in network:
+                    return True
+            except ValueError:
+                continue
+    return False
 
 
 def get_client_ip(req, trusted_proxies: collections.abc.Container[str] | None = None) -> str:
@@ -32,8 +54,7 @@ def get_client_ip(req, trusted_proxies: collections.abc.Container[str] | None = 
     if trusted_proxies is None:
         trusted_proxies = DEFAULT_TRUSTED_PROXIES
 
-    is_trusted = ('*' in trusted_proxies) or (remote_addr in trusted_proxies)
-    if is_trusted:
+    if is_ip_trusted(remote_addr, trusted_proxies):
         headers = getattr(req, 'headers', {})
         if xff := headers.get('X-Forwarded-For'):
             return xff.split(',')[0].strip()

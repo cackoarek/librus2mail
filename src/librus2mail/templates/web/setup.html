@@ -61,6 +61,7 @@
     <!-- Główny Formularz Konfiguratora -->
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
         <form id="wizard-form" method="POST" action="{{ url_for('web.setup_submit') }}" class="space-y-6" novalidate>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
             <!-- ================================================================= -->
             <!-- KROK 1: KONTA DZIECI W LIBRUSIE -->

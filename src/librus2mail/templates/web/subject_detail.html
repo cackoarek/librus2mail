@@ -528,14 +528,21 @@
         {% endif %}
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-            <!-- Wykres radarowy Chart.js -->
-            <div class="lg:col-span-5 h-[280px] sm:h-[310px] w-full flex items-center justify-center relative">
-                {% if analytics.category_analytics.radar_labels|length >= 3 %}
-                <canvas id="categoryRadarChart"></canvas>
+            <!-- Wykres radarowy / adaptacyjny słupkowy Chart.js -->
+            <div class="lg:col-span-5 h-[280px] sm:h-[310px] w-full flex flex-col items-center justify-center relative">
+                {% if analytics.category_analytics.categories %}
+                <div class="w-full h-full relative">
+                    <canvas id="categoryRadarChart"></canvas>
+                </div>
+                {% if analytics.category_analytics.radar_labels|length < 3 %}
+                <span class="text-[10px] text-slate-400 font-medium text-center mt-1 block">
+                    💡 Wykres słupkowy (od 3 różnych kategorii uaktywni się wielokąt radarowy)
+                </span>
+                {% endif %}
                 {% else %}
                 <div class="text-center p-6 text-slate-400 text-xs bg-slate-50 rounded-2xl w-full border border-slate-200/60">
                     <span class="text-2xl block mb-2">📊</span>
-                    Wykres radarowy wymaga ocen z co najmniej 3 różnych kategorii (obecnie: {{ analytics.category_analytics.radar_labels|length }}).
+                    Brak ocen z przypisaną kategorią dla tego przedmiotu.
                 </div>
                 {% endif %}
             </div>
@@ -1065,74 +1072,155 @@
         });
     }
 
-    // Wykres radarowy skuteczności wg kategorii prac
+    // Wykres skuteczności wg kategorii prac (Radar dla >= 3 kategorii, Słupkowy dla 1-2 kategorii)
     function initCategoryRadarChart() {
         const canvas = document.getElementById('categoryRadarChart');
         if (!canvas) return;
 
         const labels = {{ analytics.category_analytics.radar_labels|tojson }};
         const dataValues = {{ analytics.category_analytics.radar_averages|tojson }};
-        if (!labels || labels.length < 3) return;
+        if (!labels || labels.length === 0) return;
 
         const ctx = canvas.getContext('2d');
-        new Chart(ctx, {
-            type: 'radar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Średnia ważona',
-                    data: dataValues,
-                    backgroundColor: 'rgba(99, 102, 241, 0.22)',
-                    borderColor: '#4f46e5',
-                    borderWidth: 2.5,
-                    pointBackgroundColor: '#4338ca',
-                    pointBorderColor: '#ffffff',
-                    pointHoverBackgroundColor: '#ffffff',
-                    pointHoverBorderColor: '#4338ca',
-                    pointRadius: 4,
-                    pointHoverRadius: 6,
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    r: {
-                        min: 1,
-                        max: 6,
-                        ticks: {
-                            stepSize: 1,
-                            backdropColor: 'transparent',
-                            font: { family: 'Inter', size: 10, weight: 'bold' }
-                        },
-                        pointLabels: {
-                            font: { family: 'Inter', size: 11, weight: 'bold' },
-                            color: '#334155'
-                        },
-                        grid: {
-                            color: '#e2e8f0'
-                        },
-                        angleLines: {
-                            color: '#f1f5f9'
-                        }
-                    }
+
+        if (labels.length >= 3) {
+            // Klasyczny wielokątny wykres radarowy
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Średnia ważona',
+                        data: dataValues,
+                        backgroundColor: 'rgba(99, 102, 241, 0.22)',
+                        borderColor: '#4f46e5',
+                        borderWidth: 2.5,
+                        pointBackgroundColor: '#4338ca',
+                        pointBorderColor: '#ffffff',
+                        pointHoverBackgroundColor: '#ffffff',
+                        pointHoverBorderColor: '#4338ca',
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                    }]
                 },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                        titleFont: { family: 'Inter', weight: 'bold', size: 12 },
-                        padding: 10,
-                        cornerRadius: 10,
-                        callbacks: {
-                            label: function(ctx) {
-                                return '⭐ Średnia ważona: ' + (ctx.raw !== null ? ctx.raw.toFixed(2) : '—');
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            min: 1,
+                            max: 6,
+                            ticks: {
+                                stepSize: 1,
+                                backdropColor: 'transparent',
+                                font: { family: 'Inter', size: 10, weight: 'bold' }
+                            },
+                            pointLabels: {
+                                font: { family: 'Inter', size: 11, weight: 'bold' },
+                                color: '#334155'
+                            },
+                            grid: {
+                                color: '#e2e8f0'
+                            },
+                            angleLines: {
+                                color: '#f1f5f9'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                            titleFont: { family: 'Inter', weight: 'bold', size: 12 },
+                            padding: 10,
+                            cornerRadius: 10,
+                            callbacks: {
+                                label: function(ctx) {
+                                    return '⭐ Średnia ważona: ' + (ctx.raw !== null ? ctx.raw.toFixed(2) : '—');
+                                }
                             }
                         }
                     }
                 }
-            }
-        });
+            });
+        } else {
+            // Adaptacyjny wykres słupkowy dla 1 lub 2 kategorii
+            const barColors = dataValues.map(v => {
+                if (v >= 4.75) return 'rgba(16, 185, 129, 0.85)';
+                if (v >= 3.75) return 'rgba(79, 70, 229, 0.85)';
+                if (v >= 2.75) return 'rgba(245, 158, 11, 0.85)';
+                return 'rgba(239, 68, 68, 0.85)';
+            });
+            const borderColors = dataValues.map(v => {
+                if (v >= 4.75) return '#059669';
+                if (v >= 3.75) return '#4338ca';
+                if (v >= 2.75) return '#d97706';
+                return '#dc2626';
+            });
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Średnia ważona',
+                        data: dataValues,
+                        backgroundColor: barColors,
+                        borderColor: borderColors,
+                        borderWidth: 1.5,
+                        borderRadius: 8,
+                        barThickness: labels.length === 1 ? 36 : 28,
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', // Poziome słupki dopasowane do nazw kategorii
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            min: 1,
+                            max: 6,
+                            ticks: {
+                                stepSize: 1,
+                                font: { family: 'Inter', size: 10, weight: 'bold' }
+                            },
+                            grid: {
+                                color: '#f1f5f9'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Średnia ważona w skali 1–6',
+                                font: { family: 'Inter', size: 10, weight: '600' },
+                                color: '#94a3b8'
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                font: { family: 'Inter', size: 11, weight: 'bold' },
+                                color: '#334155'
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                            titleFont: { family: 'Inter', weight: 'bold', size: 12 },
+                            padding: 10,
+                            cornerRadius: 10,
+                            callbacks: {
+                                label: function(ctx) {
+                                    return '⭐ Średnia ważona: ' + (ctx.raw !== null ? ctx.raw.toFixed(2) : '—');
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
     }
 
     // Interaktywny mini-symulator ocen na żywo

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="a722ee32ad274c9e6736acab29d7b07ecac7c1d681cf0fca621458fd143747fc">
+    <meta name="csrf-token" content="26d095f5c673f10e3e9a5a34e7bbf621d5fc174112b9c3f10ce31e00274b5c0d">
     <title>Analiza przedmiotu: Matematyka - Librus2mail - Librus2mail</title>
     <!-- Favicon z logo Librus2mail (gradient indigo-sky + 🏫) -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%25%22%20y1%3D%22100%25%22%20x2%3D%22100%25%22%20y2%3D%220%25%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%234f46e5%22/%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%230ea5e9%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2216%22%20fill%3D%22url%28%23g%29%22/%3E%3Ctext%20x%3D%2232%22%20y%3D%2234%22%20font-size%3D%2234%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%F0%9F%8F%AB%3C/text%3E%3C/svg%3E">
@@ -45,7 +45,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
 </head>
-<body class="h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white" hx-headers='{"X-CSRFToken": "a722ee32ad274c9e6736acab29d7b07ecac7c1d681cf0fca621458fd143747fc"}'>
+<body class="h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white" hx-headers='{"X-CSRFToken": "26d095f5c673f10e3e9a5a34e7bbf621d5fc174112b9c3f10ce31e00274b5c0d"}'>
 
     <!-- Pasek nawigacyjny -->
     <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
@@ -773,10 +773,13 @@ Diagnoza: Dobra, zrównoważona forma z pojedynczymi wahaniami (sporadyczne sła
         
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-            <!-- Wykres radarowy Chart.js -->
-            <div class="lg:col-span-5 h-[280px] sm:h-[310px] w-full flex items-center justify-center relative">
+            <!-- Wykres radarowy / adaptacyjny słupkowy Chart.js -->
+            <div class="lg:col-span-5 h-[280px] sm:h-[310px] w-full flex flex-col items-center justify-center relative">
                 
-                <canvas id="categoryRadarChart"></canvas>
+                <div class="w-full h-full relative">
+                    <canvas id="categoryRadarChart"></canvas>
+                </div>
+                
                 
             </div>
 
@@ -1930,74 +1933,155 @@ Diagnoza: Dobra, zrównoważona forma z pojedynczymi wahaniami (sporadyczne sła
         });
     }
 
-    // Wykres radarowy skuteczności wg kategorii prac
+    // Wykres skuteczności wg kategorii prac (Radar dla >= 3 kategorii, Słupkowy dla 1-2 kategorii)
     function initCategoryRadarChart() {
         const canvas = document.getElementById('categoryRadarChart');
         if (!canvas) return;
 
         const labels = ["Sprawdzian", "Kartk\u00f3wka", "Odpowied\u017a", "Projekt", "Zadanie domowe", "Praca na lekcji"];
         const dataValues = [4.5, 4.0, 4.5, 5.0, 5.0, 6.0];
-        if (!labels || labels.length < 3) return;
+        if (!labels || labels.length === 0) return;
 
         const ctx = canvas.getContext('2d');
-        new Chart(ctx, {
-            type: 'radar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Średnia ważona',
-                    data: dataValues,
-                    backgroundColor: 'rgba(99, 102, 241, 0.22)',
-                    borderColor: '#4f46e5',
-                    borderWidth: 2.5,
-                    pointBackgroundColor: '#4338ca',
-                    pointBorderColor: '#ffffff',
-                    pointHoverBackgroundColor: '#ffffff',
-                    pointHoverBorderColor: '#4338ca',
-                    pointRadius: 4,
-                    pointHoverRadius: 6,
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    r: {
-                        min: 1,
-                        max: 6,
-                        ticks: {
-                            stepSize: 1,
-                            backdropColor: 'transparent',
-                            font: { family: 'Inter', size: 10, weight: 'bold' }
-                        },
-                        pointLabels: {
-                            font: { family: 'Inter', size: 11, weight: 'bold' },
-                            color: '#334155'
-                        },
-                        grid: {
-                            color: '#e2e8f0'
-                        },
-                        angleLines: {
-                            color: '#f1f5f9'
-                        }
-                    }
+
+        if (labels.length >= 3) {
+            // Klasyczny wielokątny wykres radarowy
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Średnia ważona',
+                        data: dataValues,
+                        backgroundColor: 'rgba(99, 102, 241, 0.22)',
+                        borderColor: '#4f46e5',
+                        borderWidth: 2.5,
+                        pointBackgroundColor: '#4338ca',
+                        pointBorderColor: '#ffffff',
+                        pointHoverBackgroundColor: '#ffffff',
+                        pointHoverBorderColor: '#4338ca',
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                    }]
                 },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                        titleFont: { family: 'Inter', weight: 'bold', size: 12 },
-                        padding: 10,
-                        cornerRadius: 10,
-                        callbacks: {
-                            label: function(ctx) {
-                                return '⭐ Średnia ważona: ' + (ctx.raw !== null ? ctx.raw.toFixed(2) : '—');
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            min: 1,
+                            max: 6,
+                            ticks: {
+                                stepSize: 1,
+                                backdropColor: 'transparent',
+                                font: { family: 'Inter', size: 10, weight: 'bold' }
+                            },
+                            pointLabels: {
+                                font: { family: 'Inter', size: 11, weight: 'bold' },
+                                color: '#334155'
+                            },
+                            grid: {
+                                color: '#e2e8f0'
+                            },
+                            angleLines: {
+                                color: '#f1f5f9'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                            titleFont: { family: 'Inter', weight: 'bold', size: 12 },
+                            padding: 10,
+                            cornerRadius: 10,
+                            callbacks: {
+                                label: function(ctx) {
+                                    return '⭐ Średnia ważona: ' + (ctx.raw !== null ? ctx.raw.toFixed(2) : '—');
+                                }
                             }
                         }
                     }
                 }
-            }
-        });
+            });
+        } else {
+            // Adaptacyjny wykres słupkowy dla 1 lub 2 kategorii
+            const barColors = dataValues.map(v => {
+                if (v >= 4.75) return 'rgba(16, 185, 129, 0.85)';
+                if (v >= 3.75) return 'rgba(79, 70, 229, 0.85)';
+                if (v >= 2.75) return 'rgba(245, 158, 11, 0.85)';
+                return 'rgba(239, 68, 68, 0.85)';
+            });
+            const borderColors = dataValues.map(v => {
+                if (v >= 4.75) return '#059669';
+                if (v >= 3.75) return '#4338ca';
+                if (v >= 2.75) return '#d97706';
+                return '#dc2626';
+            });
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Średnia ważona',
+                        data: dataValues,
+                        backgroundColor: barColors,
+                        borderColor: borderColors,
+                        borderWidth: 1.5,
+                        borderRadius: 8,
+                        barThickness: labels.length === 1 ? 36 : 28,
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', // Poziome słupki dopasowane do nazw kategorii
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            min: 1,
+                            max: 6,
+                            ticks: {
+                                stepSize: 1,
+                                font: { family: 'Inter', size: 10, weight: 'bold' }
+                            },
+                            grid: {
+                                color: '#f1f5f9'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Średnia ważona w skali 1–6',
+                                font: { family: 'Inter', size: 10, weight: '600' },
+                                color: '#94a3b8'
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                font: { family: 'Inter', size: 11, weight: 'bold' },
+                                color: '#334155'
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                            titleFont: { family: 'Inter', weight: 'bold', size: 12 },
+                            padding: 10,
+                            cornerRadius: 10,
+                            callbacks: {
+                                label: function(ctx) {
+                                    return '⭐ Średnia ważona: ' + (ctx.raw !== null ? ctx.raw.toFixed(2) : '—');
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
     }
 
     // Interaktywny mini-symulator ocen na żywo
@@ -2083,7 +2167,7 @@ Diagnoza: Dobra, zrównoważona forma z pojedynczymi wahaniami (sporadyczne sła
 
         <!-- Formularz edycji -->
         <form id="edit-grade-form" onsubmit="submitEditGrade(event)" class="space-y-4">
-            <input type="hidden" name="csrf_token" value="a722ee32ad274c9e6736acab29d7b07ecac7c1d681cf0fca621458fd143747fc">
+            <input type="hidden" name="csrf_token" value="26d095f5c673f10e3e9a5a34e7bbf621d5fc174112b9c3f10ce31e00274b5c0d">
             <input type="hidden" id="modal-grade-id" name="grade_id" value="">
 
             <div>

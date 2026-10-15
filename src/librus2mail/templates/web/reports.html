@@ -11,6 +11,7 @@
         .report-container { box-shadow: none !important; border: none !important; padding: 0 !important; }
     }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 {% endblock %}
 
 {% block content %}
@@ -31,7 +32,7 @@
             {% endif %}
         </h1>
         <p class="text-xs text-slate-500 mt-1">
-            Zintegrowane analizy postępów edukacyjnych, motywacyjna karta ucznia oraz podgląd codziennych powiadomień.
+            Zintegrowane centrum analityczne: raporty okresowe, motywacyjna karta ucznia, profil obszarów oraz analiza szans i ryzyk.
         </p>
     </div>
 
@@ -51,25 +52,36 @@
     </div>
 </div>
 
-<!-- Pasek podzakładek i filtrów (Okres & Styl) -->
+<!-- Pasek podzakładek (6 modułów analitycznych) -->
 <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mt-6 pb-2 no-print">
-    <!-- Główne podzakładki -->
-    <div class="flex items-center gap-1.5 p-1 bg-slate-200/70 rounded-xl overflow-x-auto scrollbar-none">
+    <div class="flex items-center gap-1.5 p-1 bg-slate-200/70 rounded-xl overflow-x-auto scrollbar-none w-full lg:w-auto">
         <a href="{{ url_for('web.reports_view', report_type='podsumowanie') }}"
-           class="px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'podsumowanie' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
+           class="px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'podsumowanie' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
             📬 Podsumowanie dzienne
         </a>
         <a href="{{ url_for('web.reports_view', report_type='postepy', days=days) }}"
-           class="px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'postepy' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
-            📈 Raport postępów
+           class="px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'postepy' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
+            📈 Postępy
         </a>
         <a href="{{ url_for('web.reports_view', report_type='uczen', variant=active_variant, days=days) }}"
-           class="px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'uczen' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
+           class="px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'uczen' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
             🌟 Raport ucznia
+        </a>
+        <a href="{{ url_for('web.reports_view', report_type='szanse') }}"
+           class="px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'szanse' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
+            🎯 Matryca Szans i Ryzyk
+        </a>
+        <a href="{{ url_for('web.reports_view', report_type='profil') }}"
+           class="px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'profil' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
+            🧭 Profil i Balans
+        </a>
+        <a href="{{ url_for('web.reports_view', report_type='stabilnosc') }}"
+           class="px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'stabilnosc' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
+            📊 Porównanie i Stabilność
         </a>
     </div>
 
-    <!-- Filtry: Wybór okresu oraz Wariantu stylu -->
+    <!-- Filtry specyficzne dla raportów tradycyjnych -->
     {% if active_tab in ('postepy', 'uczen') %}
     <div class="flex flex-wrap items-center gap-2">
         <!-- Selektor okresu (3, 7, 14, 30 dni) -->
@@ -140,10 +152,662 @@
     {% endif %}
 </div>
 
-<!-- Kontener wygenerowanego raportu HTML -->
+<!-- ============================================================== -->
+<!-- WIDOK: 🎯 MATRYCA SZANS I RYZYK (QUICK WINS)                     -->
+<!-- ============================================================== -->
+{% if active_tab == 'szanse' and opportunities_data %}
+<div class="my-6 space-y-6">
+    <!-- Wprowadzenie i Kafelki KPI -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-white p-5 rounded-2xl border border-emerald-200 shadow-sm">
+            <span class="text-xs font-bold uppercase tracking-wider text-emerald-600 flex items-center gap-1.5">
+                <span>🚀</span> Szybkie awanse
+            </span>
+            <div class="mt-2 text-3xl font-extrabold text-slate-900">
+                {{ opportunities_data.counts.quick_wins }}
+            </div>
+            <p class="text-[11px] text-slate-500 mt-1">Przedmioty o krok od wyższej oceny (różnica ≤ 0.20 pkt)</p>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-amber-200 shadow-sm">
+            <span class="text-xs font-bold uppercase tracking-wider text-amber-600 flex items-center gap-1.5">
+                <span>🛡️</span> Strefa obrony
+            </span>
+            <div class="mt-2 text-3xl font-extrabold text-slate-900">
+                {{ opportunities_data.counts.at_risk }}
+            </div>
+            <p class="text-[11px] text-slate-500 mt-1">Mały margines bezpieczeństwa (różnica < 0.12 pkt)</p>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                <span>⚓</span> Bezpieczny bufor
+            </span>
+            <div class="mt-2 text-3xl font-extrabold text-slate-900">
+                {{ opportunities_data.counts.safe }}
+            </div>
+            <p class="text-[11px] text-slate-500 mt-1">Stabilna, ugruntowana ocena końcowa</p>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-rose-200 shadow-sm">
+            <span class="text-xs font-bold uppercase tracking-wider text-rose-600 flex items-center gap-1.5">
+                <span>⚠️</span> Wymagające uwagi
+            </span>
+            <div class="mt-2 text-3xl font-extrabold text-slate-900">
+                {{ opportunities_data.counts.intervention }}
+            </div>
+            <p class="text-[11px] text-slate-500 mt-1">Średnia poniżej 2.50</p>
+        </div>
+    </div>
+
+    <!-- Sekcja 1: Szybkie Awanse (Quick Wins) -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>🚀</span>
+                    <span>Szybkie awanse (Najłatwiejsza droga do lepszych ocen na świadectwie)</span>
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    W tych przedmiotach wystarczy jedna dobra ocena ze sprawdzianu lub odpowiedzi, aby podnieść ocenę końcową o stopień wyżej!
+                </p>
+            </div>
+        </div>
+
+        {% if opportunities_data.quick_wins %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% for item in opportunities_data.quick_wins %}
+            <div class="p-4 bg-emerald-50/60 border border-emerald-200 rounded-xl flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-sm font-extrabold text-slate-900">{{ item.subject }}</h4>
+                        <span class="px-2.5 py-0.5 bg-emerald-200 text-emerald-900 text-xs font-bold rounded-full">
+                            Brakuje tylko {{ item.gap }}
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-3 text-xs text-slate-600 mt-2">
+                        <span>Bieżąca średnia: <strong>{{ item.average }}</strong></span>
+                        <span>•</span>
+                        <span>Próg: <strong>{{ item.threshold }}</strong> ({{ item.target_label }})</span>
+                    </div>
+                    <div class="mt-3 p-2.5 bg-white rounded-lg border border-emerald-100 text-xs text-emerald-900 font-semibold flex items-center gap-2">
+                        <span>💡</span>
+                        <span>{{ item.remedy }}</span>
+                    </div>
+                </div>
+                <div class="mt-4 pt-3 border-t border-emerald-200/60 flex justify-end">
+                    <a href="{{ url_for('web.subject_detail_view', subject_name=item.subject) }}"
+                       class="text-xs font-bold text-emerald-700 hover:text-emerald-900 hover:underline">
+                        Szczegóły ocen z przedmiotu →
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="p-6 text-center text-slate-400 text-xs italic bg-slate-50 rounded-xl">
+            Brak przedmiotów bezpośrednio na granicy progu wyższej oceny. Wszystkie oceny są ustabilizowane.
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sekcja 2: Zagrożone spadkiem (Strefa Obrony) -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+        <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2 mb-1">
+            <span>🛡️</span>
+            <span>Strefa obrony (Zagrożone obniżeniem oceny)</span>
+        </h3>
+        <p class="text-xs text-slate-500 mb-4">
+            W tych przedmiotach średnia przewyższa próg niższej oceny o mniej niż 0.12. Jedna słabsza ocena może obniżyć ocenę na semestr.
+        </p>
+
+        {% if opportunities_data.at_risk %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% for item in opportunities_data.at_risk %}
+            <div class="p-4 bg-amber-50/60 border border-amber-200 rounded-xl flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-sm font-extrabold text-slate-900">{{ item.subject }}</h4>
+                        <span class="px-2.5 py-0.5 bg-amber-200 text-amber-900 text-xs font-bold rounded-full">
+                            Margines: +{{ item.buffer }}
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-3 text-xs text-slate-600 mt-2">
+                        <span>Średnia: <strong>{{ item.average }}</strong></span>
+                        <span>•</span>
+                        <span>Próg spadku: <strong>{{ item.threshold }}</strong></span>
+                    </div>
+                    <p class="mt-2.5 text-xs text-amber-800 font-medium">
+                        {{ item.warning }}
+                    </p>
+                </div>
+                <div class="mt-4 pt-3 border-t border-amber-200/60 flex justify-end">
+                    <a href="{{ url_for('web.subject_detail_view', subject_name=item.subject) }}"
+                       class="text-xs font-bold text-amber-800 hover:text-amber-950 hover:underline">
+                        Zobacz historię ocen →
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="p-6 text-center text-slate-400 text-xs italic bg-slate-50 rounded-xl">
+            Świetna wiadomość! Żaden przedmiot nie jest obecnie bezpośrednio zagrożony spadkiem oceny.
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sekcja 3: Przedmioty o bezpiecznym buforze (Ugruntowana ocena) -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+            <div>
+                <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>⚓</span>
+                    <span>Bezpieczny bufor (Ugruntowane oceny bez ryzyka spadku)</span>
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    W tych przedmiotach przewaga nad dolnym progiem wynosi powyżej 0.12 pkt. Poniższa tabela przedstawia miary potwierdzające trwałość wyniku.
+                </p>
+            </div>
+            <span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200 self-start sm:self-auto">
+                {{ opportunities_data.safe|length }} przedmiotów
+            </span>
+        </div>
+
+        {% if opportunities_data.safe %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-600">
+                <thead class="text-[11px] font-extrabold uppercase text-slate-400 bg-slate-50 border-b border-slate-200">
+                    <tr>
+                        <th class="py-3 px-4">Przedmiot</th>
+                        <th class="py-3 px-3 text-center">Średnia ważona</th>
+                        <th class="py-3 px-3 text-center">Liczba ocen</th>
+                        <th class="py-3 px-3">Aktualna ocena</th>
+                        <th class="py-3 px-3 text-center">Bufor nad progiem</th>
+                        <th class="py-3 px-4">Miara stabilności (odporność)</th>
+                        <th class="py-3 px-3 text-right">Szczegóły</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for item in opportunities_data.safe %}
+                    <tr class="hover:bg-slate-50/80 transition-colors">
+                        <td class="py-3 px-4 font-bold text-slate-900">{{ item.subject }}</td>
+                        <td class="py-3 px-3 text-center font-extrabold text-slate-800">{{ item.average }}</td>
+                        <td class="py-3 px-3 text-center text-slate-500">{{ item.count }}</td>
+                        <td class="py-3 px-3">
+                            <span class="inline-flex items-center gap-1 font-semibold text-slate-800">
+                                <span>{{ item.current_label }}</span>
+                                <span class="text-[10px] text-slate-400 font-normal">(próg: {{ item.threshold }})</span>
+                            </span>
+                        </td>
+                        <td class="py-3 px-3 text-center">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                +{{ item.buffer }} pkt
+                            </span>
+                        </td>
+                        <td class="py-3 px-4 text-slate-600 font-medium">
+                            <span class="inline-flex items-center gap-1.5 text-xs text-emerald-800">
+                                <span>🛡️</span>
+                                <span>{{ item.resilience_desc }}</span>
+                            </span>
+                        </td>
+                        <td class="py-3 px-3 text-right">
+                            <a href="{{ url_for('web.subject_detail_view', subject_name=item.subject) }}"
+                               class="text-indigo-600 hover:text-indigo-800 font-bold">
+                                Analiza →
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-6 text-center text-slate-400 text-xs italic bg-slate-50 rounded-xl">
+            Brak przedmiotów w tej strefie.
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sekcja 4: Wymagające uwagi (Średnia poniżej 2.50) -->
+    <div class="bg-white rounded-2xl border border-rose-200 p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>⚠️</span>
+                    <span>Wymagające uwagi (Zagrożenie oceną dopuszczającą lub niedostateczną)</span>
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Przedmioty, w których średnia spadła poniżej 2.50. Wymagają bezpośredniego planu naprawczego i uzupełnienia ocen.
+                </p>
+            </div>
+        </div>
+
+        {% if opportunities_data.intervention %}
+        <div class="space-y-3">
+            {% for item in opportunities_data.intervention %}
+            <div class="p-4 bg-rose-50/70 border border-rose-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h4 class="text-sm font-extrabold text-rose-950">{{ item.subject }}</h4>
+                        <span class="px-2 py-0.5 bg-rose-200 text-rose-900 text-xs font-extrabold rounded-full">
+                            Średnia: {{ item.average }}
+                        </span>
+                    </div>
+                    <p class="text-xs text-rose-800 mt-1 font-medium">{{ item.reason }}</p>
+                    <p class="text-xs text-slate-600 mt-1">
+                        <strong>Rekomendowane działanie:</strong> {{ item.urgent_action }}
+                    </p>
+                </div>
+                <div class="flex-shrink-0">
+                    <a href="{{ url_for('web.subject_detail_view', subject_name=item.subject) }}"
+                       class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-rose-700 hover:bg-rose-100 border border-rose-300 shadow-2xs transition-all">
+                        Interwencja w przedmiocie →
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="p-5 text-center bg-emerald-50/70 border border-emerald-200 rounded-xl flex items-center justify-center gap-2 text-emerald-800 text-xs font-semibold">
+            <span>🎉</span>
+            <span>Świetne wieści! Żaden przedmiot nie wymaga interwencji – brak średnich poniżej 2.50.</span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- WIDOK: 🧭 PROFIL I BALANS UCZNIA (RADAR & FILARY)                -->
+<!-- ============================================================== -->
+{% elif active_tab == 'profil' and profile_data %}
+<div class="my-6 space-y-6">
+    <!-- Podsumowanie zbalansowania -->
+    <div class="p-6 bg-gradient-to-r from-indigo-900 via-slate-900 to-indigo-950 text-white rounded-2xl shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-2">
+                <span class="px-3 py-1 bg-indigo-500/30 border border-indigo-400/40 rounded-full text-xs font-extrabold text-indigo-200">
+                    {{ profile_data.balance_badge }}
+                </span>
+            </div>
+            <h2 class="text-xl font-extrabold mt-2">{{ profile_data.balance_status }}</h2>
+            <p class="text-xs text-indigo-200 mt-1 max-w-xl">
+                Rozpiętość między najsilniejszym a najsłabszym obszarem wynosi {{ profile_data.spread }} stopnia. Poniżej znajduje się mapa równowagi edukacyjnej w 4 filarach szkolnych.
+            </p>
+        </div>
+        <div class="text-right flex-shrink-0">
+            <span class="text-xs text-indigo-300 uppercase tracking-wider block">Klasyfikacja przedmiotów</span>
+            <span class="text-2xl font-extrabold text-white">{{ profile_data.all_subjects|length }}</span>
+            <span class="text-xs text-indigo-300">przedmiotów</span>
+        </div>
+    </div>
+
+    <!-- Wyjaśnienie metodologii wyliczania średnich -->
+    <div class="p-4 bg-indigo-50/80 border border-indigo-200/80 rounded-2xl text-xs text-indigo-950 flex items-start gap-3 shadow-xs">
+        <span class="text-xl leading-none">ℹ️</span>
+        <div>
+            <h4 class="font-extrabold text-indigo-900 mb-0.5">Jak wyliczane są średnie w Profilu Ucznia?</h4>
+            <div class="text-indigo-800 space-y-1 leading-relaxed">
+                <p>• <strong>Średnia każdego przedmiotu:</strong> oficjalna <strong>średnia ważona</strong> wyliczana z cząstkowych ocen i ich wag zarejestrowanych w Librusie.</p>
+                <p>• <strong>Średnia obszaru (filary i radar):</strong> <strong>średnia arytmetyczna ze średnich ważonych</strong> przedmiotów zaklasyfikowanych do danej dziedziny.</p>
+                <p>• <strong>Wykres radarowy:</strong> ilustruje rozkład średnich 4 głównych filarów w skali ocen (2.0 – 6.0), ukazując wszechstronność lub dominujące talenty ucznia.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Wykres Radarowy + Karty Filarów -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <!-- Wykres Radarowy (Chart.js) -->
+        <div class="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center">
+            <h3 class="text-sm font-extrabold text-slate-900 mb-1 flex items-center gap-2 self-start">
+                <span>🕸️</span>
+                <span>Radar Równowagi Edukacyjnej</span>
+            </h3>
+            <p class="text-xs text-slate-500 mb-2 self-start">
+                Wizualizacja średnich ważonych w 4 kluczowych obszarach wiedzy.
+            </p>
+            <div class="w-full max-w-[380px] h-[330px] relative my-auto p-1">
+                <canvas id="profileRadarChart"></canvas>
+            </div>
+            <p class="text-[10px] text-slate-400 text-center mt-2">
+                Skala ocen od 2.0 do 6.0 • Marginesy zoptymalizowane pod pełne etykiety
+            </p>
+        </div>
+
+        <!-- Karty Filarów -->
+        <div class="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {% for ckey, cdata in profile_data.categories.items() %}
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                            <span>{{ cdata.icon }}</span> {{ cdata.label }}
+                        </span>
+                        <div class="text-right">
+                            <span class="text-xl font-extrabold text-slate-900">
+                                {{ cdata.average or '-' }}
+                            </span>
+                            <div class="text-[10px] text-slate-400 font-medium">średnia obszaru</div>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex items-center gap-2 text-xs text-slate-500">
+                        <span>Przedmioty: <strong>{{ cdata.subjects|length }}</strong></span>
+                        <span>•</span>
+                        <span>Łącznie ocen: <strong>{{ cdata.total_grades }}</strong></span>
+                    </div>
+
+                    <!-- Lista przedmiotów w kategorii -->
+                    <div class="mt-3 flex flex-wrap gap-1.5">
+                        {% for subj in cdata.subjects %}
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                            <span>{{ subj.name }}</span>
+                            <strong class="text-slate-900">({{ subj.average or '-' }})</strong>
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Tabela z możliwością zmiany kategorii przedmiotu -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div>
+                <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>⚙️</span>
+                    <span>Dostosowanie kategorii przedmiotów</span>
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Jeśli system zaklasyfikował dany przedmiot nieprecyzyjnie (np. przedmiot autorski), możesz zmienić jego obszar poniżej. Zmiana zapisuje się natychmiast.
+                </p>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-600">
+                <thead class="text-[11px] font-extrabold uppercase text-slate-400 bg-slate-50 border-b border-slate-200">
+                    <tr>
+                        <th class="py-3 px-4">Przedmiot</th>
+                        <th class="py-3 px-3 text-center">Średnia ważona</th>
+                        <th class="py-3 px-3 text-center">Liczba ocen</th>
+                        <th class="py-3 px-3">Aktualny obszar edukacyjny</th>
+                        <th class="py-3 px-3 text-right">Zmień kategorię</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for subj in profile_data.all_subjects %}
+                    <tr class="hover:bg-slate-50/80 transition-colors">
+                        <td class="py-3 px-4 font-bold text-slate-900">
+                            {{ subj.name }}
+                            {% if subj.is_custom %}
+                            <span class="ml-1 px-1.5 py-0.5 text-[10px] font-bold bg-indigo-100 text-indigo-800 rounded">własna</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-3 text-center font-extrabold text-slate-800">{{ subj.average or '-' }}</td>
+                        <td class="py-3 px-3 text-center text-slate-500">{{ subj.count }}</td>
+                        <td class="py-3 px-3">
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-800 border border-slate-200">
+                                <span>{{ subj.category_icon }}</span>
+                                <span>{{ subj.category_label }}</span>
+                            </span>
+                        </td>
+                        <td class="py-3 px-3 text-right">
+                            <select onchange="updateSubjectCategory('{{ subj.name|e }}', this.value)"
+                                    class="bg-white border border-slate-300 rounded-lg px-2 py-1 text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-indigo-400 focus:outline-none cursor-pointer">
+                                {% for cat in profile_data.available_categories %}
+                                <option value="{{ cat.key }}" {% if subj.category == cat.key %}selected{% endif %}>
+                                    {{ cat.icon }} {{ cat.label }}
+                                </option>
+                                {% endfor %}
+                                <option value="default">↺ Przywróć domyślną</option>
+                            </select>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const ctx = document.getElementById('profileRadarChart');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: {{ profile_data.radar.labels | tojson }},
+                datasets: [{
+                    label: 'Średnia obszaru',
+                    data: {{ profile_data.radar['values'] | tojson }},
+                    backgroundColor: 'rgba(99, 102, 241, 0.25)',
+                    borderColor: 'rgb(79, 70, 229)',
+                    pointBackgroundColor: 'rgb(79, 70, 229)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgb(79, 70, 229)',
+                    borderWidth: 2,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: {
+                    padding: {
+                        top: 25,
+                        bottom: 25,
+                        left: 35,
+                        right: 35,
+                    }
+                },
+                scales: {
+                    r: {
+                        angleLines: { color: '#e2e8f0' },
+                        grid: { color: '#e2e8f0' },
+                        suggestedMin: 2.0,
+                        suggestedMax: 6.0,
+                        ticks: { stepSize: 1, font: { size: 10 } },
+                        pointLabels: {
+                            font: { size: 11, weight: 'bold' },
+                            color: '#334155',
+                            padding: 8,
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    }
+});
+
+async function updateSubjectCategory(subject, categoryKey) {
+    const formData = new FormData();
+    formData.append('subject', subject);
+    formData.append('category', categoryKey);
+
+    try {
+        const resp = await fetch('{{ url_for("web.api_subject_set_category") }}', {
+            method: 'POST',
+            body: formData,
+        });
+        const data = await resp.json();
+        if (resp.ok && data.success) {
+            window.location.reload();
+        } else {
+            alert(data.message || 'Wystąpił błąd podczas zmiany kategorii.');
+        }
+    } catch (e) {
+        alert('Błąd połączenia: ' + e);
+    }
+}
+</script>
+
+<!-- ============================================================== -->
+<!-- WIDOK: 📊 PORÓWNANIE I STABILNOŚĆ PRZEDMIOTÓW                   -->
+<!-- ============================================================== -->
+{% elif active_tab == 'stabilnosc' and stability_data %}
+<div class="my-6 space-y-6">
+    <!-- Kafelki: Lokomotywy vs Kotwice -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Lokomotywy -->
+        <div class="bg-white p-5 rounded-2xl border border-emerald-200 shadow-sm">
+            <span class="text-xs font-extrabold uppercase tracking-wider text-emerald-700 flex items-center gap-2">
+                <span>🚂</span> Lokomotywy średniej (Top sukcesy)
+            </span>
+            <p class="text-xs text-slate-500 mt-1">Przedmioty z najwyższą średnią ciągnące średnią w górę:</p>
+            <div class="mt-4 space-y-2">
+                {% for item in stability_data.locomotives %}
+                <div class="p-3 bg-emerald-50/50 border border-emerald-100 rounded-xl flex items-center justify-between">
+                    <div>
+                        <span class="text-xs font-bold text-slate-900">{{ item.subject }}</span>
+                        <span class="text-[11px] text-slate-500 block">{{ item.stability_desc }}</span>
+                    </div>
+                    <span class="text-base font-extrabold text-emerald-600">{{ item.average }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Kotwice -->
+        <div class="bg-white p-5 rounded-2xl border border-rose-200 shadow-sm">
+            <span class="text-xs font-extrabold uppercase tracking-wider text-rose-700 flex items-center gap-2">
+                <span>⚓</span> Kotwice średniej (Najbardziej kosztowne)
+            </span>
+            <p class="text-xs text-slate-500 mt-1">Przedmioty z najniższą średnią, obniżające wynik końcowy:</p>
+            <div class="mt-4 space-y-2">
+                {% for item in stability_data.anchors %}
+                <div class="p-3 bg-rose-50/50 border border-rose-100 rounded-xl flex items-center justify-between">
+                    <div>
+                        <span class="text-xs font-bold text-slate-900">{{ item.subject }}</span>
+                        <span class="text-[11px] text-slate-500 block">{{ item.stability_desc }}</span>
+                    </div>
+                    <span class="text-base font-extrabold text-rose-600">{{ item.average }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Wykres słupkowy poziomy porównujący przedmioty -->
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2 mb-1">
+            <span>📊</span>
+            <span>Zbiorcze zestawienie średnich ocen per przedmiot</span>
+        </h3>
+        <p class="text-xs text-slate-500 mb-4">
+            Porównanie wszystkich przedmiotów z zaznaczeniem średniej ogólnej i progu paska (4.75).
+        </p>
+        <div class="w-full h-80 relative">
+            <canvas id="stabilityBarChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Tabela stabilności i rozrzutu -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+        <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2 mb-1">
+            <span>🎯</span>
+            <span>Wskaźnik stabilności i rozrzut ocen</span>
+        </h3>
+        <p class="text-xs text-slate-500 mb-4">
+            Niskie odchylenie standardowe oznacza przewidywalność wyników, a wysokie sygnalizuje skrajne wahania (od 1 do 6).
+        </p>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-600">
+                <thead class="text-[11px] font-extrabold uppercase text-slate-400 bg-slate-50 border-b border-slate-200">
+                    <tr>
+                        <th class="py-3 px-4">Przedmiot</th>
+                        <th class="py-3 px-3 text-center">Średnia</th>
+                        <th class="py-3 px-3 text-center">Liczba ocen</th>
+                        <th class="py-3 px-3 text-center">Najniższa / Najwyższa</th>
+                        <th class="py-3 px-3 text-center">Stabilność wyników</th>
+                        <th class="py-3 px-3 text-right">Akcja</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for item in stability_data['items'] %}
+                    <tr class="hover:bg-slate-50/80 transition-colors">
+                        <td class="py-3 px-4 font-bold text-slate-900">{{ item.subject }}</td>
+                        <td class="py-3 px-3 text-center font-extrabold text-slate-800">{{ item.average }}</td>
+                        <td class="py-3 px-3 text-center text-slate-500">{{ item.count }}</td>
+                        <td class="py-3 px-3 text-center font-semibold text-slate-700">
+                            {% if item.min_grade is not none %}
+                            {{ item.min_grade|round(0)|int }} — {{ item.max_grade|round(0)|int }}
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="py-3 px-3 text-center">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border {{ item.stability_badge }}">
+                                {{ item.stability_tag }}
+                            </span>
+                        </td>
+                        <td class="py-3 px-3 text-right">
+                            <a href="{{ url_for('web.subject_detail_view', subject_name=item.subject) }}"
+                               class="text-indigo-600 hover:text-indigo-800 font-bold">
+                                Analiza →
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const ctx = document.getElementById('stabilityBarChart');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: {{ stability_data.chart.labels | tojson }},
+                datasets: [{
+                    label: 'Średnia ważona',
+                    data: {{ stability_data.chart['values'] | tojson }},
+                    backgroundColor: 'rgba(79, 70, 229, 0.85)',
+                    borderRadius: 6,
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        min: 1.0,
+                        max: 6.0,
+                        grid: { color: '#f1f5f9' },
+                        ticks: { stepSize: 1, font: { size: 11 } }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { font: { size: 11, weight: 'bold' } }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    }
+});
+</script>
+
+<!-- ============================================================== -->
+<!-- WIDOK: TRADYCYJNE RAPORTY OKRESOWE / MOTYWACYJNE                -->
+<!-- ============================================================== -->
+{% else %}
 <div class="my-6 flex justify-center">
     <div class="report-container w-full max-w-4xl bg-white rounded-2xl border border-slate-200 shadow-sm p-3 sm:p-6 overflow-x-auto">
         {{ report_html | safe }}
     </div>
 </div>
+{% endif %}
+
 {% endblock %}

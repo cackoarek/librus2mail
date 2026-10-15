@@ -171,6 +171,16 @@ class BaseStorage(ABC):
         pass
 
     @abstractmethod
+    def get_subject_categories(self, user_login: str) -> dict[str, str]:
+        """Zwraca mapę nadpisanych przez użytkownika kategorii przedmiotów."""
+        pass
+
+    @abstractmethod
+    def set_subject_category(self, user_login: str, subject: str, category_key: str | None) -> dict[str, str]:
+        """Ustawia lub usuwa nadpisanie kategorii przedmiotu."""
+        pass
+
+    @abstractmethod
     def get_last_progress_report_date(self, user_login: str, report_key: str | None = None) -> str | None:
         """Zwraca datę ostatnio wygenerowanego raportu postępów (ISO format) lub None."""
         pass
@@ -574,6 +584,39 @@ class FileStorage(BaseStorage):
         write_json_atomic(path, data)
         logger.info(f"Zaktualizowano przedmioty wykluczone ze świadectwa dla {user_login}: {new_list}")
         return new_list
+
+    def get_subject_categories(self, user_login: str) -> dict[str, str]:
+        """Zwraca mapę nadpisanych przez użytkownika kategorii przedmiotów {nazwa_przedmiotu: kategoria}."""
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
+        cats = data.get('subject_categories', {})
+        if isinstance(cats, dict):
+            return {str(k).strip(): str(v).strip() for k, v in cats.items() if str(k).strip() and str(v).strip()}
+        return {}
+
+    def set_subject_category(self, user_login: str, subject: str, category_key: str | None) -> dict[str, str]:
+        """Ustawia lub usuwa nadpisanie kategorii przedmiotu."""
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
+        cats = data.get('subject_categories', {})
+        if not isinstance(cats, dict):
+            cats = {}
+
+        target = str(subject).strip()
+        matched_keys = [k for k in cats if k.lower() == target.lower()]
+
+        if not category_key or category_key in ('default', 'none', 'reset', ''):
+            for k in matched_keys:
+                cats.pop(k, None)
+        else:
+            for k in matched_keys:
+                cats.pop(k, None)
+            cats[target] = str(category_key).strip().lower()
+
+        data['subject_categories'] = cats
+        write_json_atomic(path, data)
+        logger.info(f"Zaktualizowano kategorię przedmiotu '{target}' na '{category_key}' dla {user_login}")
+        return cats
 
     def get_last_progress_report_date(self, user_login: str, report_key: str | None = None) -> str | None:
         path = self._get_file_path(user_login)

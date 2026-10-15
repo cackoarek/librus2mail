@@ -18,9 +18,14 @@ from librus2mail.web.services import (
     build_progress_report_html,
     build_student_report_html,
     calculate_certificate_summary,
+    calculate_goal_optimizer,
     calculate_overall_average,
     calculate_subject_averages,
     capture_action_execution,
+    classify_subject,
+    compute_educational_profile,
+    compute_opportunity_matrix,
+    compute_subject_stability_benchmark,
     format_human_timestamp,
     get_storage,
     resolve_student_name,
@@ -248,8 +253,8 @@ class TestWebDashboard(unittest.TestCase):
         self.assertIn('Świadectwo'.encode(), res_oceny.data)
         self.assertIn('Pasek z wyróżnieniem'.encode(), res_oceny.data)
         self.assertIn(b"switchGradesTab('swiadectwo')", res_oceny.data)
-        self.assertIn(b'Symulator nowej oceny', res_oceny.data)
-        self.assertIn(b'Symulator Nowej Oceny', res_oceny.data)
+        self.assertIn(b'Optymalizator Celu', res_oceny.data)
+        self.assertIn(b"switchGradesTab('optymalizator')", res_oceny.data)
         self.assertIn(b'Matematyka', res_oceny.data)
 
         res_oceny_swiad = client.get('/oceny?tab=swiadectwo')
@@ -260,9 +265,9 @@ class TestWebDashboard(unittest.TestCase):
         self.assertIn(b'Ocena', res_oceny_swiad.data)
         self.assertIn('Słownie'.encode(), res_oceny_swiad.data)
 
-        res_oceny_sym = client.get('/oceny?tab=symulator')
-        self.assertEqual(res_oceny_sym.status_code, 200)
-        self.assertIn(b'grades-pane-symulator', res_oceny_sym.data)
+        res_oceny_opt = client.get('/oceny?tab=optymalizator')
+        self.assertEqual(res_oceny_opt.status_code, 200)
+        self.assertIn(b'grades-pane-optymalizator', res_oceny_opt.data)
 
         # 4. Widok terminarza
         res_term = client.get('/terminarz')
@@ -679,6 +684,25 @@ class TestWebDashboard(unittest.TestCase):
         res_summary_date = client.get('/raporty/podsumowanie?date=2026-09-20')
         self.assertEqual(res_summary_date.status_code, 200)
         self.assertIn(b'value="2026-09-20"', res_summary_date.data)
+
+        # 6. Nowe zaawansowane moduły analityczne
+        res_szanse = client.get('/raporty/szanse')
+        self.assertEqual(res_szanse.status_code, 200)
+        self.assertIn(b'Matryca Szans i Ryzyk', res_szanse.data)
+        self.assertIn(b'Quick Wins', res_szanse.data)
+        self.assertIn(b'Bezpieczny bufor', res_szanse.data)
+
+        res_profil = client.get('/raporty/profil')
+        self.assertEqual(res_profil.status_code, 200)
+        self.assertIn(b'Profil i Balans', res_profil.data)
+        self.assertIn('Radar Równowagi Edukacyjnej'.encode(), res_profil.data)
+        self.assertIn('Jak wyliczane są średnie'.encode(), res_profil.data)
+
+        res_stab = client.get('/raporty/stabilnosc')
+        self.assertEqual(res_stab.status_code, 200)
+        self.assertIn('Porównanie i Stabilność'.encode(), res_stab.data)
+        self.assertIn(b'Lokomotywy', res_stab.data)
+        self.assertIn(b'Kotwice', res_stab.data)
 
     def test_reports_builders_unit(self):
         """Testuje bezpośrednie funkcje generujące treść raportów (services)."""
@@ -1556,6 +1580,162 @@ class TestWebDashboard(unittest.TestCase):
         sim_3w = next(d for d in risk_high['drop_simulations'] if d['test_grade'] == 1 and d['test_weight'] == 3)
         self.assertEqual(sim_3w['sim_grade_num'], 3)
         self.assertIn('spadek do 3 (dostateczny)', sim_3w['desc'])
+
+    def test_api_subject_set_category(self):
+        """Testuje endpoint POST /api/subject/set-category do zmiany kategorii przedmiotu."""
+        app = create_app(
+            config_path=self.config_path,
+            storage_dir=self.storage_dir,
+            no_auth=True,
+            actual_date='2026-09-22',
+        )
+        client = app.test_client()
+
+        # 1. Błędne żądanie bez nazwy przedmiotu
+        res_bad = client.post('/api/subject/set-category', json={'category': 'scisle'})
+        self.assertEqual(res_bad.status_code, 400)
+        self.assertFalse(res_bad.get_json()['success'])
+
+        # 2. Poprawna zmiana kategorii przez JSON
+        res_ok = client.post('/api/subject/set-category', json={'subject': 'Matematyka', 'category': 'humanistyczne'})
+        self.assertEqual(res_ok.status_code, 200)
+        data = res_ok.get_json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['subject'], 'Matematyka')
+        self.assertEqual(data['category'], 'humanistyczne')
+        self.assertEqual(data['categories'].get('Matematyka'), 'humanistyczne')
+
+        # 3. Sprawdzenie w storage
+        storage = get_storage(self.mock_config, self.storage_dir)
+        cats = storage.get_subject_categories('123456')
+        self.assertEqual(cats.get('Matematyka'), 'humanistyczne')
+
+        # 4. Przywrócenie domyślnej kategorii przez wysłanie 'default'
+        res_reset = client.post('/api/subject/set-category', data={'subject': 'Matematyka', 'category': 'default'})
+        self.assertEqual(res_reset.status_code, 200)
+        self.assertNotIn('Matematyka', res_reset.get_json()['categories'])
+        self.assertNotIn('Matematyka', storage.get_subject_categories('123456'))
+
+    def test_storage_subject_categories(self):
+        """Testuje bezpośrednio metody get_subject_categories i set_subject_category w FileStorage."""
+        storage = get_storage(self.mock_config, self.storage_dir)
+        self.assertEqual(storage.get_subject_categories('123456'), {})
+
+        # Ustawienie kategorii
+        updated = storage.set_subject_category('123456', 'Fizyka', 'scisle')
+        self.assertEqual(updated, {'Fizyka': 'scisle'})
+        self.assertEqual(storage.get_subject_categories('123456'), {'Fizyka': 'scisle'})
+
+        # Usunięcie (None lub 'default')
+        updated_none = storage.set_subject_category('123456', 'Fizyka', None)
+        self.assertEqual(updated_none, {})
+        self.assertEqual(storage.get_subject_categories('123456'), {})
+
+    def test_classify_subject_and_educational_profile(self):
+        """Testuje kategoryzację przedmiotów oraz profil i balans ucznia."""
+        # 1. Automatyczna klasyfikacja po słowach kluczowych
+        self.assertEqual(classify_subject('Matematyka'), 'scisle')
+        self.assertEqual(classify_subject('Język polski'), 'humanistyczne')
+        self.assertEqual(classify_subject('Język angielski'), 'jezyki')
+        self.assertEqual(classify_subject('Wychowanie fizyczne'), 'ruch_i_sztuka')
+        self.assertEqual(classify_subject('Informatyka'), 'scisle')
+        self.assertEqual(classify_subject('Historia'), 'humanistyczne')
+        self.assertEqual(classify_subject('Nietypowy przedmiot'), 'inne')
+
+        # 2. Nadpisania użytkownika
+        overrides = {'Nietypowy przedmiot': 'scisle', 'Matematyka': 'humanistyczne'}
+        self.assertEqual(classify_subject('Nietypowy przedmiot', overrides), 'scisle')
+        self.assertEqual(classify_subject('Matematyka', overrides), 'humanistyczne')
+
+        # 3. compute_educational_profile
+        subject_averages = [
+            {'subject': 'Matematyka', 'average': 4.5, 'grades_count': 3},
+            {'subject': 'Fizyka', 'average': 5.0, 'grades_count': 2},
+            {'subject': 'Język polski', 'average': 3.5, 'grades_count': 4},
+            {'subject': 'Język angielski', 'average': 4.0, 'grades_count': 2},
+            {'subject': 'WF', 'average': 6.0, 'grades_count': 1},
+        ]
+        profile = compute_educational_profile(subject_averages, overrides={'WF': 'ruch_i_sztuka'})
+        self.assertIn('profile_groups', profile)
+        self.assertIn('radar_chart', profile)
+        self.assertIn('dominant_category', profile)
+        self.assertIn('growth_category', profile)
+        self.assertEqual(len(profile['radar_chart']['labels']), 4)
+        # Ścisłe średnia: (4.5 + 5.0) / 2 = 4.75
+        stem_group = next(g for g in profile['profile_groups'] if g['key'] == 'scisle')
+        self.assertAlmostEqual(stem_group['average'], 4.75, places=2)
+        self.assertEqual(len(stem_group['subjects']), 2)
+
+    def test_goal_optimizer(self):
+        """Testuje Optymalizator Celu (ROI i plan działania)."""
+        subject_averages = [
+            {'subject': 'Matematyka', 'average': 4.60, 'total_weight': 10.0, 'grades_count': 5},
+            {'subject': 'Fizyka', 'average': 3.70, 'total_weight': 4.0, 'grades_count': 2},
+            {'subject': 'Historia', 'average': 3.10, 'total_weight': 2.0, 'grades_count': 1},
+        ]
+        res = calculate_goal_optimizer(subject_averages, target_grade=5.0)
+        self.assertEqual(res['target_grade'], 5.0)
+        self.assertTrue(res['has_candidates'])
+        self.assertGreater(len(res['candidates']), 0)
+        mat = next((c for c in res['candidates'] if c['subject'] == 'Matematyka'), None)
+        self.assertIsNotNone(mat)
+        self.assertEqual(mat['target_proposal'], 5)
+        self.assertGreater(mat['gap'], 0)
+        self.assertIsNotNone(mat['min_grade_needed'])
+
+    def test_opportunity_matrix(self):
+        """Testuje Matrycę Szans i Ryzyk (Quick Wins, Zagrożenia, Bezpieczny bufor, Interwencja)."""
+        subject_averages = [
+            {'subject': 'Biologia', 'average': 4.65, 'total_weight': 10.0, 'grades_count': 5},
+            {'subject': 'Chemia', 'average': 3.76, 'total_weight': 8.0, 'grades_count': 4},
+            {'subject': 'Fizyka', 'average': 2.10, 'total_weight': 4.0, 'grades_count': 2},
+        ]
+        matrix = compute_opportunity_matrix(subject_averages)
+        self.assertIn('quick_wins', matrix)
+        self.assertIn('drop_risks', matrix)
+        self.assertIn('safe', matrix)
+        self.assertIn('intervention', matrix)
+        self.assertIn('matrix_items', matrix)
+
+        qw_subjects = [q['subject'] for q in matrix['quick_wins']]
+        self.assertIn('Biologia', qw_subjects)
+
+        risk_subjects = [r['subject'] for r in matrix['drop_risks']]
+        self.assertIn('Chemia', risk_subjects)
+
+        safe_subjects = [s['subject'] for s in matrix['safe']]
+        self.assertIn('Biologia', safe_subjects)
+        bio_safe = next(s for s in matrix['safe'] if s['subject'] == 'Biologia')
+        self.assertIn('resilience_desc', bio_safe)
+        self.assertGreater(bio_safe['buffer'], 0.12)
+
+        interv_subjects = [i['subject'] for i in matrix['intervention']]
+        self.assertIn('Fizyka', interv_subjects)
+
+    def test_subject_stability_benchmark(self):
+        """Testuje Porównanie i Stabilność Przedmiotów (odchylenie standardowe, lokomotywy, kotwice)."""
+        history = [
+            {'id': '1', 'subject': 'Matematyka', 'grade': '5', 'weight': '2'},
+            {'id': '2', 'subject': 'Matematyka', 'grade': '5', 'weight': '2'},
+            {'id': '3', 'subject': 'Historia', 'grade': '2', 'weight': '1'},
+            {'id': '4', 'subject': 'Historia', 'grade': '5', 'weight': '1'},
+        ]
+        averages = [
+            {'subject': 'Matematyka', 'average': 5.0, 'grades_count': 2},
+            {'subject': 'Historia', 'average': 3.5, 'grades_count': 2},
+        ]
+        benchmark = compute_subject_stability_benchmark(averages, history)
+        self.assertIn('items', benchmark)
+        self.assertIn('locomotives', benchmark)
+        self.assertIn('anchors', benchmark)
+        self.assertIn('bar_chart', benchmark)
+
+        mat_item = next(i for i in benchmark['items'] if i['subject'] == 'Matematyka')
+        self.assertEqual(mat_item['stdev'], 0.0)
+        self.assertEqual(mat_item['stability_status'], 'high')
+
+        hist_item = next(i for i in benchmark['items'] if i['subject'] == 'Historia')
+        self.assertGreater(hist_item['stdev'], 0.0)
 
 
 if __name__ == '__main__':

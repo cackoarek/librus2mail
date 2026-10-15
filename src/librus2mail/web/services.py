@@ -2,7 +2,9 @@
 
 import io
 import logging
+import math
 import os
+import re
 import statistics
 from collections import defaultdict
 from datetime import date, datetime, timedelta
@@ -208,6 +210,7 @@ def calculate_subject_averages(
             'numeric_count': numeric_count,
             'average': avg,
             'sum_weights': sum_weights,
+            'sum_weighted': sum_weighted,
             'is_excluded': is_excluded,
         }
 
@@ -1469,5 +1472,686 @@ def save_config_yaml(config_dict: dict[str, Any], target_path: str = 'config.yam
             pass
     logger.info(f"Zapisano nową konfigurację do pliku {target}")
     return str(target)
+
+
+# ==============================================================================
+# ANALITYKA MIĘDZYPRZEDMIOTOWA I OPTYMALIZACJA CELU
+# ==============================================================================
+
+EDUCATIONAL_CATEGORIES: dict[str, dict[str, Any]] = {
+    "scisle": {
+        "key": "scisle",
+        "label": "Ścisłe i przyrodnicze",
+        "short_label": "Ścisłe",
+        "icon": "📐",
+        "color": "#4f46e5",  # indigo-600
+        "bg_color": "rgba(79, 70, 229, 0.2)",
+        "keywords": [
+            "matemat", "fizyk", "chem", "biolog", "geograf",
+            "informat", "przyrod", "technolog", "algorytm", "programow"
+        ],
+    },
+    "humanistyczne": {
+        "key": "humanistyczne",
+        "label": "Humanistyczne i społeczne",
+        "short_label": "Humanistyczne",
+        "icon": "📖",
+        "color": "#0ea5e9",  # sky-500
+        "bg_color": "rgba(14, 165, 233, 0.2)",
+        "keywords": [
+            "polsk", "histor", "wos", "społeczeńst", "filozof",
+            "etyk", "hit", "wiedza o", "język ojczysty"
+        ],
+    },
+    "jezyki": {
+        "key": "jezyki",
+        "label": "Języki obce",
+        "short_label": "Języki obce",
+        "icon": "🌍",
+        "color": "#10b981",  # emerald-500
+        "bg_color": "rgba(16, 185, 129, 0.2)",
+        "keywords": [
+            "angielsk", "niemieck", "hiszpańsk", "francusk",
+            "rosyjsk", "włosk", "język obcy", "łacina", "english"
+        ],
+    },
+    "ruch_i_sztuka": {
+        "key": "ruch_i_sztuka",
+        "label": "Sport, kultura i praktyka",
+        "short_label": "Sport i Sztuka",
+        "icon": "🎨",
+        "color": "#f59e0b",  # amber-500
+        "bg_color": "rgba(245, 158, 11, 0.2)",
+        "keywords": [
+            "fizyczn", "wf", "w-f", "plastyk", "muzyk",
+            "technik", "edb", "bezpieczeństw", "artystyczn", "sport", "teatr"
+        ],
+    },
+    "inne": {
+        "key": "inne",
+        "label": "Inne i dodatkowe",
+        "short_label": "Inne",
+        "icon": "📦",
+        "color": "#8b5cf6",  # purple-500
+        "bg_color": "rgba(139, 92, 246, 0.2)",
+        "keywords": [
+            "religi", "etyk", "doradztw", "wychowawcz", "zajęcia z wychowawcą"
+        ],
+    },
+}
+
+
+def classify_subject(subject_name: str, user_overrides: dict[str, str] | None = None) -> str:
+    """Klasyfikuje przedmiot do jednego z filarów edukacyjnych z uwzględnieniem nadpisań użytkownika."""
+    target = str(subject_name or '').strip()
+    if not target:
+        return "inne"
+
+    # 1. Sprawdzenie nadpisań użytkownika (case-insensitive)
+    if user_overrides and isinstance(user_overrides, dict):
+        for k, v in user_overrides.items():
+            if str(k).strip().lower() == target.lower():
+                val = str(v).strip().lower()
+                if val in EDUCATIONAL_CATEGORIES:
+                    return val
+
+    # 2. Normalizacja tekstu
+    clean = re.sub(r'\(.*?\)', '', target.lower())
+    clean = clean.replace('-', ' ').replace('.', ' ')
+    clean = re.sub(r'\s+', ' ', clean).strip()
+
+    # Specjalne traktowanie języków obcych (np. "język angielski" vs "język polski")
+    for kw in EDUCATIONAL_CATEGORIES["jezyki"]["keywords"]:
+        if kw in clean:
+            return "jezyki"
+
+    for kw in EDUCATIONAL_CATEGORIES["scisle"]["keywords"]:
+        if kw in clean:
+            return "scisle"
+
+    for kw in EDUCATIONAL_CATEGORIES["humanistyczne"]["keywords"]:
+        if kw in clean:
+            return "humanistyczne"
+
+    for kw in EDUCATIONAL_CATEGORIES["ruch_i_sztuka"]["keywords"]:
+        if kw in clean:
+            return "ruch_i_sztuka"
+
+    for kw in EDUCATIONAL_CATEGORIES["inne"]["keywords"]:
+        if kw in clean:
+            return "inne"
+
+    return "inne"
+
+
+def compute_educational_profile(
+    subject_averages: dict[str, dict[str, Any]] | list[dict[str, Any]],
+    user_overrides: dict[str, str] | None = None,
+    overrides: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    """Oblicza przekrojowy profil zbalansowania ucznia w 4 głównych filarach edukacyjnych."""
+    if overrides is not None and user_overrides is None:
+        user_overrides = overrides
+    if isinstance(subject_averages, list):
+        subject_averages = {
+            (item.get('subject') or item.get('name') or f'Item_{idx}'): item
+            for idx, item in enumerate(subject_averages)
+        }
+
+    categories_data: dict[str, dict[str, Any]] = {
+        key: {
+            "key": key,
+            "label": info["label"],
+            "icon": info["icon"],
+            "color": info["color"],
+            "bg_color": info["bg_color"],
+            "subjects": [],
+            "averages": [],
+            "total_grades": 0,
+            "average": None,
+        }
+        for key, info in EDUCATIONAL_CATEGORIES.items()
+    }
+
+    all_classified_subjects = []
+
+    for sname, sdata in subject_averages.items():
+        cat_key = classify_subject(sname, user_overrides=user_overrides)
+        avg = sdata.get('average')
+        cnt = sdata.get('numeric_count')
+        if cnt is None:
+            cnt = sdata.get('grades_count', sdata.get('count', 0))
+
+        item = {
+            "name": sname,
+            "subject": sname,
+            "average": avg,
+            "count": cnt,
+            "category": cat_key,
+            "category_label": EDUCATIONAL_CATEGORIES[cat_key]["label"],
+            "category_icon": EDUCATIONAL_CATEGORIES[cat_key]["icon"],
+            "is_excluded": sdata.get('is_excluded', False),
+            "is_custom": bool(user_overrides and sname in user_overrides),
+        }
+        all_classified_subjects.append(item)
+        categories_data[cat_key]["subjects"].append(item)
+        if avg is not None and not sdata.get('is_excluded', False):
+            categories_data[cat_key]["averages"].append(avg)
+        categories_data[cat_key]["total_grades"] += cnt
+
+    # Obliczenie średnich dla kategorii
+    radar_labels = []
+    radar_values = []
+    radar_colors = []
+
+    for key, cdata in categories_data.items():
+        avgs = cdata["averages"]
+        if avgs:
+            cdata["average"] = round(sum(avgs) / len(avgs), 2)
+        else:
+            cdata["average"] = None
+
+        # Do radaru bierzemy 4 główne filary
+        if key in ("scisle", "humanistyczne", "jezyki", "ruch_i_sztuka"):
+            short_l = EDUCATIONAL_CATEGORIES.get(key, {}).get("short_label", cdata["label"])
+            radar_labels.append(f"{cdata['icon']} {short_l}")
+            radar_values.append(cdata["average"] or 0.0)
+            radar_colors.append(cdata["color"])
+
+    # Wskaźnik dominującego profilu
+    active_cats = [c for c in categories_data.values() if c["key"] != "inne" and c["average"] is not None]
+    if active_cats:
+        top_cat = max(active_cats, key=lambda x: x["average"])
+        min_cat = min(active_cats, key=lambda x: x["average"])
+        spread = round(top_cat["average"] - min_cat["average"], 2)
+        if spread <= 0.40:
+            balance_status = "Wszechstronny (zrównoważony profil nauki)"
+            balance_badge = "🌟 Wszechstronny"
+        else:
+            balance_status = f"Wyraźny profil: {top_cat['label']} (śr. {top_cat['average']})"
+            balance_badge = f"🚀 Profil {top_cat['icon']}"
+    else:
+        top_cat = None
+        min_cat = None
+        spread = 0.0
+        balance_status = "Brak wystarczającej liczby ocen"
+        balance_badge = "Brak danych"
+
+    return {
+        "categories": categories_data,
+        "profile_groups": list(categories_data.values()),
+        "radar": {
+            "labels": radar_labels,
+            "values": radar_values,
+        },
+        "radar_chart": {
+            "labels": radar_labels,
+            "values": radar_values,
+        },
+        "all_subjects": all_classified_subjects,
+        "available_categories": [
+            {"key": k, "label": v["label"], "icon": v["icon"]}
+            for k, v in EDUCATIONAL_CATEGORIES.items()
+        ],
+        "top_category": top_cat,
+        "dominant_category": top_cat,
+        "min_category": min_cat,
+        "growth_category": min_cat,
+        "spread": spread,
+        "balance_status": balance_status,
+        "balance_badge": balance_badge,
+    }
+
+
+def calculate_goal_optimizer(
+    subject_averages: dict[str, dict[str, Any]] | list[dict[str, Any]],
+    target_avg: float | None = None,
+    target_grade: float | None = None,
+) -> dict[str, Any]:
+    """Wieloprzedmiotowy optymalizator celu: wyznacza najłatwiejszą i najbardziej opłacalną ścieżkę do osiągnięcia docelowej średniej."""
+    if target_grade is not None and target_avg is None:
+        target_avg = target_grade
+    if isinstance(subject_averages, list):
+        subject_averages = {
+            (item.get('subject') or item.get('name') or f'Item_{idx}'): item
+            for idx, item in enumerate(subject_averages)
+        }
+
+    included_subjs = {
+        s: data for s, data in subject_averages.items()
+        if not data.get('is_excluded') and data.get('average') is not None
+    }
+    if not included_subjs:
+        eff_target = target_avg or 4.75
+        return {
+            "current_average": 0.0,
+            "target_average": eff_target,
+            "target_grade": eff_target,
+            "diff": 0.0,
+            "achieved": False,
+            "action_plan": [],
+            "candidates": [],
+            "has_candidates": False,
+            "ranked_subjects": [],
+        }
+
+    n_subjects = len(included_subjs)
+    cur_sum = sum(d['average'] for d in included_subjs.values())
+    cur_avg = round(cur_sum / n_subjects, 2)
+
+    if target_avg is None:
+        if cur_avg < 4.75:
+            target_avg = 4.75
+        elif cur_avg < 5.00:
+            target_avg = 5.00
+        else:
+            target_avg = round(min(6.0, cur_avg + 0.25), 2)
+    else:
+        target_avg = round(float(target_avg), 2)
+
+    diff = round(target_avg - cur_avg, 2)
+    if diff <= 0:
+        return {
+            "current_average": cur_avg,
+            "target_average": target_avg,
+            "target_grade": target_avg,
+            "diff": 0.0,
+            "achieved": True,
+            "action_plan": [],
+            "candidates": [],
+            "has_candidates": False,
+            "ranked_subjects": [],
+        }
+
+    # Analiza wrażliwości i ROI dla każdego przedmiotu
+    # Badamy zysk ze zdobycia oceny 5 i 6 o wagach 1, 2, 3
+    analyzed_subjects = []
+    for sname, sdata in included_subjs.items():
+        s_avg = sdata['average']
+        s_weights = max(1.0, float(sdata.get('sum_weights') or sdata.get('total_weight') or 1.0))
+        s_weighted = float(sdata.get('sum_weighted') or (s_avg * s_weights))
+
+        # Symulacja: nowa ocena 5 o wadze 2
+        new_w = 2.0
+        new_g = 5.0 if s_avg < 4.8 else 6.0
+        sim_subj_avg = (s_weighted + new_g * new_w) / (s_weights + new_w)
+        subj_gain = max(0.0, sim_subj_avg - s_avg)
+        overall_gain = subj_gain / n_subjects
+
+        # ROI (zysk dla średniej ogólnej przypadający na jednostkę wagi)
+        roi = overall_gain / new_w
+
+        # Ile potrzeba ocen 5 (waga 2), aby ten przedmiot sam podniósł średnią o 0.1?
+        analyzed_subjects.append({
+            "name": sname,
+            "subject": sname,
+            "current_average": s_avg,
+            "sum_weights": s_weights,
+            "count": sdata.get('numeric_count', sdata.get('grades_count', sdata.get('count', 0))),
+            "sim_grade": new_g,
+            "sim_weight": new_w,
+            "subj_gain": round(subj_gain, 2),
+            "overall_gain": round(overall_gain, 3),
+            "roi": roi,
+            "recommendation": (
+                f"Zdobądź ocenę {int(new_g)} z wagą {int(new_w)} "
+                f"(np. ze sprawdzianu), aby podnieść średnią przedmiotu o +{subj_gain:.2f} "
+                f"(+{overall_gain:.3f} do średniej ogólnej)."
+            ),
+        })
+
+    # Sortujemy przedmioty od najwyższego ROI (najłatwiejsze do podniesienia, mała suma wag)
+    analyzed_subjects.sort(key=lambda x: x['roi'], reverse=True)
+
+    # Budujemy konkretny "Action Plan" (krok po kroku pokrywający 'diff')
+    action_plan = []
+    accumulated_gain = 0.0
+
+    for item in analyzed_subjects:
+        if accumulated_gain >= diff:
+            break
+        gain_on_subj = round(item["subj_gain"], 2)
+        action_plan.append({
+            "step": len(action_plan) + 1,
+            "subject": item["name"],
+            "current_average": item["current_average"],
+            "suggested_grade": item["sim_grade"],
+            "suggested_weight": item["sim_weight"],
+            "target_proposal": int(item["sim_grade"]),
+            "min_grade_needed": int(item["sim_grade"]),
+            "gap": gain_on_subj,
+            "estimated_gain": item["overall_gain"],
+            "text": item["recommendation"],
+        })
+        accumulated_gain += item["overall_gain"]
+
+    return {
+        "current_average": cur_avg,
+        "target_average": target_avg,
+        "target_grade": target_avg,
+        "diff": diff,
+        "achieved": False,
+        "action_plan": action_plan,
+        "candidates": action_plan,
+        "has_candidates": bool(action_plan),
+        "ranked_subjects": analyzed_subjects,
+    }
+
+
+def compute_opportunity_matrix(
+    subject_averages: dict[str, dict[str, Any]] | list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Kategoryzuje przedmioty pod kątem szans na wyższą ocenę (Quick Wins) oraz ryzyka spadku."""
+    if isinstance(subject_averages, list):
+        subject_averages = {
+            (item.get('subject') or item.get('name') or f'Item_{idx}'): item
+            for idx, item in enumerate(subject_averages)
+        }
+
+    quick_wins = []
+    at_risk = []
+    safe = []
+    intervention = []
+
+    # Progi ocen w polskim systemie szkolnym
+    grade_thresholds = [
+        (1.75, 2.0, "dopuszczający (2)"),
+        (2.75, 3.0, "dostateczny (3)"),
+        (3.75, 4.0, "dobry (4)"),
+        (4.75, 5.0, "bardzo dobry (5)"),
+        (5.50, 6.0, "celujący (6)"),
+    ]
+
+    for sname, sdata in subject_averages.items():
+        if sdata.get('is_excluded') or sdata.get('average') is None:
+            continue
+
+        avg = sdata['average']
+        cnt = sdata.get('numeric_count')
+        if cnt is None:
+            cnt = sdata.get('grades_count', sdata.get('count', 0))
+        total_entries = sdata.get('count', cnt)
+        weights = max(0.1, float(sdata.get('sum_weights') or sdata.get('total_weight') or 1.0))
+        weighted = float(sdata.get('sum_weighted') or (avg * weights))
+
+        # 1. Sprawdzenie czy wymaga interwencji (bardzo niska średnia)
+        if avg < 2.50:
+            target_goal = 2.75
+            pts_needed = round(max(0.0, (target_goal * weights) - weighted), 2)
+            intervention.append({
+                "subject": sname,
+                "average": avg,
+                "count": cnt,
+                "total_entries": total_entries,
+                "deficit": round(target_goal - avg, 2),
+                "points_needed": pts_needed,
+                "reason": "Średnia poniżej 2.50 – bezpośrednie ryzyko oceny dopuszczającej lub niedostatecznej.",
+                "urgent_action": "Konieczna poprawa najniższych ocen lub zaliczenie prac klasowych, aby osiągnąć bezpieczny poziom 2.75+ (dostateczny).",
+            })
+
+        # 2. Sprawdzenie szans na wyższą ocenę (Quick Wins)
+        # Szukamy pierwszego progu powyżej średniej
+        next_threshold = None
+        for thresh, target_mark, label in grade_thresholds:
+            if avg < thresh:
+                next_threshold = (thresh, target_mark, label)
+                break
+
+        if next_threshold:
+            gap = round(next_threshold[0] - avg, 2)
+            if 0.0 < gap <= 0.20:
+                needed_w = 2.0
+                new_avg_with_5 = (weighted + 5.0 * needed_w) / (weights + needed_w)
+                remedy = "Wystarczy jedna ocena 5 (np. ze sprawdzianu lub kartkówki)" if new_avg_with_5 >= next_threshold[0] else "Potrzebna ocena 5 lub 6 o wadze min. 2-3"
+
+                quick_wins.append({
+                    "subject": sname,
+                    "average": avg,
+                    "count": cnt,
+                    "total_entries": total_entries,
+                    "gap": gap,
+                    "target_label": next_threshold[2],
+                    "threshold": next_threshold[0],
+                    "remedy": remedy,
+                })
+
+        # 3. Sprawdzenie zagrożenia spadkiem vs Bezpieczny bufor
+        prev_threshold = None
+        for thresh, _, label in reversed(grade_thresholds):
+            if avg >= thresh:
+                prev_threshold = (thresh, label)
+                break
+
+        if prev_threshold:
+            buffer = round(avg - prev_threshold[0], 2)
+            if buffer <= 0.12 and avg >= 2.50:
+                at_risk.append({
+                    "subject": sname,
+                    "average": avg,
+                    "count": cnt,
+                    "total_entries": total_entries,
+                    "buffer": buffer,
+                    "risk_label": prev_threshold[1],
+                    "threshold": prev_threshold[0],
+                    "warning": f"Margines bezpieczeństwa wynosi tylko +{buffer:.2f}. Jedna gorsza ocena może obniżyć ocenę.",
+                })
+            elif buffer > 0.12 and avg >= 2.50:
+                thresh_val = prev_threshold[0]
+                pts_buffer = round(weighted - thresh_val * weights, 2)
+                # Obliczamy maksymalną wagę jedynki (1), którą uczeń może otrzymać bez spadku poniżej progu
+                denom_1 = max(0.1, thresh_val - 1.0)
+                max_w1 = math.floor(pts_buffer / denom_1) if denom_1 > 0 else 0
+
+                is_preliminary = cnt <= 2 or weights < 3.0
+                if is_preliminary:
+                    test_w = 2.0
+                    avg_with_5 = round((weighted + 5.0 * test_w) / (weights + test_w), 2)
+                    avg_with_4 = round((weighted + 4.0 * test_w) / (weights + test_w), 2)
+                    prop_with_5, _ = get_predicted_grade_tuple(avg_with_5)
+                    prop_with_4, _ = get_predicted_grade_tuple(avg_with_4)
+
+                    cnt_label = f"{cnt} {'ocena cyfrowa' if cnt == 1 else 'oceny cyfrowe'}"
+                    if avg_with_5 < thresh_val:
+                        resilience_desc = f"Wstępna ocena (tylko {cnt_label}): brak stabilności! Ocena 5 ze sprawdzianu obniży stopień do {prop_with_5}"
+                    elif avg_with_4 < thresh_val:
+                        resilience_desc = f"Wstępna ocena (tylko {cnt_label}): wrażliwa – ocena 4 ze sprawdzianu obniży stopień do {prop_with_4}"
+                    else:
+                        resilience_desc = f"Wstępna ocena (tylko {cnt_label}) – każda nowa ocena mocno wpływa na średnią"
+                    resilience_weight = max_w1
+                    resilience_icon = "⏳"
+                    is_stable = False
+                elif max_w1 >= 3:
+                    resilience_desc = "Bardzo silna baza: wytrzyma nawet sprawdzian na 1 bez utraty oceny"
+                    resilience_weight = max_w1
+                    resilience_icon = "🛡️"
+                    is_stable = True
+                elif max_w1 >= 2:
+                    resilience_desc = "Stabilna ocena: wytrzyma ocenę 1 ze sprawdzianu/odpowiedzi bez spadku"
+                    resilience_weight = max_w1
+                    resilience_icon = "🛡️"
+                    is_stable = True
+                elif max_w1 >= 1:
+                    resilience_desc = "Dobra stabilność: wytrzyma jedynkę z kartkówki (waga 1)"
+                    resilience_weight = max_w1
+                    resilience_icon = "🛡️"
+                    is_stable = True
+                else:
+                    # Nie wytrzyma jedynki, sprawdzamy trójkę (3)
+                    denom_3 = max(0.1, thresh_val - 3.0)
+                    max_w3 = math.floor(pts_buffer / denom_3) if thresh_val > 3.0 and denom_3 > 0 else 0
+                    if max_w3 >= 2:
+                        resilience_desc = "Utrzyma ocenę przy trójce (3) ze sprawdzianu"
+                    else:
+                        resilience_desc = f"Solidny bufor (+{buffer:.2f} pkt), wymaga ocen na poziomie 4 lub wyższym"
+                    resilience_weight = 0
+                    resilience_icon = "🛡️"
+                    is_stable = True
+
+                safe.append({
+                    "subject": sname,
+                    "average": avg,
+                    "count": cnt,
+                    "total_entries": total_entries,
+                    "buffer": buffer,
+                    "current_label": prev_threshold[1],
+                    "threshold": thresh_val,
+                    "pts_buffer": pts_buffer,
+                    "resilience_weight": resilience_weight,
+                    "resilience_desc": resilience_desc,
+                    "resilience_icon": resilience_icon,
+                    "is_stable": is_stable,
+                    "is_preliminary": is_preliminary,
+                })
+        elif avg >= 2.50:
+            safe.append({
+                "subject": sname,
+                "average": avg,
+                "count": cnt,
+                "total_entries": total_entries,
+                "buffer": 0.0,
+                "current_label": "Ocena bazowa",
+                "threshold": 1.75,
+                "pts_buffer": 0.0,
+                "resilience_weight": 1,
+                "resilience_desc": "Ocena stabilna",
+                "resilience_icon": "🛡️",
+                "is_stable": True,
+                "is_preliminary": False,
+            })
+
+    # Sortowania
+    quick_wins.sort(key=lambda x: x['gap'])
+    at_risk.sort(key=lambda x: x['buffer'])
+    safe.sort(key=lambda x: x['average'], reverse=True)
+
+    return {
+        "quick_wins": quick_wins,
+        "at_risk": at_risk,
+        "drop_risks": at_risk,
+        "safe": safe,
+        "intervention": intervention,
+        "matrix_items": quick_wins + at_risk + safe + intervention,
+        "counts": {
+            "quick_wins": len(quick_wins),
+            "at_risk": len(at_risk),
+            "safe": len(safe),
+            "intervention": len(intervention),
+        },
+    }
+
+
+def compute_subject_stability_benchmark(
+    subject_averages: dict[str, dict[str, Any]] | list[dict[str, Any]],
+    grades_history: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Oblicza wskaźniki stabilności, rozrzutu ocen oraz porównanie lokomotyw i kotwic średniej."""
+    import math
+
+    if grades_history is None:
+        grades_history = []
+    if isinstance(subject_averages, list):
+        subject_averages = {
+            (item.get('subject') or item.get('name') or f'Item_{idx}'): item
+            for idx, item in enumerate(subject_averages)
+        }
+
+    # Grupowanie wartości ocen per przedmiot
+    grades_by_subject: dict[str, list[float]] = {}
+    for g in grades_history:
+        subj = g.get('subject') or g.get('name')
+        if not subj:
+            continue
+        raw_val = g.get('grade') or g.get('value')
+        clean_num = None
+        try:
+            m = re.search(r'([1-6])(?:\.0)?', str(raw_val))
+            if m:
+                clean_num = float(m.group(1))
+        except (ValueError, TypeError):
+            pass
+
+        if clean_num:
+            grades_by_subject.setdefault(subj, []).append(clean_num)
+
+    benchmark_list = []
+    for sname, sdata in subject_averages.items():
+        if sdata.get('is_excluded') or sdata.get('average') is None:
+            continue
+
+        avg = sdata['average']
+        vals = grades_by_subject.get(sname, [])
+
+        if len(vals) >= 2:
+            mean = sum(vals) / len(vals)
+            variance = sum((x - mean) ** 2 for x in vals) / len(vals)
+            std_dev = math.sqrt(variance)
+            min_g = min(vals)
+            max_g = max(vals)
+        elif vals:
+            std_dev = 0.0
+            min_g = vals[0]
+            max_g = vals[0]
+        else:
+            std_dev = 0.0
+            min_g = None
+            max_g = None
+
+        if std_dev < 0.60:
+            stability_tag = "Wysoka stabilność"
+            stability_status = "high"
+            stability_badge = "bg-emerald-50 text-emerald-700 border-emerald-200"
+            stability_desc = "Oceny bardzo wyrównane i przewidywalne."
+        elif std_dev <= 1.10:
+            stability_tag = "Umiarkowana"
+            stability_status = "moderate"
+            stability_badge = "bg-sky-50 text-sky-700 border-sky-200"
+            stability_desc = "Standardowe wahania ocen."
+        else:
+            stability_tag = "Duża zmienność"
+            stability_status = "low"
+            stability_badge = "bg-amber-50 text-amber-700 border-amber-200"
+            stability_desc = "Skrajny rozrzut ocen (huśtawka wyników)."
+
+        benchmark_list.append({
+            "subject": sname,
+            "average": avg,
+            "count": sdata.get('numeric_count', sdata.get('grades_count', sdata.get('count', 0))),
+            "std_dev": round(std_dev, 2),
+            "stdev": round(std_dev, 2),
+            "min_grade": min_g,
+            "max_grade": max_g,
+            "stability_tag": stability_tag,
+            "stability_status": stability_status,
+            "stability_badge": stability_badge,
+            "stability_desc": stability_desc,
+        })
+
+    # Sortowanie po średniej malejąco
+    benchmark_list.sort(key=lambda x: x['average'], reverse=True)
+
+    locomotives = benchmark_list[:3] if len(benchmark_list) >= 3 else benchmark_list
+    anchors = benchmark_list[-3:] if len(benchmark_list) >= 3 else []
+    anchors.reverse()
+
+    # Dane do wykresu słupkowego horyzontalnego
+    chart_labels = [b["subject"] for b in benchmark_list]
+    chart_values = [b["average"] for b in benchmark_list]
+
+    return {
+        "items": benchmark_list,
+        "benchmark_items": benchmark_list,
+        "subject_items": benchmark_list,
+        "locomotives": locomotives,
+        "anchors": anchors,
+        "chart": {
+            "labels": chart_labels,
+            "values": chart_values,
+        },
+        "bar_chart": {
+            "labels": chart_labels,
+            "values": chart_values,
+        },
+    }
+
 
 

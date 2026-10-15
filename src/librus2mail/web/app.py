@@ -52,8 +52,12 @@ from .services import (
     build_schedule_day_context,
     build_student_report_html,
     calculate_certificate_summary,
+    calculate_goal_optimizer,
     calculate_subject_averages,
     capture_action_execution,
+    compute_educational_profile,
+    compute_opportunity_matrix,
+    compute_subject_stability_benchmark,
     format_human_timestamp,
     get_active_student_login,
     get_storage,
@@ -270,7 +274,7 @@ def schedule_view():
 @web_bp.route('/oceny')
 @login_required
 def grades_view():
-    """Widok zestawienia ocen z kalkulatorem średniej."""
+    """Widok zestawienia ocen z kalkulatorem średniej i optymalizatorem celu."""
     config = request.app_config
     storage = request.app_storage
     active_login = get_active_student_login(config, storage, session_login=session.get('active_student_login'))
@@ -285,10 +289,22 @@ def grades_view():
     raw_tab = (request.args.get('tab') or '').strip().lower()
     if raw_tab in ('swiadectwo', 'świadectwo'):
         active_tab = 'swiadectwo'
-    elif raw_tab in ('symulator', 'simulator'):
-        active_tab = 'symulator'
+    elif raw_tab in ('optymalizator', 'cel', 'symulator', 'simulator'):
+        active_tab = 'optymalizator'
     else:
         active_tab = 'oceny'
+
+    target_param = request.args.get('target')
+    target_val = None
+    if target_param:
+        try:
+            target_val = float(str(target_param).replace(',', '.'))
+            if not (1.0 <= target_val <= 6.0):
+                target_val = None
+        except (ValueError, TypeError):
+            target_val = None
+
+    goal_optimizer = calculate_goal_optimizer(subject_averages, target_avg=target_val)
 
     return render_template(
         'web/grades.html',
@@ -297,6 +313,7 @@ def grades_view():
         certificate_summary=certificate_summary,
         active_tab=active_tab,
         excluded_subjects=excluded_subjects,
+        goal_optimizer=goal_optimizer,
     )
 
 
@@ -352,12 +369,13 @@ def messages_view():
 @web_bp.route('/raporty/<report_type>')
 @login_required
 def reports_view(report_type: str = 'podsumowanie'):
-    """Widok analityczny i motywacyjny z raportami postępów, ucznia i podsumowaniem."""
+    """Widok analityczny i motywacyjny z raportami postępów, ucznia, szans, profilu i stabilności."""
     config = request.app_config
     storage = request.app_storage
     active_login = get_active_student_login(config, storage, session_login=session.get('active_student_login'))
 
-    if report_type not in ('podsumowanie', 'postepy', 'uczen'):
+    valid_types = ('podsumowanie', 'postepy', 'uczen', 'szanse', 'profil', 'stabilnosc')
+    if report_type not in valid_types:
         report_type = 'podsumowanie'
 
     variant = request.args.get('variant', 'teens').strip().lower()
@@ -385,6 +403,26 @@ def reports_view(report_type: str = 'podsumowanie'):
 
     student_name = resolve_student_name(config, storage, active_login) if active_login else "Uczeń"
 
+    # Dane analityczne dla zaawansowanych raportów międzyprzedmiotowych
+    opportunities_data = None
+    profile_data = None
+    stability_data = None
+
+    if active_login and report_type in ('szanse', 'profil', 'stabilnosc'):
+        excluded_subjects = storage.get_excluded_certificate_subjects(active_login) if hasattr(storage, 'get_excluded_certificate_subjects') else []
+        all_subjects = storage.get_subjects(active_login) if hasattr(storage, 'get_subjects') else []
+        grades = storage.get_grades_history(active_login) if hasattr(storage, 'get_grades_history') else []
+        subject_averages = calculate_subject_averages(grades, excluded_subjects=excluded_subjects, all_subjects=all_subjects)
+
+        if report_type == 'szanse':
+            opportunities_data = compute_opportunity_matrix(subject_averages)
+        elif report_type == 'profil':
+            user_overrides = storage.get_subject_categories(active_login) if hasattr(storage, 'get_subject_categories') else {}
+            profile_data = compute_educational_profile(subject_averages, user_overrides=user_overrides)
+        elif report_type == 'stabilnosc':
+            stability_data = compute_subject_stability_benchmark(subject_averages, grades)
+
+    report_html = ""
     if not active_login:
         report_html = (
             '<div class="py-16 text-center bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">'
@@ -407,7 +445,7 @@ def reports_view(report_type: str = 'podsumowanie'):
             days=days,
             now=ref_now,
         )
-    else:  # uczen
+    elif report_type == 'uczen':
         report_html = build_student_report_html(
             storage=storage,
             login=active_login,
@@ -429,6 +467,9 @@ def reports_view(report_type: str = 'podsumowanie'):
         default_date_str=default_date_str,
         prev_date_str=prev_date_str,
         next_date_str=next_date_str,
+        opportunities_data=opportunities_data,
+        profile_data=profile_data,
+        stability_data=stability_data,
     )
 
 
@@ -568,6 +609,33 @@ def api_subject_toggle_certificate():
         })
 
     return jsonify({'success': False, 'message': 'Magazyn danych nie obsługuje wykluczania przedmiotów.'}), 500
+
+
+@web_bp.route('/api/subject/set-category', methods=['POST'])
+@login_required
+def api_subject_set_category():
+    """Zmienia kategorię edukacyjną przypisaną do przedmiotu."""
+    storage = request.app_storage
+    active_login = get_active_student_login(request.app_config, storage, session_login=session.get('active_student_login'))
+
+    data = request.get_json(silent=True) or {}
+    subject = (request.form.get('subject') or data.get('subject') or '').strip()
+    category = (request.form.get('category') or data.get('category') or '').strip().lower()
+
+    if not subject:
+        return jsonify({'success': False, 'message': 'Brak nazwy przedmiotu.'}), 400
+
+    if hasattr(storage, 'set_subject_category'):
+        updated_cats = storage.set_subject_category(active_login, subject, category_key=category)
+        return jsonify({
+            'success': True,
+            'subject': subject,
+            'category': category,
+            'categories': updated_cats,
+            'message': f'Zaktualizowano kategorię dla przedmiotu "{subject}".',
+        })
+
+    return jsonify({'success': False, 'message': 'Magazyn danych nie obsługuje kategorii przedmiotów.'}), 500
 
 
 @web_bp.route('/api/action/sync', methods=['POST'])

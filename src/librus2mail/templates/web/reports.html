@@ -321,7 +321,7 @@
                     <tr>
                         <th class="py-3 px-4">Przedmiot</th>
                         <th class="py-3 px-3 text-center">Średnia ważona</th>
-                        <th class="py-3 px-3 text-center">Liczba ocen</th>
+                        <th class="py-3 px-3 text-center" title="Liczba rzeczywistych ocen cząstkowych wliczanych do średniej">Liczba ocen</th>
                         <th class="py-3 px-3">Aktualna ocena</th>
                         <th class="py-3 px-3 text-center">Bufor nad progiem</th>
                         <th class="py-3 px-4">Miara stabilności (odporność)</th>
@@ -333,7 +333,12 @@
                     <tr class="hover:bg-slate-50/80 transition-colors">
                         <td class="py-3 px-4 font-bold text-slate-900">{{ item.subject }}</td>
                         <td class="py-3 px-3 text-center font-extrabold text-slate-800">{{ item.average }}</td>
-                        <td class="py-3 px-3 text-center text-slate-500">{{ item.count }}</td>
+                        <td class="py-3 px-3 text-center text-slate-500">
+                            <span class="font-bold text-slate-800">{{ item.count }}</span>
+                            {% if item.total_entries and item.total_entries > item.count %}
+                            <span class="text-[10px] text-slate-400 block" title="W tym znaki niebędące ocenami liczbowymi (np. plusy, minusy, nieprzygotowania)">(+{{ item.total_entries - item.count }} znaki)</span>
+                            {% endif %}
+                        </td>
                         <td class="py-3 px-3">
                             <span class="inline-flex items-center gap-1 font-semibold text-slate-800">
                                 <span>{{ item.current_label }}</span>
@@ -341,13 +346,13 @@
                             </span>
                         </td>
                         <td class="py-3 px-3 text-center">
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-extrabold {% if item.is_preliminary %}bg-amber-50 text-amber-800 border border-amber-200{% else %}bg-emerald-50 text-emerald-700 border border-emerald-200{% endif %}">
                                 +{{ item.buffer }} pkt
                             </span>
                         </td>
                         <td class="py-3 px-4 text-slate-600 font-medium">
-                            <span class="inline-flex items-center gap-1.5 text-xs text-emerald-800">
-                                <span>🛡️</span>
+                            <span class="inline-flex items-center gap-1.5 text-xs {% if item.is_preliminary %}text-amber-800 font-medium{% else %}text-emerald-800{% endif %}">
+                                <span>{{ item.resilience_icon|default('🛡️') }}</span>
                                 <span>{{ item.resilience_desc }}</span>
                             </span>
                         </td>

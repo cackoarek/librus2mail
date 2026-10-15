@@ -210,6 +210,7 @@ def calculate_subject_averages(
             'numeric_count': numeric_count,
             'average': avg,
             'sum_weights': sum_weights,
+            'sum_weighted': sum_weighted,
             'is_excluded': is_excluded,
         }
 
@@ -1617,7 +1618,9 @@ def compute_educational_profile(
     for sname, sdata in subject_averages.items():
         cat_key = classify_subject(sname, user_overrides=user_overrides)
         avg = sdata.get('average')
-        cnt = sdata.get('count', sdata.get('grades_count', 0))
+        cnt = sdata.get('numeric_count')
+        if cnt is None:
+            cnt = sdata.get('grades_count', sdata.get('count', 0))
 
         item = {
             "name": sname,
@@ -1784,7 +1787,7 @@ def calculate_goal_optimizer(
             "subject": sname,
             "current_average": s_avg,
             "sum_weights": s_weights,
-            "count": sdata.get('count', sdata.get('grades_count', 0)),
+            "count": sdata.get('numeric_count', sdata.get('grades_count', sdata.get('count', 0))),
             "sim_grade": new_g,
             "sim_weight": new_w,
             "subj_gain": round(subj_gain, 2),
@@ -1864,8 +1867,11 @@ def compute_opportunity_matrix(
             continue
 
         avg = sdata['average']
-        cnt = sdata.get('count', 0)
-        weights = max(1.0, float(sdata.get('sum_weights') or 1.0))
+        cnt = sdata.get('numeric_count')
+        if cnt is None:
+            cnt = sdata.get('grades_count', sdata.get('count', 0))
+        total_entries = sdata.get('count', cnt)
+        weights = max(0.1, float(sdata.get('sum_weights') or sdata.get('total_weight') or 1.0))
         weighted = float(sdata.get('sum_weighted') or (avg * weights))
 
         # 1. Sprawdzenie czy wymaga interwencji (bardzo niska średnia)
@@ -1876,6 +1882,7 @@ def compute_opportunity_matrix(
                 "subject": sname,
                 "average": avg,
                 "count": cnt,
+                "total_entries": total_entries,
                 "deficit": round(target_goal - avg, 2),
                 "points_needed": pts_needed,
                 "reason": "Średnia poniżej 2.50 – bezpośrednie ryzyko oceny dopuszczającej lub niedostatecznej.",
@@ -1901,6 +1908,7 @@ def compute_opportunity_matrix(
                     "subject": sname,
                     "average": avg,
                     "count": cnt,
+                    "total_entries": total_entries,
                     "gap": gap,
                     "target_label": next_threshold[2],
                     "threshold": next_threshold[0],
@@ -1921,6 +1929,7 @@ def compute_opportunity_matrix(
                     "subject": sname,
                     "average": avg,
                     "count": cnt,
+                    "total_entries": total_entries,
                     "buffer": buffer,
                     "risk_label": prev_threshold[1],
                     "threshold": prev_threshold[0],
@@ -1933,18 +1942,39 @@ def compute_opportunity_matrix(
                 denom_1 = max(0.1, thresh_val - 1.0)
                 max_w1 = math.floor(pts_buffer / denom_1) if denom_1 > 0 else 0
 
-                if cnt <= 2:
-                    resilience_desc = f"Wstępna ocena (tylko {cnt} {'ocena' if cnt == 1 else 'oceny'}) – każda nowa ocena mocno wpływa na średnią"
+                is_preliminary = cnt <= 2 or weights < 3.0
+                if is_preliminary:
+                    test_w = 2.0
+                    avg_with_5 = round((weighted + 5.0 * test_w) / (weights + test_w), 2)
+                    avg_with_4 = round((weighted + 4.0 * test_w) / (weights + test_w), 2)
+                    prop_with_5, _ = get_predicted_grade_tuple(avg_with_5)
+                    prop_with_4, _ = get_predicted_grade_tuple(avg_with_4)
+
+                    cnt_label = f"{cnt} {'ocena cyfrowa' if cnt == 1 else 'oceny cyfrowe'}"
+                    if avg_with_5 < thresh_val:
+                        resilience_desc = f"Wstępna ocena (tylko {cnt_label}): brak stabilności! Ocena 5 ze sprawdzianu obniży stopień do {prop_with_5}"
+                    elif avg_with_4 < thresh_val:
+                        resilience_desc = f"Wstępna ocena (tylko {cnt_label}): wrażliwa – ocena 4 ze sprawdzianu obniży stopień do {prop_with_4}"
+                    else:
+                        resilience_desc = f"Wstępna ocena (tylko {cnt_label}) – każda nowa ocena mocno wpływa na średnią"
                     resilience_weight = max_w1
+                    resilience_icon = "⏳"
+                    is_stable = False
                 elif max_w1 >= 3:
                     resilience_desc = "Bardzo silna baza: wytrzyma nawet sprawdzian na 1 bez utraty oceny"
                     resilience_weight = max_w1
+                    resilience_icon = "🛡️"
+                    is_stable = True
                 elif max_w1 >= 2:
                     resilience_desc = "Stabilna ocena: wytrzyma ocenę 1 ze sprawdzianu/odpowiedzi bez spadku"
                     resilience_weight = max_w1
+                    resilience_icon = "🛡️"
+                    is_stable = True
                 elif max_w1 >= 1:
                     resilience_desc = "Dobra stabilność: wytrzyma jedynkę z kartkówki (waga 1)"
                     resilience_weight = max_w1
+                    resilience_icon = "🛡️"
+                    is_stable = True
                 else:
                     # Nie wytrzyma jedynki, sprawdzamy trójkę (3)
                     denom_3 = max(0.1, thresh_val - 3.0)
@@ -1954,29 +1984,39 @@ def compute_opportunity_matrix(
                     else:
                         resilience_desc = f"Solidny bufor (+{buffer:.2f} pkt), wymaga ocen na poziomie 4 lub wyższym"
                     resilience_weight = 0
+                    resilience_icon = "🛡️"
+                    is_stable = True
 
                 safe.append({
                     "subject": sname,
                     "average": avg,
                     "count": cnt,
+                    "total_entries": total_entries,
                     "buffer": buffer,
                     "current_label": prev_threshold[1],
                     "threshold": thresh_val,
                     "pts_buffer": pts_buffer,
                     "resilience_weight": resilience_weight,
                     "resilience_desc": resilience_desc,
+                    "resilience_icon": resilience_icon,
+                    "is_stable": is_stable,
+                    "is_preliminary": is_preliminary,
                 })
         elif avg >= 2.50:
             safe.append({
                 "subject": sname,
                 "average": avg,
                 "count": cnt,
+                "total_entries": total_entries,
                 "buffer": 0.0,
                 "current_label": "Ocena bazowa",
                 "threshold": 1.75,
                 "pts_buffer": 0.0,
                 "resilience_weight": 1,
                 "resilience_desc": "Ocena stabilna",
+                "resilience_icon": "🛡️",
+                "is_stable": True,
+                "is_preliminary": False,
             })
 
     # Sortowania
@@ -2075,7 +2115,7 @@ def compute_subject_stability_benchmark(
         benchmark_list.append({
             "subject": sname,
             "average": avg,
-            "count": sdata.get('count', sdata.get('grades_count', 0)),
+            "count": sdata.get('numeric_count', sdata.get('grades_count', sdata.get('count', 0))),
             "std_dev": round(std_dev, 2),
             "stdev": round(std_dev, 2),
             "min_grade": min_g,

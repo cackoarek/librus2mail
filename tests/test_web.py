@@ -1712,6 +1712,24 @@ class TestWebDashboard(unittest.TestCase):
         interv_subjects = [i['subject'] for i in matrix['intervention']]
         self.assertIn('Fizyka', interv_subjects)
 
+        # Test małej próby i znaków nieliczbowych (np. Historia z 1 oceną 6 i 2 plusami)
+        historia_case = [
+            {
+                'subject': 'Historia',
+                'average': 6.0,
+                'sum_weights': 1.0,
+                'numeric_count': 1,
+                'count': 3,  # 1 ocena + 2 plusy
+            }
+        ]
+        hist_matrix = compute_opportunity_matrix(historia_case)
+        hist_safe = next(s for s in hist_matrix['safe'] if s['subject'] == 'Historia')
+        self.assertEqual(hist_safe['count'], 1)
+        self.assertEqual(hist_safe['total_entries'], 3)
+        self.assertTrue(hist_safe['is_preliminary'])
+        self.assertEqual(hist_safe['resilience_icon'], '⏳')
+        self.assertIn('brak stabilności', hist_safe['resilience_desc'])
+
     def test_subject_stability_benchmark(self):
         """Testuje Porównanie i Stabilność Przedmiotów (odchylenie standardowe, lokomotywy, kotwice)."""
         history = [

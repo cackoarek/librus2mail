@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="25442d45b25597ef5a3c01058427cb2de5407b4499047d1e60cf12a6eb603c98">
     <title>Kreator Konfiguracji - Librus2mail - Librus2mail</title>
     <!-- Favicon z logo Librus2mail (gradient indigo-sky + 🏫) -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%25%22%20y1%3D%22100%25%22%20x2%3D%22100%25%22%20y2%3D%220%25%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%234f46e5%22/%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%230ea5e9%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2216%22%20fill%3D%22url%28%23g%29%22/%3E%3Ctext%20x%3D%2232%22%20y%3D%2234%22%20font-size%3D%2234%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%F0%9F%8F%AB%3C/text%3E%3C/svg%3E">
@@ -10,6 +11,25 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- HTMX CDN -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script>
+        // Automatyczne dołączanie tokenu CSRF do wszystkich zapytań fetch
+        (function() {
+            const _origFetch = window.fetch;
+            window.fetch = function(url, options) {
+                options = options || {};
+                options.headers = options.headers || {};
+                const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                if (token) {
+                    if (options.headers instanceof Headers) {
+                        if (!options.headers.has('X-CSRFToken')) options.headers.set('X-CSRFToken', token);
+                    } else if (!options.headers['X-CSRFToken'] && !options.headers['x-csrftoken']) {
+                        options.headers['X-CSRFToken'] = token;
+                    }
+                }
+                return _origFetch(url, options);
+            };
+        })();
+    </script>
     <!-- Inter Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,7 +42,7 @@
     </style>
     
 </head>
-<body class="h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white">
+<body class="h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white" hx-headers='{"X-CSRFToken": "25442d45b25597ef5a3c01058427cb2de5407b4499047d1e60cf12a6eb603c98"}'>
 
     <!-- Pasek nawigacyjny -->
     <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
@@ -65,7 +85,7 @@
                            class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
                             ✉️ Wiadomości
                         </a>
-                        <a href="web_raporty_postepy.html"
+                        <a href="web_raporty_podsumowanie.html"
                            class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
                             📈 Raporty
                         </a>
@@ -87,7 +107,7 @@
                         
                         <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-lg text-xs font-semibold text-slate-700 border border-slate-200">
                             <span>👤</span>
-                            <span>Jan Kowalski (Przykładowy Uczeń) (8979296)</span>
+                            <span>Jan Kowalski (8979296)</span>
                         </div>
                         
 
@@ -111,7 +131,7 @@
             <a href="web_oceny.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📝 Oceny</a>
             <a href="web_terminarz.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">🔔 Terminarz</a>
             <a href="web_wiadomosci.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">✉️ Wiadomości</a>
-            <a href="web_raporty_postepy.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📈 Raporty</a>
+            <a href="web_raporty_podsumowanie.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📈 Raporty</a>
             <a href="web_akcje.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">⚡ Akcje</a>
             <a href="web_ustawienia.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">⚙️ Ustawienia</a>
         </div>
@@ -186,6 +206,7 @@
     <!-- Główny Formularz Konfiguratora -->
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
         <form id="wizard-form" method="POST" action="/setup" class="space-y-6" novalidate>
+            <input type="hidden" name="csrf_token" value="25442d45b25597ef5a3c01058427cb2de5407b4499047d1e60cf12a6eb603c98">
 
             <!-- ================================================================= -->
             <!-- KROK 1: KONTA DZIECI W LIBRUSIE -->
@@ -263,6 +284,11 @@
                                 <label class="inline-flex items-center gap-1.5 cursor-pointer" title="Wiadomości w Librusie zostaną oznaczone jako przeczytane">
                                     <input type="checkbox" name="student_messages_0" checked class="rounded text-indigo-600 focus:ring-indigo-500">
                                     <span>Wiadomości</span>
+                                </label>
+                                <label class="inline-flex items-center gap-1.5 cursor-pointer" title="Konsoliduje oceny, wiadomości, ogłoszenia i terminarz w jeden wspólny e-mail (one_summary_message)">
+                                    <input type="hidden" name="student_one_summary_present_0" value="1">
+                                    <input type="checkbox" name="student_one_summary_0" id="student_one_summary_0" checked class="student-summary-checkbox rounded text-indigo-600 focus:ring-indigo-500">
+                                    <span class="font-semibold text-indigo-900">📦 Zbiorczy e-mail (wszystko w jednym)</span>
                                 </label>
                             </div>
 
@@ -434,6 +460,32 @@
 
                 <div id="gmail-oauth-tip-box" class="hidden mt-4 p-4 bg-indigo-50 border border-indigo-200 rounded-xl text-xs text-indigo-900">
                     🛡️ <strong>Wskazówka OAuth2:</strong> Wskaż ścieżkę do pliku JSON (np. <code>yagmail_client.json</code>) zawierającego wygenerowane dane dostępowe Google OAuth2 (<code>client_id</code>, <code>client_secret</code>, <code>refresh_token</code>). W tym trybie hasło do konta nie jest wymagane.
+                </div>
+
+                <!-- Format powiadomień e-mail (wszystko w jednym vs osobne) -->
+                <div class="mt-6 pt-5 border-t border-slate-100">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-2">
+                        Format i organizacja powiadomień e-mail (one_summary_message)
+                    </label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <label class="summary-mode-radio flex items-start gap-3 p-4 border-2 border-indigo-600 bg-indigo-50/40 rounded-2xl cursor-pointer transition">
+                            <input type="radio" name="one_summary_message" value="1" checked onchange="toggleSummaryMode()"
+                                   class="mt-1 text-indigo-600 focus:ring-indigo-500">
+                            <div>
+                                <span class="block text-sm font-extrabold text-slate-900">📦 Wszystko w jednym e-mailu (zalecane)</span>
+                                <span class="block text-xs text-slate-600 mt-0.5">Wysyła jedno zbiorcze powiadomienie łączące nowe oceny, wiadomości i ogłoszenia ze szkoły.</span>
+                            </div>
+                        </label>
+
+                        <label class="summary-mode-radio flex items-start gap-3 p-4 border-2 border-slate-200 bg-white rounded-2xl cursor-pointer transition">
+                            <input type="radio" name="one_summary_message" value="0" onchange="toggleSummaryMode()"
+                                   class="mt-1 text-indigo-600 focus:ring-indigo-500">
+                            <div>
+                                <span class="block text-sm font-extrabold text-slate-900">📨 Osobne e-maile dla każdej kategorii</span>
+                                <span class="block text-xs text-slate-600 mt-0.5">Wysyła osobny e-mail o nowych ocenach, osobny o wiadomościach i osobny o ogłoszeniach.</span>
+                            </div>
+                        </label>
+                    </div>
                 </div>
             </div>
 
@@ -838,11 +890,6 @@
 
                 <div class="mt-4 pt-4 border-t border-slate-100 flex flex-wrap gap-6 text-xs font-medium text-slate-700 mb-6">
                     <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" name="do_not_send_first_parse" checked class="rounded text-indigo-600 focus:ring-indigo-500">
-                        <span><strong>Tryb pierwszego startu:</strong> Ustal aktualny stan jako bazę i nie wysyłaj maili o historii</span>
-                    </label>
-
-                    <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" name="send_error_notifications" checked class="rounded text-indigo-600 focus:ring-indigo-500">
                         <span>Wysyłaj e-mail z alertem w razie awarii połączenia ze szkołą</span>
                     </label>
@@ -1135,6 +1182,22 @@ function toggleMailProvider() {
     }
 }
 
+function toggleSummaryMode() {
+    const isOneSummary = document.querySelector('input[name="one_summary_message"]:checked')?.value === '1';
+    document.querySelectorAll('.summary-mode-radio').forEach(label => {
+        const radio = label.querySelector('input[type="radio"]');
+        if (radio && radio.checked) {
+            label.className = "summary-mode-radio flex items-start gap-3 p-4 border-2 border-indigo-600 bg-indigo-50/40 rounded-2xl cursor-pointer transition";
+        } else {
+            label.className = "summary-mode-radio flex items-start gap-3 p-4 border-2 border-slate-200 bg-white rounded-2xl cursor-pointer transition";
+        }
+    });
+    // Synchronizuj checkboxy na kartach uczniów
+    document.querySelectorAll('.student-summary-checkbox').forEach(cb => {
+        cb.checked = isOneSummary;
+    });
+}
+
 function addStudentCard() {
     const idx = studentCount;
     const container = document.getElementById('students-container');
@@ -1198,6 +1261,11 @@ function addStudentCard() {
                 <label class="inline-flex items-center gap-1.5 cursor-pointer">
                     <input type="checkbox" name="student_messages_${idx}" checked class="rounded text-indigo-600 focus:ring-indigo-500">
                     <span>Wiadomości</span>
+                </label>
+                <label class="inline-flex items-center gap-1.5 cursor-pointer" title="Konsoliduje oceny, wiadomości, ogłoszenia i terminarz w jeden wspólny e-mail (one_summary_message)">
+                    <input type="hidden" name="student_one_summary_present_${idx}" value="1">
+                    <input type="checkbox" name="student_one_summary_${idx}" id="student_one_summary_${idx}" checked class="student-summary-checkbox rounded text-indigo-600 focus:ring-indigo-500">
+                    <span class="font-semibold text-indigo-900">📦 Zbiorczy e-mail (wszystko w jednym)</span>
                 </label>
             </div>
             <div>
@@ -1559,12 +1627,12 @@ document.addEventListener('DOMContentLoaded', () => {
     <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500">
         <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div class="flex items-center gap-2 font-medium">
-                <span>🏫 Librus2mail v2.1.0</span>
+                <span>🏫 Librus2mail v2.3.0</span>
                 <span>•</span>
                 <span>Prywatny Dashboard Rodzica</span>
             </div>
             <div class="text-slate-400 text-[11px]">
-                Bezpieczny odczyt z lokalnej pamięci <code>storage/</code> • Stan na: 08.10.2026 07:44
+                Bezpieczny odczyt z lokalnej pamięci <code>storage/</code> • Stan na: 15.10.2026 21:33
             </div>
         </div>
     </footer>

@@ -64,7 +64,11 @@
     "1036",
     "1037",
     "1038",
-    "1039"
+    "1039",
+    "1040",
+    "1041",
+    "1042",
+    "1043"
   ],
   "last_error": {
     "error": "HTTPError: HTTP 403: Forbidden",
@@ -540,6 +544,54 @@
       "comment": "brak stroju sportowego",
       "added_at": "2026-09-17T10:00:00",
       "href": "/przegladaj_oceny/szczegoly/1039"
+    },
+    "1040": {
+      "id": "1040",
+      "subject": "Matematyka",
+      "grade": "4+",
+      "weight": "2",
+      "category": "Odpowiedź",
+      "date": "2026-09-07 (pon.)",
+      "teacher": "Renata Matyk",
+      "comment": "własności liczb naturalnych i podzielność",
+      "added_at": "2026-09-07T10:00:00",
+      "href": "/przegladaj_oceny/szczegoly/1040"
+    },
+    "1041": {
+      "id": "1041",
+      "subject": "Matematyka",
+      "grade": "6",
+      "weight": "1",
+      "category": "Praca na lekcji",
+      "date": "2026-09-10 (czw.)",
+      "teacher": "Renata Matyk",
+      "comment": "rozwiązanie zadania z gwiazdką na tablicy",
+      "added_at": "2026-09-10T10:00:00",
+      "href": "/przegladaj_oceny/szczegoly/1041"
+    },
+    "1042": {
+      "id": "1042",
+      "subject": "Matematyka",
+      "grade": "3+",
+      "weight": "2",
+      "category": "Kartkówka",
+      "date": "2026-09-11 (pt.)",
+      "teacher": "Renata Matyk",
+      "comment": "kolejność działań i nawiasy kwadratowe",
+      "added_at": "2026-09-11T10:00:00",
+      "href": "/przegladaj_oceny/szczegoly/1042"
+    },
+    "1043": {
+      "id": "1043",
+      "subject": "Matematyka",
+      "grade": "5",
+      "weight": "2",
+      "category": "Projekt",
+      "date": "2026-09-18 (pt.)",
+      "teacher": "Renata Matyk",
+      "comment": "plakat: geometria i symetria w architekturze",
+      "added_at": "2026-09-18T10:00:00",
+      "href": "/przegladaj_oceny/szczegoly/1043"
     }
   },
   "last_progress_report_date": "2026-09-19T09:54:36.910857",

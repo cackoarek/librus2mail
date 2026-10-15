@@ -87,6 +87,39 @@ class TestDateUtils:
         d = date(2026, 9, 16)
         assert parse_datetime_safe(d) == datetime(2026, 9, 16, 0, 0, 0)
 
+    def test_parse_datetime_safe_numeric_timestamp(self):
+        # 1789569600 to timestamp dla 2026-09-16 14:40:00 UTC
+        ts_sec = 1789569600
+        dt_int = parse_datetime_safe(ts_sec)
+        assert dt_int is not None
+        assert dt_int.year == 2026
+
+        # Milisekundy
+        ts_ms = ts_sec * 1000
+        dt_ms = parse_datetime_safe(ts_ms)
+        assert dt_ms is not None
+        assert dt_ms.year == 2026
+
+        # String z timestampem
+        dt_str = parse_datetime_safe(str(ts_sec))
+        assert dt_str is not None
+        assert dt_str.year == 2026
+
+    def test_parse_datetime_safe_alternative_separators(self):
+        # Format z ukośnikami
+        dt_slash1 = parse_datetime_safe("2026/09/16 15:30:00")
+        assert dt_slash1 == datetime(2026, 9, 16, 15, 30, 0)
+
+        dt_slash2 = parse_datetime_safe("16/09/2026 15:30")
+        assert dt_slash2 == datetime(2026, 9, 16, 15, 30, 0)
+
+        dt_slash3 = parse_datetime_safe("2026/09/16")
+        assert dt_slash3 == datetime(2026, 9, 16, 0, 0, 0)
+
+        # Format z kropkami YYYY.MM.DD
+        dt_dot = parse_datetime_safe("2026.09.16 12:00")
+        assert dt_dot == datetime(2026, 9, 16, 12, 0, 0)
+
     def test_parse_datetime_safe_invalid_string(self):
         assert parse_datetime_safe("to-nie-jest-data") is None
         assert parse_datetime_safe("9999-99-99") is None
@@ -96,6 +129,9 @@ class TestDateUtils:
         assert parse_date_safe("2026-09-16T15:39:20Z") == date(2026, 9, 16)
         assert parse_date_safe("2026-09-16") == date(2026, 9, 16)
         assert parse_date_safe("16.09.2026") == date(2026, 9, 16)
+        assert parse_date_safe("2026/09/16") == date(2026, 9, 16)
         assert parse_date_safe("2026-09-11 (pt.)") == date(2026, 9, 11)
         assert parse_date_safe(datetime(2026, 9, 16, 12, 0)) == date(2026, 9, 16)
         assert parse_date_safe(date(2026, 9, 16)) == date(2026, 9, 16)
+        assert parse_date_safe(1789569600) == date(2026, 9, 16)
+

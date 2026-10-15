@@ -3,6 +3,7 @@
 import io
 import logging
 import os
+import statistics
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from typing import Any
@@ -12,6 +13,7 @@ from librus2mail.mail_sender import MailSender
 from librus2mail.progress_analyzer import (
     ProgressAnalyzer,
     get_predicted_grade_tuple,
+    parse_grade_date,
     parse_numeric_grade,
     parse_weight,
 )
@@ -228,6 +230,639 @@ GRADE_WORDS = {
     2: "dopuszczający",
     1: "niedostateczny",
 }
+
+THRESHOLD_MAP = {
+    6: 5.51,
+    5: 4.75,
+    4: 3.75,
+    3: 2.75,
+    2: 1.75,
+    1: 0.00,
+}
+
+
+def _compute_target_analysis(
+    current_avg: float | None,
+    current_sum_weighted: float,
+    current_sum_weights: float,
+    current_grade_num: int | None,
+) -> dict[str, Any]:
+    """Wylicza analizę możliwości podwyższenia oceny końcowej na kolejny stopień."""
+    if current_avg is None or current_grade_num is None:
+        return {
+            'has_target': False,
+            'is_max': False,
+            'message': 'Brak ocen liczbowych do wyznaczenia celu.',
+            'scenarios': [],
+        }
+
+    if current_grade_num >= 6:
+        return {
+            'has_target': False,
+            'is_max': True,
+            'target_grade_num': 6,
+            'target_grade_label': "6 (celujący)",
+            'message': "Uczeń osiągnął już najwyższą możliwą ocenę celującą (6)! 🎉",
+            'scenarios': [],
+        }
+
+    target_grade_num = current_grade_num + 1
+    target_threshold = THRESHOLD_MAP.get(target_grade_num, 4.75)
+    target_word = GRADE_WORDS.get(target_grade_num, "")
+    target_label = f"{target_grade_num} ({target_word})"
+    gap = max(0.0, round(target_threshold - current_avg, 2))
+
+    scenarios: list[dict[str, Any]] = []
+    # 1. Scenariusze pojedynczej oceny o wagach 1, 2, 3, 4
+    for w in (1.0, 2.0, 3.0, 4.0):
+        needed_val = (target_threshold * (current_sum_weights + w) - current_sum_weighted) / w
+        if needed_val <= 6.0:
+            if needed_val <= 4.75:
+                desc = f"1x ocena 5 lub wyższa przy wadze {int(w)}"
+            elif needed_val <= 5.0:
+                desc = f"1x ocena 5 przy wadze {int(w)}"
+            elif needed_val <= 5.5:
+                desc = f"1x ocena 5+ lub 6 przy wadze {int(w)}"
+            else:
+                desc = f"1x ocena 6 (celujący) przy wadze {int(w)}"
+
+            new_avg_sample = round((current_sum_weighted + max(needed_val, 5.0) * w) / (current_sum_weights + w), 2)
+            scenarios.append({
+                'type': 'single',
+                'weight': int(w),
+                'needed_grade_raw': round(needed_val, 2),
+                'description': desc,
+                'sample_result_avg': new_avg_sample,
+            })
+
+    # 2. Scenariusze dwóch ocen (np. dwie piątki ze sprawdzianów o wadze 2 lub 3)
+    for w in (2.0, 3.0):
+        new_w = w * 2
+        new_sum = current_sum_weighted + (5.0 * w * 2)
+        sim_avg = round(new_sum / (current_sum_weights + new_w), 2)
+        if sim_avg >= target_threshold:
+            scenarios.append({
+                'type': 'multi',
+                'weight': int(w),
+                'needed_grade_raw': 5.0,
+                'description': f"2x ocena 5 (bardzo dobry) o wadze {int(w)} każda",
+                'sample_result_avg': sim_avg,
+            })
+
+    # Ocena trudności osiągnięcia celu
+    if any(s['weight'] <= 2 and s.get('needed_grade_raw', 99) <= 5.0 for s in scenarios if s['type'] == 'single'):
+        difficulty = "easy"
+        difficulty_label = "Łatwy cel (wystarczy dobra kartkówka lub odpowiedź)"
+    elif any(s.get('needed_grade_raw', 99) <= 5.5 for s in scenarios if s['type'] == 'single'):
+        difficulty = "realistic"
+        difficulty_label = "Realny cel (wymaga b. dobrej oceny ze sprawdzianu)"
+    elif scenarios:
+        difficulty = "challenging"
+        difficulty_label = "Wymagający cel (wymaga maksymalnej oceny lub dwóch sprawdzianów)"
+    else:
+        difficulty = "hard"
+        difficulty_label = "Bardzo trudny cel (wymaga serii bardzo dobrych ocen)"
+
+    return {
+        'has_target': True,
+        'is_max': False,
+        'target_grade_num': target_grade_num,
+        'target_grade_label': target_label,
+        'target_threshold': target_threshold,
+        'gap': gap,
+        'difficulty': difficulty,
+        'difficulty_label': difficulty_label,
+        'scenarios': scenarios,
+    }
+
+
+def _compute_risk_analysis(
+    current_avg: float | None,
+    current_sum_weighted: float,
+    current_sum_weights: float,
+    current_grade_num: int | None,
+) -> dict[str, Any]:
+    """Wylicza margines bezpieczeństwa oraz ryzyko obniżenia oceny końcowej na niższy stopień."""
+    if current_avg is None or current_grade_num is None:
+        return {
+            'has_risk': False,
+            'is_min': False,
+            'safety_margin': None,
+            'message': 'Brak ocen liczbowych do oceny ryzyka.',
+            'drop_simulations': [],
+        }
+
+    if current_grade_num <= 1:
+        return {
+            'has_risk': True,
+            'is_min': True,
+            'safety_margin': 0.0,
+            'risk_level': 'critical',
+            'risk_label': 'Zagrożenie oceną niedostateczną (1)',
+            'message': 'Bieżąca średnia wskazuje na ocenę niedostateczną (1). Wymagana pilna poprawa.',
+            'drop_simulations': [],
+        }
+
+    current_threshold = THRESHOLD_MAP.get(current_grade_num, 1.75)
+    lower_grade_num = current_grade_num - 1
+    lower_word = GRADE_WORDS.get(lower_grade_num, "")
+    lower_label = f"{lower_grade_num} ({lower_word})"
+
+    safety_margin = round(current_avg - current_threshold, 2)
+
+    if safety_margin < 0.10:
+        risk_level = 'critical'
+        risk_label = 'Wysokie ryzyko spadku (na granicy progu)'
+    elif safety_margin < 0.25:
+        risk_level = 'moderate'
+        risk_label = 'Umiarkowane ryzyko spadku'
+    else:
+        risk_level = 'safe'
+        risk_label = 'Stabilny margines bezpieczeństwa'
+
+    # Symulacje negatywnych zdarzeń (co jeśli uczeń dostanie słabą ocenę):
+    drop_simulations: list[dict[str, Any]] = []
+    for test_grade, test_w in [(1.0, 1.0), (1.0, 3.0), (2.0, 2.0)]:
+        new_w = current_sum_weights + test_w
+        new_sum = current_sum_weighted + (test_grade * test_w)
+        sim_avg = round(new_sum / new_w, 2)
+        sim_grade_num, sim_grade_label = get_predicted_grade_tuple(sim_avg)
+        causes_drop = sim_grade_num < current_grade_num
+        drop_simulations.append({
+            'test_grade': int(test_grade),
+            'test_weight': int(test_w),
+            'sim_avg': sim_avg,
+            'diff': round(sim_avg - current_avg, 2),
+            'causes_drop': causes_drop,
+            'sim_grade_num': sim_grade_num,
+            'sim_grade_label': sim_grade_label,
+            'desc': (
+                f"Ocena {int(test_grade)} z wagą {int(test_w)} obniży średnią do {sim_avg}"
+                + (f" ⚠️ (spadek do {sim_grade_label})!" if causes_drop else f" (nadal bezpieczna ocena {current_grade_num})")
+            ),
+        })
+
+    return {
+        'has_risk': True,
+        'is_min': False,
+        'current_threshold': current_threshold,
+        'lower_grade_num': lower_grade_num,
+        'lower_grade_label': lower_label,
+        'safety_margin': safety_margin,
+        'risk_level': risk_level,
+        'risk_label': risk_label,
+        'drop_simulations': drop_simulations,
+    }
+
+
+def _compute_category_analytics(
+    matching_grades: list[dict[str, Any]],
+    total_sum_weights: float,
+) -> dict[str, Any]:
+    """Wylicza skuteczność ucznia w rozbiciu na poszczególne kategorie prac (sprawdziany, kartkówki itp.)."""
+    cat_map: dict[str, dict[str, Any]] = {}
+
+    for g in matching_grades:
+        num_val = parse_numeric_grade(g.get('grade'))
+        raw_w = parse_weight(g.get('weight'))
+        eff_w = raw_w if (raw_w is not None and raw_w > 0) else (1.0 if num_val is not None else 0.0)
+
+        raw_cat = str(g.get('category') or '').strip()
+        cat_name = raw_cat if raw_cat else 'Inne / Bieżące'
+
+        if cat_name not in cat_map:
+            cat_map[cat_name] = {
+                'name': cat_name,
+                'grades_count': 0,
+                'numeric_count': 0,
+                'sum_weighted': 0.0,
+                'sum_weights': 0.0,
+                'grades_list': [],
+            }
+
+        cat_map[cat_name]['grades_count'] += 1
+        if num_val is not None:
+            cat_map[cat_name]['numeric_count'] += 1
+            cat_map[cat_name]['sum_weighted'] += num_val * eff_w
+            cat_map[cat_name]['sum_weights'] += eff_w
+            cat_map[cat_name]['grades_list'].append(num_val)
+
+    items: list[dict[str, Any]] = []
+    for cat_name, data in cat_map.items():
+        w_avg = round(data['sum_weighted'] / data['sum_weights'], 2) if data['sum_weights'] > 0 else None
+        a_avg = round(sum(data['grades_list']) / data['numeric_count'], 2) if data['numeric_count'] > 0 else None
+        share = round((data['sum_weights'] / total_sum_weights) * 100, 1) if total_sum_weights > 0 else 0.0
+
+        items.append({
+            'name': cat_name,
+            'grades_count': data['grades_count'],
+            'numeric_count': data['numeric_count'],
+            'sum_weights': round(data['sum_weights'], 2),
+            'weighted_average': w_avg,
+            'arithmetic_average': a_avg,
+            'weight_share': share,
+        })
+
+    # Sortujemy: najpierw te ze średnią ważoną wg sumy wag malejąco
+    items.sort(key=lambda x: (x['weighted_average'] is not None, x['sum_weights'], x['grades_count']), reverse=True)
+
+    radar_labels: list[str] = []
+    radar_averages: list[float] = []
+    radar_counts: list[int] = []
+    for it in items:
+        if it['weighted_average'] is not None:
+            radar_labels.append(it['name'])
+            radar_averages.append(it['weighted_average'])
+            radar_counts.append(it['grades_count'])
+
+    best_cat = max((it for it in items if it['weighted_average'] is not None), key=lambda x: x['weighted_average'], default=None)
+    worst_cat = min((it for it in items if it['weighted_average'] is not None), key=lambda x: x['weighted_average'], default=None)
+
+    insight = ""
+    if best_cat and worst_cat and best_cat['name'] != worst_cat['name']:
+        diff = round(best_cat['weighted_average'] - worst_cat['weighted_average'], 2)
+        if diff >= 0.75:
+            insight = (
+                f"Wyraźna dysproporcja: najlepsze wyniki w '{best_cat['name']}' (śr. {best_cat['weighted_average']}), "
+                f"a największe wyzwanie to '{worst_cat['name']}' (śr. {worst_cat['weighted_average']}). Różnica wynosi aż {diff} pkt."
+            )
+        else:
+            insight = f"Zrównoważona forma w różnych formach sprawdzania wiedzy (średnie od {worst_cat['weighted_average']} do {best_cat['weighted_average']})."
+    elif best_cat:
+        insight = f"Oceny skupione głównie w kategorii '{best_cat['name']}' ze średnią {best_cat['weighted_average']}."
+
+    return {
+        'has_data': bool(items),
+        'categories': items,
+        'radar_labels': radar_labels,
+        'radar_averages': radar_averages,
+        'radar_counts': radar_counts,
+        'best_category': best_cat,
+        'worst_category': worst_cat,
+        'insight': insight,
+    }
+
+
+def _compute_impact_analysis(
+    timeline_data: list[dict[str, Any]],
+    current_avg: float | None,
+    current_sum_weighted: float,
+    current_sum_weights: float,
+) -> dict[str, Any]:
+    """Wylicza wpływ poszczególnych ocen na średnią: lokomotywy (ciągnące w górę) i kotwice (ściągające w dół)."""
+    if current_avg is None or current_sum_weights <= 0:
+        return {'boosters': [], 'draggers': [], 'has_data': False}
+
+    impacted: list[dict[str, Any]] = []
+
+    for item in timeline_data:
+        num_val = item.get('numeric_grade')
+        w = float(item.get('weight') or 1.0)
+        if num_val is None or w <= 0:
+            continue
+
+        without_weights = current_sum_weights - w
+        without_weighted = current_sum_weighted - (num_val * w)
+
+        if without_weights > 0:
+            avg_without = round(without_weighted / without_weights, 2)
+            delta = round(current_avg - avg_without, 2)
+        else:
+            avg_without = current_avg
+            delta = 0.0
+
+        # Kalkulacja zysku przy poprawie oceny na 5 (bdb) lub 4 (db)
+        sum_with_5 = (current_sum_weighted - (num_val * w)) + (5.0 * w)
+        sim_avg_if_5 = round(sum_with_5 / current_sum_weights, 2)
+        gain_if_5 = round(sim_avg_if_5 - current_avg, 2)
+
+        sum_with_4 = (current_sum_weighted - (num_val * w)) + (4.0 * w)
+        sim_avg_if_4 = round(sum_with_4 / current_sum_weights, 2)
+        gain_if_4 = round(sim_avg_if_4 - current_avg, 2)
+
+        impacted.append({
+            'id': item.get('id'),
+            'grade': item.get('grade'),
+            'numeric_grade': num_val,
+            'weight': w,
+            'category': item.get('category'),
+            'date': item.get('date'),
+            'comment': item.get('comment'),
+            'teacher': item.get('teacher'),
+            'delta': delta,
+            'avg_without': avg_without,
+            'gain_if_5': gain_if_5,
+            'gain_if_4': gain_if_4,
+            'sim_avg_if_5': sim_avg_if_5,
+            'sim_avg_if_4': sim_avg_if_4,
+        })
+
+    # Sortujemy:
+    # Lokomotywy (boosters): delta > 0, malejąco
+    boosters = sorted([x for x in impacted if x['delta'] > 0], key=lambda x: x['delta'], reverse=True)[:3]
+    # Kotwice (draggers): delta < 0, rosnąco (najbardziej ujemne)
+    draggers = sorted([x for x in impacted if x['delta'] < 0], key=lambda x: x['delta'])[:3]
+
+    return {
+        'has_data': bool(boosters or draggers),
+        'boosters': boosters,
+        'draggers': draggers,
+    }
+
+
+def _compute_consistency_metrics(numeric_vals: list[float]) -> dict[str, Any]:
+    """Wylicza odchylenie standardowe oraz wskaźnik stabilności formy (Consistency Score 0-100%)."""
+    if not numeric_vals:
+        return {
+            'has_data': False,
+            'stdev': None,
+            'score': None,
+            'status': 'neutral',
+            'label': 'Brak ocen do oceny stabilności',
+            'desc': (
+                "Wskaźnik stabilności formy (0–100%): Mierzy systematyczność i powtarzalność wyników ucznia "
+                "na podstawie odchylenia standardowego ocen. Wymaga co najmniej 1 oceny liczbowej."
+            ),
+        }
+
+    if len(numeric_vals) == 1:
+        return {
+            'has_data': True,
+            'stdev': 0.0,
+            'score': 100,
+            'status': 'high',
+            'label': 'Wzorcowa (1 ocena)',
+            'desc': (
+                "Wskaźnik stabilności formy (100% – wzorcowa):\n"
+                "Mierzy systematyczność i powtarzalność wyników ucznia na podstawie matematycznego odchylenia standardowego (stdev: 0.00).\n\n"
+                "100% oznacza brak wahań ocen. Zarejestrowano dotąd tylko 1 ocenę – stabilność stanowi punkt odniesienia na początek semestru."
+            ),
+        }
+
+    try:
+        stdev = round(statistics.stdev(numeric_vals), 2)
+    except statistics.StatisticsError:
+        stdev = 0.0
+
+    score = max(0, min(100, int(round((1.0 - (stdev / 2.0)) * 100))))
+
+    if score >= 80:
+        status = 'high'
+        status_name = 'Wysoka'
+        label = f'Wysoka ({score}%)'
+        diag_desc = 'Bardzo powtarzalne wyniki. Uczeń uczy się systematycznie i rzadko miewa nieprzewidziane potknięcia.'
+    elif score >= 60:
+        status = 'moderate'
+        status_name = 'Umiarkowana'
+        label = f'Umiarkowana ({score}%)'
+        diag_desc = 'Dobra, zrównoważona forma z pojedynczymi wahaniami (sporadyczne słabsze lub wybitne oceny).'
+    else:
+        status = 'low'
+        status_name = 'Zmienna'
+        label = f'Zmienna ({score}%)'
+        diag_desc = 'Znaczny rozrzut ocen (tzw. forma w kratkę). Warto zadbać o równiejsze przygotowanie do wszystkich form sprawdzania wiedzy.'
+
+    desc = (
+        f"Wskaźnik stabilności formy ({score}% – {status_name}):\n"
+        f"Mierzy systematyczność i przewidywalność wyników ucznia na podstawie matematycznego odchylenia standardowego (stdev: {stdev:.2f}).\n\n"
+        f"• Skala 0–100%: Im wyższy wskaźnik, tym równiejsze oceny bez niespodziewanych potknięć.\n"
+        f"• Wyniki powyżej 80% oznaczają stabilną formę i stały poziom wiedzy, natomiast poniżej 60% wskazują na duży rozrzut między sukcesami a wpadkami (formę w kratkę).\n\n"
+        f"Diagnoza: {diag_desc}"
+    )
+
+    return {
+        'has_data': True,
+        'stdev': stdev,
+        'score': score,
+        'status': status,
+        'label': label,
+        'desc': desc,
+    }
+
+
+def _compute_pacing_metrics(
+    chronological_grades: list[dict[str, Any]],
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Wylicza tempo zdobywania ocen i szacunek pozostałych prac do końca semestru."""
+    ref_now = now or datetime.now()
+
+    dated_grades: list[datetime] = []
+    for g in chronological_grades:
+        dt = parse_grade_date(g.get('date'), g.get('added_at'))
+        if dt:
+            dated_grades.append(dt)
+
+    if len(dated_grades) < 2:
+        return {
+            'has_data': False,
+            'days_per_grade': None,
+            'label': 'Zbyt mało ocen z datami do określenia tempa',
+            'estimated_remaining': None,
+            'semester_end_desc': '',
+        }
+
+    dated_grades.sort()
+    first_dt = dated_grades[0]
+    last_dt = dated_grades[-1]
+    span_days = max(1, (last_dt - first_dt).days)
+    days_per_grade = round(span_days / max(1, len(dated_grades) - 1), 1)
+    if days_per_grade < 1.0:
+        days_per_grade = 1.0
+
+    cur_year = ref_now.year
+    if ref_now.month in (9, 10, 11, 12):
+        sem_end = datetime(cur_year + 1, 1, 31)
+        sem_name = "I semestru (styczeń)"
+    elif ref_now.month == 1:
+        sem_end = datetime(cur_year, 1, 31)
+        sem_name = "I semestru (styczeń)"
+    else:
+        sem_end = datetime(cur_year, 6, 25)
+        sem_name = "roku szkolnego (czerwiec)"
+
+    days_to_end = max(0, (sem_end - ref_now).days)
+    if days_to_end > 0 and days_per_grade > 0:
+        est_remaining = max(1, int(round(days_to_end / max(4.0, days_per_grade))))
+    else:
+        est_remaining = 0
+
+    return {
+        'has_data': True,
+        'days_per_grade': days_per_grade,
+        'label': f"Średnio 1 ocena co {days_per_grade:g} dni",
+        'estimated_remaining': est_remaining,
+        'days_to_end': days_to_end,
+        'semester_end_desc': f"Do końca {sem_name} pozostało ok. {days_to_end} dni",
+    }
+
+
+def get_subject_detailed_analytics(
+    grades_history: list[dict[str, Any]],
+    subject_name: str,
+    excluded_subjects: list[str] | set[str] | None = None,
+) -> dict[str, Any]:
+    """Wylicza pełną analitykę, statystyki, średnią kroczącą, cele i ryzyka dla wybranego przedmiotu."""
+    norm_excluded = {s.strip().lower() for s in (excluded_subjects or [])}
+    target_subj = subject_name.strip()
+    target_lower = target_subj.lower()
+
+    # Filtrowanie ocen dla danego przedmiotu
+    matching_grades: list[dict[str, Any]] = []
+    canonical_name = target_subj
+    for g in grades_history:
+        g_subj = str(g.get('subject') or '').strip()
+        if g_subj.lower() == target_lower:
+            matching_grades.append(g)
+            if g_subj:
+                canonical_name = g_subj
+
+    is_excluded = canonical_name.lower() in norm_excluded
+
+    # Chronologiczne sortowanie ocen (od najstarszej do najnowszej) dla osi czasu
+    def grade_sort_key(item: dict[str, Any]):
+        dt = parse_grade_date(item.get('date'), item.get('added_at'))
+        if dt:
+            return dt
+        parsed = parse_datetime_safe(item.get('added_at')) or parse_date_safe(item.get('date'))
+        if parsed:
+            return datetime.combine(parsed, datetime.min.time()) if isinstance(parsed, date) and not isinstance(parsed, datetime) else parsed
+        return datetime.min
+
+    chronological_grades = sorted(matching_grades, key=grade_sort_key)
+
+    # Obliczanie średniej kroczącej (running average)
+    timeline_data: list[dict[str, Any]] = []
+    running_sum_weighted = 0.0
+    running_sum_weights = 0.0
+    numeric_vals: list[float] = []
+
+    for idx, g in enumerate(chronological_grades, start=1):
+        num_val = parse_numeric_grade(g.get('grade'))
+        raw_weight = parse_weight(g.get('weight'))
+        eff_weight = raw_weight if (raw_weight is not None and raw_weight > 0) else (1.0 if num_val is not None else 0.0)
+
+        running_avg = None
+        if num_val is not None:
+            numeric_vals.append(num_val)
+            running_sum_weighted += num_val * eff_weight
+            running_sum_weights += eff_weight
+            if running_sum_weights > 0:
+                running_avg = round(running_sum_weighted / running_sum_weights, 2)
+
+        dt = parse_grade_date(g.get('date'), g.get('added_at'))
+        clean_date = dt.strftime("%Y-%m-%d") if dt else str(g.get('date') or g.get('added_at') or '')
+
+        timeline_data.append({
+            'index': idx,
+            'id': str(g.get('id', idx)),
+            'subject': canonical_name,
+            'date': clean_date,
+            'date_raw': str(g.get('date', '')),
+            'grade': str(g.get('grade', '')),
+            'numeric_grade': num_val,
+            'weight': eff_weight,
+            'weight_raw': str(g.get('weight', '')),
+            'category': str(g.get('category') or 'Brak kategorii'),
+            'teacher': str(g.get('teacher') or '—'),
+            'comment': str(g.get('comment') or '—'),
+            'running_average': running_avg,
+            'is_custom': bool(g.get('is_custom')),
+            'original_grade': str(g.get('original_grade') or ''),
+            'original_weight': str(g.get('original_weight') or ''),
+        })
+
+    # Podsumowanie statystyk
+    numeric_count = len(numeric_vals)
+    total_count = len(matching_grades)
+    final_avg = round(running_sum_weighted / running_sum_weights, 2) if running_sum_weights > 0 else None
+    arithmetic_avg = round(sum(numeric_vals) / numeric_count, 2) if numeric_count > 0 else None
+    min_grade = min(numeric_vals) if numeric_vals else None
+    max_grade = max(numeric_vals) if numeric_vals else None
+    median_grade = round(statistics.median(numeric_vals), 2) if numeric_vals else None
+
+    # Dominanta
+    mode_grade = None
+    if numeric_vals:
+        try:
+            mode_grade = statistics.mode(numeric_vals)
+        except statistics.StatisticsError:
+            mode_grade = round(numeric_vals[-1], 2)
+
+    # Proponowana ocena
+    prop_num, prop_label = get_predicted_grade_tuple(final_avg) if final_avg is not None else (None, "Brak ocen")
+    prop_word = GRADE_WORDS.get(prop_num, "—") if prop_num else "—"
+
+    # Histogram rozkładu ocen
+    histogram_counts = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0}
+    for nv in numeric_vals:
+        round_int = max(1, min(6, round(nv)))
+        histogram_counts[round_int] += 1
+
+    histogram_data = [
+        {
+            'grade': g_int,
+            'count': histogram_counts[g_int],
+            'percentage': round((histogram_counts[g_int] / numeric_count) * 100, 1) if numeric_count > 0 else 0,
+        }
+        for g_int in range(1, 7)
+    ]
+
+    # Analiza trendu (ostatnie oceny vs wcześniejsze)
+    trend = "stable"
+    trend_icon = "➡"
+    trend_desc = "Średnia ustabilizowana"
+    num_timeline = [p for p in timeline_data if p['numeric_grade'] is not None]
+    if len(num_timeline) >= 4:
+        recent_avg = sum(p['numeric_grade'] for p in num_timeline[-2:]) / 2
+        prior_avg = sum(p['numeric_grade'] for p in num_timeline[:-2]) / len(num_timeline[:-2])
+        if recent_avg - prior_avg >= 0.35:
+            trend = "improving"
+            trend_icon = "↗"
+            trend_desc = "Wyraźny trend wzrostowy w ostatnich ocenach"
+        elif prior_avg - recent_avg >= 0.35:
+            trend = "declining"
+            trend_icon = "↘"
+            trend_desc = "Ostatnie oceny poniżej dotychczasowej średniej"
+
+    target_analysis = _compute_target_analysis(final_avg, running_sum_weighted, running_sum_weights, prop_num)
+    risk_analysis = _compute_risk_analysis(final_avg, running_sum_weighted, running_sum_weights, prop_num)
+    category_analytics = _compute_category_analytics(matching_grades, running_sum_weights)
+    impact_analysis = _compute_impact_analysis(timeline_data, final_avg, running_sum_weighted, running_sum_weights)
+    consistency_metrics = _compute_consistency_metrics(numeric_vals)
+    pacing_metrics = _compute_pacing_metrics(chronological_grades)
+
+    # Tabela ocen posortowana malejąco (najnowsze wpisy u góry)
+    table_grades = sorted(timeline_data, key=lambda x: x['index'], reverse=True)
+
+    return {
+        'subject': canonical_name,
+        'is_excluded': is_excluded,
+        'total_count': total_count,
+        'numeric_count': numeric_count,
+        'sum_weights': round(running_sum_weights, 2),
+        'average': final_avg,
+        'arithmetic_average': arithmetic_avg,
+        'min_grade': min_grade,
+        'max_grade': max_grade,
+        'median_grade': median_grade,
+        'mode_grade': mode_grade,
+        'predicted_grade_num': prop_num,
+        'predicted_grade_label': prop_label,
+        'predicted_grade_word': prop_word,
+        'trend': trend,
+        'trend_icon': trend_icon,
+        'trend_desc': trend_desc,
+        'timeline_data': timeline_data,
+        'table_grades': table_grades,
+        'histogram_data': histogram_data,
+        'target_analysis': target_analysis,
+        'risk_analysis': risk_analysis,
+        'category_analytics': category_analytics,
+        'impact_analysis': impact_analysis,
+        'consistency_metrics': consistency_metrics,
+        'pacing_metrics': pacing_metrics,
+    }
 
 
 def calculate_certificate_summary(

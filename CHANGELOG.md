@@ -9,6 +9,17 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ## [Unreleased]
 
+- **WERSJA NIEKOMPATYBILNA WSTECZNIE**, konieczność zainstalowania aplikacji ponownie (np. poprzez nowy wbudowany konfigurator)
+- **Widok szczegółowy przedmiotu i zaawansowana analityka ocen w Panelu WWW (`/oceny/<przedmiot>`)**:
+  - Dedykowany widok po kliknięciu na dowolny przedmiot w module ocen (`web/subject_detail.html` oraz endpointy `/oceny/<subject_name>` i `/przedmiot/<subject_name>`).
+  - **Interaktywny wykres trajektorii ocen (Chart.js)**: wielkość i kolor punktu (bubble/scatter) odzwierciedla wagę pracy i stopień, z wykresem dynamicznej średniej kroczącej (Cumulative Moving Average) po każdej ocenie.
+  - **Mini-histogram rozkładu ocen**: wizualizacja procentowa i ilościowa wystawionych ocen (stopnie 1–6).
+  - **Analiza szansy podwyższenia oceny (`target_analysis`)**: precyzyjne wyliczenie dystansu punktowego do wyższego stopnia rocznego/śródrocznego oraz automatycznie generowane scenariusze (np. 1x sprawdzian o wadze 3 na stopień 5).
+  - **Analiza ryzyka obniżenia oceny (`risk_analysis`)**: wyliczenie marginesu bezpieczeństwa nad dolnym prokiem bieżącej oceny oraz symulacje odporności na słabsze oceny (np. wpadka ze sprawdzianu o wadze 3 na 1).
+  - **Interaktywny mini-symulator ocen na żywo**: dynamiczne przeliczanie nowej średniej i oceny bezpośrednio w przeglądarce za pomocą suwaków/list wyboru.
+  - Pełne statystyki opisowe przedmiotu: średnia ważona, zwykła arytmetyczna, mediana, dominanta, min, max, suma wag i liczba prac.
+  - Dodano 4 nowe testy jednostkowe i integracyjne w `tests/test_web.py`.
+
 ---
 
 ## [2.3.0] – 2026-10-13

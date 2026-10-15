@@ -36,14 +36,10 @@ from .updates_notifier import (
     UpdatesNotifier,
     configure_mail_provider,
     parse_item_datetime,
-    print_cli_summary,
     run_notifier,
 )
 
 logger = logging.getLogger(__name__)
-
-# Alias wsteczny dla testów i skryptów
-print_collector_cli_summary = print_cli_summary
 
 __all__ = [
     "ConfigWatcher",
@@ -51,10 +47,12 @@ __all__ = [
     "ReportScheduler",
     "calculate_next_wait_seconds",
     "configure_mail_provider",
+    "execute_collection_cycle",
     "main",
     "parse_item_datetime",
-    "print_collector_cli_summary",
+    "resolve_target_users",
     "run_collector",
+    "run_collector_daemon",
     "run_notifier",
     "should_collect_now",
     "sleep_with_config_watch",
@@ -288,49 +286,16 @@ def sleep_with_config_watch(
     )
 
 
-def run_collector(
-    config_path: str = 'config.yaml',
-    storage_dir: str | None = None,
-    days: int | None = None,
-    hours: int | None = None,
-    dry_run: bool = False,
-    output_html: str | None = None,
+def resolve_target_users(
+    config: dict,
+    storage: BaseStorage,
     user_filter: str | None = None,
-    offline: bool = False,
-    sync_only: bool = False,
-    work_in_loop: bool | None = None,
-    once: bool = False,
-    loop: bool = False,
-    summary: bool | None = None,
-    schedule_day_offset: int | None = None,
-):
-    """
-    Główna usługa pobierająca (collector):
-    - W trybie sieciowym pobiera dane z Librusa i zapisuje je do bazy storage/.
-    - Jeśli sync_only=False (domyślnie), przekazuje zebrane dane do UpdatesNotifier
-    w celu wysyłki powiadomień e-mail, podglądu lub zapisu do pliku HTML.
-    """
-    config = read_config(config_path)
+    is_simulation: bool = False,
+) -> list[dict]:
+    """Wyznacza i przygotowuje listę kont uczniów na podstawie konfiguracji, filtrów i stanu storage."""
+    users = [dict(u) for u in config.get('librus_users', [])]
+    effective_storage_dir = getattr(storage, 'storage_dir', 'storage')
 
-    effective_storage_dir = storage_dir or config.get('storage_dir', 'storage')
-    config['storage_dir'] = effective_storage_dir
-    storage = create_storage(effective_storage_dir)
-
-    # Ustalenie trybu pętli
-    is_simulation = dry_run or bool(output_html) or days is not None or hours is not None or offline
-    if is_simulation or once:
-        effective_work_in_loop = False
-    elif loop:
-        effective_work_in_loop = True
-    elif work_in_loop is not None:
-        effective_work_in_loop = work_in_loop
-    else:
-        effective_work_in_loop = config.get('work_in_loop', True)
-
-    logger.info(f"Tryb pracy w pętli (work_in_loop): {effective_work_in_loop}")
-
-    # Lista użytkowników
-    users = config.get('librus_users', [])
     if user_filter:
         filter_val = str(user_filter).strip().lower()
         matched = [
@@ -396,73 +361,121 @@ def run_collector(
         user['id'] = idx
         user['dry-parse'] = not storage.has_existing_data(str(user.get('librus_login')))
 
-    collector = LibrusCollector(config, storage=storage)
-    notifier = UpdatesNotifier(config, storage=storage)
-    scheduler = ReportScheduler(config, storage=storage)
+    return users
+
+
+def execute_collection_cycle(
+    collector: LibrusCollector,
+    notifier: UpdatesNotifier,
+    scheduler: ReportScheduler,
+    users: list[dict],
+    storage: BaseStorage,
+    config_path: str = 'config.yaml',
+    effective_storage_dir: str = 'storage',
+    days: int | None = None,
+    hours: int | None = None,
+    dry_run: bool = False,
+    output_html: str | None = None,
+    offline: bool = False,
+    sync_only: bool = False,
+    summary: bool | None = None,
+    schedule_day_offset: int | None = None,
+    work_in_loop: bool = False,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Wykonuje pojedynczy przebieg cyklu zbierania i powiadomień."""
+    ref_now = now or datetime.now()
+    collected_data: dict[str, Any] = {}
+
+    should_collect = True
+    if work_in_loop and not offline:
+        should_collect = scheduler.should_collect_now(users, now=ref_now)
+
+    if should_collect:
+        if not offline:
+            collected_data = collector.collect_all(users)
+        else:
+            logger.info(f"Tryb OFFLINE: pomijam połączenie z Librusem, odczytuję dane ze storage ({effective_storage_dir})...")
+
+        if not sync_only:
+            for user_config in users:
+                login = str(user_config.get('librus_login', ''))
+                c_item = collected_data.get(login, {})
+                if not offline and c_item.get('success') is False:
+                    logger.warning(
+                        f"{user_config.get('librus_login_name', login)} ({login}): "
+                        "Pominięto generowanie powiadomień o nowościach, ponieważ pobieranie danych ze szkoły zakończyło się błędem."
+                    )
+                    continue
+
+                notifier.process_user_notifications(
+                    user_config=user_config,
+                    all_messages=c_item.get('messages'),
+                    all_notifications=c_item.get('notifications'),
+                    all_grades=c_item.get('grades'),
+                    new_messages=c_item.get('new_messages'),
+                    new_notifications=c_item.get('new_notifications'),
+                    new_grades=c_item.get('new_grades'),
+                    days=days,
+                    hours=hours,
+                    dry_run=dry_run,
+                    output_html=output_html,
+                    total_users=len(users),
+                    summary=summary,
+                    schedule_day_offset=schedule_day_offset,
+                )
+                if user_config.get('dry-parse'):
+                    user_config['dry-parse'] = False
+
+    if not offline and not sync_only:
+        scheduler.trigger_scheduled_reports(
+            config_path=config_path,
+            users=users,
+            effective_storage_dir=effective_storage_dir,
+            now=ref_now,
+        )
+
+    return {
+        'should_collect': should_collect,
+        'collected_data': collected_data,
+    }
+
+
+def run_collector_daemon(
+    collector: LibrusCollector,
+    notifier: UpdatesNotifier,
+    scheduler: ReportScheduler,
+    users: list[dict],
+    storage: BaseStorage,
+    config: dict,
+    config_path: str = 'config.yaml',
+    effective_storage_dir: str = 'storage',
+    sync_only: bool = False,
+    summary: bool | None = None,
+    schedule_day_offset: int | None = None,
+) -> None:
+    """Pętla demona kolektora z automatycznym przeładowaniem po zmianie konfiguracji."""
+    current_users = users
+    current_config = config
 
     while True:
-        collected_data = {}
-
-        # Sprawdzenie czy pobieranie danych ze szkoły powinno nastąpić w tym cyklu:
-        # W trybie 'daily' o stałej porze (np. 16:00/22:00) przy starcie sprawdzamy,
-        # czy dzisiejsze pobieranie już się odbyło lub czy jeszcze nie nadeszła jego pora.
-        should_collect = True
-        if effective_work_in_loop and not offline:
-            should_collect = scheduler.should_collect_now(users, now=datetime.now())
-
-        # 1. Pobieranie danych (chyba że tryb offline lub pominięto z uwagi na harmonogram)
-        if should_collect:
-            if not offline:
-                collected_data = collector.collect_all(users)
-            else:
-                logger.info(f"Tryb OFFLINE: pomijam połączenie z Librusem, odczytuję dane ze storage ({effective_storage_dir})...")
-
-            # 2. Powiadomienia (chyba że sync_only)
-            if not sync_only:
-                for user_config in users:
-                    login = str(user_config.get('librus_login', ''))
-                    c_item = collected_data.get(login, {})
-                    if not offline and c_item.get('success') is False:
-                        logger.warning(
-                            f"{user_config.get('librus_login_name', login)} ({login}): "
-                            "Pominięto generowanie powiadomień o nowościach, ponieważ pobieranie danych ze szkoły zakończyło się błędem."
-                        )
-                        continue
-
-                    notifier.process_user_notifications(
-                        user_config=user_config,
-                        all_messages=c_item.get('messages'),
-                        all_notifications=c_item.get('notifications'),
-                        all_grades=c_item.get('grades'),
-                        new_messages=c_item.get('new_messages'),
-                        new_notifications=c_item.get('new_notifications'),
-                        new_grades=c_item.get('new_grades'),
-                        days=days,
-                        hours=hours,
-                        dry_run=dry_run,
-                        output_html=output_html,
-                        total_users=len(users),
-                        summary=summary,
-                        schedule_day_offset=schedule_day_offset,
-                    )
-                    if user_config.get('dry-parse'):
-                        user_config['dry-parse'] = False
-
-        # Opcjonalne wyzwolenie zaplanowanych raportów postępów oraz motywacyjnych
-        if not offline and not sync_only:
-            scheduler.trigger_scheduled_reports(
+        try:
+            execute_collection_cycle(
+                collector=collector,
+                notifier=notifier,
+                scheduler=scheduler,
+                users=current_users,
+                storage=storage,
                 config_path=config_path,
-                users=users,
                 effective_storage_dir=effective_storage_dir,
-                now=datetime.now(),
+                offline=False,
+                sync_only=sync_only,
+                summary=summary,
+                schedule_day_offset=schedule_day_offset,
+                work_in_loop=True,
             )
-
-        if not effective_work_in_loop:
-            if is_simulation:
-                logger.info("Zakończono symulację / pojedynczy przebieg.")
-            else:
-                logger.info("Zakończono pojedynczy przebieg (work_in_loop: false). Koniec pracy.")
-            break
+        except Exception as cycle_err:
+            logger.error(f"Nieoczekiwany błąd w cyklu kolektora: {cycle_err}", exc_info=True)
 
         sleep_s = scheduler.calculate_next_wait_seconds(now=datetime.now())
         logger.info(f"Czekam przez {sleep_s} sekund do kolejnego sprawdzenia")
@@ -474,15 +487,15 @@ def run_collector(
                     "Przeładowuję konfigurację i odświeżam harmonogram..."
                 )
                 try:
-                    config = read_config(config_path)
-                    new_users = config.get('librus_users', [])
+                    current_config = read_config(config_path)
+                    new_users = current_config.get('librus_users', [])
                     for idx, user in enumerate(new_users):
                         user['id'] = idx
                         user['dry-parse'] = not storage.has_existing_data(str(user.get('librus_login')))
-                    users = new_users
-                    collector.config = config
-                    notifier.config = config
-                    scheduler.config = config
+                    current_users = new_users
+                    collector.config = current_config
+                    notifier.config = current_config
+                    scheduler.config = current_config
                 except Exception as reload_err:
                     logger.warning(
                         f"Błąd podczas przeładowywania pliku konfiguracji '{config_path}': {reload_err}",
@@ -492,6 +505,96 @@ def run_collector(
         except KeyboardInterrupt:
             logger.info("Zatrzymano działanie usługi (Ctrl+C).")
             break
+
+
+def run_collector(
+    config_path: str = 'config.yaml',
+    storage_dir: str | None = None,
+    days: int | None = None,
+    hours: int | None = None,
+    dry_run: bool = False,
+    output_html: str | None = None,
+    user_filter: str | None = None,
+    offline: bool = False,
+    sync_only: bool = False,
+    work_in_loop: bool | None = None,
+    once: bool = False,
+    loop: bool = False,
+    summary: bool | None = None,
+    schedule_day_offset: int | None = None,
+):
+    """
+    Główna usługa pobierająca (collector):
+    - W trybie sieciowym pobiera dane z Librusa i zapisuje je do bazy storage/.
+    - Jeśli sync_only=False (domyślnie), przekazuje zebrane dane do UpdatesNotifier
+    w celu wysyłki powiadomień e-mail, podglądu lub zapisu do pliku HTML.
+    """
+    config = read_config(config_path)
+
+    effective_storage_dir = storage_dir or config.get('storage_dir', 'storage')
+    config['storage_dir'] = effective_storage_dir
+    storage = create_storage(effective_storage_dir)
+
+    is_simulation = dry_run or bool(output_html) or days is not None or hours is not None or offline
+    if is_simulation or once:
+        effective_work_in_loop = False
+    elif loop:
+        effective_work_in_loop = True
+    elif work_in_loop is not None:
+        effective_work_in_loop = work_in_loop
+    else:
+        effective_work_in_loop = config.get('work_in_loop', True)
+
+    logger.info(f"Tryb pracy w pętli (work_in_loop): {effective_work_in_loop}")
+
+    users = resolve_target_users(
+        config=config,
+        storage=storage,
+        user_filter=user_filter,
+        is_simulation=is_simulation,
+    )
+
+    collector = LibrusCollector(config, storage=storage)
+    notifier = UpdatesNotifier(config, storage=storage)
+    scheduler = ReportScheduler(config, storage=storage)
+
+    if effective_work_in_loop:
+        run_collector_daemon(
+            collector=collector,
+            notifier=notifier,
+            scheduler=scheduler,
+            users=users,
+            storage=storage,
+            config=config,
+            config_path=config_path,
+            effective_storage_dir=effective_storage_dir,
+            sync_only=sync_only,
+            summary=summary,
+            schedule_day_offset=schedule_day_offset,
+        )
+    else:
+        execute_collection_cycle(
+            collector=collector,
+            notifier=notifier,
+            scheduler=scheduler,
+            users=users,
+            storage=storage,
+            config_path=config_path,
+            effective_storage_dir=effective_storage_dir,
+            days=days,
+            hours=hours,
+            dry_run=dry_run,
+            output_html=output_html,
+            offline=offline,
+            sync_only=sync_only,
+            summary=summary,
+            schedule_day_offset=schedule_day_offset,
+            work_in_loop=False,
+        )
+        if is_simulation:
+            logger.info("Zakończono symulację / pojedynczy przebieg.")
+        else:
+            logger.info("Zakończono pojedynczy przebieg (work_in_loop: false). Koniec pracy.")
 
 
 def main():

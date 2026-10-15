@@ -56,6 +56,7 @@ class TestWebDashboard(unittest.TestCase):
             'web': {
                 'password': 'SuperParentPassword',
                 'secret_key': 'test-secret-key-1234',
+                'enable_csrf': False,
             },
             'storage_dir': self.storage_dir,
         }
@@ -565,6 +566,7 @@ class TestWebDashboard(unittest.TestCase):
             'web_dashboard.html',
             'web_plan.html',
             'web_oceny.html',
+            'web_przedmiot_matematyka.html',
             'web_terminarz.html',
             'web_wiadomosci.html',
             'web_raporty_postepy.html',
@@ -597,6 +599,17 @@ class TestWebDashboard(unittest.TestCase):
             self.assertIn('Jan Kowalski (123456)', dash_content)
             self.assertIn('href="web_plan.html"', dash_content)
             self.assertIn('href="web_oceny.html"', dash_content)
+
+        # Weryfikacja podlinkowania analizy przedmiotu z poziomu zestawienia ocen
+        with open(os.path.join(export_dir, 'web_oceny.html'), encoding='utf-8') as f:
+            oceny_content = f.read()
+            self.assertIn('href="web_przedmiot_matematyka.html"', oceny_content)
+
+        # Weryfikacja zawartości analizy przedmiotu
+        with open(os.path.join(export_dir, 'web_przedmiot_matematyka.html'), encoding='utf-8') as f:
+            mat_content = f.read()
+            self.assertIn('Matematyka', mat_content)
+            self.assertIn('href="web_oceny.html"', mat_content)
 
     def test_web_cli_export_html_flag(self):
         """Testuje wywołanie eksportu widoków HTML przez flagę CLI --export-html."""
@@ -909,7 +922,7 @@ class TestWebDashboard(unittest.TestCase):
         """Weryfikuje wypełnienie kreatora /setup, zapisanie pliku config.yaml i odblokowanie aplikacji."""
         new_config_path = os.path.join(self.temp_dir, 'fresh_config.yaml')
         # Plik początkowo nie istnieje
-        app = create_app(config_path=new_config_path, storage_dir=self.storage_dir, no_auth=True)
+        app = create_app(config_path=new_config_path, storage_dir=self.storage_dir, no_auth=True, enable_csrf=False)
         client = app.test_client()
 
         # Użytkownik przesyła formularz kreatora
@@ -1120,7 +1133,7 @@ class TestWebDashboard(unittest.TestCase):
         """Weryfikuje konfigurację wysyłki Gmail przez OAuth2 w /setup oraz /ustawienia."""
         import yaml
         new_config_path = os.path.join(self.temp_dir, 'oauth_config.yaml')
-        app = create_app(config_path=new_config_path, storage_dir=self.storage_dir, no_auth=True)
+        app = create_app(config_path=new_config_path, storage_dir=self.storage_dir, no_auth=True, enable_csrf=False)
         client = app.test_client()
 
         # 1. Przesłanie formularza kreatora /setup z Gmail OAuth2
@@ -1357,6 +1370,13 @@ class TestWebDashboard(unittest.TestCase):
         self.assertEqual(res_view.status_code, 200)
         self.assertIn(b'zmieniona', res_view.data)
 
+        # Sprawdzenie w widoku szczegółowym /oceny/Matematyka
+        res_detail = client.get('/oceny/Matematyka')
+        self.assertEqual(res_detail.status_code, 200)
+        self.assertIn(b'zmieniona', res_detail.data)
+        self.assertIn(b'edit-grade-modal', res_detail.data)
+        self.assertIn(b'openEditGradeModal', res_detail.data)
+
         # 3. Przywrócenie ze szkoły (reset)
         res_reset = client.post('/api/grade/reset', data={'grade_id': 'g1'})
         self.assertEqual(res_reset.status_code, 200)
@@ -1398,8 +1418,148 @@ class TestWebDashboard(unittest.TestCase):
         self.assertTrue(data_inc['included'])
         self.assertNotIn('Język polski', data_inc['excluded_subjects'])
 
+    def test_subject_detail_view_success(self):
+        """Testuje szczegółowy widok przedmiotu z wykresem, statystykami i analizą celów."""
+        app = create_app(config_path=self.config_path, storage_dir=self.storage_dir, no_auth=True)
+        client = app.test_client()
+
+        res = client.get('/oceny/Matematyka')
+        self.assertEqual(res.status_code, 200)
+        self.assertIn(b'Matematyka', res.data)
+        html_text = res.data.decode('utf-8')
+        self.assertIn('Dział raportów: Trajektoria ocen w czasie ze średnią kroczącą', html_text)
+        self.assertIn('Dział raportów', html_text)
+        self.assertIn('Śr. ważona', html_text)
+        self.assertIn('Szansa na podwyższenie oceny', html_text)
+        self.assertIn('Margines bezpieczeństwa & ryzyko', html_text)
+        self.assertIn('Interaktywny symulator nowej oceny z przedmiotu', html_text)
+        self.assertIn('Rozkład ocen (Histogram)', html_text)
+        self.assertIn('Wszystkie oceny cząstkowe z przedmiotu', html_text)
+
+        # Weryfikacja nowych modułów analitycznych
+        self.assertIn('Stabilność', html_text)
+        self.assertIn('Tempo ocen', html_text)
+        self.assertIn('Wpływ pojedynczych ocen na średnią ważoną', html_text)
+        self.assertIn('Lokomotywy średniej', html_text)
+        self.assertIn('Kotwice średniej', html_text)
+        self.assertIn('Skuteczność wg formy sprawdzania wiedzy', html_text)
+        self.assertIn('thresholdBandsPlugin', html_text)
+        self.assertIn('initCategoryRadarChart', html_text)
+
+    def test_subject_detail_przedmiot_alias(self):
+        """Testuje działanie aliasu URL /przedmiot/<nazwa>."""
+        app = create_app(config_path=self.config_path, storage_dir=self.storage_dir, no_auth=True)
+        client = app.test_client()
+
+        res = client.get('/przedmiot/Matematyka')
+        self.assertEqual(res.status_code, 200)
+        self.assertIn(b'Matematyka', res.data)
+        self.assertIn('Dział raportów', res.data.decode('utf-8'))
+
+    def test_subject_detail_no_grades(self):
+        """Testuje zachowanie widoku szczegółowego dla przedmiotu bez ocen."""
+        app = create_app(config_path=self.config_path, storage_dir=self.storage_dir, no_auth=True)
+        client = app.test_client()
+
+        res = client.get('/oceny/Informatyka')
+        self.assertEqual(res.status_code, 200)
+        self.assertIn('Brak zarejestrowanych ocen dla tego przedmiotu', res.data.decode('utf-8'))
+
+    def test_get_subject_detailed_analytics_function(self):
+        """Testuje bezpośrednio logikę get_subject_detailed_analytics w services.py."""
+        from src.librus2mail.web.services import get_subject_detailed_analytics
+
+        sample_grades = [
+            {'id': '1', 'subject': 'Fizyka', 'grade': '3', 'weight': '2', 'date': '2026-09-10', 'category': 'Sprawdzian'},
+            {'id': '2', 'subject': 'Fizyka', 'grade': '4', 'weight': '2', 'date': '2026-09-15', 'category': 'Kartkówka'},
+            {'id': '3', 'subject': 'Fizyka', 'grade': '5', 'weight': '3', 'date': '2026-09-20', 'category': 'Odpowiedź ustna'},
+            {'id': '4', 'subject': 'Chemia', 'grade': '6', 'weight': '1', 'date': '2026-09-22', 'category': 'Sprawdzian'},
+        ]
+
+        analytics = get_subject_detailed_analytics(sample_grades, 'Fizyka')
+        self.assertEqual(analytics['subject'], 'Fizyka')
+        self.assertEqual(analytics['total_count'], 3)
+        self.assertEqual(analytics['numeric_count'], 3)
+        self.assertIsNotNone(analytics['average'])
+        self.assertAlmostEqual(analytics['average'], 4.14, places=2)
+        self.assertEqual(analytics['min_grade'], 3.0)
+        self.assertEqual(analytics['max_grade'], 5.0)
+        self.assertEqual(analytics['median_grade'], 4.0)
+
+        # Sprawdzenie osi czasu (timeline)
+        timeline = analytics['timeline_data']
+        self.assertEqual(len(timeline), 3)
+        self.assertEqual(timeline[0]['running_average'], 3.0)
+        self.assertEqual(timeline[1]['running_average'], 3.5)
+        self.assertAlmostEqual(timeline[2]['running_average'], 4.14, places=2)
+
+        # Sprawdzenie analizy celu podwyższenia
+        target = analytics['target_analysis']
+        self.assertTrue(target['has_target'])
+        self.assertEqual(target['target_grade_num'], 5)
+        self.assertGreater(len(target['scenarios']), 0)
+
+        # Sprawdzenie analizy ryzyka
+        risk = analytics['risk_analysis']
+        self.assertTrue(risk['has_risk'])
+        self.assertEqual(risk['lower_grade_num'], 3)
+        self.assertIn('drop_simulations', risk)
+
+        # Sprawdzenie analizy skuteczności wg kategorii (Category Analytics & Radar Chart)
+        cat_analytics = analytics['category_analytics']
+        self.assertTrue(cat_analytics['has_data'])
+        self.assertEqual(len(cat_analytics['categories']), 3)
+        self.assertEqual(len(cat_analytics['radar_labels']), 3)
+        self.assertEqual(len(cat_analytics['radar_averages']), 3)
+        self.assertIsNotNone(cat_analytics['best_category'])
+        self.assertIsNotNone(cat_analytics['worst_category'])
+        self.assertIn('insight', cat_analytics)
+
+        # Sprawdzenie analizy wpływu (Impact Analysis: Boosters & Draggers)
+        impact = analytics['impact_analysis']
+        self.assertTrue(impact['has_data'])
+        self.assertGreater(len(impact['boosters']), 0)
+        self.assertGreater(len(impact['draggers']), 0)
+        # Najwyższa ocena (5) powinna być boosterem
+        self.assertEqual(impact['boosters'][0]['grade'], '5')
+        self.assertGreater(impact['boosters'][0]['delta'], 0)
+        # Najniższa ocena (3) powinna być draggerem
+        self.assertEqual(impact['draggers'][0]['grade'], '3')
+        self.assertLess(impact['draggers'][0]['delta'], 0)
+        self.assertGreater(impact['draggers'][0]['gain_if_5'], 0)
+
+        # Sprawdzenie stabilności formy (Consistency Metrics)
+        consistency = analytics['consistency_metrics']
+        self.assertTrue(consistency['has_data'])
+        self.assertIsNotNone(consistency['score'])
+        self.assertGreaterEqual(consistency['score'], 0)
+        self.assertLessEqual(consistency['score'], 100)
+        self.assertIn(consistency['status'], ['high', 'moderate', 'low'])
+        self.assertGreater(consistency['stdev'], 0)
+        self.assertIn('Wskaźnik stabilności formy', consistency['desc'])
+        self.assertIn('odchylenia standardowego', consistency['desc'])
+        self.assertIn('Diagnoza:', consistency['desc'])
+
+        # Sprawdzenie tempa i estymacji (Pacing Metrics)
+        pacing = analytics['pacing_metrics']
+        self.assertTrue(pacing['has_data'])
+        self.assertGreater(pacing['days_per_grade'], 0)
+        self.assertGreaterEqual(pacing['estimated_remaining'], 0)
+
+        # Test scenariusza z głębszym spadkiem (wyjściowa ocena 5 spadająca do 3 po 1 z wagą 3)
+        sample_high = [
+            {'id': '10', 'subject': 'Biologia', 'grade': '5', 'weight': '2', 'date': '2026-09-10'},
+            {'id': '11', 'subject': 'Biologia', 'grade': '5', 'weight': '2', 'date': '2026-09-15'},
+        ]
+        analytics_high = get_subject_detailed_analytics(sample_high, 'Biologia')
+        risk_high = analytics_high['risk_analysis']
+        sim_3w = next(d for d in risk_high['drop_simulations'] if d['test_grade'] == 1 and d['test_weight'] == 3)
+        self.assertEqual(sim_3w['sim_grade_num'], 3)
+        self.assertIn('spadek do 3 (dostateczny)', sim_3w['desc'])
+
 
 if __name__ == '__main__':
     unittest.main()
+
 
 

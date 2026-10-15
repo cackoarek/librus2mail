@@ -18,11 +18,20 @@ DATE_PATTERNS = (
     "%Y-%m-%dT%H:%M:%S",
     "%Y-%m-%dT%H:%M:%S.%f",
     "%Y-%m-%d",
+    "%Y/%m/%d %H:%M:%S",
+    "%Y/%m/%d %H:%M",
+    "%Y/%m/%d",
+    "%Y.%m.%d %H:%M:%S",
+    "%Y.%m.%d %H:%M",
+    "%Y.%m.%d",
     "%d.%m.%Y %H:%M:%S",
     "%d.%m.%Y %H:%M",
     "%d.%m.%Y",
     "%d-%m-%Y %H:%M:%S",
     "%d-%m-%Y",
+    "%d/%m/%Y %H:%M:%S",
+    "%d/%m/%Y %H:%M",
+    "%d/%m/%Y",
 )
 
 
@@ -33,14 +42,25 @@ def parse_datetime_safe(val: Any, make_naive: bool = True) -> datetime | None:
     Obsługuje:
     - datetime (opcjonalna konwersja na naive, aby uniknąć błędów TypeError przy porównaniach)
     - date (konwersja do datetime o północy)
+    - liczbowe znaczniki czasu unix timestamp (int, float, w sekundach lub milisekundach)
     - stringi ISO 8601 (np. '2026-09-16T15:39:20', '2026-09-16T15:39:20Z', '2026-09-16T15:39:20+02:00')
     - stringi ze spacją ('YYYY-MM-DD HH:MM:SS')
+    - formaty z ukośnikami ('YYYY/MM/DD', 'DD/MM/YYYY')
     - samą datę ('YYYY-MM-DD', 'DD.MM.YYYY')
     - tekst z opisem dnia tygodnia w nawiasie (np. '2026-09-11 (pt.)')
     - None, puste stringi, napisy '-'
     """
     if val is None:
         return None
+
+    if isinstance(val, (int, float)):
+        try:
+            ts = float(val)
+            if ts > 1e11:  # milisekundy
+                ts /= 1000.0
+            return datetime.fromtimestamp(ts)
+        except (ValueError, OSError, OverflowError):
+            return None
 
     if isinstance(val, datetime):
         if make_naive and val.tzinfo is not None:
@@ -53,6 +73,17 @@ def parse_datetime_safe(val: Any, make_naive: bool = True) -> datetime | None:
     val_str = str(val).strip()
     if not val_str or val_str in ("-", "None", "null", "undefined"):
         return None
+
+    # Obsługa stringów będących czystym timestampem numerycznym
+    if re.match(r"^\d+(\.\d+)?$", val_str):
+        try:
+            ts = float(val_str)
+            if ts > 1e11:
+                ts /= 1000.0
+            if 1e8 < ts < 2.5e9:  # bezpieczny zakres timestampów (1973 - 2049)
+                return datetime.fromtimestamp(ts)
+        except (ValueError, OSError, OverflowError):
+            pass
 
     # Zastąpienie sufiksu 'Z' dla kompatybilności z datetime.fromisoformat w Python < 3.11
     # '2026-09-16T15:39:20Z' -> '2026-09-16T15:39:20+00:00'

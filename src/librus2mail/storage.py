@@ -480,7 +480,7 @@ class FileStorage(BaseStorage):
         gh = data.get('grades_history', {})
         if isinstance(gh, dict):
             return list(gh.values())
-        elif isinstance(gh, list):
+        if isinstance(gh, list):
             return gh
         return []
 
@@ -582,7 +582,7 @@ class FileStorage(BaseStorage):
             rep_dates = data.get(FIELD_LAST_PROGRESS_REPORT_DATES, {})
             if isinstance(rep_dates, dict) and report_key in rep_dates:
                 return rep_dates[report_key]
-        return data.get(FIELD_LAST_PROGRESS_REPORT_DATE) or data.get('last_progress_report_time')
+        return data.get(FIELD_LAST_PROGRESS_REPORT_DATE)
 
     def save_last_progress_report_date(self, user_login: str, date_iso: str, report_key: str | None = None) -> None:
         path = self._get_file_path(user_login)
@@ -741,11 +741,7 @@ class FileStorage(BaseStorage):
         path = self._get_file_path(user_login)
         data = read_json_safe(path)
         th = data.get('timetable_history', [])
-        if isinstance(th, dict):
-            return list(th.values())
-        elif isinstance(th, list):
-            return th
-        return []
+        return th if isinstance(th, list) else []
 
     def get_last_timetable_sync(self, user_login: str) -> str | None:
         path = self._get_file_path(user_login)
@@ -841,11 +837,7 @@ class FileStorage(BaseStorage):
         path = self._get_file_path(user_login)
         data = read_json_safe(path)
         sh = data.get('schedule_history', [])
-        if isinstance(sh, dict):
-            return list(sh.values())
-        elif isinstance(sh, list):
-            return sh
-        return []
+        return sh if isinstance(sh, list) else []
 
     def get_last_schedule_sync(self, user_login: str) -> str | None:
         path = self._get_file_path(user_login)

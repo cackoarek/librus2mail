@@ -25,6 +25,8 @@ def make_offline_friendly(html: str) -> str:
         ('href="/setup"', 'href="web_setup.html"'),
         ('href="/logout"', 'href="web_login.html"'),
         ('href="/login"', 'href="web_login.html"'),
+        ('href="/oceny/Matematyka"', 'href="web_przedmiot_matematyka.html"'),
+        ('href="/przedmiot/Matematyka"', 'href="web_przedmiot_matematyka.html"'),
     ]
     for old, new in replacements:
         html = html.replace(old, new)
@@ -37,6 +39,7 @@ def make_offline_friendly(html: str) -> str:
     html = re.sub(r'href="/raporty/uczen\?[^"]*variant=youth[^"]*"', 'href="web_raporty_uczen_youth.html"', html)
     html = re.sub(r'href="/raporty/uczen(\?[^"]*)?"', 'href="web_raporty_uczen_teens.html"', html)
     html = re.sub(r'href="/raporty/podsumowanie(\?[^"]*)?"', 'href="web_raporty_podsumowanie.html"', html)
+    html = re.sub(r'href="/(?:oceny|przedmiot)/Matematyka(\?[^"]*)?"', 'href="web_przedmiot_matematyka.html"', html)
 
     # W podglądzie statycznym formularz logowania kieruje od razu na pulpit
     html = re.sub(r'action="/login[^"]*"', 'action="web_dashboard.html" method="GET"', html)
@@ -57,6 +60,7 @@ def export_web_views(
     - web_dashboard.html (pulpit główny po zalogowaniu)
     - web_plan.html (plan lekcji)
     - web_oceny.html (zestawienie ocen)
+    - web_przedmiot_matematyka.html (szczegółowa analiza przedmiotu i wykresy)
     - web_terminarz.html (terminarz)
     - web_wiadomosci.html (wiadomości i ogłoszenia)
     - web_akcje.html (centrum akcji CLI)
@@ -123,6 +127,7 @@ def export_web_views(
         ('/', 'web_dashboard.html', "pulpit główny"),
         ('/plan', 'web_plan.html', "plan lekcji"),
         ('/oceny', 'web_oceny.html', "zestawienie ocen"),
+        ('/oceny/Matematyka', 'web_przedmiot_matematyka.html', "analiza przedmiotu (Matematyka)"),
         ('/terminarz', 'web_terminarz.html', "terminarz"),
         ('/wiadomosci', 'web_wiadomosci.html', "wiadomości"),
         ('/raporty/postepy', 'web_raporty_postepy.html', "raport postępów"),

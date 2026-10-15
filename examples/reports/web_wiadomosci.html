@@ -3,13 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wiadomości i Ogłoszenia - Jan Kowalski (Przykładowy Uczeń) (8979296) - Librus2mail</title>
+    <meta name="csrf-token" content="26d095f5c673f10e3e9a5a34e7bbf621d5fc174112b9c3f10ce31e00274b5c0d">
+    <title>Wiadomości i Ogłoszenia - Jan Kowalski (8979296) - Librus2mail</title>
     <!-- Favicon z logo Librus2mail (gradient indigo-sky + 🏫) -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%25%22%20y1%3D%22100%25%22%20x2%3D%22100%25%22%20y2%3D%220%25%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%234f46e5%22/%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%230ea5e9%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2216%22%20fill%3D%22url%28%23g%29%22/%3E%3Ctext%20x%3D%2232%22%20y%3D%2234%22%20font-size%3D%2234%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%F0%9F%8F%AB%3C/text%3E%3C/svg%3E">
     <!-- TailwindCSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- HTMX CDN -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script>
+        // Automatyczne dołączanie tokenu CSRF do wszystkich zapytań fetch
+        (function() {
+            const _origFetch = window.fetch;
+            window.fetch = function(url, options) {
+                options = options || {};
+                options.headers = options.headers || {};
+                const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                if (token) {
+                    if (options.headers instanceof Headers) {
+                        if (!options.headers.has('X-CSRFToken')) options.headers.set('X-CSRFToken', token);
+                    } else if (!options.headers['X-CSRFToken'] && !options.headers['x-csrftoken']) {
+                        options.headers['X-CSRFToken'] = token;
+                    }
+                }
+                return _origFetch(url, options);
+            };
+        })();
+    </script>
     <!-- Inter Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,7 +42,7 @@
     </style>
     
 </head>
-<body class="h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white">
+<body class="h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white" hx-headers='{"X-CSRFToken": "26d095f5c673f10e3e9a5a34e7bbf621d5fc174112b9c3f10ce31e00274b5c0d"}'>
 
     <!-- Pasek nawigacyjny -->
     <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
@@ -65,7 +85,7 @@
                            class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors bg-indigo-50 text-indigo-700">
                             ✉️ Wiadomości
                         </a>
-                        <a href="web_raporty_postepy.html"
+                        <a href="web_raporty_podsumowanie.html"
                            class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
                             📈 Raporty
                         </a>
@@ -98,7 +118,7 @@
                                 </option>
                                 
                                 <option value="8979296" selected>
-                                    👤 Jan Kowalski (Przykładowy Uczeń) (8979296)
+                                    👤 Jan Kowalski (8979296)
                                 </option>
                                 
                             </select>
@@ -127,7 +147,7 @@
             <a href="web_oceny.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📝 Oceny</a>
             <a href="web_terminarz.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">🔔 Terminarz</a>
             <a href="web_wiadomosci.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap bg-indigo-600 text-white">✉️ Wiadomości</a>
-            <a href="web_raporty_postepy.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📈 Raporty</a>
+            <a href="web_raporty_podsumowanie.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📈 Raporty</a>
             <a href="web_akcje.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">⚡ Akcje</a>
             <a href="web_ustawienia.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">⚙️ Ustawienia</a>
         </div>
@@ -153,7 +173,7 @@
             </a>
         </div>
         <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1 flex items-center gap-3">
-            <span>✉️ Wiadomości i Ogłoszenia: Jan Kowalski (Przykładowy Uczeń) (8979296)</span>
+            <span>✉️ Wiadomości i Ogłoszenia: Jan Kowalski (8979296)</span>
             
         </h1>
         <p class="text-xs text-slate-500 mt-1">
@@ -222,28 +242,56 @@
             <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
                 <div class="flex items-start justify-between gap-3">
                     <div class="font-extrabold text-sm text-slate-900 leading-snug">
-                        Podręczniki - j. niemiecki
+                        Zajęcia SKS dla uczniów klas 5-6
                     </div>
                     
                     <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
-                        2026-09-08 14:14
+                        2026-09-16 15:39
                     </span>
                     
                 </div>
 
                 <div class="text-xs text-indigo-700 font-semibold mt-1 flex items-center gap-1.5">
                     <span>👨‍🏫 Nadawca:</span>
-                    <span>Węglarczyk Marian (Nauczyciel)</span>
+                    <span>Feryc Michał (Nauczyciel)</span>
                 </div>
 
                 
                 <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
-                    Dzień dobry Państwu,
+                    Dzień dobry,
 
-Informuję, że w klasie 5 na lekcjach języka niemieckiego obowiązuje podręcznik i zeszyt ćwiczeń &#34;Wir smart 2&#34; wydawnictwa Klett. Uczniowie, którzy jeszcze nie odebrali zestawu z biblioteki szkolnej, proszeni są o zgłoszenie się w najbliższy czwartek.
+Od przyszłego tygodnia ruszają bezpłatne zajęcia SKS z piłki siatkowej i koszykówki dla uczniów klas 5-6. Treningi będą odbywać się w środy w godzinach 15:30-17:00 w dużej sali gimnastycznej. Wymagana jest pisemna zgoda rodziców oraz obuwie zmienne z białą podeszwą.
 
-Pozdrawiam serdecznie,
-Marian Węglarczyk
+Pozdrawiam,
+Michał Feryc
+                </div>
+                
+            </div>
+            
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="font-extrabold text-sm text-slate-900 leading-snug">
+                        Zajęcia wych.fizycznego
+                    </div>
+                    
+                    <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
+                        2026-09-15 09:24
+                    </span>
+                    
+                </div>
+
+                <div class="text-xs text-indigo-700 font-semibold mt-1 flex items-center gap-1.5">
+                    <span>👨‍🏫 Nadawca:</span>
+                    <span>Staszewska Elżbieta (Nauczyciel)</span>
+                </div>
+
+                
+                <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
+                    Drodzy Rodzice,
+
+Przypominam, że ze względu na sprzyjające warunki pogodowe, lekcje wychowania fizycznego w najbliższym tygodniu będą odbywać się na boisku szkolnym (&#34;Orlik&#34;). Proszę o wyposażenie dzieci w odpowiedni strój sportowy dostosowany do temperatury zewnętrznej (dres/bluza).
+
+Elżbieta Staszewska
                 </div>
                 
             </div>
@@ -280,56 +328,28 @@ Magdalena Wiaderko
             <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
                 <div class="flex items-start justify-between gap-3">
                     <div class="font-extrabold text-sm text-slate-900 leading-snug">
-                        Zajęcia wych.fizycznego
+                        Podręczniki - j. niemiecki
                     </div>
                     
                     <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
-                        2026-09-15 09:24
+                        2026-09-08 14:14
                     </span>
                     
                 </div>
 
                 <div class="text-xs text-indigo-700 font-semibold mt-1 flex items-center gap-1.5">
                     <span>👨‍🏫 Nadawca:</span>
-                    <span>Staszewska Elżbieta (Nauczyciel)</span>
+                    <span>Węglarczyk Marian (Nauczyciel)</span>
                 </div>
 
                 
                 <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
-                    Drodzy Rodzice,
+                    Dzień dobry Państwu,
 
-Przypominam, że ze względu na sprzyjające warunki pogodowe, lekcje wychowania fizycznego w najbliższym tygodniu będą odbywać się na boisku szkolnym (&#34;Orlik&#34;). Proszę o wyposażenie dzieci w odpowiedni strój sportowy dostosowany do temperatury zewnętrznej (dres/bluza).
+Informuję, że w klasie 5 na lekcjach języka niemieckiego obowiązuje podręcznik i zeszyt ćwiczeń &#34;Wir smart 2&#34; wydawnictwa Klett. Uczniowie, którzy jeszcze nie odebrali zestawu z biblioteki szkolnej, proszeni są o zgłoszenie się w najbliższy czwartek.
 
-Elżbieta Staszewska
-                </div>
-                
-            </div>
-            
-            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
-                <div class="flex items-start justify-between gap-3">
-                    <div class="font-extrabold text-sm text-slate-900 leading-snug">
-                        Zajęcia SKS dla uczniów klas 5-6
-                    </div>
-                    
-                    <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
-                        2026-09-16 15:39
-                    </span>
-                    
-                </div>
-
-                <div class="text-xs text-indigo-700 font-semibold mt-1 flex items-center gap-1.5">
-                    <span>👨‍🏫 Nadawca:</span>
-                    <span>Feryc Michał (Nauczyciel)</span>
-                </div>
-
-                
-                <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
-                    Dzień dobry,
-
-Od przyszłego tygodnia ruszają bezpłatne zajęcia SKS z piłki siatkowej i koszykówki dla uczniów klas 5-6. Treningi będą odbywać się w środy w godzinach 15:30-17:00 w dużej sali gimnastycznej. Wymagana jest pisemna zgoda rodziców oraz obuwie zmienne z białą podeszwą.
-
-Pozdrawiam,
-Michał Feryc
+Pozdrawiam serdecznie,
+Marian Węglarczyk
                 </div>
                 
             </div>
@@ -352,6 +372,30 @@ Michał Feryc
 
         
         <div class="space-y-3">
+            
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="font-extrabold text-sm text-slate-900 leading-snug">
+                        LEGITYMACJE SZKOLNE
+                    </div>
+                    
+                    <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
+                        2026-09-17
+                    </span>
+                    
+                </div>
+
+                <div class="text-xs text-amber-800 font-semibold mt-1 flex items-center gap-1.5">
+                    <span>🏫 Autor:</span>
+                    <span>Renata Lublińska (Sekretariat)</span>
+                </div>
+
+                
+                <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
+                    Przypominamy o konieczności dostarczenia do sekretariatu szkolnego papierowych legitymacji szkolnych celem przedłużenia ważności (podbicia pieczęci) na rok szkolny 2026/2027. Ostateczny termin mija 30 września.
+                </div>
+                
+            </div>
             
             <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
                 <div class="flex items-start justify-between gap-3">
@@ -404,7 +448,7 @@ Michał Feryc
             <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
                 <div class="flex items-start justify-between gap-3">
                     <div class="font-extrabold text-sm text-slate-900 leading-snug">
-                        Karta rowerowa - egz. poprawkowy
+                        Zapisy na zajęcia dodatkowe i koła zainteresowań
                     </div>
                     
                     <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
@@ -415,84 +459,12 @@ Michał Feryc
 
                 <div class="text-xs text-amber-800 font-semibold mt-1 flex items-center gap-1.5">
                     <span>🏫 Autor:</span>
-                    <span>Joanna Lipska</span>
+                    <span>Renata Lublińska</span>
                 </div>
 
                 
                 <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
-                    Egzamin poprawkowy na kartę rowerową (część teoretyczna oraz jazda sprawnościowa na miasteczku ruchu drogowego) odbędzie się w piątek 25 września o godzinie 14:30. Zgłoszenia przyjmuje pani Joanna Lipska w sali 12.
-                </div>
-                
-            </div>
-            
-            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
-                <div class="flex items-start justify-between gap-3">
-                    <div class="font-extrabold text-sm text-slate-900 leading-snug">
-                        Konkursy przedmiotowe
-                    </div>
-                    
-                    <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
-                        2026-09-10
-                    </span>
-                    
-                </div>
-
-                <div class="text-xs text-amber-800 font-semibold mt-1 flex items-center gap-1.5">
-                    <span>🏫 Autor:</span>
-                    <span>Dorota Opolska</span>
-                </div>
-
-                
-                <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
-                    Rozpoczęły się zapisy do kuratoryjnych konkursów przedmiotowych z języka polskiego, matematyki, historii oraz języka angielskiego dla klas 6-8. Uczniowie zainteresowani udziałem proszeni są o zgłaszanie się do nauczycieli poszczególnych przedmiotów do 30 września.
-                </div>
-                
-            </div>
-            
-            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
-                <div class="flex items-start justify-between gap-3">
-                    <div class="font-extrabold text-sm text-slate-900 leading-snug">
-                        LEGITYMACJE SZKOLNE
-                    </div>
-                    
-                    <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
-                        2026-09-17
-                    </span>
-                    
-                </div>
-
-                <div class="text-xs text-amber-800 font-semibold mt-1 flex items-center gap-1.5">
-                    <span>🏫 Autor:</span>
-                    <span>Renata Lublińska (Sekretariat)</span>
-                </div>
-
-                
-                <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
-                    Przypominamy o konieczności dostarczenia do sekretariatu szkolnego papierowych legitymacji szkolnych celem przedłużenia ważności (podbicia pieczęci) na rok szkolny 2026/2027. Ostateczny termin mija 30 września.
-                </div>
-                
-            </div>
-            
-            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
-                <div class="flex items-start justify-between gap-3">
-                    <div class="font-extrabold text-sm text-slate-900 leading-snug">
-                        Majsterki - warsztaty techniczne
-                    </div>
-                    
-                    <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
-                        2026-09-10
-                    </span>
-                    
-                </div>
-
-                <div class="text-xs text-amber-800 font-semibold mt-1 flex items-center gap-1.5">
-                    <span>🏫 Autor:</span>
-                    <span>Joanna Lipska</span>
-                </div>
-
-                
-                <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
-                    Zapraszamy chętnych uczniów klas 4-6 na warsztaty techniczno-konstrukcyjne &#34;Majsterki&#34;, które będą odbywać się w każdy wtorek w pracowni technicznej w godzinach 14:40-16:10. Liczba miejsc ograniczona, decyduje kolejność zgłoszeń.
+                    Sekretariat szkoły prowadzi zapisy na koła zainteresowań i zajęcia pozalekcyjne (chór szkolny, koło szachowe, teatr, basen). Formularze deklaracji dostępne są na stronie szkoły oraz w portierni do 25 września.
                 </div>
                 
             </div>
@@ -524,7 +496,7 @@ Michał Feryc
             <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
                 <div class="flex items-start justify-between gap-3">
                     <div class="font-extrabold text-sm text-slate-900 leading-snug">
-                        Zapisy na zajęcia dodatkowe i koła zainteresowań
+                        Majsterki - warsztaty techniczne
                     </div>
                     
                     <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
@@ -535,12 +507,12 @@ Michał Feryc
 
                 <div class="text-xs text-amber-800 font-semibold mt-1 flex items-center gap-1.5">
                     <span>🏫 Autor:</span>
-                    <span>Renata Lublińska</span>
+                    <span>Joanna Lipska</span>
                 </div>
 
                 
                 <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
-                    Sekretariat szkoły prowadzi zapisy na koła zainteresowań i zajęcia pozalekcyjne (chór szkolny, koło szachowe, teatr, basen). Formularze deklaracji dostępne są na stronie szkoły oraz w portierni do 25 września.
+                    Zapraszamy chętnych uczniów klas 4-6 na warsztaty techniczno-konstrukcyjne &#34;Majsterki&#34;, które będą odbywać się w każdy wtorek w pracowni technicznej w godzinach 14:40-16:10. Liczba miejsc ograniczona, decyduje kolejność zgłoszeń.
                 </div>
                 
             </div>
@@ -548,11 +520,11 @@ Michał Feryc
             <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
                 <div class="flex items-start justify-between gap-3">
                     <div class="font-extrabold text-sm text-slate-900 leading-snug">
-                        Diety w szkolnej stołówce
+                        Konkursy przedmiotowe
                     </div>
                     
                     <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
-                        2026-09-03
+                        2026-09-10
                     </span>
                     
                 </div>
@@ -564,7 +536,31 @@ Michał Feryc
 
                 
                 <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
-                    Rodzice dzieci wymagających diet eliminacyjnych (np. bezglutenowa, bezmleczna) proszeni są o dostarczenie aktualnych zaświadczeń lekarskich do gabinetu pielęgniarki szkolnej.
+                    Rozpoczęły się zapisy do kuratoryjnych konkursów przedmiotowych z języka polskiego, matematyki, historii oraz języka angielskiego dla klas 6-8. Uczniowie zainteresowani udziałem proszeni są o zgłaszanie się do nauczycieli poszczególnych przedmiotów do 30 września.
+                </div>
+                
+            </div>
+            
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="font-extrabold text-sm text-slate-900 leading-snug">
+                        Karta rowerowa - egz. poprawkowy
+                    </div>
+                    
+                    <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
+                        2026-09-10
+                    </span>
+                    
+                </div>
+
+                <div class="text-xs text-amber-800 font-semibold mt-1 flex items-center gap-1.5">
+                    <span>🏫 Autor:</span>
+                    <span>Joanna Lipska</span>
+                </div>
+
+                
+                <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
+                    Egzamin poprawkowy na kartę rowerową (część teoretyczna oraz jazda sprawnościowa na miasteczku ruchu drogowego) odbędzie się w piątek 25 września o godzinie 14:30. Zgłoszenia przyjmuje pani Joanna Lipska w sali 12.
                 </div>
                 
             </div>
@@ -613,6 +609,30 @@ Michał Feryc
                 
                 <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
                     Szkolny klub sportowy ogłasza nabór do sekcji szermierczej (floret) dla klas 3-5. Treningi pokazowe odbędą się w najbliższy poniedziałek o 16:00.
+                </div>
+                
+            </div>
+            
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="font-extrabold text-sm text-slate-900 leading-snug">
+                        Diety w szkolnej stołówce
+                    </div>
+                    
+                    <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">
+                        2026-09-03
+                    </span>
+                    
+                </div>
+
+                <div class="text-xs text-amber-800 font-semibold mt-1 flex items-center gap-1.5">
+                    <span>🏫 Autor:</span>
+                    <span>Dorota Opolska</span>
+                </div>
+
+                
+                <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700 font-normal leading-relaxed whitespace-pre-line bg-slate-50/60 p-3 rounded-xl border">
+                    Rodzice dzieci wymagających diet eliminacyjnych (np. bezglutenowa, bezmleczna) proszeni są o dostarczenie aktualnych zaświadczeń lekarskich do gabinetu pielęgniarki szkolnej.
                 </div>
                 
             </div>
@@ -678,7 +698,7 @@ Michał Feryc
     <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500">
         <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div class="flex items-center gap-2 font-medium">
-                <span>🏫 Librus2mail v2.1.0</span>
+                <span>🏫 Librus2mail v2.3.0</span>
                 <span>•</span>
                 <span>Prywatny Dashboard Rodzica</span>
             </div>

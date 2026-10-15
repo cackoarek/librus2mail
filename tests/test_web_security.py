@@ -6,9 +6,14 @@ Testy jednostkowe bezpieczeństwa aplikacji webowej (Faza 2 planu naprawczego):
 - Bezpieczna obsługa uszkodzonych plików w FileStorage
 """
 
+import os
+import stat
+
+from werkzeug.middleware.proxy_fix import ProxyFix
+
 from librus2mail.storage import read_json_safe, write_json_atomic
-from librus2mail.web.app import create_app
-from librus2mail.web.auth import LoginRateLimiter, get_client_ip
+from librus2mail.web.app import create_app, get_or_create_persistent_secret_key
+from librus2mail.web.auth import LoginRateLimiter, get_client_ip, is_ip_trusted
 
 
 class DummyRequest:
@@ -119,3 +124,125 @@ class TestWebSecurity:
         target_file = tmp_path / "test.json"
         write_json_atomic(target_file, {"invalid": object()})
         assert not target_file.exists()
+
+    def test_is_ip_trusted_cidr(self):
+        """Weryfikuje poprawne dopasowanie adresu IP do reguł CIDR oraz pojedynczych adresów."""
+        trusted_proxies = {"127.0.0.1", "172.18.0.0/16", "10.0.0.0/8"}
+
+        # Adresy w podsieci
+        assert is_ip_trusted("127.0.0.1", trusted_proxies) is True
+        assert is_ip_trusted("172.18.0.1", trusted_proxies) is True
+        assert is_ip_trusted("172.18.254.10", trusted_proxies) is True
+        assert is_ip_trusted("10.5.20.1", trusted_proxies) is True
+
+        # Adresy poza zaufanymi podsieciami
+        assert is_ip_trusted("172.19.0.1", trusted_proxies) is False
+        assert is_ip_trusted("192.168.1.1", trusted_proxies) is False
+        assert is_ip_trusted("8.8.8.8", trusted_proxies) is False
+
+        # Zaufanie do wszystkich przy wildcard '*'
+        assert is_ip_trusted("1.2.3.4", {"*"}) is True
+
+        # Pusta lista lub niepoprawne IP
+        assert is_ip_trusted("127.0.0.1", set()) is False
+        assert is_ip_trusted("", trusted_proxies) is False
+        assert is_ip_trusted("invalid_ip", trusted_proxies) is False
+
+    def test_persistent_secret_key(self, tmp_path):
+        """Weryfikuje generowanie, trwałość oraz uprawnienia 0600 pliku .secret_key w katalogu storage."""
+        storage_dir = tmp_path / "storage"
+        key_file = storage_dir / ".secret_key"
+
+        # 1. Pierwsze wywołanie tworzy nowy plik klucza
+        key1 = get_or_create_persistent_secret_key(storage_dir)
+        assert len(key1) >= 32
+        assert key_file.exists()
+        assert key_file.read_text(encoding="utf-8").strip() == key1
+
+        # Weryfikacja uprawnień (0600 na systemach POSIX)
+        if os.name == "posix":
+            file_mode = stat.S_IMODE(os.stat(key_file).st_mode)
+            assert file_mode == 0o600
+
+        # 2. Drugie wywołanie odczytuje dokładnie ten sam klucz (trwałość po restarcie)
+        key2 = get_or_create_persistent_secret_key(storage_dir)
+        assert key2 == key1
+
+    def test_http_security_headers(self, tmp_path):
+        """Weryfikuje obecność nagłówków bezpieczeństwa OWASP w odpowiedziach HTTP."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text("librus_users: []\n", encoding="utf-8")
+
+        app = create_app(config_path=str(config_path), storage_dir=str(tmp_path / "storage"), no_auth=True)
+        client = app.test_client()
+
+        res = client.get("/favicon.ico")
+        assert res.headers.get("X-Content-Type-Options") == "nosniff"
+        assert res.headers.get("X-Frame-Options") == "SAMEORIGIN"
+        assert res.headers.get("Referrer-Policy") == "strict-origin-when-cross-origin"
+        assert "mode=block" in res.headers.get("X-XSS-Protection", "")
+
+    def test_proxy_fix_enabled(self, tmp_path):
+        """Weryfikuje konfigurację ProxyFix middleware, gdy włączono behind_proxy."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text("librus_users: []\n", encoding="utf-8")
+
+        app = create_app(
+            config_path=str(config_path),
+            storage_dir=str(tmp_path / "storage"),
+            behind_proxy=True,
+        )
+        assert isinstance(app.wsgi_app, ProxyFix)
+
+    def test_csrf_protection_lifecycle(self, tmp_path):
+        """Weryfikuje cykl życia ochrony CSRF: blokowanie bez tokenu, akceptacja z poprawnym tokenem w formularzu i nagłówku."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text(
+            "librus_users:\n  - librus_login: '123'\n    librus_login_name: 'Test'\n    librus_password: 'pass'\n",
+            encoding="utf-8",
+        )
+
+        app = create_app(
+            config_path=str(config_path),
+            storage_dir=str(tmp_path / "storage"),
+            no_auth=True,
+            enable_csrf=True,
+        )
+        client = app.test_client()
+
+        # 1. POST bez tokenu CSRF -> 400 Bad Request
+        res_blocked = client.post("/api/whatif", data={"subject": "Matematyka", "grade": "5", "weight": "2"})
+        assert res_blocked.status_code == 400
+        assert "token" in res_blocked.get_data(as_text=True).lower()
+
+        # 2. POST z błędnym tokenem CSRF -> 400 Bad Request
+        res_invalid = client.post(
+            "/api/whatif",
+            data={"subject": "Matematyka", "grade": "5", "weight": "2", "csrf_token": "fake_token_123"},
+        )
+        assert res_invalid.status_code == 400
+
+        # 3. GET pobiera stronę i inicjuje _csrf_token w sesji
+        res_page = client.get("/")
+        assert res_page.status_code in (200, 302)
+
+        with client.session_transaction() as sess:
+            valid_token = sess.get("_csrf_token")
+            assert valid_token is not None
+            assert len(valid_token) >= 32
+
+        # 4. POST z prawidłowym tokenem w polu formularza `csrf_token` -> sukces (200)
+        res_form_ok = client.post(
+            "/api/whatif",
+            data={"subject": "Matematyka", "grade": "5", "weight": "2", "csrf_token": valid_token},
+        )
+        assert res_form_ok.status_code == 200
+
+        # 5. POST z prawidłowym tokenem w nagłówku HTTP `X-CSRFToken` -> sukces (200)
+        res_header_ok = client.post(
+            "/api/whatif",
+            data={"subject": "Matematyka", "grade": "5", "weight": "2"},
+            headers={"X-CSRFToken": valid_token},
+        )
+        assert res_header_ok.status_code == 200
+

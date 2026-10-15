@@ -447,6 +447,11 @@ jobs:
               <p>Zestawienie ocen ucznia, średnie ważone per przedmiot oraz symulator wpływu nowej oceny.</p>
             </a>
 
+            <a class="card" href="web_przedmiot_matematyka.html">
+              <h3>📐 Szczegółowa analiza przedmiotu (Matematyka)</h3>
+              <p>Wykres radarowy kompetencji, pasma progowe ocen 1–6, trajektoria średniej, lokomotywy i kotwice oraz stabilność i tempo.</p>
+            </a>
+
             <a class="card" href="web_terminarz.html">
               <h3>🔔 Terminarz sprawdzianów</h3>
               <p>Kalendarz nadchodzących sprawdzianów, kartkówek oraz nieobecności nauczycieli.</p>
@@ -552,7 +557,7 @@ jobs:
 
             WEB_LINKS="—"
             if [ -f "pages/${V}/web_dashboard.html" ]; then
-              WEB_LINKS="<a href=\"${V}/web_dashboard.html\">📊 Pulpit</a> &nbsp;|&nbsp; <a href=\"${V}/web_login.html\">🔒 Login</a> &nbsp;|&nbsp; <a href=\"${V}/web_plan.html\">📅 Plan</a> &nbsp;|&nbsp; <a href=\"${V}/web_oceny.html\">📝 Oceny</a> &nbsp;|&nbsp; <a href=\"${V}/web_raporty_postepy.html\">📈 Raporty</a>"
+              WEB_LINKS="<a href=\"${V}/web_dashboard.html\">📊 Pulpit</a> &nbsp;|&nbsp; <a href=\"${V}/web_login.html\">🔒 Login</a> &nbsp;|&nbsp; <a href=\"${V}/web_plan.html\">📅 Plan</a> &nbsp;|&nbsp; <a href=\"${V}/web_oceny.html\">📝 Oceny</a> &nbsp;|&nbsp; <a href=\"${V}/web_przedmiot_matematyka.html\">📐 Analiza</a> &nbsp;|&nbsp; <a href=\"${V}/web_raporty_postepy.html\">📈 Raporty</a>"
             fi
 
             ROWS="${ROWS}<tr><td><a href=\"${V}/\"><strong>${V}</strong></a></td><td><a href=\"${V}/powiadomienie_collector.html\">📬 Powiadomienie</a></td><td><a href=\"${V}/raport_8979296.html\">📊 Raport postępów</a></td><td>${STUDENT_LINKS}</td><td>${WEB_LINKS}</td></tr>\n"
@@ -594,6 +599,8 @@ jobs:
               <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px;">
                 <a href="latest/web_dashboard.html">📊 Web Dashboard</a>
                 <a href="latest/web_login.html">🔒 Web Login</a>
+                <a href="latest/web_oceny.html">📝 Oceny</a>
+                <a href="latest/web_przedmiot_matematyka.html">📐 Analiza przedmiotu</a>
                 <a href="latest/powiadomienie_collector.html">📬 Powiadomienie e-mail</a>
                 <a href="latest/raport_8979296.html">📊 Raport postępów</a>
                 <a href="latest/raport_kids.html">🎮 Kids (kl. 4–6)</a>

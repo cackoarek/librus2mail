@@ -1,0 +1,1266 @@
+{% extends "web/base.html" %}
+
+{% block title %}Analiza przedmiotu: {{ analytics.subject }} - Librus2mail{% endblock %}
+
+{% block head %}
+<!-- Chart.js do renderowania trajektorii ocen i średniej kroczącej -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+
+    <!-- Breadcrumbs & Pasek nawigacji powrotnej -->
+    <div class="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-slate-200">
+        <nav class="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-500">
+            <a href="{{ url_for('web.dashboard') }}" class="hover:text-indigo-600 transition-colors">Pulpit</a>
+            <span class="text-slate-300">/</span>
+            <a href="{{ url_for('web.grades_view') }}" class="hover:text-indigo-600 transition-colors">Oceny</a>
+            <span class="text-slate-300">/</span>
+            <span class="text-slate-900 font-bold">{{ analytics.subject }}</span>
+        </nav>
+        <a href="{{ url_for('web.grades_view') }}"
+           class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 hover:text-indigo-600 hover:border-slate-300 transition-all shadow-2xs">
+            <span>&larr;</span>
+            <span>Wróć do wszystkich ocen</span>
+        </a>
+    </div>
+
+    <!-- Nagłówek przedmiotu z głównym statusem -->
+    <div class="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-5 relative overflow-hidden">
+        <div class="absolute -right-8 -bottom-8 text-8xl opacity-5 select-none pointer-events-none">📚</div>
+        
+        <div>
+            <div class="flex flex-wrap items-center gap-2.5 mb-2">
+                <span class="px-3 py-1 rounded-full text-xs font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-100 flex items-center gap-1.5">
+                    <span>📖</span>
+                    <span>Przedmiot szkolny</span>
+                </span>
+                {% if analytics.is_excluded %}
+                <span class="px-3 py-1 rounded-full text-xs font-extrabold bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1">
+                    <span>🚫</span>
+                    <span>Wykluczony ze średniej świadectwa</span>
+                </span>
+                {% else %}
+                <span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                    <span>🎓</span>
+                    <span>Wliczany do średniej świadectwa</span>
+                </span>
+                {% endif %}
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
+                <span>{{ analytics.subject }}</span>
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1 flex items-center gap-2">
+                <span>Profil ucznia: <strong>{{ data.student_name }}</strong></span>
+                <span class="text-slate-300">•</span>
+                <span>Łącznie ocen: <strong>{{ analytics.total_count }}</strong></span>
+                <span class="text-slate-300">•</span>
+                <span>Suma wag: <strong>{{ analytics.sum_weights }}</strong></span>
+            </p>
+        </div>
+
+        <!-- Główny widget proponowanej oceny i trendu -->
+        <div class="flex items-center gap-4 bg-slate-50/80 p-4 rounded-2xl border border-slate-100 self-start md:self-auto">
+            <div class="text-right">
+                <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Proponowana ocena</span>
+                <div class="flex items-baseline justify-end gap-1.5 mt-0.5">
+                    {% if analytics.predicted_grade_num %}
+                    <span class="text-2xl font-black text-indigo-700">{{ analytics.predicted_grade_num }}</span>
+                    <span class="text-xs font-bold text-slate-600">({{ analytics.predicted_grade_word }})</span>
+                    {% else %}
+                    <span class="text-base font-bold text-slate-400">—</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="h-10 w-[1px] bg-slate-200"></div>
+            <div>
+                <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Dynamika ocen</span>
+                <span class="inline-flex items-center gap-1 text-xs font-extrabold mt-1
+                    {% if analytics.trend == 'improving' %} text-emerald-600
+                    {% elif analytics.trend == 'declining' %} text-rose-600
+                    {% else %} text-slate-600 {% endif %}"
+                    title="{{ analytics.trend_desc }}">
+                    <span class="text-base leading-none">{{ analytics.trend_icon }}</span>
+                    <span>{{ analytics.trend_desc }}</span>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- SEKCJA 1: STATYSTYKI OCEN (KAFELKI KPI)                                   -->
+    <!-- ========================================================================= -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-3.5">
+        <!-- Średnia ważona -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-xs">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <span>Śr. ważona</span>
+                <span>⚖️</span>
+            </div>
+            <div class="mt-2 text-2xl font-black
+                {% if analytics.average and analytics.average >= 4.75 %} text-emerald-600
+                {% elif analytics.average and analytics.average >= 3.75 %} text-indigo-600
+                {% elif analytics.average and analytics.average >= 2.75 %} text-amber-600
+                {% elif analytics.average %} text-rose-600
+                {% else %} text-slate-400 {% endif %}">
+                {{ "%.2f"|format(analytics.average) if analytics.average else "—" }}
+            </div>
+            <span class="text-[10px] text-slate-500 font-medium mt-0.5 block truncate">kluczowa dla oceny</span>
+        </div>
+
+        <!-- Średnia arytmetyczna -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-xs">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <span>Śr. zwykła</span>
+                <span>🔢</span>
+            </div>
+            <div class="mt-2 text-2xl font-black text-slate-800">
+                {{ "%.2f"|format(analytics.arithmetic_average) if analytics.arithmetic_average else "—" }}
+            </div>
+            <span class="text-[10px] text-slate-500 font-medium mt-0.5 block truncate">arytmetyczna</span>
+        </div>
+
+        <!-- Liczba ocen i suma wag -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-xs">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <span>Oceny / Wagi</span>
+                <span>📝</span>
+            </div>
+            <div class="mt-2 text-2xl font-black text-slate-800">
+                {{ analytics.numeric_count }} <span class="text-xs font-semibold text-slate-400">/ {{ analytics.sum_weights }}</span>
+            </div>
+            <span class="text-[10px] text-slate-500 font-medium mt-0.5 block truncate">oceny / suma wag</span>
+        </div>
+
+        <!-- Najwyższa ocena -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-xs">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <span>Najwyższa</span>
+                <span>⭐</span>
+            </div>
+            <div class="mt-2 text-2xl font-black text-emerald-600">
+                {{ analytics.max_grade or "—" }}
+            </div>
+            <span class="text-[10px] text-slate-500 font-medium mt-0.5 block truncate">maksimum (MAX)</span>
+        </div>
+
+        <!-- Najniższa ocena -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-xs">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <span>Najniższa</span>
+                <span>⚠️</span>
+            </div>
+            <div class="mt-2 text-2xl font-black {% if analytics.min_grade and analytics.min_grade <= 2 %} text-rose-600 {% else %} text-slate-800 {% endif %}">
+                {{ analytics.min_grade or "—" }}
+            </div>
+            <span class="text-[10px] text-slate-500 font-medium mt-0.5 block truncate">minimum (MIN)</span>
+        </div>
+
+        <!-- Mediana -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-xs">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <span>Mediana</span>
+                <span>🎯</span>
+            </div>
+            <div class="mt-2 text-2xl font-black text-slate-800">
+                {{ analytics.median_grade or "—" }}
+            </div>
+            <span class="text-[10px] text-slate-500 font-medium mt-0.5 block truncate">środkowy wynik</span>
+        </div>
+
+        <!-- Stabilność formy (Volatility Score) -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-xs cursor-help group transition-colors hover:border-indigo-300"
+             title="{{ analytics.consistency_metrics.desc }}">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <span class="group-hover:text-indigo-600 transition-colors">Stabilność</span>
+                <span>📐</span>
+            </div>
+            <div class="mt-2 text-2xl font-black
+                {% if analytics.consistency_metrics.status == 'high' %} text-emerald-600
+                {% elif analytics.consistency_metrics.status == 'moderate' %} text-indigo-600
+                {% elif analytics.consistency_metrics.status == 'low' %} text-rose-600
+                {% else %} text-slate-400 {% endif %}">
+                {{ analytics.consistency_metrics.score ~ "%" if analytics.consistency_metrics.score is not none else "—" }}
+            </div>
+            <span class="text-[10px] text-slate-500 font-medium mt-0.5 block truncate">
+                {{ analytics.consistency_metrics.label if analytics.consistency_metrics.has_data else "wymaga ocen" }}
+            </span>
+        </div>
+
+        <!-- Tempo ocen (Pacing & Velocity) -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-xs" title="{{ analytics.pacing_metrics.semester_end_desc }}">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <span>Tempo ocen</span>
+                <span>⏱️</span>
+            </div>
+            <div class="mt-2 text-2xl font-black text-slate-800">
+                {% if analytics.pacing_metrics.days_per_grade %}
+                <span class="text-lg text-slate-400 font-normal">co </span>{{ "%.1f"|format(analytics.pacing_metrics.days_per_grade) }}<span class="text-xs font-bold text-slate-500"> d.</span>
+                {% else %}
+                <span class="text-slate-400">—</span>
+                {% endif %}
+            </div>
+            <span class="text-[10px] text-slate-500 font-medium mt-0.5 block truncate">
+                {% if analytics.pacing_metrics.has_data %}
+                ok. {{ analytics.pacing_metrics.estimated_remaining }} ocen do końca
+                {% else %}
+                początek semestru
+                {% endif %}
+            </span>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- SEKCJA 2: STRATEGIA OCENY — CEL PODWYŻSZENIA VS RYZYKO SPADKU              -->
+    <!-- ========================================================================= -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        
+        <!-- KARTA A: SZANSA NA WYŻSZĄ OCENĘ (TARGET ANALYSIS) -->
+        <div class="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-base">🎯</span>
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900">Szansa na podwyższenie oceny</h3>
+                            <span class="text-xs text-slate-500">Analiza możliwości zdobycia wyższego stopnia</span>
+                        </div>
+                    </div>
+                    {% if analytics.target_analysis.has_target %}
+                    <span class="px-2.5 py-1 rounded-lg text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        Cel: {{ analytics.target_analysis.target_grade_label }}
+                    </span>
+                    {% endif %}
+                </div>
+
+                {% if analytics.target_analysis.is_max %}
+                <div class="mt-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm">
+                    <p class="font-bold flex items-center gap-2">
+                        <span>🎉</span>
+                        <span>Maksymalny stopień celujący (6)</span>
+                    </p>
+                    <p class="mt-1 text-xs text-emerald-800">
+                        Uczeń posiada już najwyższą możliwą ocenę roczną/śródroczną z tego przedmiotu. Gratulacje!
+                    </p>
+                </div>
+                {% elif analytics.target_analysis.has_target %}
+                <div class="mt-4 space-y-3.5">
+                    <!-- Pasek dystansu do celu -->
+                    <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+                        <div>
+                            <span class="text-xs text-slate-500 font-semibold block">Dystans do progu oceny {{ analytics.target_analysis.target_grade_num }}:</span>
+                            <span class="text-xs text-slate-400">Próg od: <strong>{{ "%.2f"|format(analytics.target_analysis.target_threshold) }}</strong> (bieżąca średnia: {{ "%.2f"|format(analytics.average) }})</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-lg font-black text-indigo-700">Brakuje {{ "%.2f"|format(analytics.target_analysis.gap) }} pkt</span>
+                            <span class="block text-[10px] font-bold text-slate-500 uppercase">{{ analytics.target_analysis.difficulty_label }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Gotowe scenariusze co potrzeba zdobyć -->
+                    <div>
+                        <span class="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-2">Scenariusze osiągnięcia celu:</span>
+                        {% if analytics.target_analysis.scenarios %}
+                        <div class="space-y-2">
+                            {% for sc in analytics.target_analysis.scenarios %}
+                            <div class="p-2.5 rounded-xl bg-slate-50/70 border border-slate-100 flex items-center justify-between text-xs hover:bg-slate-100 transition-colors">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-emerald-500 font-bold">✔</span>
+                                    <span class="font-semibold text-slate-800">{{ sc.description }}</span>
+                                </div>
+                                <span class="text-[11px] font-bold text-slate-500">nowa śr: <strong class="text-indigo-600">{{ sc.sample_result_avg }}</strong></span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="text-xs text-slate-500 italic bg-amber-50 p-3 rounded-xl border border-amber-200">
+                            Podwyższenie oceny z pojedynczych prac jest mało prawdopodobne z uwagi na dużą sumę dotychczasowych wag. Wymagana jest seria bardzo dobrych ocen (5 i 6).
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% else %}
+                <p class="mt-4 text-xs text-slate-400 italic">Brak wystarczającej liczby ocen do wyznaczenia celu.</p>
+                {% endif %}
+            </div>
+            
+            <div class="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-400">
+                Wskazówka: Najszybszy skok średniej dają prace klasowe i sprawdziany o wadze 3 i 4.
+            </div>
+        </div>
+
+        <!-- KARTA B: MARGINES BEZPIECZEŃSTWA I RYZYKO SPADKU (RISK ANALYSIS) -->
+        <div class="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-base">🛡️</span>
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900">Margines bezpieczeństwa & ryzyko</h3>
+                            <span class="text-xs text-slate-500">Bufor punktowy przed obniżeniem stopnia</span>
+                        </div>
+                    </div>
+                    {% if analytics.risk_analysis.has_risk and not analytics.risk_analysis.is_min %}
+                    <span class="px-2.5 py-1 rounded-lg text-xs font-extrabold
+                        {% if analytics.risk_analysis.risk_level == 'critical' %} bg-rose-50 text-rose-700 border border-rose-200
+                        {% elif analytics.risk_analysis.risk_level == 'moderate' %} bg-amber-50 text-amber-700 border border-amber-200
+                        {% else %} bg-emerald-50 text-emerald-700 border border-emerald-200 {% endif %}">
+                        {{ analytics.risk_analysis.risk_label }}
+                    </span>
+                    {% endif %}
+                </div>
+
+                {% if analytics.risk_analysis.is_min %}
+                <div class="mt-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 text-sm">
+                    <p class="font-bold flex items-center gap-2">
+                        <span>⚠️</span>
+                        <span>Średnia w strefie oceny niedostatecznej (1)</span>
+                    </p>
+                    <p class="mt-1 text-xs text-rose-800">
+                        Uczeń znajduje się poniżej progu oceny dopuszczającej (1.75). Zalecany pilny kontakt z nauczycielem w celu poprawy nieudanych prac.
+                    </p>
+                </div>
+                {% elif analytics.risk_analysis.has_risk %}
+                <div class="mt-4 space-y-3.5">
+                    <!-- Bufor punktowy -->
+                    <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+                        <div>
+                            <span class="text-xs text-slate-500 font-semibold block">Margines nad dolnym progiem stopnia:</span>
+                            <span class="text-xs text-slate-400">Próg bieżącej oceny to: <strong>{{ "%.2f"|format(analytics.risk_analysis.current_threshold) }}</strong></span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-lg font-black
+                                {% if analytics.risk_analysis.risk_level == 'critical' %} text-rose-600
+                                {% elif analytics.risk_analysis.risk_level == 'moderate' %} text-amber-600
+                                {% else %} text-emerald-600 {% endif %}">
+                                +{{ "%.2f"|format(analytics.risk_analysis.safety_margin) }} pkt
+                            </span>
+                            <span class="block text-[10px] font-bold text-slate-500 uppercase">bufor ochronny</span>
+                        </div>
+                    </div>
+
+                    <!-- Symulacje niepomyślnych ocen -->
+                    <div>
+                        <span class="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-2">Odporność na słabsze oceny (symulacja):</span>
+                        <div class="space-y-2">
+                            {% for drop in analytics.risk_analysis.drop_simulations %}
+                            <div class="p-2.5 rounded-xl bg-slate-50/70 border border-slate-100 flex items-center justify-between text-xs hover:bg-slate-100 transition-colors">
+                                <span class="font-semibold text-slate-800">{{ drop.desc }}</span>
+                                <span class="text-[11px] font-bold {{ 'text-rose-600' if drop.diff < -0.3 else 'text-slate-500' }}">
+                                    {{ "%.2f"|format(drop.diff) }} pkt
+                                </span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <p class="mt-4 text-xs text-slate-400 italic">Brak ocen liczbowych do kalkulacji marginesu bezpieczeństwa.</p>
+                {% endif %}
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-400">
+                Wskazówka: Ocena ze sprawdzianu o wadze 3 wpływa na średnią trzykrotnie silniej niż zwykła kartkówka.
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- SEKCJA 3: WPŁYW OCEN NA ŚREDNIĄ (LOKOMOTYWY 🚀 I KOTWICE ⚓)                 -->
+    <!-- ========================================================================= -->
+    <div class="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+            <div>
+                <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <span>⚡</span>
+                    <span>Wpływ pojedynczych ocen na średnią ważoną</span>
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Oceny, które najbardziej zaważyły na obecnym wyniku (dźwignia w górę vs spadek) oraz kalkulator zysku z poprawy.
+                </p>
+            </div>
+            <span class="text-xs font-semibold px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-xl text-slate-600 self-start sm:self-auto">
+                Bieżąca średnia: <strong class="text-indigo-600">{{ "%.2f"|format(analytics.average) if analytics.average else "—" }}</strong>
+            </span>
+        </div>
+
+        {% if analytics.impact_analysis.has_data %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <!-- Kolumna 1: Lokomotywy (Boosters) -->
+            <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50/40 p-5 sm:p-6 space-y-3.5">
+                <div class="flex flex-wrap items-center justify-between gap-2.5 pb-3 pt-1 border-b border-emerald-200/70">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <span class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-base shrink-0 shadow-2xs">🚀</span>
+                        <span class="text-xs sm:text-sm font-extrabold text-emerald-900 tracking-wide uppercase">
+                            Lokomotywy średniej <span class="font-bold text-emerald-700 normal-case">(Top sukcesy)</span>
+                        </span>
+                    </div>
+                    <span class="text-[11px] font-extrabold text-emerald-800 bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-lg shrink-0 shadow-2xs">
+                        Dźwignia w górę
+                    </span>
+                </div>
+
+                {% if analytics.impact_analysis.boosters %}
+                <div class="space-y-2.5">
+                    {% for b in analytics.impact_analysis.boosters %}
+                    <div class="bg-white/90 border border-emerald-100 rounded-xl p-3 flex items-center justify-between gap-3 shadow-2xs">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <span class="w-8 h-8 rounded-lg bg-emerald-500 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-xs">
+                                {{ b.grade }}
+                            </span>
+                            <div class="min-w-0">
+                                <div class="text-xs font-bold text-slate-800 truncate" title="{{ b.category }}">
+                                    {{ b.category }}
+                                </div>
+                                <div class="text-[11px] text-slate-400 truncate">
+                                    Waga: <strong class="text-slate-600">{{ b.weight }}</strong> • {{ b.date or '—' }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <span class="text-sm font-black text-emerald-600 block">
+                                +{{ "%.2f"|format(b.delta) }} pkt
+                            </span>
+                            <span class="text-[10px] text-slate-400 block" title="Średnia, gdyby nie ta ocena: {{ b.avg_without }}">
+                                bez niej: {{ "%.2f"|format(b.avg_without) }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-xs text-slate-400 italic py-4 text-center">Brak ocen wyraźnie wyższych od średniej.</p>
+                {% endif %}
+            </div>
+
+            <!-- Kolumna 2: Kotwice (Draggers) -->
+            <div class="rounded-2xl border border-rose-200/80 bg-rose-50/40 p-5 sm:p-6 space-y-3.5">
+                <div class="flex flex-wrap items-center justify-between gap-2.5 pb-3 pt-1 border-b border-rose-200/70">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <span class="w-8 h-8 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center text-base shrink-0 shadow-2xs">⚓</span>
+                        <span class="text-xs sm:text-sm font-extrabold text-rose-900 tracking-wide uppercase">
+                            Kotwice średniej <span class="font-bold text-rose-700 normal-case">(Najbardziej kosztowne)</span>
+                        </span>
+                    </div>
+                    <span class="text-[11px] font-extrabold text-rose-800 bg-rose-100 border border-rose-200 px-2.5 py-1 rounded-lg shrink-0 shadow-2xs">
+                        Ściągają w dół
+                    </span>
+                </div>
+
+                {% if analytics.impact_analysis.draggers %}
+                <div class="space-y-2.5">
+                    {% for d in analytics.impact_analysis.draggers %}
+                    <div class="bg-white/90 border border-rose-100 rounded-xl p-3 flex flex-col gap-2 shadow-2xs">
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-2.5 min-w-0">
+                                <span class="w-8 h-8 rounded-lg bg-rose-500 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-xs">
+                                    {{ d.grade }}
+                                </span>
+                                <div class="min-w-0">
+                                    <div class="text-xs font-bold text-slate-800 truncate" title="{{ d.category }}">
+                                        {{ d.category }}
+                                    </div>
+                                    <div class="text-[11px] text-slate-400 truncate">
+                                        Waga: <strong class="text-slate-600">{{ d.weight }}</strong> • {{ d.date or '—' }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <span class="text-sm font-black text-rose-600 block">
+                                    {{ "%.2f"|format(d.delta) }} pkt
+                                </span>
+                                <span class="text-[10px] text-slate-400 block" title="Średnia, gdyby nie ta ocena: {{ d.avg_without }}">
+                                    bez niej: {{ "%.2f"|format(d.avg_without) }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Zysk z poprawki -->
+                        {% if d.numeric_grade and d.numeric_grade < 4 %}
+                        <div class="pt-2 border-t border-rose-100/70 flex items-center justify-between text-[11px] text-slate-600 bg-rose-50/60 rounded-lg px-2.5 py-1.5">
+                            <span class="font-medium">💡 Poprawa na <strong>5 (bdb)</strong>:</span>
+                            <span class="font-extrabold text-emerald-700">
+                                +{{ "%.2f"|format(d.gain_if_5) }} pkt &rarr; śr. {{ "%.2f"|format(d.sim_avg_if_5) }}
+                            </span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-xs text-slate-400 italic py-4 text-center">Brak ocen drastycznie zaniżających średnią.</p>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <p class="text-xs text-slate-400 italic py-4 text-center">Brak wystarczającej liczby ocen do wyliczenia wpływu.</p>
+        {% endif %}
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- SEKCJA 4: SKUTECZNOŚĆ WG KATEGORII PRAC & WYKRES RADAROWY                    -->
+    <!-- ========================================================================= -->
+    <div class="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+            <div>
+                <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <span>🕸️</span>
+                    <span>Skuteczność wg formy sprawdzania wiedzy (Kategorie prac)</span>
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Porównanie wyników ze sprawdzianów, kartkówek, odpowiedzi ustnych i prac domowych.
+                </p>
+            </div>
+            {% if analytics.category_analytics.best_category %}
+            <span class="text-xs font-semibold px-2.5 py-1 bg-indigo-50 border border-indigo-100 rounded-xl text-indigo-700 self-start sm:self-auto">
+                Najsilniejszy obszar: <strong>{{ analytics.category_analytics.best_category.name }}</strong> ({{ analytics.category_analytics.best_category.weighted_average }})
+            </span>
+            {% endif %}
+        </div>
+
+        {% if analytics.category_analytics.insight %}
+        <div class="p-3.5 rounded-2xl bg-indigo-50/70 border border-indigo-100 text-xs text-indigo-900 flex items-center gap-2.5 font-medium">
+            <span class="text-base">💡</span>
+            <span>{{ analytics.category_analytics.insight }}</span>
+        </div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+            <!-- Wykres radarowy / adaptacyjny słupkowy Chart.js -->
+            <div class="lg:col-span-5 h-[280px] sm:h-[310px] w-full flex flex-col items-center justify-center relative">
+                {% if analytics.category_analytics.categories %}
+                <div class="w-full h-full relative">
+                    <canvas id="categoryRadarChart"></canvas>
+                </div>
+                {% if analytics.category_analytics.radar_labels|length < 3 %}
+                <span class="text-[10px] text-slate-400 font-medium text-center mt-1 block">
+                    💡 Wykres słupkowy (od 3 różnych kategorii uaktywni się wielokąt radarowy)
+                </span>
+                {% endif %}
+                {% else %}
+                <div class="text-center p-6 text-slate-400 text-xs bg-slate-50 rounded-2xl w-full border border-slate-200/60">
+                    <span class="text-2xl block mb-2">📊</span>
+                    Brak ocen z przypisaną kategorią dla tego przedmiotu.
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Tabela / lista szczegółowa kategorii -->
+            <div class="lg:col-span-7 space-y-2.5">
+                {% for cat in analytics.category_analytics.categories %}
+                <div class="p-3 rounded-2xl border border-slate-200/90 bg-slate-50/50 hover:bg-white hover:shadow-xs transition-all flex flex-col gap-1.5">
+                    <div class="flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2">
+                            <span class="font-extrabold text-slate-800">{{ cat.name }}</span>
+                            <span class="text-[11px] text-slate-400">({{ cat.grades_count }} {{ 'ocena' if cat.grades_count == 1 else ('oceny' if cat.grades_count in (2,3,4) else 'ocen') }}, suma wag: {{ cat.sum_weights }})</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[11px] text-slate-500 font-semibold">{{ cat.weight_share }}% wagi</span>
+                            <span class="px-2 py-0.5 rounded-lg text-xs font-black
+                                {% if cat.weighted_average and cat.weighted_average >= 4.75 %} bg-emerald-100 text-emerald-800
+                                {% elif cat.weighted_average and cat.weighted_average >= 3.75 %} bg-indigo-100 text-indigo-800
+                                {% elif cat.weighted_average and cat.weighted_average >= 2.75 %} bg-amber-100 text-amber-800
+                                {% elif cat.weighted_average %} bg-rose-100 text-rose-800
+                                {% else %} bg-slate-200 text-slate-600 {% endif %}">
+                                {{ "%.2f"|format(cat.weighted_average) if cat.weighted_average else "—" }}
+                            </span>
+                        </div>
+                    </div>
+                    <!-- Pasek postępu średniej w skali 1-6 -->
+                    <div class="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
+                        {% if cat.weighted_average %}
+                        <div class="h-full rounded-full transition-all duration-500
+                            {% if cat.weighted_average >= 4.75 %} bg-emerald-500
+                            {% elif cat.weighted_average >= 3.75 %} bg-indigo-500
+                            {% elif cat.weighted_average >= 2.75 %} bg-amber-500
+                            {% else %} bg-rose-500 {% endif %}"
+                            style="width: {{ ((cat.weighted_average - 1.0) / 5.0 * 100)|round(1) }}%;"></div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- INTERAKTYWNY MINI-SYMULATOR OCEN DLA TEGO PRZEDMIOTU                       -->
+    <!-- ========================================================================= -->
+    <div class="bg-gradient-to-tr from-slate-900 to-indigo-950 text-white rounded-3xl p-5 sm:p-6 shadow-md">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-indigo-900/60">
+            <div>
+                <h3 class="text-base font-bold flex items-center gap-2">
+                    <span>🔮</span>
+                    <span>Interaktywny symulator nowej oceny z przedmiotu {{ analytics.subject }}</span>
+                </h3>
+                <p class="text-xs text-indigo-200/80 mt-0.5">
+                    Sprawdź natychmiast jak dowolna planowana ocena (lub ewentualna wpadka) wpłynie na średnią ważoną i końcowy stopień.
+                </p>
+            </div>
+            <div class="text-xs font-semibold px-3 py-1 bg-indigo-800/40 border border-indigo-700/50 rounded-xl text-indigo-200">
+                Bieżąca średnia: <strong class="text-white">{{ "%.2f"|format(analytics.average) if analytics.average else "0.00" }}</strong>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-5">
+            <!-- Wybór oceny -->
+            <div>
+                <label for="sim-grade-select" class="block text-xs font-bold uppercase tracking-wider text-indigo-300 mb-2">Symulowana ocena:</label>
+                <select id="sim-grade-select" onchange="runSubjectSimulation()"
+                        class="w-full bg-slate-800/80 border border-indigo-700/60 rounded-xl px-3.5 py-2.5 text-sm font-bold text-white focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                    <option value="6.0">6 (celujący)</option>
+                    <option value="5.5">5+ (bardzo dobry plus)</option>
+                    <option value="5.0" selected>5 (bardzo dobry)</option>
+                    <option value="4.75">5- (bardzo dobry minus)</option>
+                    <option value="4.5">4+ (dobry plus)</option>
+                    <option value="4.0">4 (dobry)</option>
+                    <option value="3.75">4- (dobry minus)</option>
+                    <option value="3.5">3+ (dostateczny plus)</option>
+                    <option value="3.0">3 (dostateczny)</option>
+                    <option value="2.5">2+ (dopuszczający plus)</option>
+                    <option value="2.0">2 (dopuszczający)</option>
+                    <option value="1.0">1 (niedostateczny)</option>
+                </select>
+            </div>
+
+            <!-- Wybór wagi -->
+            <div>
+                <label for="sim-weight-select" class="block text-xs font-bold uppercase tracking-wider text-indigo-300 mb-2">Waga oceny:</label>
+                <select id="sim-weight-select" onchange="runSubjectSimulation()"
+                        class="w-full bg-slate-800/80 border border-indigo-700/60 rounded-xl px-3.5 py-2.5 text-sm font-bold text-white focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                    <option value="1.0">Waga 1 (kartkówka, zadanie domowe, aktywność)</option>
+                    <option value="2.0">Waga 2 (odpowiedź ustna, większy test)</option>
+                    <option value="3.0" selected>Waga 3 (sprawdzian, praca klasowa)</option>
+                    <option value="4.0">Waga 4 (duży projekt, egzamin próbny)</option>
+                </select>
+            </div>
+
+            <!-- Wynik symulacji -->
+            <div class="bg-indigo-900/40 border border-indigo-700/50 rounded-2xl p-4 flex items-center justify-between">
+                <div>
+                    <span class="block text-[11px] uppercase font-bold text-indigo-300 tracking-wider">Nowa średnia:</span>
+                    <span id="sim-result-avg" class="text-3xl font-black text-white mt-0.5 block">—</span>
+                    <span id="sim-result-diff" class="text-xs font-bold text-emerald-400 block mt-0.5">+0.00 pkt</span>
+                </div>
+                <div class="text-right">
+                    <span class="block text-[11px] uppercase font-bold text-indigo-300 tracking-wider">Proponowana:</span>
+                    <span id="sim-result-grade" class="text-xl font-extrabold text-indigo-200 mt-0.5 block">—</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- SEKCJA 3: DZIAŁ RAPORTÓW (WIZUALIZACJA: TRAJEKTORIA OCEN & ŚREDNIA)        -->
+    <!-- ========================================================================= -->
+    <div class="space-y-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>📈</span>
+                    <span>Dział raportów: Trajektoria ocen w czasie ze średnią kroczącą</span>
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Wielkość kropki odzwierciedla wagę pracy, wysokość jej ocenę. Fioletowa linia prezentuje dynamiczną średnią kroczącą po każdej ocenie.
+                </p>
+            </div>
+            <div class="hidden sm:flex items-center gap-3 text-xs font-semibold text-slate-500">
+                <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> 5-6 (b. dobre)</span>
+                <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> 4 (dobre)</span>
+                <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span> 3 (dostateczne)</span>
+                <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span> 1-2 (słabe)</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-5">
+            
+            <!-- Główny wykres czasu i średniej kroczącej (Chart.js) -->
+            <div class="lg:col-span-3 bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm">
+                {% if analytics.timeline_data %}
+                <div class="relative h-[320px] sm:h-[360px] w-full">
+                    <canvas id="timelineChart"></canvas>
+                </div>
+                <div class="flex flex-wrap items-center justify-between gap-2 mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-400">
+                    <span>Oś X: Chronologiczna kolejność wystawiania ocen ze szkoły</span>
+                    <span>Wielkość punktu: <strong>Waga 1 (mały) &rarr; Waga 3/4 (duży)</strong></span>
+                    <span>Linia fioletowa: <strong>Średnia krocząca (bieżąca na dany dzień)</strong></span>
+                </div>
+                {% else %}
+                <div class="py-16 text-center text-slate-400 text-sm">
+                    Brak ocen z datami do wygenerowania wykresu osi czasu.
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Mini-histogram rozkładu ocen -->
+            <div class="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col justify-between">
+                <div>
+                    <h3 class="text-sm font-bold text-slate-900 flex items-center justify-between pb-3 border-b border-slate-100">
+                        <span>📊 Rozkład ocen (Histogram)</span>
+                        <span class="text-xs text-slate-400 font-semibold">{{ analytics.numeric_count }} ocen</span>
+                    </h3>
+
+                    <div class="mt-4 space-y-2.5">
+                        {% for h in analytics.histogram_data %}
+                        <div>
+                            <div class="flex items-center justify-between text-xs font-bold text-slate-700 mb-1">
+                                <span class="flex items-center gap-1.5">
+                                    <span class="w-5 text-center px-1 py-0.5 rounded-md
+                                        {% if h.grade >= 5 %} bg-emerald-100 text-emerald-800
+                                        {% elif h.grade == 4 %} bg-blue-100 text-blue-800
+                                        {% elif h.grade == 3 %} bg-amber-100 text-amber-800
+                                        {% else %} bg-rose-100 text-rose-800 {% endif %}">
+                                        {{ h.grade }}
+                                    </span>
+                                    <span class="text-slate-500 font-medium">ocena {{ h.grade }}</span>
+                                </span>
+                                <span>{{ h.count }} <span class="text-slate-400 font-normal">({{ h.percentage }}%)</span></span>
+                            </div>
+                            <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                                <div class="h-full rounded-full transition-all duration-500
+                                    {% if h.grade >= 5 %} bg-emerald-500
+                                    {% elif h.grade == 4 %} bg-blue-500
+                                    {% elif h.grade == 3 %} bg-amber-500
+                                    {% else %} bg-rose-500 {% endif %}"
+                                    style="width: {{ h.percentage }}%;"></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="mt-5 pt-3 border-t border-slate-100 text-[11px] text-slate-400">
+                    Rozkład odzwierciedla częstotliwość poszczególnych stopni w całym semestrze.
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- SEKCJA 4: SZCZEGÓŁOWA HISTORIA WSZYSTKICH OCEN Z TEGO PRZEDMIOTU          -->
+    <!-- ========================================================================= -->
+    <div class="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+            <div>
+                <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <span>📋</span>
+                    <span>Wszystkie oceny cząstkowe z przedmiotu ({{ analytics.total_count }})</span>
+                </h3>
+                <span class="text-xs text-slate-500">Uporządkowane chronologicznie od najnowszych do najstarszych</span>
+            </div>
+            <div class="text-xs text-slate-400 font-medium">
+                Pulpit rodzica Librus2mail
+            </div>
+        </div>
+
+        {% if analytics.table_grades %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                    <tr class="border-b border-slate-200 text-slate-400 font-extrabold uppercase text-[10px] tracking-wider">
+                        <th class="py-3 px-3">Data</th>
+                        <th class="py-3 px-3">Ocena</th>
+                        <th class="py-3 px-3">Waga</th>
+                        <th class="py-3 px-3">Średnia po ocenie</th>
+                        <th class="py-3 px-3">Kategoria / Tytuł</th>
+                        <th class="py-3 px-3">Nauczyciel</th>
+                        <th class="py-3 px-3">Komentarz</th>
+                        <th class="py-3 px-3 text-right">Akcja</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-slate-700">
+                    {% for g in analytics.table_grades %}
+                    <tr onclick="openEditGradeModal({
+                            id: '{{ g.id }}',
+                            subject: '{{ analytics.subject|e }}',
+                            grade: '{{ g.grade|e }}',
+                            weight: '{{ g.weight_raw or g.weight or '1'|e }}',
+                            category: '{{ g.category or 'Ocena'|e }}',
+                            date: '{{ g.date_raw or g.date or ''|e }}',
+                            teacher: '{{ g.teacher or ''|e }}',
+                            is_custom: {{ 'true' if g.is_custom else 'false' }},
+                            original_grade: '{{ g.original_grade or ''|e }}',
+                            original_weight: '{{ g.original_weight or ''|e }}'
+                        })"
+                        class="hover:bg-slate-50 transition-colors cursor-pointer group {{ 'bg-amber-50/20' if g.is_custom else '' }}"
+                        title="Kliknij, aby edytować ocenę lub wagę{% if g.is_custom %} (skorygowana ręcznie, oryg. waga: {{ g.original_weight }}){% endif %}">
+                        <td class="py-3 px-3 font-semibold text-slate-600 whitespace-nowrap">
+                            {{ g.date_raw or g.date }}
+                        </td>
+                        <td class="py-3 px-3">
+                            <div class="inline-flex items-center gap-1.5">
+                                <span class="inline-flex items-center justify-center min-w-[28px] h-7 px-2 rounded-lg font-black text-xs
+                                    {% if g.numeric_grade and g.numeric_grade >= 5 %} bg-emerald-100 text-emerald-800 border border-emerald-200
+                                    {% elif g.numeric_grade and g.numeric_grade >= 4 %} bg-indigo-100 text-indigo-800 border border-indigo-200
+                                    {% elif g.numeric_grade and g.numeric_grade >= 3 %} bg-amber-100 text-amber-800 border border-amber-200
+                                    {% elif g.numeric_grade %} bg-rose-100 text-rose-800 border border-rose-200
+                                    {% else %} bg-slate-100 text-slate-700 border border-slate-200 {% endif %}">
+                                    {{ g.grade }}
+                                </span>
+                                {% if g.is_custom %}
+                                <span class="text-[9px] font-bold text-amber-700 bg-amber-100 border border-amber-200 px-1.5 py-0.5 rounded-md whitespace-nowrap" title="Waga lub ocena skorygowana ręcznie">✏️ zmieniona</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="py-3 px-3">
+                            <span class="{{ 'font-bold text-amber-800' if g.is_custom else 'font-bold text-slate-900' }}">
+                                {{ g.weight_raw or g.weight }}
+                            </span>
+                            {% if g.is_custom and g.original_weight %}
+                            <span class="block text-[10px] text-slate-400">oryg. {{ g.original_weight }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-3 font-extrabold text-indigo-700">
+                            {{ "%.2f"|format(g.running_average) if g.running_average else "—" }}
+                        </td>
+                        <td class="py-3 px-3 font-semibold text-slate-800">
+                            {{ g.category }}
+                        </td>
+                        <td class="py-3 px-3 text-slate-500 whitespace-nowrap">
+                            {{ g.teacher }}
+                        </td>
+                        <td class="py-3 px-3 text-slate-500 italic max-w-xs truncate" title="{{ g.comment }}">
+                            {{ g.comment }}
+                        </td>
+                        <td class="py-3 px-3 text-right whitespace-nowrap">
+                            <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-slate-600 bg-white border border-slate-200 rounded-lg group-hover:border-indigo-400 group-hover:text-indigo-600 group-hover:bg-indigo-50/50 transition-all shadow-2xs">
+                                <span>✏️</span>
+                                <span>Edytuj</span>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="py-8 text-center text-slate-400 text-xs">
+            Brak zarejestrowanych ocen dla tego przedmiotu.
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- ========================================================================= -->
+<!-- SKRYPTY JAVASCRIPT: CHART.JS WYKRES TRAJEKTORII & MINI-SYMULATOR          -->
+<!-- ========================================================================= -->
+<script>
+    // Dane przekazane z backendu do wykresu Chart.js
+    const timelineData = {{ analytics.timeline_data|tojson }};
+    const currentSumWeighted = {{ analytics.average and analytics.sum_weights and (analytics.average * analytics.sum_weights)|round(4) or 0.0 }};
+    const currentSumWeights = {{ analytics.sum_weights or 0.0 }};
+    const currentAvg = {{ analytics.average or 0.0 }};
+
+    document.addEventListener('DOMContentLoaded', function() {
+        initTimelineChart();
+        initCategoryRadarChart();
+        runSubjectSimulation();
+    });
+
+    function initTimelineChart() {
+        const canvas = document.getElementById('timelineChart');
+        if (!canvas || !timelineData || timelineData.length === 0) return;
+
+        // Filtrujemy tylko oceny liczbowe do trajektorii wykresu
+        const validTimelineData = timelineData.filter(p => p.numeric_grade !== null && p.numeric_grade !== undefined);
+        if (validTimelineData.length === 0) return;
+
+        // Etykiety osi X (skrócona data mm-dd lub numer kolejny)
+        const labels = validTimelineData.map((p, idx) => {
+            return p.date ? p.date.substring(5) : ('#' + (idx + 1));
+        });
+
+        // Wartości średniej kroczącej i ocen cząstkowych jako płaskie tablice
+        const movingAverages = validTimelineData.map(p => p.running_average);
+        const gradesValues = validTimelineData.map(p => p.numeric_grade);
+
+        // Promienie punktów na podstawie wagi oceny
+        const pointRadii = validTimelineData.map(p => {
+            if (p.weight >= 4) return 13;
+            if (p.weight >= 3) return 10;
+            if (p.weight >= 2) return 8;
+            return 6;
+        });
+
+        const pointHoverRadii = validTimelineData.map(p => {
+            if (p.weight >= 4) return 16;
+            if (p.weight >= 3) return 13;
+            if (p.weight >= 2) return 11;
+            return 9;
+        });
+
+        // Kolorystyka punktów wg stopnia (zielony 5-6, niebieski 4, bursztyn 3, czerwień 1-2)
+        const bgColors = validTimelineData.map(p => {
+            if (p.numeric_grade >= 5) return 'rgba(16, 185, 129, 0.85)'; // szmaragd
+            if (p.numeric_grade >= 4) return 'rgba(37, 99, 235, 0.85)';  // czysty niebieski (Blue)
+            if (p.numeric_grade >= 3) return 'rgba(245, 158, 11, 0.85)'; // bursztyn
+            return 'rgba(239, 68, 68, 0.85)'; // czerwień
+        });
+
+        const borderColors = validTimelineData.map(p => {
+            if (p.numeric_grade >= 5) return 'rgb(5, 150, 105)';
+            if (p.numeric_grade >= 4) return 'rgb(29, 78, 216)';        // ciemny niebieski
+            if (p.numeric_grade >= 3) return 'rgb(217, 119, 6)';
+            return 'rgb(220, 38, 38)';
+        });
+
+        // Plugin rysujący kolorowe pasma progowe (Threshold Bands) oraz linie progów ocen 2, 3, 4, 5
+        const thresholdBandsPlugin = {
+            id: 'thresholdBands',
+            beforeDatasetsDraw(chart) {
+                const { ctx, chartArea: { top, bottom, left, right }, scales: { y } } = chart;
+                if (!y) return;
+
+                const bands = [
+                    { min: 4.75, max: 6.2, color: 'rgba(16, 185, 129, 0.08)' },
+                    { min: 3.75, max: 4.75, color: 'rgba(37, 99, 235, 0.07)' },
+                    { min: 2.75, max: 3.75, color: 'rgba(245, 158, 11, 0.07)' },
+                    { min: 1.75, max: 2.75, color: 'rgba(249, 115, 22, 0.07)' },
+                    { min: 1.0, max: 1.75, color: 'rgba(239, 68, 68, 0.08)' }
+                ];
+
+                ctx.save();
+                bands.forEach(b => {
+                    const yTop = y.getPixelForValue(Math.min(6.2, b.max));
+                    const yBottom = y.getPixelForValue(Math.max(1.0, b.min));
+                    const height = yBottom - yTop;
+                    if (height > 0) {
+                        ctx.fillStyle = b.color;
+                        ctx.fillRect(left, yTop, right - left, height);
+                    }
+                });
+
+                const lines = [
+                    { val: 4.75, text: 'próg 5 (4.75)', color: 'rgba(16, 185, 129, 0.55)' },
+                    { val: 3.75, text: 'próg 4 (3.75)', color: 'rgba(37, 99, 235, 0.55)' },
+                    { val: 2.75, text: 'próg 3 (2.75)', color: 'rgba(217, 119, 6, 0.55)' },
+                    { val: 1.75, text: 'próg 2 (1.75)', color: 'rgba(220, 38, 38, 0.55)' }
+                ];
+
+                lines.forEach(l => {
+                    const yPos = y.getPixelForValue(l.val);
+                    if (yPos >= top && yPos <= bottom) {
+                        ctx.strokeStyle = l.color;
+                        ctx.setLineDash([4, 4]);
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(left, yPos);
+                        ctx.lineTo(right, yPos);
+                        ctx.stroke();
+
+                        ctx.font = '600 9px Inter, sans-serif';
+                        ctx.fillStyle = l.color;
+                        ctx.textAlign = 'right';
+                        ctx.fillText(l.text, right - 6, yPos - 3);
+                    }
+                });
+                ctx.restore();
+            }
+        };
+
+        const ctx = canvas.getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            plugins: [thresholdBandsPlugin],
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Średnia krocząca (ważona)',
+                        data: movingAverages,
+                        borderColor: '#9333ea',                         // wyrazisty fiolet (Purple)
+                        backgroundColor: 'rgba(147, 51, 234, 0.12)',
+                        borderWidth: 3,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#7e22ce',               // głęboki fiolet
+                        pointHoverRadius: 6,
+                        tension: 0.35,
+                        fill: false,
+                        spanGaps: true,
+                        order: 1
+                    },
+                    {
+                        label: 'Oceny cząstkowe (wielkość = waga)',
+                        data: gradesValues,
+                        showLine: false,
+                        pointRadius: pointRadii,
+                        pointHoverRadius: pointHoverRadii,
+                        pointBackgroundColor: bgColors,
+                        pointBorderColor: borderColors,
+                        pointBorderWidth: 2,
+                        order: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 900,
+                    easing: 'easeOutQuart'
+                },
+                scales: {
+                    y: {
+                        min: 1.0,
+                        max: 6.2,
+                        ticks: {
+                            stepSize: 1,
+                            font: { family: 'Inter', weight: 'bold' }
+                        },
+                        grid: {
+                            color: '#f1f5f9'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            callback: function(val, index) {
+                                const item = validTimelineData[index];
+                                return item ? (item.date ? item.date.substring(5) : ('#' + (index+1))) : '';
+                            },
+                            font: { family: 'Inter', size: 10, weight: '600' },
+                            color: '#64748b'
+                        },
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            font: { family: 'Inter', size: 12, weight: 'bold' },
+                            usePointStyle: true,
+                            boxWidth: 8
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                        titleFont: { family: 'Inter', weight: 'bold', size: 13 },
+                        bodyFont: { family: 'Inter', size: 12 },
+                        padding: 12,
+                        cornerRadius: 12,
+                        callbacks: {
+                            title: function(items) {
+                                if (!items || items.length === 0) return '';
+                                const idx = items[0].dataIndex;
+                                const item = validTimelineData[idx];
+                                return item ? (item.date + ' • ' + item.category) : '';
+                            },
+                            label: function(ctx) {
+                                const item = validTimelineData[ctx.dataIndex];
+                                if (!item) return '';
+                                if (ctx.datasetIndex === 0) {
+                                    return '📊 Średnia po tej ocenie: ' + (item.running_average !== null && item.running_average !== undefined ? item.running_average.toFixed(2) : '—');
+                                } else {
+                                    return [
+                                        '⭐ Ocena: ' + item.grade + ' (waga ' + item.weight + ')',
+                                        '👨‍🏫 Nauczyciel: ' + item.teacher,
+                                        item.comment && item.comment !== '—' ? ('💬 ' + item.comment) : ''
+                                    ].filter(Boolean);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Wykres skuteczności wg kategorii prac (Radar dla >= 3 kategorii, Słupkowy dla 1-2 kategorii)
+    function initCategoryRadarChart() {
+        const canvas = document.getElementById('categoryRadarChart');
+        if (!canvas) return;
+
+        const labels = {{ analytics.category_analytics.radar_labels|tojson }};
+        const dataValues = {{ analytics.category_analytics.radar_averages|tojson }};
+        if (!labels || labels.length === 0) return;
+
+        const ctx = canvas.getContext('2d');
+
+        if (labels.length >= 3) {
+            // Klasyczny wielokątny wykres radarowy
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Średnia ważona',
+                        data: dataValues,
+                        backgroundColor: 'rgba(99, 102, 241, 0.22)',
+                        borderColor: '#4f46e5',
+                        borderWidth: 2.5,
+                        pointBackgroundColor: '#4338ca',
+                        pointBorderColor: '#ffffff',
+                        pointHoverBackgroundColor: '#ffffff',
+                        pointHoverBorderColor: '#4338ca',
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            min: 1,
+                            max: 6,
+                            ticks: {
+                                stepSize: 1,
+                                backdropColor: 'transparent',
+                                font: { family: 'Inter', size: 10, weight: 'bold' }
+                            },
+                            pointLabels: {
+                                font: { family: 'Inter', size: 11, weight: 'bold' },
+                                color: '#334155'
+                            },
+                            grid: {
+                                color: '#e2e8f0'
+                            },
+                            angleLines: {
+                                color: '#f1f5f9'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                            titleFont: { family: 'Inter', weight: 'bold', size: 12 },
+                            padding: 10,
+                            cornerRadius: 10,
+                            callbacks: {
+                                label: function(ctx) {
+                                    return '⭐ Średnia ważona: ' + (ctx.raw !== null ? ctx.raw.toFixed(2) : '—');
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            // Adaptacyjny wykres słupkowy dla 1 lub 2 kategorii
+            const barColors = dataValues.map(v => {
+                if (v >= 4.75) return 'rgba(16, 185, 129, 0.85)';
+                if (v >= 3.75) return 'rgba(79, 70, 229, 0.85)';
+                if (v >= 2.75) return 'rgba(245, 158, 11, 0.85)';
+                return 'rgba(239, 68, 68, 0.85)';
+            });
+            const borderColors = dataValues.map(v => {
+                if (v >= 4.75) return '#059669';
+                if (v >= 3.75) return '#4338ca';
+                if (v >= 2.75) return '#d97706';
+                return '#dc2626';
+            });
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Średnia ważona',
+                        data: dataValues,
+                        backgroundColor: barColors,
+                        borderColor: borderColors,
+                        borderWidth: 1.5,
+                        borderRadius: 8,
+                        barThickness: labels.length === 1 ? 36 : 28,
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', // Poziome słupki dopasowane do nazw kategorii
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            min: 1,
+                            max: 6,
+                            ticks: {
+                                stepSize: 1,
+                                font: { family: 'Inter', size: 10, weight: 'bold' }
+                            },
+                            grid: {
+                                color: '#f1f5f9'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Średnia ważona w skali 1–6',
+                                font: { family: 'Inter', size: 10, weight: '600' },
+                                color: '#94a3b8'
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                font: { family: 'Inter', size: 11, weight: 'bold' },
+                                color: '#334155'
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                            titleFont: { family: 'Inter', weight: 'bold', size: 12 },
+                            padding: 10,
+                            cornerRadius: 10,
+                            callbacks: {
+                                label: function(ctx) {
+                                    return '⭐ Średnia ważona: ' + (ctx.raw !== null ? ctx.raw.toFixed(2) : '—');
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // Interaktywny mini-symulator ocen na żywo
+    function runSubjectSimulation() {
+        const gradeVal = parseFloat(document.getElementById('sim-grade-select').value);
+        const weightVal = parseFloat(document.getElementById('sim-weight-select').value);
+        
+        const newWeightTotal = currentSumWeights + weightVal;
+        const newSumWeighted = currentSumWeighted + (gradeVal * weightVal);
+        const newAvg = (newSumWeighted / newWeightTotal);
+        const diff = newAvg - currentAvg;
+
+        const avgEl = document.getElementById('sim-result-avg');
+        const diffEl = document.getElementById('sim-result-diff');
+        const gradeEl = document.getElementById('sim-result-grade');
+
+        avgEl.textContent = newAvg.toFixed(2);
+        
+        if (diff > 0) {
+            diffEl.textContent = "+" + diff.toFixed(2) + " pkt w górę";
+            diffEl.className = "text-xs font-bold text-emerald-400 block mt-0.5";
+        } else if (diff < 0) {
+            diffEl.textContent = diff.toFixed(2) + " pkt w dół";
+            diffEl.className = "text-xs font-bold text-rose-400 block mt-0.5";
+        } else {
+            diffEl.textContent = "brak zmiany średniej";
+            diffEl.className = "text-xs font-bold text-slate-300 block mt-0.5";
+        }
+
+        // Ustalenie stopnia
+        let propGrade = "1 (niedostateczny)";
+        if (newAvg >= 5.51) propGrade = "6 (celujący)";
+        else if (newAvg >= 4.75) propGrade = "5 (bardzo dobry)";
+        else if (newAvg >= 3.75) propGrade = "4 (dobry)";
+        else if (newAvg >= 2.75) propGrade = "3 (dostateczny)";
+        else if (newAvg >= 1.75) propGrade = "2 (dopuszczający)";
+
+        gradeEl.textContent = propGrade;
+    }
+</script>
+
+{% include "web/edit_grade_modal.html" %}
+{% endblock %}

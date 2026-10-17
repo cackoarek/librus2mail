@@ -97,6 +97,40 @@ def sort_items_descending(items: list[Any]) -> list[Any]:
     )
 
 
+def sort_grades_descending(grades: list[Any]) -> list[Any]:
+    """Sortuje oceny chronologicznie od najnowszych do najstarszych (malejąco po dacie wystawienia).
+
+    Priorytety sortowania:
+    1. Rzeczywista data wystawienia oceny ('date') sparsowana do datetime.
+    2. Znacznik techniczny dodania ('added_at') jako uzupełnienie przy identycznej dacie.
+    3. Identyfikator oceny ('id') numerycznie (wyższy ID = nowszy wpis w Librusie).
+    """
+    if not grades:
+        return []
+
+    def _extract_val(item: Any, key: str) -> Any:
+        if isinstance(item, collections.abc.Mapping):
+            return item.get(key)
+        return getattr(item, key, None)
+
+    def _grade_sort_key(g: Any):
+        raw_date = _extract_val(g, 'date')
+        dt_grade = parse_datetime_safe(raw_date)
+
+        raw_added = _extract_val(g, 'added_at')
+        dt_added = parse_datetime_safe(raw_added)
+
+        effective_dt = dt_grade or dt_added or datetime.min
+        secondary_added = dt_added or datetime.min
+
+        raw_id = str(_extract_val(g, 'id') or '').strip()
+        int_id = int(raw_id) if raw_id.isdigit() else 0
+
+        return (effective_dt, secondary_added, int_id, raw_id)
+
+    return sorted(grades, key=_grade_sort_key, reverse=True)
+
+
 class BaseStorage(ABC):
     """Bazowa klasa pamięci stanu aplikacji."""
 

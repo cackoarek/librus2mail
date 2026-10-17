@@ -19,7 +19,12 @@ from librus2mail.progress_analyzer import (
     parse_numeric_grade,
     parse_weight,
 )
-from librus2mail.storage import BaseStorage, create_storage, sort_items_descending
+from librus2mail.storage import (
+    BaseStorage,
+    create_storage,
+    sort_grades_descending,
+    sort_items_descending,
+)
 from librus2mail.student_analyzer import StudentAnalyzer
 from librus2mail.updates_notifier import (
     parse_item_datetime,
@@ -200,7 +205,7 @@ def calculate_subject_averages(
                 sum_weights += effective_weight
 
         avg = round(sum_weighted / sum_weights, 2) if sum_weights > 0 else None
-        sorted_grades = sorted(g_list, key=lambda x: str(x.get('date', '')), reverse=True)
+        sorted_grades = sort_grades_descending(g_list)
         is_excluded = subj.strip().lower() in norm_excluded
 
         result[subj] = {
@@ -1167,8 +1172,8 @@ def get_student_dashboard_bundle(
     overall_avg = calculate_overall_average(subj_averages)
     certificate_summary = calculate_certificate_summary(subj_averages, excluded_subjects=excluded_subjects)
 
-    # Najnowsze oceny (ostatnie 8)
-    recent_grades = sorted(grades, key=lambda x: str(x.get('added_at', '') or x.get('date', '')), reverse=True)[:8]
+    # Najnowsze oceny (ostatnie 8 wystawionych)
+    recent_grades = sort_grades_descending(grades)[:8]
 
     # Terminarz i plan lekcji
     timetable_summary = prepare_timetable_summary(timetable, reference_date=ref_now.date())

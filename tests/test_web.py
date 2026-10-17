@@ -30,6 +30,7 @@ from librus2mail.web.services import (
     get_storage,
     resolve_student_name,
     simulate_new_grade,
+    sort_grades_descending,
 )
 from librus2mail.web.services import (
     test_librus_credentials as check_librus_credentials,
@@ -443,6 +444,31 @@ class TestWebDashboard(unittest.TestCase):
         # Zapis i ponowny odczyt przez set_student_name
         storage.set_student_name('123456', 'Jan Kowalski Zaktualizowany')
         self.assertEqual(storage.get_student_name('123456'), 'Jan Kowalski Zaktualizowany')
+
+        # Test sortowania ocen malejąco po rzeczywistej dacie wystawienia
+        unsorted_grades = [
+            {'subject': 'Historia', 'grade': '6', 'date': '2026-09-11 (pt.)', 'added_at': '2026-10-15T20:00:00', 'id': '1005'},
+            {'subject': 'Biologia', 'grade': 'np', 'date': '2026-09-15 (wt.)', 'added_at': '2026-10-15T20:00:00', 'id': '1010'},
+            {'subject': 'Język angielski', 'grade': '4', 'date': '2026-10-16 (pt.)', 'added_at': '2026-10-16T15:00:00', 'id': '1055'},
+            {'subject': 'Geografia', 'grade': '5-', 'date': '2026-10-12 (pon.)', 'added_at': '2026-10-15T20:00:00', 'id': '1040'},
+            {'subject': 'Biologia', 'grade': '5', 'date': '2026-10-06 (wt.)', 'added_at': '2026-10-15T20:00:00', 'id': '1035'},
+            {'subject': 'Biologia', 'grade': 'np', 'date': '2026-09-29 (wt.)', 'added_at': '2026-10-15T20:00:00', 'id': '1025'},
+            {'subject': 'Język polski', 'grade': '3', 'date': '2026-10-16 (pt.)', 'added_at': '2026-10-16T15:00:00', 'id': '1054'},
+        ]
+        sorted_res = sort_grades_descending(unsorted_grades)
+        dates_order = [g['date'] for g in sorted_res]
+        self.assertEqual(dates_order, [
+            '2026-10-16 (pt.)',
+            '2026-10-16 (pt.)',
+            '2026-10-12 (pon.)',
+            '2026-10-06 (wt.)',
+            '2026-09-29 (wt.)',
+            '2026-09-15 (wt.)',
+            '2026-09-11 (pt.)',
+        ])
+        # Tie-breaker po wyższym ID dla tej samej daty 16.10
+        self.assertEqual(sorted_res[0]['subject'], 'Język angielski')
+        self.assertEqual(sorted_res[1]['subject'], 'Język polski')
 
     def test_login_rate_limiter_unit(self):
         """Testuje jednostkowo działanie klasy LoginRateLimiter (licznik prób i blokada)."""

@@ -173,4 +173,14 @@ web:
   # Czas trwania blokady adresu IP w sekundach po przekroczeniu limitu prób (domyślnie: 900 = 15 minut):
   lockout_duration_s: 900
 
+  # Moduł kalendarium zdarzeń na pulpicie głównym:
+  # Czy wyświetlać moduł kalendarium ostatnich dni (domyślnie: true):
+  timeline_enabled: true
+
+  # Liczba dni wstecz objętych kalendarium (zakres: 1 - 14, domyślnie: 5):
+  timeline_days: 5
+
+  # Czy ukrywać dni weekendu (sobota i niedziela), prezentując tylko dni szkolne (domyślnie: false):
+  timeline_hide_weekends: false
+
 

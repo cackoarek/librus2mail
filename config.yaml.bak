@@ -1,0 +1,55 @@
+librus_users:
+- librus_login_name: Jan Kowalski
+  librus_login: '11030948'
+  librus_password: OlaFalenica2209!
+  read_messages: true
+  read_grades: true
+  read_timetable: true
+  read_schedule: true
+  schedule_retention_days: 30
+  schedule_day_offset: 1
+  one_summary_message: true
+  notification_receivers:
+  - cackoarek@gmail.com
+delay_between_users_s: 10
+login_retries: 2
+login_retry_delay_s: 5
+wait_time_s: 3600
+schedule:
+  collection:
+    mode: daily
+    time: '16:00'
+    days: all
+  reports:
+  - name: Raport tygodniowy
+    enabled: true
+    frequency: weekly
+    time: '17:00'
+    interval_days: 7
+    weekday: friday
+  - name: Raport miesięczny
+    enabled: false
+    frequency: monthly
+    time: '17:00'
+    interval_days: 30
+    day_of_month: 1
+schedule_day_offset: 1
+schedule_retention_days: 30
+one_summary_message: true
+work_in_loop: true
+storage_dir: storage
+send_error_notifications: true
+error_cooldown_s: 3600
+mail:
+  login: aa.pl
+  use_gmail: false
+  password: AAA
+  non_gmail_settings:
+    smtp_host: aaa.pl
+    port: 587
+web:
+  port: 5000
+  host: 127.0.0.1
+  password: aaa
+  max_login_attempts: 5
+  lockout_duration_s: 900

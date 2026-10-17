@@ -608,6 +608,60 @@
             </div>
         </div>
 
+        <!-- ================================================================= -->
+        <!-- SEKCJA 5: KALENDARIUM ZDARZEŃ NA PULPICIE (DASHBOARD) -->
+        <!-- ================================================================= -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7">
+            <div class="border-b border-slate-100 pb-4 mb-6">
+                <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>🗓️</span> Moduł kalendarium zdarzeń (Pulpit główny)
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Dostosuj wyświetlanie graficznego paska ostatnich dni prezentującego oceny, wiadomości, ogłoszenia i sprawdziany.
+                </p>
+            </div>
+
+            <div class="max-w-xl space-y-5">
+                <!-- Włącznik / wyłącznik kalendarium -->
+                <div class="flex items-start gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <input type="checkbox" id="timeline_enabled" name="timeline_enabled"
+                           {% if web_cfg.get('timeline_enabled', config.get('timeline_enabled', True)) %}checked{% endif %}
+                           class="mt-1 rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                    <label for="timeline_enabled" class="text-xs text-slate-700 cursor-pointer">
+                        <span class="font-bold text-slate-900 block text-sm">Wyświetlaj kalendarium zdarzeń na stronie głównej</span>
+                        Pokazuje pełnoszerokościowy graficzny harmonogram dzień po dniu bezpośrednio pod kafelkami podsumowującymi.
+                    </label>
+                </div>
+
+                <!-- Liczba dni wstecz -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                        Liczba dni wstecz objętych kalendarium (zakres: 1 – 14 dni)
+                    </label>
+                    <div class="flex items-center gap-3">
+                        <input type="number" name="timeline_days" min="1" max="14"
+                               value="{{ web_cfg.get('timeline_days', config.get('timeline_days', 5)) }}"
+                               class="w-32 text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <span class="text-xs text-slate-500 font-medium">dni (domyślnie: 5 dni)</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-1">
+                        Określa ile kolumn/kart kolejnych dni pojawi się w kalendarium na pulpicie.
+                    </p>
+                </div>
+
+                <!-- Ukrywanie weekendów -->
+                <div class="flex items-start gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <input type="checkbox" id="timeline_hide_weekends" name="timeline_hide_weekends"
+                           {% if web_cfg.get('timeline_hide_weekends', config.get('timeline_hide_weekends', False)) %}checked{% endif %}
+                           class="mt-1 rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                    <label for="timeline_hide_weekends" class="text-xs text-slate-700 cursor-pointer">
+                        <span class="font-bold text-slate-900 block text-sm">Ukryj dni weekendu (sobota i niedziela)</span>
+                        Pokazuje wyłącznie dni robocze nauki szkolnej (od poniedziałku do piątku), pomijając karty weekendowe.
+                    </label>
+                </div>
+            </div>
+        </div>
+
         <!-- Zapis zmian -->
         <div class="flex items-center justify-end gap-3 pt-4">
             <a href="{{ url_for('web.dashboard') }}"

@@ -1875,6 +1875,60 @@ class TestWebDashboard(unittest.TestCase):
         self.assertIn("Apel szkolny", html)
         self.assertIn("Dziś", html)
 
+        # 3. Test opcji hide_weekends=True (ukrywanie weekendów)
+        ref_monday = datetime(2026, 9, 21, 10, 0, 0)
+        school_days, _ = build_recent_days_timeline(
+            grades, messages, notifications, timetable, now=ref_monday, days_count=5, hide_weekends=True
+        )
+        school_dates = [d['date'] for d in school_days]
+        # Powinny być tylko dni robocze: wtorek 15.09, środa 16.09, czwartek 17.09, piątek 18.09, poniedziałek 21.09
+        self.assertEqual(school_dates, ['2026-09-15', '2026-09-16', '2026-09-17', '2026-09-18', '2026-09-21'])
+        self.assertFalse(any(d['is_weekend'] for d in school_days))
+
+        # 4. Test wyłączenia kalendarium w konfiguracji (timeline_enabled = False)
+        cfg_disabled = dict(self.mock_config)
+        cfg_disabled['web'] = {'timeline_enabled': False}
+        with open(self.config_path, 'w', encoding='utf-8') as f:
+            import yaml
+            yaml.dump(cfg_disabled, f)
+
+        app_disabled = create_app(config_path=self.config_path, storage_dir=self.storage_dir, no_auth=True)
+        res_disabled = app_disabled.test_client().get('/')
+        self.assertEqual(res_disabled.status_code, 200)
+        self.assertNotIn("Kalendarium ostatnich", res_disabled.data.decode('utf-8'))
+
+        # 5. Test niestandardowej liczby dni wstecz (np. 3 dni)
+        cfg_3days = dict(self.mock_config)
+        cfg_3days['web'] = {'timeline_enabled': True, 'timeline_days': 3}
+        with open(self.config_path, 'w', encoding='utf-8') as f:
+            yaml.dump(cfg_3days, f)
+
+        app_3days = create_app(config_path=self.config_path, storage_dir=self.storage_dir, no_auth=True, actual_date=ref_now)
+        res_3days = app_3days.test_client().get('/')
+        self.assertEqual(res_3days.status_code, 200)
+        html_3days = res_3days.data.decode('utf-8')
+        self.assertIn("Kalendarium ostatnich 3 dni", html_3days)
+
+        # 6. Test zapisu ustawień kalendarium przez formularz POST /ustawienia
+        post_data = {
+            'student_login_0': '123456',
+            'student_name_0': 'Jan Kowalski',
+            'mail_provider': 'gmail',
+            'mail_login': 'parent@example.com',
+            'timeline_enabled': 'on',
+            'timeline_days': '7',
+            'timeline_hide_weekends': 'on',
+            'collection_mode': 'interval',
+            'collection_interval_hours': '1',
+        }
+        res_post = client.post('/ustawienia', data=post_data, follow_redirects=True)
+        self.assertEqual(res_post.status_code, 200)
+        with open(self.config_path, encoding='utf-8') as f:
+            saved_cfg = yaml.safe_load(f)
+        self.assertTrue(saved_cfg['web']['timeline_enabled'])
+        self.assertEqual(saved_cfg['web']['timeline_days'], 7)
+        self.assertTrue(saved_cfg['web']['timeline_hide_weekends'])
+
 
 if __name__ == '__main__':
     unittest.main()

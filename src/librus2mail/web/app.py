@@ -1130,6 +1130,13 @@ def settings_view():
         new_config['web']['port'] = int(form.get('web_port') or existing_web.get('port', 5000))
         new_config['web']['host'] = form.get('web_host', '').strip() or existing_web.get('host', '127.0.0.1')
         new_config['web']['password'] = effective_web_pwd
+        new_config['web']['timeline_enabled'] = 'timeline_enabled' in form
+        try:
+            timeline_days_in = int(form.get('timeline_days', 5))
+            new_config['web']['timeline_days'] = max(1, min(14, timeline_days_in))
+        except (ValueError, TypeError):
+            new_config['web']['timeline_days'] = 5
+        new_config['web']['timeline_hide_weekends'] = 'timeline_hide_weekends' in form
 
         try:
             save_config_yaml(new_config, config_path)

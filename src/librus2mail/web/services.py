@@ -7,6 +7,7 @@ import os
 import re
 import statistics
 from collections import defaultdict
+from collections.abc import Mapping
 from datetime import date, datetime, timedelta
 from typing import Any
 
@@ -1166,14 +1167,28 @@ def build_recent_days_timeline(
     timetable: list[dict[str, Any]],
     now: datetime | None = None,
     days_count: int = 5,
+    hide_weekends: bool = False,
 ) -> tuple[list[dict[str, Any]], int]:
     """
     Buduje chronologiczne kalendarium ostatnich N dni (domyślnie 5) z zebranymi zdarzeniami:
     ocenami, wiadomościami, ogłoszeniami szkolnymi oraz zapowiedzianymi sprawdzianami.
+    Opcjonalnie ukrywa weekendy (sobota i niedziela), prezentując tylko dni szkolne.
     """
     ref_now = now or datetime.now()
     ref_date = ref_now.date()
-    target_dates = [ref_date - timedelta(days=offset) for offset in range(days_count - 1, -1, -1)]
+    days_count = max(1, min(30, days_count))
+
+    if hide_weekends:
+        target_dates = []
+        cur_date = ref_date
+        while len(target_dates) < days_count:
+            if cur_date.weekday() < 5:  # 0=Pn .. 4=Pt
+                target_dates.append(cur_date)
+            cur_date -= timedelta(days=1)
+        target_dates.reverse()
+    else:
+        target_dates = [ref_date - timedelta(days=offset) for offset in range(days_count - 1, -1, -1)]
+
     date_to_day: dict[str, dict[str, Any]] = {}
     weekdays_pl = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela"]
     weekdays_short_pl = ["Pon", "Wt", "Śr", "Czw", "Pt", "Sob", "Ndz"]
@@ -1377,15 +1392,29 @@ def get_student_dashboard_bundle(
     schedule_summary = sched_ctx['selected_summary']
     today_schedule_summary = prepare_schedule_summary(schedule, timetable_entries=timetable, now=ref_now, day_offset=0)
 
-    # Kalendarium ostatnich 5 dni (dzień po dniu)
-    recent_timeline_days, recent_timeline_total_events = build_recent_days_timeline(
-        grades=grades,
-        messages=raw_messages,
-        notifications=raw_notifications,
-        timetable=timetable,
-        now=ref_now,
-        days_count=5,
-    )
+    # Kalendarium ostatnich dni (konfiguracja: włączenie, liczba dni, ukrywanie weekendów)
+    web_cfg = config.get('web', {}) if isinstance(config.get('web'), (dict, Mapping)) else {}
+    timeline_enabled = bool(web_cfg.get('timeline_enabled', config.get('timeline_enabled', True)))
+    try:
+        timeline_days_count = int(web_cfg.get('timeline_days', config.get('timeline_days', 5)))
+    except (ValueError, TypeError):
+        timeline_days_count = 5
+    timeline_days_count = max(1, min(14, timeline_days_count))
+    timeline_hide_weekends = bool(web_cfg.get('timeline_hide_weekends', config.get('timeline_hide_weekends', False)))
+
+    if timeline_enabled:
+        recent_timeline_days, recent_timeline_total_events = build_recent_days_timeline(
+            grades=grades,
+            messages=raw_messages,
+            notifications=raw_notifications,
+            timetable=timetable,
+            now=ref_now,
+            days_count=timeline_days_count,
+            hide_weekends=timeline_hide_weekends,
+        )
+    else:
+        recent_timeline_days = []
+        recent_timeline_total_events = 0
 
     # Liczba nadchodzących sprawdzianów w horyzoncie
     upcoming_tests_count = len(timetable_summary.get('immediate_tests', [])) + sum(
@@ -1401,6 +1430,9 @@ def get_student_dashboard_bundle(
         'certificate_summary': certificate_summary,
         'excluded_subjects': excluded_subjects,
         'recent_grades': recent_grades,
+        'recent_timeline_enabled': timeline_enabled,
+        'recent_timeline_days_count': timeline_days_count,
+        'recent_timeline_hide_weekends': timeline_hide_weekends,
         'recent_timeline_days': recent_timeline_days,
         'recent_timeline_total_events': recent_timeline_total_events,
         'timetable_summary': timetable_summary,

@@ -16,6 +16,7 @@ from librus2mail.web.auth import LoginRateLimiter, get_client_ip
 from librus2mail.web.services import (
     build_daily_summary_html,
     build_progress_report_html,
+    build_recent_days_timeline,
     build_student_report_html,
     calculate_certificate_summary,
     calculate_goal_optimizer,
@@ -1785,6 +1786,94 @@ class TestWebDashboard(unittest.TestCase):
 
         hist_item = next(i for i in benchmark['items'] if i['subject'] == 'Historia')
         self.assertGreater(hist_item['stdev'], 0.0)
+
+    def test_recent_days_timeline_unit_and_integration(self):
+        """Weryfikuje moduł 5-dniowego kalendarium zdarzeń (jednostkowo oraz w widoku dashboardu)."""
+        ref_now = datetime(2026, 9, 18, 12, 0, 0)
+        grades = [
+            {'id': '1', 'subject': 'Matematyka', 'grade': '5', 'weight': '2', 'date': '2026-09-18', 'comment': 'Bardzo dobrze'},
+            {'id': '2', 'subject': 'Język polski', 'grade': '4', 'weight': '1', 'date': '2026-09-15', 'category': 'Kartkówka'},
+        ]
+        messages = [
+            {'id': 'm1', 'title': 'Zajęcia SKS', 'sender': 'Nauczyciel WF', 'datetime': '2026-09-17 14:00:00', 'body': 'Przypominam o stroju.'},
+        ]
+        notifications = [
+            {'id': 'n1', 'title': 'Apel szkolny', 'sender': 'Dyrekcja', 'datetime': '2026-09-16', 'body': 'Obowiązuje strój galowy.'},
+        ]
+        timetable = [
+            {'id': 't1', 'date': '2026-09-18', 'category': 'Sprawdzian', 'subject': 'Historia', 'description': 'Wojny perskie', 'lesson_no': '3'},
+            {'id': 't2', 'date': '2026-09-22', 'add_date': '2026-09-14 10:00:00', 'category': 'Kartkówka', 'subject': 'Biologia', 'description': 'Budowa komórki'},
+        ]
+
+        # 1. Test jednostkowy funkcji build_recent_days_timeline
+        days, total = build_recent_days_timeline(grades, messages, notifications, timetable, now=ref_now, days_count=5)
+        self.assertEqual(len(days), 5)
+        self.assertEqual(total, 6)
+
+        # Daty: 14.09, 15.09, 16.09, 17.09, 18.09
+        dates = [d['date'] for d in days]
+        self.assertEqual(dates, ['2026-09-14', '2026-09-15', '2026-09-16', '2026-09-17', '2026-09-18'])
+        self.assertFalse(days[0]['is_today'])
+        self.assertTrue(days[4]['is_today'])
+
+        # 14.09: zapowiedziana kartkówka z biologii
+        day_14 = days[0]
+        self.assertEqual(day_14['tests_count'], 1)
+        self.assertEqual(day_14['events'][0]['type'], 'test_announced')
+        self.assertIn('Biologia', day_14['events'][0]['title'])
+
+        # 15.09: ocena z języka polskiego
+        day_15 = days[1]
+        self.assertEqual(day_15['grades_count'], 1)
+        self.assertEqual(day_15['events'][0]['badge'], '4')
+
+        # 16.09: ogłoszenie szkolne
+        day_16 = days[2]
+        self.assertEqual(day_16['notifications_count'], 1)
+        self.assertEqual(day_16['events'][0]['type'], 'notification')
+
+        # 17.09: wiadomość
+        day_17 = days[3]
+        self.assertEqual(day_17['messages_count'], 1)
+        self.assertEqual(day_17['events'][0]['type'], 'message')
+
+        # 18.09: sprawdzian z historii oraz ocena z matematyki
+        day_18 = days[4]
+        self.assertEqual(day_18['tests_count'], 1)
+        self.assertEqual(day_18['grades_count'], 1)
+        types_18 = [e['type'] for e in day_18['events']]
+        self.assertIn('test', types_18)
+        self.assertIn('grade', types_18)
+
+        # 2. Test integracyjny z widokiem HTML dashboardu
+        student_data = {
+            'student_name': 'Jan Kowalski (klasa 5A)',
+            'last_collect_time': '2026-09-18 20:00:00',
+            'grades_history': grades,
+            'messages_history': messages,
+            'notifications_history': notifications,
+            'timetable_history': timetable,
+        }
+        with open(os.path.join(self.storage_dir, '123456.json'), 'w', encoding='utf-8') as f:
+            json.dump(student_data, f)
+
+        app = create_app(
+            config_path=self.config_path,
+            storage_dir=self.storage_dir,
+            actual_date=ref_now,
+            no_auth=True,
+        )
+        client = app.test_client()
+        res = client.get('/')
+        self.assertEqual(res.status_code, 200)
+
+        html = res.data.decode('utf-8')
+        self.assertIn("Kalendarium ostatnich 5 dni", html)
+        self.assertIn("Łącznie: 6 zdarzeń", html)
+        self.assertIn("Wojny perskie", html)
+        self.assertIn("Zajęcia SKS", html)
+        self.assertIn("Apel szkolny", html)
+        self.assertIn("Dziś", html)
 
 
 if __name__ == '__main__':

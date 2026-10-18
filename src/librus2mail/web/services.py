@@ -912,12 +912,17 @@ def calculate_certificate_summary(
             'is_excluded': is_excluded,
         })
 
+    included_subjects = [s for s in subjects_list if not s['is_excluded']]
+    excluded_subjects_list = [s for s in subjects_list if s['is_excluded']]
+
     certificate_avg = round(sum(rated_grades) / len(rated_grades), 2) if rated_grades else None
     has_red_stripe = certificate_avg is not None and certificate_avg >= 4.75
     red_stripe_diff = round(4.75 - certificate_avg, 2) if (certificate_avg is not None and certificate_avg < 4.75) else 0.0
 
     return {
-        'subjects': subjects_list,
+        'subjects': included_subjects + excluded_subjects_list,
+        'included_subjects': included_subjects,
+        'excluded_subjects': excluded_subjects_list,
         'rated_count': len(rated_grades),
         'unrated_count': unrated_count,
         'total_count': len(subjects_list),

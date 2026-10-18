@@ -304,7 +304,11 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-sm">
-                    {% for s in certificate_summary.subjects %}
+                    {% set inc_subjects = certificate_summary.included_subjects if certificate_summary.included_subjects is defined else (certificate_summary.subjects|rejectattr('is_excluded')|list) %}
+                    {% set exc_subjects = certificate_summary.excluded_subjects if certificate_summary.excluded_subjects is defined else (certificate_summary.subjects|selectattr('is_excluded')|list) %}
+
+                    <!-- 1. PRZEDMIOTY WLICZANE DO ŚREDNIEJ -->
+                    {% for s in inc_subjects %}
                     <tr class="hover:bg-blue-50/25 transition-colors group">
                         <!-- Lp -->
                         <td class="py-3.5 px-4 sm:px-6 text-center text-xs font-bold text-slate-400">
@@ -315,11 +319,6 @@
                         <td class="py-3.5 px-4 sm:px-6">
                             <div class="flex flex-wrap items-center gap-2">
                                 <span class="font-extrabold text-slate-900">{{ s.subject }}</span>
-                                {% if s.is_excluded %}
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-rose-100 text-rose-700 border border-rose-300 shadow-2xs">
-                                    Nie zaliczany do średniej
-                                </span>
-                                {% endif %}
                             </div>
                             {% if s.numeric_count == 0 %}
                             <span class="text-[10px] text-slate-400 italic">brak zarejestrowanych ocen cząstkowych</span>
@@ -354,11 +353,7 @@
 
                         <!-- Proponowana: Ocena (wyróżniona kolumna niebieskim akcentem) -->
                         <td class="py-3.5 px-3 sm:px-4 text-center bg-blue-50/35 group-hover:bg-blue-100/40 border-l-2 border-blue-300/80 transition-colors">
-                            {% if s.is_excluded and s.proposed_grade_num %}
-                            <span class="inline-flex items-center justify-center w-9 h-9 rounded-xl font-bold text-base shadow-2xs ring-1 border bg-slate-100 text-slate-600 border-slate-300 ring-slate-200" title="Przedmiot niezaliczany do średniej">
-                                {{ s.proposed_grade_num }}
-                            </span>
-                            {% elif s.proposed_grade_num %}
+                            {% if s.proposed_grade_num %}
                             <span class="inline-flex items-center justify-center w-9 h-9 rounded-xl font-black text-base shadow-sm ring-2 border
                                 {% if s.proposed_grade_num == 6 %} bg-emerald-100 text-emerald-950 border-emerald-300 ring-emerald-400/30
                                 {% elif s.proposed_grade_num == 5 %} bg-teal-100 text-teal-950 border-teal-300 ring-teal-400/30
@@ -375,12 +370,7 @@
 
                         <!-- Proponowana: Słownie (wyróżniona kolumna niebieskim akcentem) -->
                         <td class="py-3.5 px-4 sm:px-6 text-left bg-blue-50/35 group-hover:bg-blue-100/40 transition-colors">
-                            {% if s.is_excluded %}
-                            <div>
-                                <span class="font-bold text-sm text-slate-600 capitalize tracking-tight">{{ s.proposed_grade_word }}</span>
-                                <div class="text-[11px] font-bold text-rose-600">Nie zaliczany do średniej</div>
-                            </div>
-                            {% elif s.proposed_grade_num %}
+                            {% if s.proposed_grade_num %}
                             <span class="font-black text-sm capitalize tracking-tight
                                 {% if s.proposed_grade_num == 6 %} text-emerald-900
                                 {% elif s.proposed_grade_num == 5 %} text-teal-900
@@ -398,6 +388,97 @@
                         </td>
                     </tr>
                     {% endfor %}
+
+                    <!-- 2. SEKCJA: PRZEDMIOTY NIE ZALICZANE DO ŚREDNIEJ -->
+                    {% if exc_subjects %}
+                    <tr class="bg-slate-100/90 border-t-2 border-b border-slate-300">
+                        <td colspan="6" class="py-2.5 px-4 sm:px-6">
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs">📌</span>
+                                    <span class="text-xs font-black uppercase tracking-wider text-slate-700">
+                                        Nie zaliczane do średniej
+                                    </span>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-200 text-slate-700 border border-slate-300">
+                                        {{ exc_subjects|length }} {{ 'przedmiot' if exc_subjects|length == 1 else 'przedmioty' if exc_subjects|length in [2, 3, 4] else 'przedmiotów' }}
+                                    </span>
+                                </div>
+                                <span class="text-[11px] text-slate-500 italic hidden sm:inline">
+                                    Przedmioty widoczne na świadectwie, lecz nie wliczane do średniej ocen
+                                </span>
+                            </div>
+                        </td>
+                    </tr>
+                    {% for s in exc_subjects %}
+                    <tr class="bg-slate-50/80 hover:bg-slate-100/70 transition-colors group">
+                        <!-- Lp -->
+                        <td class="py-3.5 px-4 sm:px-6 text-center text-xs font-bold text-slate-400">
+                            {{ loop.index + inc_subjects|length }}
+                        </td>
+
+                        <!-- Przedmiot -->
+                        <td class="py-3.5 px-4 sm:px-6">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="font-extrabold text-slate-700">{{ s.subject }}</span>
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-200/90 text-slate-600 border border-slate-300 shadow-2xs">
+                                    Nie zaliczany do średniej
+                                </span>
+                            </div>
+                            {% if s.numeric_count == 0 %}
+                            <span class="text-[10px] text-slate-400 italic">brak zarejestrowanych ocen cząstkowych</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Ilość ocen -->
+                        <td class="py-3.5 px-4 sm:px-6 text-center">
+                            {% if s.numeric_count > 0 %}
+                            <span class="inline-flex items-center justify-center min-w-[28px] h-7 px-2 rounded-lg bg-slate-200/80 text-slate-700 text-xs font-bold">
+                                {{ s.numeric_count }}
+                            </span>
+                            {% else %}
+                            <span class="text-xs text-slate-400 font-medium">0</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Średnia ważona -->
+                        <td class="py-3.5 px-4 sm:px-6 text-right border-r border-slate-200/60">
+                            {% if s.average is not none %}
+                            <span class="font-bold text-base text-slate-500">
+                                {{ "%.2f"|format(s.average) }}
+                            </span>
+                            <div class="text-[10px] text-slate-400 font-medium">poza średnią</div>
+                            {% else %}
+                            <span class="text-slate-400 text-sm font-semibold">—</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Proponowana: Ocena (neutralny ton dla przedmiotów poza średnią) -->
+                        <td class="py-3.5 px-3 sm:px-4 text-center bg-slate-100/50 group-hover:bg-slate-100/90 border-l-2 border-slate-200 transition-colors">
+                            {% if s.proposed_grade_num %}
+                            <span class="inline-flex items-center justify-center w-9 h-9 rounded-xl font-bold text-base shadow-2xs ring-1 border bg-white text-slate-700 border-slate-300 ring-slate-200" title="Przedmiot niezaliczany do średniej">
+                                {{ s.proposed_grade_num }}
+                            </span>
+                            {% else %}
+                            <span class="text-slate-400 font-bold text-sm">—</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Proponowana: Słownie -->
+                        <td class="py-3.5 px-4 sm:px-6 text-left bg-slate-100/50 group-hover:bg-slate-100/90 transition-colors">
+                            {% if s.proposed_grade_num %}
+                            <div>
+                                <span class="font-bold text-sm text-slate-700 capitalize tracking-tight">{{ s.proposed_grade_word }}</span>
+                                <div class="text-[10px] font-semibold text-slate-400">nie wlicza się do średniej</div>
+                            </div>
+                            {% else %}
+                            <span class="text-xs font-semibold text-slate-400 italic">
+                                brak ocen (pominięty)
+                            </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% endif %}
                 </tbody>
             </table>
         </div>

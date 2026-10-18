@@ -437,6 +437,17 @@ class TestWebDashboard(unittest.TestCase):
         self.assertEqual(cert['subjects'][0]['proposed_grade_word'], 'dobry')
         self.assertEqual(cert['subjects'][2]['proposed_grade_word'], 'brak ocen')
 
+        # Test wykluczenia przedmiotu ze średniej ze świadectwa (sekcja dolna)
+        cert_ex = calculate_certificate_summary(averages_with_empty, excluded_subjects=['Fizyka'])
+        self.assertEqual(len(cert_ex['included_subjects']), 2)
+        self.assertEqual(len(cert_ex['excluded_subjects']), 1)
+        self.assertEqual(cert_ex['excluded_subjects'][0]['subject'], 'Fizyka')
+        self.assertTrue(cert_ex['excluded_subjects'][0]['is_excluded'])
+        # Przedmioty wykluczone znajdują się na dole listy subjects
+        self.assertEqual(cert_ex['subjects'][-1]['subject'], 'Fizyka')
+        self.assertEqual(cert_ex['rated_count'], 1)  # tylko Matematyka
+        self.assertEqual(cert_ex['certificate_average'], 4.00)
+
         # Test ustalania pełnej nazwy ucznia (resolve_student_name)
         storage = get_storage(self.mock_config, self.storage_dir)
         resolved = resolve_student_name(self.mock_config, storage, '123456')
@@ -1461,10 +1472,11 @@ class TestWebDashboard(unittest.TestCase):
         self.assertEqual(res_view.status_code, 200)
         self.assertIn('Nie zaliczany do średniej'.encode(), res_view.data)
 
-        # Sprawdzenie w zakładce świadectwo
+        # Sprawdzenie w zakładce świadectwo (powinna być widoczna sekcja na dole tabeli)
         res_swiad = client.get('/oceny?tab=swiadectwo')
         self.assertEqual(res_swiad.status_code, 200)
-        self.assertIn('Nie zaliczany do średniej'.encode(), res_swiad.data)
+        self.assertIn('Nie zaliczane do średniej'.encode(), res_swiad.data)
+        self.assertIn('poza średnią'.encode(), res_swiad.data)
 
         # 4. Ponowne włączenie przedmiotu
         res_inc = client.post('/api/subject/toggle-certificate', data={'subject': 'Język polski', 'included': 'true'})

@@ -123,6 +123,249 @@
     </a>
 </div>
 
+{% if data.recent_timeline_enabled %}
+<!-- Moduł: Kalendarium Ostatnich Dni (Pełna szerokość) -->
+<div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6">
+    <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/50">
+        <div class="flex items-center gap-3">
+            <span class="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl text-lg">🗓️</span>
+            <div>
+                <h2 class="text-base font-bold text-slate-900">
+                    Kalendarium ostatnich {{ data.recent_timeline_days|length }} dni
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Dzień po dniu: oceny, wiadomości, ogłoszenia szkolne i zapowiedziane sprawdziany
+                    {% if data.recent_timeline_hide_weekends %}
+                    <span class="text-slate-400 font-medium">(tylko dni szkolne)</span>
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+            <span class="px-3 py-1 bg-indigo-50 text-indigo-700 font-extrabold text-xs rounded-full border border-indigo-100">
+                Łącznie: {{ data.recent_timeline_total_events }} zdarzeń
+            </span>
+            <a href="{{ url_for('web.settings_view') }}#kalendarium"
+               class="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition"
+               title="Dostosuj kalendarium w Ustawieniach">
+                ⚙️
+            </a>
+        </div>
+    </div>
+
+    <!-- Siatka dni w układzie kalendarza -->
+    <div class="p-4 sm:p-5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 {% if data.recent_timeline_days|length <= 3 %}md:grid-cols-3{% elif data.recent_timeline_days|length == 4 %}md:grid-cols-2 lg:grid-cols-4{% elif data.recent_timeline_days|length == 5 %}md:grid-cols-3 lg:grid-cols-5{% elif data.recent_timeline_days|length <= 7 %}md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7{% else %}md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5{% endif %} gap-3.5 items-stretch">
+            {% for day in data.recent_timeline_days %}
+            <div class="rounded-xl flex flex-col h-full transition-all border
+                {% if day.is_today %}
+                    bg-indigo-50/40 border-indigo-300 ring-2 ring-indigo-500/20 shadow-sm
+                {% else %}
+                    bg-slate-50/70 border-slate-200/80 hover:border-slate-300
+                {% endif %}">
+
+                <!-- Nagłówek karty dnia -->
+                <div class="p-3 border-b flex items-center justify-between
+                    {% if day.is_today %} border-indigo-200/80 bg-indigo-100/30 {% else %} border-slate-200/60 bg-white/50 {% endif %}">
+                    <div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-xs font-extrabold text-slate-900">
+                                {{ day.weekday_name }}
+                            </span>
+                            {% if day.is_today %}
+                            <span class="px-1.5 py-0.5 bg-indigo-600 text-white text-[10px] font-bold rounded-md uppercase tracking-wider">
+                                Dziś
+                            </span>
+                            {% endif %}
+                        </div>
+                        <span class="text-[11px] font-semibold text-slate-400">
+                            {{ day.formatted_date }}
+                        </span>
+                    </div>
+
+                    <span class="text-[11px] font-bold px-2 py-0.5 rounded-full
+                        {% if day.events_count > 0 %}
+                            {% if day.is_today %} bg-indigo-100 text-indigo-700 {% else %} bg-slate-200/80 text-slate-700 {% endif %}
+                        {% else %}
+                            bg-slate-100 text-slate-400
+                        {% endif %}">
+                        {{ day.events_count }}
+                    </span>
+                </div>
+
+                <!-- Lista zdarzeń w danym dniu -->
+                <div class="p-2.5 flex-1 max-h-[380px] overflow-y-auto space-y-2">
+                    {% if day.events %}
+                        {% for ev in day.events %}
+                        <div class="bg-white rounded-lg p-2.5 border border-slate-200/90 shadow-2xs hover:shadow-xs transition text-xs">
+
+                            <!-- Typ: Ocena -->
+                            {% if ev.type == 'grade' %}
+                            <div class="flex items-start gap-2">
+                                <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center font-extrabold text-xs shadow-2xs {{ ev.badge_color }}">
+                                    {{ ev.badge }}
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-1">
+                                        <a href="{{ url_for('web.grades_view') }}" class="font-bold text-slate-900 truncate hover:text-indigo-600 transition" title="{{ ev.title }}">
+                                            {{ ev.title }}
+                                        </a>
+                                        {% if ev.time_str %}
+                                        <span class="text-[10px] text-slate-400 shrink-0">{{ ev.time_str }}</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-[11px] text-slate-500 mt-0.5">
+                                        waga: <strong>{{ ev.weight }}</strong>
+                                        {% if ev.category %} • {{ ev.category }}{% endif %}
+                                    </div>
+                                    {% if ev.comment %}
+                                    <div class="text-[11px] text-slate-600 italic mt-0.5 truncate" title="{{ ev.comment }}">
+                                        "{{ ev.comment }}"
+                                    </div>
+                                    {% endif %}
+                                    <a href="{{ url_for('web.grades_view') }}" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-0.5 mt-1">
+                                        Szczegóły ➔
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Typ: Wiadomość -->
+                            {% elif ev.type == 'message' %}
+                            <div class="flex items-start gap-2">
+                                <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center bg-sky-50 text-sky-600 border border-sky-100 text-xs">
+                                    ✉️
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-1">
+                                        <span class="font-bold text-slate-900 truncate" title="{{ ev.title }}">
+                                            {{ ev.title }}
+                                        </span>
+                                        {% if ev.time_str %}
+                                        <span class="text-[10px] text-slate-400 shrink-0">{{ ev.time_str }}</span>
+                                        {% endif %}
+                                    </div>
+                                    {% if ev.sender %}
+                                    <div class="text-[10px] font-medium text-slate-500 truncate mt-0.5">
+                                        Od: {{ ev.sender }}
+                                    </div>
+                                    {% endif %}
+                                    {% if ev.snippet %}
+                                    <div class="text-[11px] text-slate-600 mt-1 line-clamp-2" title="{{ ev.snippet }}">
+                                        {{ ev.snippet }}
+                                    </div>
+                                    {% endif %}
+                                    <a href="{{ url_for('web.messages_view') }}" class="text-[10px] font-bold text-sky-600 hover:text-sky-800 inline-flex items-center gap-0.5 mt-1">
+                                        Zobacz wiadomość ➔
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Typ: Ogłoszenie -->
+                            {% elif ev.type == 'notification' %}
+                            <div class="flex items-start gap-2">
+                                <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center bg-amber-50 text-amber-600 border border-amber-100 text-xs">
+                                    📢
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-1">
+                                        <span class="font-bold text-slate-900 truncate" title="{{ ev.title }}">
+                                            {{ ev.title }}
+                                        </span>
+                                        {% if ev.time_str %}
+                                        <span class="text-[10px] text-slate-400 shrink-0">{{ ev.time_str }}</span>
+                                        {% endif %}
+                                    </div>
+                                    {% if ev.sender %}
+                                    <div class="text-[10px] font-medium text-slate-500 truncate mt-0.5">
+                                        {{ ev.sender }}
+                                    </div>
+                                    {% endif %}
+                                    {% if ev.snippet %}
+                                    <div class="text-[11px] text-slate-600 mt-1 line-clamp-2" title="{{ ev.snippet }}">
+                                        {{ ev.snippet }}
+                                    </div>
+                                    {% endif %}
+                                    <a href="{{ url_for('web.messages_view') }}" class="text-[10px] font-bold text-amber-600 hover:text-amber-800 inline-flex items-center gap-0.5 mt-1">
+                                        Zobacz ogłoszenie ➔
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Typ: Sprawdzian w tym dniu -->
+                            {% elif ev.type == 'test' %}
+                            <div class="flex items-start gap-2">
+                                <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center bg-indigo-50 text-indigo-600 border border-indigo-100 text-xs">
+                                    🔔
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-1">
+                                        <span class="font-bold text-indigo-950 truncate" title="{{ ev.title }}">
+                                            {{ ev.title }}
+                                        </span>
+                                        {% if ev.time_str %}
+                                        <span class="text-[10px] font-semibold text-indigo-600 shrink-0">{{ ev.time_str }}</span>
+                                        {% endif %}
+                                    </div>
+                                    {% if ev.description %}
+                                    <div class="text-[11px] text-slate-600 mt-0.5 line-clamp-2" title="{{ ev.description }}">
+                                        {{ ev.description }}
+                                    </div>
+                                    {% endif %}
+                                    <a href="{{ url_for('web.timetable_view') }}" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-0.5 mt-1">
+                                        W terminarzu ➔
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Typ: Sprawdzian zapowiedziany na przyszłość -->
+                            {% elif ev.type == 'test_announced' %}
+                            <div class="flex items-start gap-2">
+                                <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center bg-violet-50 text-violet-600 border border-violet-100 text-xs">
+                                    🗓️
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-1">
+                                        <span class="font-bold text-violet-950 truncate" title="{{ ev.title }}">
+                                            {{ ev.title }}
+                                        </span>
+                                        {% if ev.time_str %}
+                                        <span class="text-[10px] text-slate-400 shrink-0">{{ ev.time_str }}</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-[10px] font-bold text-violet-700 mt-0.5">
+                                        Termin: {{ ev.target_date }}
+                                    </div>
+                                    {% if ev.description %}
+                                    <div class="text-[11px] text-slate-600 mt-0.5 line-clamp-2" title="{{ ev.description }}">
+                                        {{ ev.description }}
+                                    </div>
+                                    {% endif %}
+                                    <a href="{{ url_for('web.timetable_view') }}" class="text-[10px] font-bold text-violet-600 hover:text-violet-800 inline-flex items-center gap-0.5 mt-1">
+                                        Szczegóły w terminarzu ➔
+                                    </a>
+                                </div>
+                            </div>
+
+                            {% endif %}
+
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="py-10 text-center flex flex-col items-center justify-center text-slate-400">
+                            <span class="text-2xl mb-1.5 opacity-60">{% if day.is_weekend %}☕{% else %}🌿{% endif %}</span>
+                            <p class="text-xs font-semibold text-slate-500">{% if day.is_weekend %}Spokojny weekend{% else %}Brak wpisów{% endif %}</p>
+                            <p class="text-[10px] text-slate-400 mt-0.5">W tym dniu nic nie zarejestrowano</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- Główny Układ Siatki (2/3 lewa strona, 1/3 prawa strona) -->
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 

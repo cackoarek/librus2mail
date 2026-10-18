@@ -3,6 +3,8 @@ config.yaml
 arek_config.yaml
 *_config.yaml
 *.local.yaml
+*.bak
+*.yaml.bak
 .env
 ai-continue.txt
 todo.md

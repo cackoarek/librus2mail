@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="5d40925666f91918e51c05b147288f426f649d529db89c2c60e8524d9b5afbdb">
+    <meta name="csrf-token" content="ef9e1d1e39ef035dad5f26da4dc74d87f4f3aa93dbc9fe2113c84427d88c5238">
     <title>Ustawienia Systemu - Librus2mail - Librus2mail</title>
     <!-- Favicon z logo Librus2mail (gradient indigo-sky + 🏫) -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%25%22%20y1%3D%22100%25%22%20x2%3D%22100%25%22%20y2%3D%220%25%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%234f46e5%22/%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%230ea5e9%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2216%22%20fill%3D%22url%28%23g%29%22/%3E%3Ctext%20x%3D%2232%22%20y%3D%2234%22%20font-size%3D%2234%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%F0%9F%8F%AB%3C/text%3E%3C/svg%3E">
@@ -42,7 +42,7 @@
     </style>
     
 </head>
-<body class="h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white" hx-headers='{"X-CSRFToken": "5d40925666f91918e51c05b147288f426f649d529db89c2c60e8524d9b5afbdb"}'>
+<body class="h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white" hx-headers='{"X-CSRFToken": "ef9e1d1e39ef035dad5f26da4dc74d87f4f3aa93dbc9fe2113c84427d88c5238"}'>
 
     <!-- Pasek nawigacyjny -->
     <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
@@ -185,7 +185,7 @@
 
     <!-- Główny formularz ustawień -->
     <form method="POST" action="/ustawienia" class="mt-8 space-y-8">
-        <input type="hidden" name="csrf_token" value="5d40925666f91918e51c05b147288f426f649d529db89c2c60e8524d9b5afbdb">
+        <input type="hidden" name="csrf_token" value="ef9e1d1e39ef035dad5f26da4dc74d87f4f3aa93dbc9fe2113c84427d88c5238">
 
         <!-- ================================================================= -->
         <!-- SEKCJA 1: KONTA UCZNIÓW -->
@@ -1085,6 +1085,130 @@
             </div>
         </div>
 
+        <!-- ================================================================= -->
+        <!-- SEKCJA 5: KALENDARIUM ZDARZEŃ NA PULPICIE (DASHBOARD) -->
+        <!-- ================================================================= -->
+        <div id="kalendarium" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 scroll-mt-20">
+            <div class="border-b border-slate-100 pb-4 mb-6">
+                <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>🗓️</span> Moduł kalendarium zdarzeń (Pulpit główny)
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Dostosuj wyświetlanie graficznego paska ostatnich dni prezentującego oceny, wiadomości, ogłoszenia i sprawdziany.
+                </p>
+            </div>
+
+            <input type="hidden" name="timeline_settings_present" value="1">
+
+            <div class="max-w-2xl space-y-5">
+                <!-- Włącznik / wyłącznik kalendarium -->
+                <div class="flex items-start gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <input type="checkbox" id="timeline_enabled" name="timeline_enabled"
+                           checked
+                           class="mt-1 rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                    <label for="timeline_enabled" class="text-xs text-slate-700 cursor-pointer">
+                        <span class="font-bold text-slate-900 block text-sm">Wyświetlaj kalendarium zdarzeń na stronie głównej</span>
+                        Pokazuje pełnoszerokościowy graficzny harmonogram dzień po dniu bezpośrednio pod kafelkami podsumowującymi.
+                    </label>
+                </div>
+
+                <!-- Liczba dni wstecz -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                        Liczba dni wstecz objętych kalendarium (zakres: 1 – 14 dni)
+                    </label>
+                    <div class="flex items-center gap-3">
+                        <input type="number" name="timeline_days" min="1" max="14"
+                               value="5"
+                               class="w-32 text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <span class="text-xs text-slate-500 font-medium">dni (domyślnie: 5 dni)</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-1">
+                        Określa ile kolumn/kart kolejnych dni pojawi się w kalendarium na pulpicie.
+                    </p>
+                </div>
+
+                <!-- Ukrywanie weekendów -->
+                <div class="flex items-start gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <input type="checkbox" id="timeline_hide_weekends" name="timeline_hide_weekends"
+                           
+                           class="mt-1 rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                    <label for="timeline_hide_weekends" class="text-xs text-slate-700 cursor-pointer">
+                        <span class="font-bold text-slate-900 block text-sm">Ukryj dni weekendu (sobota i niedziela)</span>
+                        Pokazuje wyłącznie dni robocze nauki szkolnej (od poniedziałku do piątku), pomijając karty weekendowe.
+                    </label>
+                </div>
+
+                <!-- Odwrotna kolejność dni (najnowsze na początku / u góry) -->
+                <div class="flex items-start gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <input type="checkbox" id="timeline_reverse_order" name="timeline_reverse_order"
+                           
+                           class="mt-1 rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                    <label for="timeline_reverse_order" class="text-xs text-slate-700 cursor-pointer">
+                        <span class="font-bold text-slate-900 block text-sm">Odwrotna kolejność kart (najnowsze na początku / u góry)</span>
+                        Wygodne zwłaszcza na telefonach: dzisiejszy dzień pojawia się na samej górze listy, a wcześniejsze dni po przewinięciu w dół (od najnowszego do najstarszego).
+                    </label>
+                </div>
+
+                <!-- Wybór typów zdarzeń -->
+                <div class="pt-2">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-2">
+                        Typy zdarzeń widoczne w kalendarium:
+                    </label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        
+                        <!-- Oceny -->
+                        <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                            <input type="checkbox" name="timeline_type_grades" checked
+                                   class="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                            <div>
+                                <span class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                    <span>📝</span> Oceny
+                                </span>
+                                <span class="text-[11px] text-slate-500 block">Nowo wystawione oceny z przedmiotów</span>
+                            </div>
+                        </label>
+
+                        <!-- Wiadomości -->
+                        <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                            <input type="checkbox" name="timeline_type_messages" checked
+                                   class="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                            <div>
+                                <span class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                    <span>✉️</span> Wiadomości
+                                </span>
+                                <span class="text-[11px] text-slate-500 block">Wiadomości od nauczycieli i wychowawcy</span>
+                            </div>
+                        </label>
+
+                        <!-- Ogłoszenia szkolne -->
+                        <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                            <input type="checkbox" name="timeline_type_notifications" checked
+                                   class="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                            <div>
+                                <span class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                    <span>📢</span> Ogłoszenia szkolne
+                                </span>
+                                <span class="text-[11px] text-slate-500 block">Komunikaty dyrekcji i ogłoszenia ze szkoły</span>
+                            </div>
+                        </label>
+
+                        <!-- Sprawdziany i terminarz -->
+                        <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                            <input type="checkbox" name="timeline_type_tests" checked
+                                   class="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                            <div>
+                                <span class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                    <span>🔔</span> Sprawdziany i zapowiedzi
+                                </span>
+                                <span class="text-[11px] text-slate-500 block">Sprawdziany, kartkówki i nowe zapowiedzi</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Zapis zmian -->
         <div class="flex items-center justify-end gap-3 pt-4">
             <a href="web_dashboard.html"
@@ -1579,7 +1703,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500">
         <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div class="flex items-center gap-2 font-medium">
-                <span>🏫 Librus2mail v2.4.0</span>
+                <span>🏫 Librus2mail v2.5.0</span>
                 <span>•</span>
                 <span>Prywatny Dashboard Rodzica</span>
             </div>

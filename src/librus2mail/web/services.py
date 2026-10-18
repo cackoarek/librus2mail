@@ -7,6 +7,7 @@ import os
 import re
 import statistics
 from collections import defaultdict
+from collections.abc import Mapping
 from datetime import date, datetime, timedelta
 from typing import Any
 
@@ -19,7 +20,12 @@ from librus2mail.progress_analyzer import (
     parse_numeric_grade,
     parse_weight,
 )
-from librus2mail.storage import BaseStorage, create_storage, sort_items_descending
+from librus2mail.storage import (
+    BaseStorage,
+    create_storage,
+    sort_grades_descending,
+    sort_items_descending,
+)
 from librus2mail.student_analyzer import StudentAnalyzer
 from librus2mail.updates_notifier import (
     parse_item_datetime,
@@ -200,7 +206,7 @@ def calculate_subject_averages(
                 sum_weights += effective_weight
 
         avg = round(sum_weighted / sum_weights, 2) if sum_weights > 0 else None
-        sorted_grades = sorted(g_list, key=lambda x: str(x.get('date', '')), reverse=True)
+        sorted_grades = sort_grades_descending(g_list)
         is_excluded = subj.strip().lower() in norm_excluded
 
         result[subj] = {
@@ -906,12 +912,17 @@ def calculate_certificate_summary(
             'is_excluded': is_excluded,
         })
 
+    included_subjects = [s for s in subjects_list if not s['is_excluded']]
+    excluded_subjects_list = [s for s in subjects_list if s['is_excluded']]
+
     certificate_avg = round(sum(rated_grades) / len(rated_grades), 2) if rated_grades else None
     has_red_stripe = certificate_avg is not None and certificate_avg >= 4.75
     red_stripe_diff = round(4.75 - certificate_avg, 2) if (certificate_avg is not None and certificate_avg < 4.75) else 0.0
 
     return {
-        'subjects': subjects_list,
+        'subjects': included_subjects + excluded_subjects_list,
+        'included_subjects': included_subjects,
+        'excluded_subjects': excluded_subjects_list,
         'rated_count': len(rated_grades),
         'unrated_count': unrated_count,
         'total_count': len(subjects_list),
@@ -1140,6 +1151,232 @@ def build_schedule_day_context(
     }
 
 
+def _get_grade_badge_color(grade_val: str | None) -> str:
+    """Zwraca klasy stylów Tailwind CSS dla odznaki oceny na podstawie jej wartości."""
+    g = str(grade_val or '').strip()
+    if g in {'5', '6', '5+', '6-', '5-', '6+'}:
+        return 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+    if g in {'4', '4+', '4-'}:
+        return 'bg-sky-100 text-sky-800 border border-sky-200'
+    if g in {'3', '3+', '3-'}:
+        return 'bg-amber-100 text-amber-800 border border-amber-200'
+    if g in {'1', '2', '1+', '2+', '1-', '2-'}:
+        return 'bg-rose-100 text-rose-800 border border-rose-200'
+    return 'bg-slate-100 text-slate-700 border border-slate-200'
+
+
+def build_recent_days_timeline(
+    grades: list[dict[str, Any]],
+    messages: list[dict[str, Any]],
+    notifications: list[dict[str, Any]],
+    timetable: list[dict[str, Any]],
+    now: datetime | None = None,
+    days_count: int = 5,
+    hide_weekends: bool = False,
+    reverse_order: bool = False,
+    enabled_types: list[str] | set[str] | None = None,
+) -> tuple[list[dict[str, Any]], int]:
+    """
+    Buduje chronologiczne kalendarium ostatnich N dni (domyślnie 5) z zebranymi zdarzeniami:
+    ocenami, wiadomościami, ogłoszeniami szkolnymi oraz zapowiedzianymi sprawdzianami.
+    Opcjonalnie ukrywa weekendy (sobota i niedziela), prezentując tylko dni szkolne.
+    Obsługuje odwrotną kolejność sortowania (najnowsze dni na początku/u góry) oraz filtrowanie typów zdarzeń.
+    """
+    ref_now = now or datetime.now()
+    ref_date = ref_now.date()
+    days_count = max(1, min(30, days_count))
+
+    if enabled_types is None:
+        norm_types = {'grades', 'messages', 'notifications', 'tests'}
+    else:
+        norm_types = {str(t).strip().lower() for t in enabled_types}
+
+    if hide_weekends:
+        target_dates = []
+        cur_date = ref_date
+        while len(target_dates) < days_count:
+            if cur_date.weekday() < 5:  # 0=Pn .. 4=Pt
+                target_dates.append(cur_date)
+            cur_date -= timedelta(days=1)
+        if not reverse_order:
+            target_dates.reverse()
+    else:
+        if reverse_order:
+            target_dates = [ref_date - timedelta(days=offset) for offset in range(days_count)]
+        else:
+            target_dates = [ref_date - timedelta(days=offset) for offset in range(days_count - 1, -1, -1)]
+
+    date_to_day: dict[str, dict[str, Any]] = {}
+    weekdays_pl = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela"]
+    weekdays_short_pl = ["Pon", "Wt", "Śr", "Czw", "Pt", "Sob", "Ndz"]
+
+    for d in target_dates:
+        d_str = d.strftime('%Y-%m-%d')
+        date_to_day[d_str] = {
+            'date': d_str,
+            'date_obj': d,
+            'formatted_date': d.strftime('%d.%m'),
+            'weekday_name': weekdays_pl[d.weekday()],
+            'weekday_short': weekdays_short_pl[d.weekday()],
+            'is_today': (d == ref_date),
+            'is_weekend': (d.weekday() >= 5),
+            'events': [],
+            'grades_count': 0,
+            'messages_count': 0,
+            'notifications_count': 0,
+            'tests_count': 0,
+        }
+
+    # 1. Oceny
+    if 'grades' in norm_types:
+        for g in grades:
+            raw_date = g.get('date') or g.get('added_at')
+            dt = parse_datetime_safe(raw_date)
+            if dt:
+                d_str = dt.strftime('%Y-%m-%d')
+                if d_str in date_to_day:
+                    grade_val = str(g.get('grade') or '').strip()
+                    date_to_day[d_str]['events'].append({
+                        'type': 'grade',
+                        'icon': '📝',
+                        'badge': grade_val,
+                        'badge_color': _get_grade_badge_color(grade_val),
+                        'title': g.get('subject') or 'Ocena',
+                        'category': g.get('category') if g.get('category') != '-' else '',
+                        'weight': g.get('weight') or '1',
+                        'comment': g.get('comment') if g.get('comment') != '-' else '',
+                        'teacher': g.get('teacher', ''),
+                        'datetime': dt,
+                        'time_str': dt.strftime('%H:%M') if dt.hour != 0 or dt.minute != 0 else '',
+                        'raw': g,
+                    })
+                    date_to_day[d_str]['grades_count'] += 1
+
+    # 2. Wiadomości
+    if 'messages' in norm_types:
+        for m in messages:
+            raw_date = m.get('datetime') or m.get('date') or m.get('added_at')
+            dt = parse_datetime_safe(raw_date)
+            if dt:
+                d_str = dt.strftime('%Y-%m-%d')
+                if d_str in date_to_day:
+                    body = (m.get('body') or '').strip()
+                    snippet = (body[:120] + '...') if len(body) > 120 else body
+                    date_to_day[d_str]['events'].append({
+                        'type': 'message',
+                        'icon': '✉️',
+                        'badge': 'Wiadomość',
+                        'title': m.get('title') or 'Wiadomość',
+                        'sender': m.get('sender', ''),
+                        'snippet': snippet,
+                        'datetime': dt,
+                        'time_str': dt.strftime('%H:%M') if dt.hour != 0 or dt.minute != 0 else '',
+                        'raw': m,
+                    })
+                    date_to_day[d_str]['messages_count'] += 1
+
+    # 3. Ogłoszenia
+    if 'notifications' in norm_types:
+        for n in notifications:
+            raw_date = n.get('datetime') or n.get('date') or n.get('added_at')
+            dt = parse_datetime_safe(raw_date)
+            if dt:
+                d_str = dt.strftime('%Y-%m-%d')
+                if d_str in date_to_day:
+                    body = (n.get('body') or '').strip()
+                    snippet = (body[:120] + '...') if len(body) > 120 else body
+                    date_to_day[d_str]['events'].append({
+                        'type': 'notification',
+                        'icon': '📢',
+                        'badge': 'Ogłoszenie',
+                        'title': n.get('title') or 'Ogłoszenie',
+                        'sender': n.get('sender', ''),
+                        'snippet': snippet,
+                        'datetime': dt,
+                        'time_str': dt.strftime('%H:%M') if dt.hour != 0 or dt.minute != 0 else '',
+                        'raw': n,
+                    })
+                    date_to_day[d_str]['notifications_count'] += 1
+
+    # 4. Sprawdziany (odbywające się w danym dniu oraz zapowiedziane na przyszłość)
+    if 'tests' in norm_types:
+        seen_test_events: set[tuple[str, str, str, str]] = set()
+
+        for t in timetable:
+            # A. Sprawdzian odbywający się w danym dniu
+            raw_test_date = t.get('date')
+            test_dt = parse_datetime_safe(raw_test_date)
+            if test_dt:
+                t_str = test_dt.strftime('%Y-%m-%d')
+                if t_str in date_to_day:
+                    cat = t.get('category') or 'Sprawdzian'
+                    subj = t.get('subject') or 'Przedmiot'
+                    desc = (t.get('description') or '').strip()
+                    dedup_key = ('test', subj, cat, t_str)
+                    if dedup_key not in seen_test_events:
+                        seen_test_events.add(dedup_key)
+                        date_to_day[t_str]['events'].append({
+                            'type': 'test',
+                            'icon': '🔔',
+                            'badge': cat,
+                            'title': f'{cat}: {subj}',
+                            'subject': subj,
+                            'description': desc,
+                            'lesson_no': t.get('lesson_no', ''),
+                            'teacher': t.get('teacher', ''),
+                            'datetime': test_dt,
+                            'time_str': f'Lekcja {t.get("lesson_no")}' if t.get('lesson_no') else '',
+                            'is_announced_future': False,
+                            'raw': t,
+                        })
+                        date_to_day[t_str]['tests_count'] += 1
+
+            # B. Sprawdzian zapowiedziany w danym dniu na przyszłość
+            raw_add_date = t.get('add_date')
+            add_dt = parse_datetime_safe(raw_add_date)
+            if add_dt and test_dt and test_dt.date() > add_dt.date():
+                add_str = add_dt.strftime('%Y-%m-%d')
+                if add_str in date_to_day:
+                    cat = t.get('category') or 'Sprawdzian'
+                    subj = t.get('subject') or 'Przedmiot'
+                    desc = (t.get('description') or '').strip()
+                    target_date_str = test_dt.strftime('%d.%m')
+                    dedup_key = ('test_announced', subj, cat, f'{add_str}->{target_date_str}')
+                    if dedup_key not in seen_test_events:
+                        seen_test_events.add(dedup_key)
+                        date_to_day[add_str]['events'].append({
+                            'type': 'test_announced',
+                            'icon': '🗓️',
+                            'badge': f'Na {target_date_str}',
+                            'title': f'Zapowiedziano: {cat} ({subj})',
+                            'subject': subj,
+                            'description': desc,
+                            'target_date': target_date_str,
+                            'teacher': t.get('teacher', ''),
+                            'datetime': add_dt,
+                            'time_str': add_dt.strftime('%H:%M') if add_dt.hour != 0 or add_dt.minute != 0 else '',
+                            'is_announced_future': True,
+                            'raw': t,
+                        })
+                        date_to_day[add_str]['tests_count'] += 1
+
+    # Sortowanie zdarzeń wewnątrz każdego dnia i kalkulacja sum
+    timeline_days = []
+    total_events = 0
+    type_priority = {'test': 1, 'test_announced': 2, 'grade': 3, 'message': 4, 'notification': 5}
+
+    for d in target_dates:
+        d_str = d.strftime('%Y-%m-%d')
+        day_data = date_to_day[d_str]
+        day_data['events'].sort(key=lambda ev: (type_priority.get(ev['type'], 99), str(ev.get('datetime') or '')))
+        day_data['events_count'] = len(day_data['events'])
+        day_data['has_events'] = bool(day_data['events'])
+        total_events += day_data['events_count']
+        timeline_days.append(day_data)
+
+    return timeline_days, total_events
+
+
 def get_student_dashboard_bundle(
     storage: BaseStorage,
     login: str,
@@ -1167,14 +1404,68 @@ def get_student_dashboard_bundle(
     overall_avg = calculate_overall_average(subj_averages)
     certificate_summary = calculate_certificate_summary(subj_averages, excluded_subjects=excluded_subjects)
 
-    # Najnowsze oceny (ostatnie 8)
-    recent_grades = sorted(grades, key=lambda x: str(x.get('added_at', '') or x.get('date', '')), reverse=True)[:8]
+    # Najnowsze oceny (ostatnie 8 wystawionych)
+    recent_grades = sort_grades_descending(grades)[:8]
 
     # Terminarz i plan lekcji
     timetable_summary = prepare_timetable_summary(timetable, reference_date=ref_now.date())
     sched_ctx = build_schedule_day_context(schedule, timetable_entries=timetable, ref_now=ref_now)
     schedule_summary = sched_ctx['selected_summary']
     today_schedule_summary = prepare_schedule_summary(schedule, timetable_entries=timetable, now=ref_now, day_offset=0)
+
+    # Kalendarium ostatnich dni (konfiguracja: dedykowana sekcja 'timeline' z fallbackiem do 'web')
+    timeline_cfg = config.get('timeline') if isinstance(config.get('timeline'), (dict, Mapping)) else {}
+    web_cfg = config.get('web') if isinstance(config.get('web'), (dict, Mapping)) else {}
+
+    timeline_enabled = bool(
+        timeline_cfg.get('enabled')
+        if 'enabled' in timeline_cfg
+        else web_cfg.get('timeline_enabled', config.get('timeline_enabled', True))
+    )
+    raw_days = timeline_cfg.get('days') or web_cfg.get('timeline_days') or config.get('timeline_days', 5)
+    try:
+        timeline_days_count = int(raw_days)
+    except (ValueError, TypeError):
+        timeline_days_count = 5
+    timeline_days_count = max(1, min(14, timeline_days_count))
+
+    timeline_hide_weekends = bool(
+        timeline_cfg.get('hide_weekends')
+        if 'hide_weekends' in timeline_cfg
+        else web_cfg.get('timeline_hide_weekends', config.get('timeline_hide_weekends', False))
+    )
+
+    timeline_reverse_order = bool(
+        timeline_cfg.get('reverse_order')
+        if 'reverse_order' in timeline_cfg
+        else web_cfg.get('timeline_reverse_order', False)
+    )
+
+    raw_event_types = timeline_cfg.get('event_types')
+    if raw_event_types is None:
+        raw_event_types = web_cfg.get('timeline_event_types')
+    if raw_event_types is None:
+        timeline_event_types = ['grades', 'messages', 'notifications', 'tests']
+    elif isinstance(raw_event_types, (list, tuple, set)):
+        timeline_event_types = [str(x).strip().lower() for x in raw_event_types if str(x).strip()]
+    else:
+        timeline_event_types = ['grades', 'messages', 'notifications', 'tests']
+
+    if timeline_enabled:
+        recent_timeline_days, recent_timeline_total_events = build_recent_days_timeline(
+            grades=grades,
+            messages=raw_messages,
+            notifications=raw_notifications,
+            timetable=timetable,
+            now=ref_now,
+            days_count=timeline_days_count,
+            hide_weekends=timeline_hide_weekends,
+            reverse_order=timeline_reverse_order,
+            enabled_types=timeline_event_types,
+        )
+    else:
+        recent_timeline_days = []
+        recent_timeline_total_events = 0
 
     # Liczba nadchodzących sprawdzianów w horyzoncie
     upcoming_tests_count = len(timetable_summary.get('immediate_tests', [])) + sum(
@@ -1190,6 +1481,13 @@ def get_student_dashboard_bundle(
         'certificate_summary': certificate_summary,
         'excluded_subjects': excluded_subjects,
         'recent_grades': recent_grades,
+        'recent_timeline_enabled': timeline_enabled,
+        'recent_timeline_days_count': timeline_days_count,
+        'recent_timeline_hide_weekends': timeline_hide_weekends,
+        'recent_timeline_reverse_order': timeline_reverse_order,
+        'recent_timeline_event_types': timeline_event_types,
+        'recent_timeline_days': recent_timeline_days,
+        'recent_timeline_total_events': recent_timeline_total_events,
         'timetable_summary': timetable_summary,
         'schedule_summary': schedule_summary,
         'today_schedule_summary': today_schedule_summary,

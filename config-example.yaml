@@ -174,3 +174,29 @@ web:
   lockout_duration_s: 900
 
 
+# ------------------------------------------------------------------------------
+# 7. KALENDARIUM ZDARZEŃ NA PULPICIE GŁÓWNYM (timeline)
+# ------------------------------------------------------------------------------
+# Pełnoszerokościowy graficzny moduł prezentujący dzień po dniu zdarzenia szkolne
+# bezpośrednio na pulpicie głównym (dashboard) pod kafelkami podsumowującymi.
+timeline:
+  # Czy wyświetlać moduł kalendarium na pulpicie (domyślnie: true):
+  enabled: true
+
+  # Liczba dni wstecz objętych kalendarium (zakres: 1 - 14, domyślnie: 5):
+  days: 5
+
+  # Czy ukrywać dni weekendu (sobota i niedziela), prezentując tylko dni szkolne (domyślnie: false):
+  hide_weekends: false
+
+  # Odwrotna kolejność kart (najnowsze / dzisiejszy dzień na początku, u góry na telefonie) (domyślnie: false):
+  reverse_order: false
+
+  # Typy zdarzeń uwzględniane w kalendarium (domyślnie wszystkie 4):
+  event_types:
+    - grades          # 📝 Oceny
+    - messages        # ✉️ Wiadomości
+    - notifications   # 📢 Ogłoszenia szkolne
+    - tests           # 🔔 Sprawdziany i zapowiedzi sprawdzianów
+
+

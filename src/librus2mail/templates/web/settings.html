@@ -608,6 +608,130 @@
             </div>
         </div>
 
+        <!-- ================================================================= -->
+        <!-- SEKCJA 5: KALENDARIUM ZDARZEŃ NA PULPICIE (DASHBOARD) -->
+        <!-- ================================================================= -->
+        <div id="kalendarium" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 scroll-mt-20">
+            <div class="border-b border-slate-100 pb-4 mb-6">
+                <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>🗓️</span> Moduł kalendarium zdarzeń (Pulpit główny)
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Dostosuj wyświetlanie graficznego paska ostatnich dni prezentującego oceny, wiadomości, ogłoszenia i sprawdziany.
+                </p>
+            </div>
+
+            <input type="hidden" name="timeline_settings_present" value="1">
+
+            <div class="max-w-2xl space-y-5">
+                <!-- Włącznik / wyłącznik kalendarium -->
+                <div class="flex items-start gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <input type="checkbox" id="timeline_enabled" name="timeline_enabled"
+                           {% if timeline_cfg.get('enabled', True) %}checked{% endif %}
+                           class="mt-1 rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                    <label for="timeline_enabled" class="text-xs text-slate-700 cursor-pointer">
+                        <span class="font-bold text-slate-900 block text-sm">Wyświetlaj kalendarium zdarzeń na stronie głównej</span>
+                        Pokazuje pełnoszerokościowy graficzny harmonogram dzień po dniu bezpośrednio pod kafelkami podsumowującymi.
+                    </label>
+                </div>
+
+                <!-- Liczba dni wstecz -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                        Liczba dni wstecz objętych kalendarium (zakres: 1 – 14 dni)
+                    </label>
+                    <div class="flex items-center gap-3">
+                        <input type="number" name="timeline_days" min="1" max="14"
+                               value="{{ timeline_cfg.get('days', 5) }}"
+                               class="w-32 text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <span class="text-xs text-slate-500 font-medium">dni (domyślnie: 5 dni)</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-1">
+                        Określa ile kolumn/kart kolejnych dni pojawi się w kalendarium na pulpicie.
+                    </p>
+                </div>
+
+                <!-- Ukrywanie weekendów -->
+                <div class="flex items-start gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <input type="checkbox" id="timeline_hide_weekends" name="timeline_hide_weekends"
+                           {% if timeline_cfg.get('hide_weekends', False) %}checked{% endif %}
+                           class="mt-1 rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                    <label for="timeline_hide_weekends" class="text-xs text-slate-700 cursor-pointer">
+                        <span class="font-bold text-slate-900 block text-sm">Ukryj dni weekendu (sobota i niedziela)</span>
+                        Pokazuje wyłącznie dni robocze nauki szkolnej (od poniedziałku do piątku), pomijając karty weekendowe.
+                    </label>
+                </div>
+
+                <!-- Odwrotna kolejność dni (najnowsze na początku / u góry) -->
+                <div class="flex items-start gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <input type="checkbox" id="timeline_reverse_order" name="timeline_reverse_order"
+                           {% if timeline_cfg.get('reverse_order', False) %}checked{% endif %}
+                           class="mt-1 rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                    <label for="timeline_reverse_order" class="text-xs text-slate-700 cursor-pointer">
+                        <span class="font-bold text-slate-900 block text-sm">Odwrotna kolejność kart (najnowsze na początku / u góry)</span>
+                        Wygodne zwłaszcza na telefonach: dzisiejszy dzień pojawia się na samej górze listy, a wcześniejsze dni po przewinięciu w dół (od najnowszego do najstarszego).
+                    </label>
+                </div>
+
+                <!-- Wybór typów zdarzeń -->
+                <div class="pt-2">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-2">
+                        Typy zdarzeń widoczne w kalendarium:
+                    </label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {% set enabled_types = timeline_cfg.get('event_types') if timeline_cfg.get('event_types') is not none else ['grades', 'messages', 'notifications', 'tests'] %}
+                        <!-- Oceny -->
+                        <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                            <input type="checkbox" name="timeline_type_grades" {% if 'grades' in enabled_types %}checked{% endif %}
+                                   class="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                            <div>
+                                <span class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                    <span>📝</span> Oceny
+                                </span>
+                                <span class="text-[11px] text-slate-500 block">Nowo wystawione oceny z przedmiotów</span>
+                            </div>
+                        </label>
+
+                        <!-- Wiadomości -->
+                        <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                            <input type="checkbox" name="timeline_type_messages" {% if 'messages' in enabled_types %}checked{% endif %}
+                                   class="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                            <div>
+                                <span class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                    <span>✉️</span> Wiadomości
+                                </span>
+                                <span class="text-[11px] text-slate-500 block">Wiadomości od nauczycieli i wychowawcy</span>
+                            </div>
+                        </label>
+
+                        <!-- Ogłoszenia szkolne -->
+                        <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                            <input type="checkbox" name="timeline_type_notifications" {% if 'notifications' in enabled_types %}checked{% endif %}
+                                   class="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                            <div>
+                                <span class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                    <span>📢</span> Ogłoszenia szkolne
+                                </span>
+                                <span class="text-[11px] text-slate-500 block">Komunikaty dyrekcji i ogłoszenia ze szkoły</span>
+                            </div>
+                        </label>
+
+                        <!-- Sprawdziany i terminarz -->
+                        <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                            <input type="checkbox" name="timeline_type_tests" {% if 'tests' in enabled_types %}checked{% endif %}
+                                   class="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                            <div>
+                                <span class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                    <span>🔔</span> Sprawdziany i zapowiedzi
+                                </span>
+                                <span class="text-[11px] text-slate-500 block">Sprawdziany, kartkówki i nowe zapowiedzi</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Zapis zmian -->
         <div class="flex items-center justify-end gap-3 pt-4">
             <a href="{{ url_for('web.dashboard') }}"

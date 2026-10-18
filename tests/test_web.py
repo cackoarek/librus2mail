@@ -16,6 +16,7 @@ from librus2mail.web.auth import LoginRateLimiter, get_client_ip
 from librus2mail.web.services import (
     build_daily_summary_html,
     build_progress_report_html,
+    build_recent_days_timeline,
     build_student_report_html,
     calculate_certificate_summary,
     calculate_goal_optimizer,
@@ -30,6 +31,7 @@ from librus2mail.web.services import (
     get_storage,
     resolve_student_name,
     simulate_new_grade,
+    sort_grades_descending,
 )
 from librus2mail.web.services import (
     test_librus_credentials as check_librus_credentials,
@@ -435,6 +437,17 @@ class TestWebDashboard(unittest.TestCase):
         self.assertEqual(cert['subjects'][0]['proposed_grade_word'], 'dobry')
         self.assertEqual(cert['subjects'][2]['proposed_grade_word'], 'brak ocen')
 
+        # Test wykluczenia przedmiotu ze średniej ze świadectwa (sekcja dolna)
+        cert_ex = calculate_certificate_summary(averages_with_empty, excluded_subjects=['Fizyka'])
+        self.assertEqual(len(cert_ex['included_subjects']), 2)
+        self.assertEqual(len(cert_ex['excluded_subjects']), 1)
+        self.assertEqual(cert_ex['excluded_subjects'][0]['subject'], 'Fizyka')
+        self.assertTrue(cert_ex['excluded_subjects'][0]['is_excluded'])
+        # Przedmioty wykluczone znajdują się na dole listy subjects
+        self.assertEqual(cert_ex['subjects'][-1]['subject'], 'Fizyka')
+        self.assertEqual(cert_ex['rated_count'], 1)  # tylko Matematyka
+        self.assertEqual(cert_ex['certificate_average'], 4.00)
+
         # Test ustalania pełnej nazwy ucznia (resolve_student_name)
         storage = get_storage(self.mock_config, self.storage_dir)
         resolved = resolve_student_name(self.mock_config, storage, '123456')
@@ -443,6 +456,31 @@ class TestWebDashboard(unittest.TestCase):
         # Zapis i ponowny odczyt przez set_student_name
         storage.set_student_name('123456', 'Jan Kowalski Zaktualizowany')
         self.assertEqual(storage.get_student_name('123456'), 'Jan Kowalski Zaktualizowany')
+
+        # Test sortowania ocen malejąco po rzeczywistej dacie wystawienia
+        unsorted_grades = [
+            {'subject': 'Historia', 'grade': '6', 'date': '2026-09-11 (pt.)', 'added_at': '2026-10-15T20:00:00', 'id': '1005'},
+            {'subject': 'Biologia', 'grade': 'np', 'date': '2026-09-15 (wt.)', 'added_at': '2026-10-15T20:00:00', 'id': '1010'},
+            {'subject': 'Język angielski', 'grade': '4', 'date': '2026-10-16 (pt.)', 'added_at': '2026-10-16T15:00:00', 'id': '1055'},
+            {'subject': 'Geografia', 'grade': '5-', 'date': '2026-10-12 (pon.)', 'added_at': '2026-10-15T20:00:00', 'id': '1040'},
+            {'subject': 'Biologia', 'grade': '5', 'date': '2026-10-06 (wt.)', 'added_at': '2026-10-15T20:00:00', 'id': '1035'},
+            {'subject': 'Biologia', 'grade': 'np', 'date': '2026-09-29 (wt.)', 'added_at': '2026-10-15T20:00:00', 'id': '1025'},
+            {'subject': 'Język polski', 'grade': '3', 'date': '2026-10-16 (pt.)', 'added_at': '2026-10-16T15:00:00', 'id': '1054'},
+        ]
+        sorted_res = sort_grades_descending(unsorted_grades)
+        dates_order = [g['date'] for g in sorted_res]
+        self.assertEqual(dates_order, [
+            '2026-10-16 (pt.)',
+            '2026-10-16 (pt.)',
+            '2026-10-12 (pon.)',
+            '2026-10-06 (wt.)',
+            '2026-09-29 (wt.)',
+            '2026-09-15 (wt.)',
+            '2026-09-11 (pt.)',
+        ])
+        # Tie-breaker po wyższym ID dla tej samej daty 16.10
+        self.assertEqual(sorted_res[0]['subject'], 'Język angielski')
+        self.assertEqual(sorted_res[1]['subject'], 'Język polski')
 
     def test_login_rate_limiter_unit(self):
         """Testuje jednostkowo działanie klasy LoginRateLimiter (licznik prób i blokada)."""
@@ -1434,10 +1472,11 @@ class TestWebDashboard(unittest.TestCase):
         self.assertEqual(res_view.status_code, 200)
         self.assertIn('Nie zaliczany do średniej'.encode(), res_view.data)
 
-        # Sprawdzenie w zakładce świadectwo
+        # Sprawdzenie w zakładce świadectwo (powinna być widoczna sekcja na dole tabeli)
         res_swiad = client.get('/oceny?tab=swiadectwo')
         self.assertEqual(res_swiad.status_code, 200)
-        self.assertIn('Nie zaliczany do średniej'.encode(), res_swiad.data)
+        self.assertIn('Nie zaliczane do średniej'.encode(), res_swiad.data)
+        self.assertIn('poza średnią'.encode(), res_swiad.data)
 
         # 4. Ponowne włączenie przedmiotu
         res_inc = client.post('/api/subject/toggle-certificate', data={'subject': 'Język polski', 'included': 'true'})
@@ -1759,6 +1798,179 @@ class TestWebDashboard(unittest.TestCase):
 
         hist_item = next(i for i in benchmark['items'] if i['subject'] == 'Historia')
         self.assertGreater(hist_item['stdev'], 0.0)
+
+    def test_recent_days_timeline_unit_and_integration(self):
+        """Weryfikuje moduł 5-dniowego kalendarium zdarzeń (jednostkowo oraz w widoku dashboardu)."""
+        ref_now = datetime(2026, 9, 18, 12, 0, 0)
+        grades = [
+            {'id': '1', 'subject': 'Matematyka', 'grade': '5', 'weight': '2', 'date': '2026-09-18', 'comment': 'Bardzo dobrze'},
+            {'id': '2', 'subject': 'Język polski', 'grade': '4', 'weight': '1', 'date': '2026-09-15', 'category': 'Kartkówka'},
+        ]
+        messages = [
+            {'id': 'm1', 'title': 'Zajęcia SKS', 'sender': 'Nauczyciel WF', 'datetime': '2026-09-17 14:00:00', 'body': 'Przypominam o stroju.'},
+        ]
+        notifications = [
+            {'id': 'n1', 'title': 'Apel szkolny', 'sender': 'Dyrekcja', 'datetime': '2026-09-16', 'body': 'Obowiązuje strój galowy.'},
+        ]
+        timetable = [
+            {'id': 't1', 'date': '2026-09-18', 'category': 'Sprawdzian', 'subject': 'Historia', 'description': 'Wojny perskie', 'lesson_no': '3'},
+            {'id': 't2', 'date': '2026-09-22', 'add_date': '2026-09-14 10:00:00', 'category': 'Kartkówka', 'subject': 'Biologia', 'description': 'Budowa komórki'},
+        ]
+
+        # 1. Test jednostkowy funkcji build_recent_days_timeline
+        days, total = build_recent_days_timeline(grades, messages, notifications, timetable, now=ref_now, days_count=5)
+        self.assertEqual(len(days), 5)
+        self.assertEqual(total, 6)
+
+        # Daty: 14.09, 15.09, 16.09, 17.09, 18.09
+        dates = [d['date'] for d in days]
+        self.assertEqual(dates, ['2026-09-14', '2026-09-15', '2026-09-16', '2026-09-17', '2026-09-18'])
+        self.assertFalse(days[0]['is_today'])
+        self.assertTrue(days[4]['is_today'])
+
+        # 14.09: zapowiedziana kartkówka z biologii
+        day_14 = days[0]
+        self.assertEqual(day_14['tests_count'], 1)
+        self.assertEqual(day_14['events'][0]['type'], 'test_announced')
+        self.assertIn('Biologia', day_14['events'][0]['title'])
+
+        # 15.09: ocena z języka polskiego
+        day_15 = days[1]
+        self.assertEqual(day_15['grades_count'], 1)
+        self.assertEqual(day_15['events'][0]['badge'], '4')
+
+        # 16.09: ogłoszenie szkolne
+        day_16 = days[2]
+        self.assertEqual(day_16['notifications_count'], 1)
+        self.assertEqual(day_16['events'][0]['type'], 'notification')
+
+        # 17.09: wiadomość
+        day_17 = days[3]
+        self.assertEqual(day_17['messages_count'], 1)
+        self.assertEqual(day_17['events'][0]['type'], 'message')
+
+        # 18.09: sprawdzian z historii oraz ocena z matematyki
+        day_18 = days[4]
+        self.assertEqual(day_18['tests_count'], 1)
+        self.assertEqual(day_18['grades_count'], 1)
+        types_18 = [e['type'] for e in day_18['events']]
+        self.assertIn('test', types_18)
+        self.assertIn('grade', types_18)
+
+        # 2. Test integracyjny z widokiem HTML dashboardu
+        student_data = {
+            'student_name': 'Jan Kowalski (klasa 5A)',
+            'last_collect_time': '2026-09-18 20:00:00',
+            'grades_history': grades,
+            'messages_history': messages,
+            'notifications_history': notifications,
+            'timetable_history': timetable,
+        }
+        with open(os.path.join(self.storage_dir, '123456.json'), 'w', encoding='utf-8') as f:
+            json.dump(student_data, f)
+
+        app = create_app(
+            config_path=self.config_path,
+            storage_dir=self.storage_dir,
+            actual_date=ref_now,
+            no_auth=True,
+        )
+        client = app.test_client()
+        res = client.get('/')
+        self.assertEqual(res.status_code, 200)
+
+        html = res.data.decode('utf-8')
+        self.assertIn("Kalendarium ostatnich 5 dni", html)
+        self.assertIn("Łącznie: 6 zdarzeń", html)
+        self.assertIn("Wojny perskie", html)
+        self.assertIn("Zajęcia SKS", html)
+        self.assertIn("Apel szkolny", html)
+        self.assertIn("Dziś", html)
+        # Ikona zębatki powinna linkować bezpośrednio do sekcji #kalendarium w Ustawieniach
+        self.assertIn('href="/ustawienia#kalendarium"', html)
+
+        # Sprawdzenie obecności kotwicy #kalendarium w widoku /ustawienia
+        res_settings = client.get('/ustawienia')
+        self.assertEqual(res_settings.status_code, 200)
+        self.assertIn('id="kalendarium"', res_settings.data.decode('utf-8'))
+
+        # 3. Test opcji hide_weekends=True (ukrywanie weekendów)
+        ref_monday = datetime(2026, 9, 21, 10, 0, 0)
+        school_days, _ = build_recent_days_timeline(
+            grades, messages, notifications, timetable, now=ref_monday, days_count=5, hide_weekends=True
+        )
+        school_dates = [d['date'] for d in school_days]
+        # Powinny być tylko dni robocze: wtorek 15.09, środa 16.09, czwartek 17.09, piątek 18.09, poniedziałek 21.09
+        self.assertEqual(school_dates, ['2026-09-15', '2026-09-16', '2026-09-17', '2026-09-18', '2026-09-21'])
+        self.assertFalse(any(d['is_weekend'] for d in school_days))
+
+        # 4. Test opcji reverse_order=True (odwrotne sortowanie - dzisiaj na początku/u góry)
+        rev_days, _ = build_recent_days_timeline(
+            grades, messages, notifications, timetable, now=ref_now, days_count=5, reverse_order=True
+        )
+        self.assertEqual(rev_days[0]['date'], '2026-09-18')
+        self.assertTrue(rev_days[0]['is_today'])
+        self.assertEqual(rev_days[-1]['date'], '2026-09-14')
+
+        # 5. Test filtrowania typów zdarzeń (enabled_types)
+        filtered_days, filtered_total = build_recent_days_timeline(
+            grades, messages, notifications, timetable, now=ref_now, days_count=5, enabled_types=['grades']
+        )
+        # Tylko 2 oceny, brak powiadomień, wiadomości i sprawdzianów
+        self.assertEqual(filtered_total, 2)
+        all_ev_types = [ev['type'] for d in filtered_days for ev in d['events']]
+        self.assertTrue(all(t == 'grade' for t in all_ev_types))
+
+        # 6. Test wyłączenia kalendarium w dedykowanej sekcji timeline (enabled: False)
+        cfg_disabled = dict(self.mock_config)
+        cfg_disabled['timeline'] = {'enabled': False}
+        with open(self.config_path, 'w', encoding='utf-8') as f:
+            import yaml
+            yaml.dump(cfg_disabled, f)
+
+        app_disabled = create_app(config_path=self.config_path, storage_dir=self.storage_dir, no_auth=True)
+        res_disabled = app_disabled.test_client().get('/')
+        self.assertEqual(res_disabled.status_code, 200)
+        self.assertNotIn("Kalendarium ostatnich", res_disabled.data.decode('utf-8'))
+
+        # 7. Test niestandardowej liczby dni wstecz w dedykowanej sekcji timeline (days: 3)
+        cfg_3days = dict(self.mock_config)
+        cfg_3days['timeline'] = {'enabled': True, 'days': 3}
+        with open(self.config_path, 'w', encoding='utf-8') as f:
+            yaml.dump(cfg_3days, f)
+
+        app_3days = create_app(config_path=self.config_path, storage_dir=self.storage_dir, no_auth=True, actual_date=ref_now)
+        res_3days = app_3days.test_client().get('/')
+        self.assertEqual(res_3days.status_code, 200)
+        html_3days = res_3days.data.decode('utf-8')
+        self.assertIn("Kalendarium ostatnich 3 dni", html_3days)
+
+        # 8. Test zapisu ustawień kalendarium przez formularz POST /ustawienia (dedykowana sekcja timeline)
+        post_data = {
+            'student_login_0': '123456',
+            'student_name_0': 'Jan Kowalski',
+            'mail_provider': 'gmail',
+            'mail_login': 'parent@example.com',
+            'timeline_settings_present': '1',
+            'timeline_enabled': 'on',
+            'timeline_days': '7',
+            'timeline_hide_weekends': 'on',
+            'timeline_reverse_order': 'on',
+            'timeline_type_grades': 'on',
+            'timeline_type_tests': 'on',
+            'collection_mode': 'interval',
+            'collection_interval_hours': '1',
+        }
+        res_post = client.post('/ustawienia', data=post_data, follow_redirects=True)
+        self.assertEqual(res_post.status_code, 200)
+        with open(self.config_path, encoding='utf-8') as f:
+            saved_cfg = yaml.safe_load(f)
+        self.assertIn('timeline', saved_cfg)
+        self.assertTrue(saved_cfg['timeline']['enabled'])
+        self.assertEqual(saved_cfg['timeline']['days'], 7)
+        self.assertTrue(saved_cfg['timeline']['hide_weekends'])
+        self.assertTrue(saved_cfg['timeline']['reverse_order'])
+        self.assertEqual(saved_cfg['timeline']['event_types'], ['grades', 'tests'])
 
 
 if __name__ == '__main__':

@@ -533,5 +533,7 @@ sudo journalctl -u librus2mail -f -n 50
 | **Raport miesięczny dla rodziców przez orkiestrator** | `venv/bin/python librus_collect_and_notify.py --report --days 30 -o miesiac.html` |
 | **Uruchomienie interaktywnego panelu webowego WWW** | `venv/bin/python librus_web.py` |
 | **Panel webowy w sieci lokalnej (dostęp ze smartfona)** | `venv/bin/python librus_web.py -b 0.0.0.0 -p 5000` |
+| **Przegenerowanie wszystkich widoków demo HTML** | `./examples/reports/regenerate_reports.sh` |
+| **Wygenerowanie animacji demonstracyjnej (Showcase GIF)** | `./venv/bin/python scripts/generate_showcase.py` |
 | **Uruchomienie testów jednostkowych** | `venv/bin/pytest` |
 | **Weryfikacja jakości kodu linterem** | `venv/bin/ruff check .` |

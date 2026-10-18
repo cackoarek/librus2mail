@@ -15,6 +15,12 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 - **Obsługa przedmiotów szkolnych bez ocen w bazie i na świadectwie**:
   - Wzbogacenie danych demonstracyjnych w `examples/storage/8979296.json` o przedmiot „Sztuka” (wliczany do średniej, bez ocen) oraz „Godzina wychowawcza” (oceny 4 i 5, wyłączona ze średniej na świadectwie).
 - **Deterministyczny token CSRF w statycznym eksporcie widoków HTML**: Użycie stałego identyfikatora tokenu CSRF w trybie demonstracyjnym (`export_web_views`), eliminujące zbędne diffy w gicie w plikach `examples/reports/*.html` przy ponownym uruchamianiu `regenerate_reports.sh`.
+- **Animowany podgląd możliwości aplikacji (Showcase GIF / WebP) w nagłówku README**:
+  - Zoptymalizowany animowany GIF (`docs/assets/librus2mail_showcase.gif`) oraz wersja WebP prezentujące pełny przekrój możliwości ekosystemu Librus2mail.
+  - Zautomatyzowany skrypt `scripts/generate_showcase.py` (Headless Chrome + ffmpeg) generujący bezstratne klatki z widoków demonstracyjnych `examples/reports/`.
+  - Płynne pionowe przewijanie zawartości stron (`CSS translateY`) przy unieruchomionej górnej belce nawigacyjnej.
+  - Dedykowany slajd tytułowy (Intro) oraz slajd podsumowujący (Outro).
+  - Indywidualnie konfigurowalny czas trwania każdego slajdu, parametry scrolla oraz opcja procentowego skalowania wielkości czcionki (`font_scale`).
 
 ### Zmienione
 - **Ergonomia nawigacji panelu WWW**:

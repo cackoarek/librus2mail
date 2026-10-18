@@ -11,6 +11,18 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ---
 
+## [2.6.0] – 2026-10-18
+
+### Dodane
+- separate section for excluded subjects in subject summary
+- timeline sorting options, choose event types
+- calendar settings options
+- 5 day calendar of recent events
+
+### Naprawione
+- grades sorting fix
+
+---
 ## [2.5.0] – 2026-10-15
 
 ### Dodane
@@ -272,7 +284,8 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ---
 
-[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v2.5.0...HEAD
+[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v2.6.0...HEAD
+[2.6.0]: https://github.com/cackoarek/librus2mail/compare/v2.5.0...v2.6.0
 [2.5.0]: https://github.com/cackoarek/librus2mail/compare/v2.4.0...v2.5.0
 [2.4.0]: https://github.com/cackoarek/librus2mail/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/cackoarek/librus2mail/compare/v2.2.0...v2.3.0

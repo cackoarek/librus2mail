@@ -54,11 +54,6 @@ class Librus:
         self.__do_read_grades = config.get('read_grades', True)
         self.__do_read_timetable = config.get('read_timetable', True)
         self.__do_read_schedule = config.get('read_schedule', True)
-        raw_ret = config.get('schedule_retention_days', 30)
-        try:
-            self.__schedule_retention_days = int(raw_ret) if raw_ret is not None else 30
-        except (ValueError, TypeError):
-            self.__schedule_retention_days = 30
         self.__librus_login = config.get('librus_login')
         raw_password = config.get('librus_password')
         self.__librus_password = (
@@ -383,7 +378,6 @@ class Librus:
                 self.__storage.save_schedule_entries(
                     str(self.__librus_login),
                     self.schedule,
-                    retention_days=self.__schedule_retention_days,
                 )
 
     def get_not_known_messages_and_mark_as_known(self) -> list[dict[str, bool | str | Any]]:

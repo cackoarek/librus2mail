@@ -1049,7 +1049,15 @@ def build_schedule_day_context(
         target_reason = 'empty'
 
     req_clean = (requested_date or '').strip()
-    selected_date = req_clean if req_clean in by_date else default_target_date
+    if req_clean and re.match(r'^\d{4}-\d{2}-\d{2}$', req_clean):
+        selected_date = req_clean
+        if selected_date not in by_date:
+            by_date[selected_date] = []
+        target_reason = 'user_selected'
+    else:
+        selected_date = default_target_date
+
+    sorted_dates = sorted(by_date.keys())
 
     prev_date = None
     next_date = None

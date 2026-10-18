@@ -2364,23 +2364,17 @@ class TestLibrus(unittest.TestCase):
             self.assertTrue(pol['is_substitution'])
             self.assertEqual(pol['substitution_info'], 'Zastępstwo za B. Kowalska')
 
-            # 5. Test retencji (usuwanie lekcji starszych niż retention_days, np. 30 dni)
+            # 5. Test bezterminowego przechowywania lekcji (brak retencji)
             old_entry = {
                 'id': 'sched_2026-08-01_1_stara',
                 'date': '2026-08-01',  # 52 dni przed 2026-09-22
                 'lesson_no': 1,
                 'subject': 'Stara lekcja',
             }
-            storage.save_schedule_entries(login, [old_entry], retention_days=None)
-            self.assertEqual(len(storage.get_schedule_history(login)), 3)
-
-            # Wywołanie z retencją 30 dni względem daty odniesienia 2026-09-22
-            from datetime import date
-            ref_d = date(2026, 9, 22)
-            storage.save_schedule_entries(login, [], retention_days=30, reference_date=ref_d)
+            storage.save_schedule_entries(login, [old_entry])
             retained = storage.get_schedule_history(login)
-            self.assertEqual(len(retained), 2)
-            self.assertNotIn('sched_2026-08-01_1_stara', [x['id'] for x in retained])
+            self.assertEqual(len(retained), 3)
+            self.assertIn('sched_2026-08-01_1_stara', [x['id'] for x in retained])
 
     def test_parse_schedule_soup_and_fetch(self):
         from bs4 import BeautifulSoup

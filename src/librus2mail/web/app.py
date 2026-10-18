@@ -242,7 +242,7 @@ def switch_school_year():
 @web_bp.route('/actions/archive-year', methods=['POST'])
 @login_required
 def action_archive_year():
-    """Archiwizuje bieżący rok szkolny dla aktywnego profilu ucznia."""
+    """Archiwizuje bieżący rok szkolny dla aktywnego profilu ucznia (lub wszystkich dzieci)."""
     if getattr(request, 'is_archive_mode', False):
         flash("Nie można archiwizować z poziomu widoku archiwalnego.", "error")
         return redirect(url_for('web.settings_view'))
@@ -259,9 +259,44 @@ def action_archive_year():
         now = getattr(request, 'app_actual_date', None) or datetime.now()
         year_label = f"{now.year - 1}/{now.year}"
 
+    all_students = list_students(config, raw_storage)
+    archive_all = bool(request.form.get('archive_all_students')) and len(all_students) > 1
+
+    targets = all_students if archive_all else [s for s in all_students if s['login'] == active_login]
+    if not targets:
+        targets = [{'login': active_login, 'name': active_login}]
+
+    archived_names = []
     try:
-        archive_path = raw_storage.archive_school_year(active_login, year_label)
-        flash(f"Pomyślnie zarchiwizowano rok szkolny {year_label} (plik: {archive_path.name}). Rozpoczęto czysty nowy rok szkolny.", "success")
+        for st in targets:
+            s_login = st['login']
+            s_name = st.get('name') or s_login
+            raw_storage.archive_school_year(s_login, year_label)
+            archived_names.append(s_name)
+
+        if archive_all and len(targets) > 1:
+            names_str = ", ".join(f"'{name}'" for name in archived_names)
+            flash(
+                f"Pomyślnie zarchiwizowano rok szkolny {year_label} jednocześnie dla wszystkich dzieci: {names_str}. "
+                f"Rozpoczęto czysty nowy rok szkolny.",
+                "success",
+            )
+        else:
+            active_name = archived_names[0] if archived_names else active_login
+            other_students = [s for s in all_students if s['login'] != active_login]
+            if other_students:
+                other_names = ", ".join(f"'{s['name']}'" for s in other_students)
+                flash(
+                    f"Pomyślnie zarchiwizowano rok szkolny {year_label} dla ucznia '{active_name}'. "
+                    f"Pamiętaj: operacja dotyczyła wyłącznie tego profilu. Przełącz ucznia w menu i powtórz archiwizację dla pozostałych dzieci ({other_names}) "
+                    f"lub zaznacz opcję archiwizacji dla wszystkich dzieci.",
+                    "success",
+                )
+            else:
+                flash(
+                    f"Pomyślnie zarchiwizowano rok szkolny {year_label} dla ucznia '{active_name}'. Rozpoczęto czysty nowy rok szkolny.",
+                    "success",
+                )
     except Exception as e:
         logger.error(f"Błąd archiwizacji roku szkolnego dla {active_login}: {e}", exc_info=True)
         flash(f"Błąd podczas archiwizacji: {e}", "error")

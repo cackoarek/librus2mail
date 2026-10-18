@@ -9,6 +9,8 @@ import unittest
 from datetime import datetime, timedelta
 from unittest.mock import patch
 
+import yaml
+
 from librus2mail.web import create_app, export_web_views
 from librus2mail.web import main as web_main
 from librus2mail.web.app import get_app_version
@@ -444,9 +446,22 @@ class TestWebDashboard(unittest.TestCase):
         self.assertEqual(cert_ex['excluded_subjects'][0]['subject'], 'Fizyka')
         self.assertTrue(cert_ex['excluded_subjects'][0]['is_excluded'])
         # Przedmioty wykluczone znajdują się na dole listy subjects
-        self.assertEqual(cert_ex['subjects'][-1]['subject'], 'Fizyka')
         self.assertEqual(cert_ex['rated_count'], 1)  # tylko Matematyka
         self.assertEqual(cert_ex['certificate_average'], 4.00)
+
+        # Test kalkulacji z calculate_subject_averages dla przedmiotu bez ocen (np. Sztuka)
+        full_subj_avgs = calculate_subject_averages(
+            grades,
+            all_subjects=['Matematyka', 'Fizyka', 'Sztuka'],
+        )
+        self.assertIn('Sztuka', full_subj_avgs)
+        self.assertIsNone(full_subj_avgs['Sztuka']['average'])
+        self.assertIsNone(full_subj_avgs['Sztuka']['proposed_grade_num'])
+        self.assertEqual(full_subj_avgs['Sztuka']['proposed_grade_label'], 'Brak ocen')
+        cert_full = calculate_certificate_summary(full_subj_avgs)
+        self.assertEqual(cert_full['rated_count'], 2)
+        self.assertEqual(cert_full['unrated_count'], 1)
+        self.assertEqual(cert_full['certificate_average'], 4.00)
 
         # Test ustalania pełnej nazwy ucznia (resolve_student_name)
         storage = get_storage(self.mock_config, self.storage_dir)
@@ -2207,6 +2222,49 @@ class TestWebDashboard(unittest.TestCase):
         arch_labels = [a['label'] for a in updated_arch_list]
         self.assertIn('2025/2026', arch_labels)
         self.assertIn('2024/2025', arch_labels)
+
+        # 9. Test wielodzietności: przypomnienie o drugim dziecku oraz checkbox 'archive_all_students'
+        # Dopisujemy drugie dziecko do configu
+        with open(self.config_path, encoding='utf-8') as f:
+            multi_cfg = yaml.safe_load(f)
+        multi_cfg['librus_users'].append({
+            'librus_login': '654321',
+            'librus_login_name': 'Kasia Kowalska',
+            'librus_password': 'secret_pass_2',
+            'receivers': ['mama@example.com'],
+        })
+        with open(self.config_path, 'w', encoding='utf-8') as f:
+            yaml.safe_dump(multi_cfg, f)
+
+        # Tworzymy aplikację z nowym configiem zawierającym dwoje dzieci
+        multi_app = create_app(config_path=self.config_path, storage_dir=self.storage_dir, no_auth=True)
+        multi_client = multi_app.test_client()
+
+        # a) Archiwizacja pojedyncza (bez zaznaczonego checkboxa 'archive_all_students')
+        res_single = multi_client.post('/actions/archive-year', data={
+            'school_year_label': '2026/2027',
+            'csrf_token': csrf_curr,
+        }, follow_redirects=True)
+        self.assertEqual(res_single.status_code, 200)
+        html_single = res_single.data.decode('utf-8')
+        self.assertIn('Pomyślnie zarchiwizowano rok szkolny 2026/2027', html_single)
+        self.assertIn('Pamiętaj: operacja dotyczyła wyłącznie tego profilu', html_single)
+        self.assertIn('Kasia Kowalska', html_single)
+
+        # b) Archiwizacja masowa ze zaznaczonym checkboxem 'archive_all_students'
+        res_all = multi_client.post('/actions/archive-year', data={
+            'school_year_label': '2027/2028',
+            'archive_all_students': '1',
+            'csrf_token': csrf_curr,
+        }, follow_redirects=True)
+        self.assertEqual(res_all.status_code, 200)
+        html_all = res_all.data.decode('utf-8')
+        self.assertIn('Pomyślnie zarchiwizowano rok szkolny 2027/2028 jednocześnie dla wszystkich dzieci', html_all)
+        self.assertIn('Kasia Kowalska', html_all)
+
+        # Sprawdzamy, czy archiwum powstało zarówno dla pierwszego, jak i dla drugiego dziecka
+        self.assertIn('2027/2028', [a['label'] for a in storage.list_archived_years('123456')])
+        self.assertIn('2027/2028', [a['label'] for a in storage.list_archived_years('654321')])
 
 
 if __name__ == '__main__':

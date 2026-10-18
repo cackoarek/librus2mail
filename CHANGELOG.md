@@ -9,6 +9,22 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ## [Unreleased]
 
+### Dodane
+- **Dedykowany modal potwierdzenia archiwizacji roku szkolnego**: Zastąpienie przeglądarkowego okna `confirm()` własnym, ostylowanym modalem w zakładce Ustawienia z dynamicznym podsumowaniem zakresu operacji i obsługą klawiszy Enter oraz Escape.
+- **Obsługa wielu dzieci przy archiwizacji roku**: Możliwość zarchiwizowania okresu jednocześnie dla wszystkich dzieci (checkbox w oknie modalnym) oraz systemowe przypomnienie `flash` o konieczności archiwizacji drugiego dziecka przy operacji pojedynczej.
+- **Obsługa przedmiotów szkolnych bez ocen w bazie i na świadectwie**:
+  - Wzbogacenie danych demonstracyjnych w `examples/storage/8979296.json` o przedmiot „Sztuka” (wliczany do średniej, bez ocen) oraz „Godzina wychowawcza” (oceny 4 i 5, wyłączona ze średniej na świadectwie).
+- **Deterministyczny token CSRF w statycznym eksporcie widoków HTML**: Użycie stałego identyfikatora tokenu CSRF w trybie demonstracyjnym (`export_web_views`), eliminujące zbędne diffy w gicie w plikach `examples/reports/*.html` przy ponownym uruchamianiu `regenerate_reports.sh`.
+
+### Zmienione
+- **Ergonomia nawigacji panelu WWW**:
+  - Przeniesienie „Akcji CLI” z górnego paska nawigacyjnego do dedykowanej karty na samym dole zakładki „Ustawienia” z wygodnym przyciskiem przejścia i powrotną ścieżką breadcrumbs.
+  - Zwolnienie miejsca w nagłówku aplikacji na przełącznik uczniów oraz wybór archiwalnych lat szkolnych.
+- **Rozbudowa opisu archiwizacji w Ustawieniach**: Dodanie jasnej instrukcji informującej rodzica, że zarchiwizowane okresy można w każdej chwili przeglądać w menu wyboru ucznia na górnym pasku.
+
+### Naprawione
+- **Kalkulacja średniej ze świadectwa dla przedmiotów bez ocen**: Zabezpieczenie funkcji `calculate_subject_averages` oraz `calculate_certificate_summary` przed traktowaniem braku ocen jako stopnia 0 przy wyliczaniu średniej końcowej — przedmioty bez ocen otrzymują poprawny status „brak ocen” (`unrated_count`) i nie zaniżają średniej ze świadectwa.
+
 ---
 
 ## [2.6.0] – 2026-10-18

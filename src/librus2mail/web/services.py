@@ -342,8 +342,10 @@ def calculate_subject_averages(
                     s2_n = get_predicted_grade_tuple(sem2_avg)[0]
                     calc_a = round((s1_n + s2_n) / 2.0, 2)
                     pred_final_num, pred_final_label = get_predicted_grade_tuple(calc_a)
-                else:
+                elif annual_avg is not None:
                     pred_final_num, pred_final_label = get_predicted_grade_tuple(annual_avg)
+                else:
+                    pred_final_num, pred_final_label = None, "Brak ocen"
             elif annual_grade_algorithm == 'progress_favored':
                 if sem1_avg is not None and sem2_avg is not None:
                     s1_n = get_predicted_grade_tuple(sem1_avg)[0]
@@ -354,10 +356,15 @@ def calculate_subject_averages(
                     else:
                         calc_a = round((s1_n + s2_n) / 2.0, 2)
                         pred_final_num, pred_final_label = get_predicted_grade_tuple(calc_a)
-                else:
+                elif annual_avg is not None:
                     pred_final_num, pred_final_label = get_predicted_grade_tuple(annual_avg)
+                else:
+                    pred_final_num, pred_final_label = None, "Brak ocen"
             else:  # 'all_year_weighted' (domyślny)
-                pred_final_num, pred_final_label = get_predicted_grade_tuple(annual_avg)
+                if annual_avg is not None:
+                    pred_final_num, pred_final_label = get_predicted_grade_tuple(annual_avg)
+                else:
+                    pred_final_num, pred_final_label = None, "Brak ocen"
 
         # Jeśli nauczyciel wystawił oficjalną propozycję, ma ona pierwszeństwo nad algorytmem
         if official_proposed:
@@ -1136,17 +1143,30 @@ def calculate_certificate_summary(
         is_official = bool(sdata.get('is_official_proposal'))
         is_completed = bool(sdata.get('is_completed'))
 
-        if sdata.get('proposed_grade_num') is not None:
+        has_valid_prop = (
+            sdata.get('proposed_grade_num') is not None
+            and int(sdata.get('proposed_grade_num') or 0) > 0
+        )
+        if has_valid_prop:
             prop_num = int(sdata['proposed_grade_num'])
             prop_label = sdata.get('proposed_grade_label') or f"{prop_num} ({GRADE_WORDS.get(prop_num, '—')})"
             prop_word = GRADE_WORDS.get(prop_num, "—")
             if not is_excluded:
                 rated_grades.append(prop_num)
         elif avg is not None and num_count > 0:
-            prop_num, prop_label = get_predicted_grade_tuple(avg)
-            prop_word = GRADE_WORDS.get(prop_num, "—")
-            if not is_excluded:
-                rated_grades.append(prop_num)
+            p_num, p_label = get_predicted_grade_tuple(avg)
+            if p_num > 0:
+                prop_num = p_num
+                prop_label = p_label
+                prop_word = GRADE_WORDS.get(prop_num, "—")
+                if not is_excluded:
+                    rated_grades.append(prop_num)
+            else:
+                prop_num = None
+                prop_label = "Brak ocen"
+                prop_word = "brak ocen"
+                if not is_excluded:
+                    unrated_count += 1
         else:
             prop_num = None
             prop_label = "Brak ocen"

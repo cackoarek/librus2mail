@@ -882,22 +882,119 @@
             <span>Przeglądasz zarchiwizowany rok szkolny w trybie tylko do odczytu. Archiwizacja nowego roku jest zablokowana do czasu powrotu do roku bieżącego.</span>
         </div>
         {% else %}
-        <form method="POST" action="{{ url_for('web.action_archive_year') }}" onsubmit="return confirm('Czy na pewno chcesz zarchiwizować bieżący rok szkolny? Oceny zostaną przeniesione do archiwum, a na bieżący rok rozpocznie się nowy czysty stan. Preferencje i wiadomości zostaną zachowane.');" class="p-4 bg-slate-50/70 rounded-2xl border border-slate-200 max-w-xl">
+        <form id="archive-year-form" method="POST" action="{{ url_for('web.action_archive_year') }}" onsubmit="event.preventDefault(); openArchiveConfirmModal();" class="p-5 bg-slate-50/70 rounded-2xl border border-slate-200 max-w-2xl">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">Ręczna archiwizacja bieżącego roku szkolnego:</h4>
             <p class="text-xs text-slate-600 mb-3 leading-relaxed">
                 Wpisz etykietę zamykanego roku (np. <code>2024/2025</code>). System utworzy trwały snapshot w <code>storage/archive/</code>, wyczyści oceny, terminarz i plan lekcji do czystego stanu, pozostawiając konfigurację oraz ciągłość wiadomości. Zarchiwizowany rok natychmiast pojawi się w menu wyboru okresu w prawym górnym rogu ekranu.
             </p>
+
+            {% if all_students and all_students|length > 1 %}
+            <div class="mb-4 p-3.5 bg-indigo-50/70 border border-indigo-200 rounded-xl text-xs text-indigo-950">
+                <label class="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" id="archive_all_students" name="archive_all_students" value="1"
+                           class="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                    <div>
+                        <span class="font-extrabold text-indigo-950 block text-xs">
+                            Zarchiwizuj jednocześnie dla wszystkich dzieci ({% for s in all_students %}{{ s.name }}{% if not loop.last %}, {% endif %}{% endfor %})
+                        </span>
+                        <span class="text-[11px] text-indigo-800 block mt-0.5">
+                            Gdy zaznaczone, rok zostanie zarchiwizowany równolegle dla każdego dziecka. Gdy odznaczone, zarchiwizowany zostanie wyłącznie aktualny profil: <strong>{{ active_student.name }}</strong> (dla pozostałych dzieci należy powtórzyć operację po przełączeniu profilu).
+                        </span>
+                    </div>
+                </label>
+            </div>
+            {% endif %}
+
             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                <input type="text" name="school_year_label" placeholder="np. 2024/2025" required
+                <input type="text" id="archive_school_year_input" name="school_year_label" placeholder="np. 2024/2025" required
+                       onkeydown="if(event.key === 'Enter'){ event.preventDefault(); openArchiveConfirmModal(); }"
                        class="px-3.5 py-2 text-xs font-bold border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white flex-1">
-                <button type="submit"
+                <button type="button" onclick="openArchiveConfirmModal()"
                         class="px-4 py-2 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-xl shadow-sm transition whitespace-nowrap cursor-pointer">
                     📦 Zarchiwizuj i rozpocznij nowy rok
                 </button>
             </div>
         </form>
         {% endif %}
+    </div>
+
+    <!-- Modal potwierdzenia archiwizacji roku szkolnego (Custom Application Modal) -->
+    <div id="archive-confirm-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 hidden" onclick="handleArchiveModalBackdrop(event)">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 sm:p-7 relative" onclick="event.stopPropagation()">
+            <!-- Przycisk zamknięcia X -->
+            <button type="button" onclick="closeArchiveConfirmModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-lg font-bold p-1 rounded-lg hover:bg-slate-100 transition cursor-pointer" title="Zamknij">
+                ✕
+            </button>
+
+            <!-- Nagłówek z ikoną -->
+            <div class="flex items-start gap-4 mb-4">
+                <div class="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center text-2xl flex-shrink-0 shadow-xs">
+                    📦
+                </div>
+                <div>
+                    <h3 class="text-base font-extrabold text-slate-900">
+                        Potwierdzenie archiwizacji roku szkolnego
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        Tworzenie trwałego snapshotu i przygotowanie czystego stanu.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Zawartość / Szczegóły archiwizacji -->
+            <div class="space-y-3.5 my-5">
+                <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
+                    <span class="text-slate-600 font-medium">Etykieta zamykanego roku:</span>
+                    <span id="archive-modal-year-display" class="font-extrabold font-mono text-slate-900 px-2.5 py-1 bg-white border border-slate-200 rounded-lg"></span>
+                </div>
+
+                <!-- Zakres: Wszystkie dzieci -->
+                <div id="archive-modal-scope-all" class="hidden p-3.5 bg-indigo-50/80 border border-indigo-200 rounded-xl text-xs text-indigo-950">
+                    <div class="font-extrabold flex items-center gap-1.5 mb-1 text-indigo-900">
+                        <span>👨‍👩‍👧‍👦</span> Zakres: Jednocześnie wszystkie dzieci
+                    </div>
+                    <p class="text-indigo-800 leading-relaxed text-[11px]">
+                        Zostaną zarchiwizowane dane dla każdego profilu:
+                        <strong>{% for s in all_students %}{{ s.name }}{% if not loop.last %}, {% endif %}{% endfor %}</strong>.
+                        Oceny, terminarz i plan lekcji każdego dziecka zostaną zarchiwizowane do <code>storage/archive/</code>, a na nowy rok szkolny rozpocznie się czysty stan.
+                    </p>
+                </div>
+
+                <!-- Zakres: Tylko bieżące dziecko -->
+                <div id="archive-modal-scope-single" class="p-3.5 bg-amber-50/80 border border-amber-200 rounded-xl text-xs text-amber-950">
+                    <div class="font-extrabold flex items-center gap-1.5 mb-1 text-amber-900">
+                        <span>👤</span> Zakres: Wyłącznie aktywny uczeń
+                    </div>
+                    <p class="text-amber-900 leading-relaxed text-[11px]">
+                        Zarchiwizowane zostaną dane tylko dla profilu: <strong>{{ active_student.name if active_student else 'aktywnego ucznia' }}</strong>.
+                        {% if all_students and all_students|length > 1 %}
+                        <span class="block mt-2 p-2 bg-amber-100/70 border border-amber-300 rounded-lg text-amber-950 font-semibold text-[11px]">
+                            ⚠️ <strong>Ważne:</strong> Po zakończeniu przełącz profil ucznia w prawym górnym rogu menu i powtórz archiwizację dla pozostałych dzieci ({% for s in all_students if s.login != active_login %}{{ s.name }}{% if not loop.last %}, {% endif %}{% endfor %}).
+                        </span>
+                        {% endif %}
+                    </p>
+                </div>
+
+                <!-- Bezpieczeństwo i gwarancja ciągłości -->
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/80 text-[11px] text-slate-600 flex items-center gap-2">
+                    <span class="text-emerald-600 text-sm">🛡️</span>
+                    <span>Historia wiadomości i ogłoszeń ze szkoły oraz preferencje powiadomień zostaną zachowane.</span>
+                </div>
+            </div>
+
+            <!-- Przyciski akcji -->
+            <div class="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
+                <button type="button" onclick="closeArchiveConfirmModal()"
+                        class="px-4 py-2.5 text-xs font-bold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer">
+                    Anuluj
+                </button>
+                <button type="button" onclick="submitArchiveForm()"
+                        class="px-5 py-2.5 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-xl shadow-md shadow-amber-200 transition cursor-pointer">
+                    📦 Tak, zarchiwizuj i rozpocznij nowy rok
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- ================================================================= -->
@@ -941,6 +1038,60 @@
 
 <script>
 let studentSettingsCount = {{ users|length }};
+
+function openArchiveConfirmModal() {
+    const input = document.getElementById('archive_school_year_input');
+    const val = input ? input.value.trim() : '';
+    if (!val) {
+        if (input) {
+            input.focus();
+            if (input.reportValidity) input.reportValidity();
+        }
+        return;
+    }
+
+    const yearDisplay = document.getElementById('archive-modal-year-display');
+    if (yearDisplay) yearDisplay.textContent = val;
+
+    const isAll = document.getElementById('archive_all_students')?.checked;
+    const scopeAll = document.getElementById('archive-modal-scope-all');
+    const scopeSingle = document.getElementById('archive-modal-scope-single');
+
+    if (isAll) {
+        if (scopeAll) scopeAll.classList.remove('hidden');
+        if (scopeSingle) scopeSingle.classList.add('hidden');
+    } else {
+        if (scopeAll) scopeAll.classList.add('hidden');
+        if (scopeSingle) scopeSingle.classList.remove('hidden');
+    }
+
+    const modal = document.getElementById('archive-confirm-modal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeArchiveConfirmModal() {
+    const modal = document.getElementById('archive-confirm-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function handleArchiveModalBackdrop(event) {
+    if (event.target.id === 'archive-confirm-modal') {
+        closeArchiveConfirmModal();
+    }
+}
+
+function submitArchiveForm() {
+    const form = document.getElementById('archive-year-form');
+    if (form) {
+        form.submit();
+    }
+}
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeArchiveConfirmModal();
+    }
+});
 
 function toggleGmailAuthModeSettings() {
     const isGmail = document.querySelector('input[name="mail_provider"]:checked')?.value === 'gmail';

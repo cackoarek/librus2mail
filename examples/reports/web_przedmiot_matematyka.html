@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="318f6e250a17e1f6b4dd7cfaeae63a32169620d23e45bc7f5cc45fb86e0a2adf">
+    <meta name="csrf-token" content="static_demo_csrf_token_librus2mail">
     <title>Analiza przedmiotu: Matematyka - Librus2mail - Librus2mail</title>
     <!-- Favicon z logo Librus2mail (gradient indigo-sky + 🏫) -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%25%22%20y1%3D%22100%25%22%20x2%3D%22100%25%22%20y2%3D%220%25%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%234f46e5%22/%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%230ea5e9%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2216%22%20fill%3D%22url%28%23g%29%22/%3E%3Ctext%20x%3D%2232%22%20y%3D%2234%22%20font-size%3D%2234%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%F0%9F%8F%AB%3C/text%3E%3C/svg%3E">
@@ -45,7 +45,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
 </head>
-<body class="h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white" hx-headers='{"X-CSRFToken": "318f6e250a17e1f6b4dd7cfaeae63a32169620d23e45bc7f5cc45fb86e0a2adf"}'>
+<body class="h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white" hx-headers='{"X-CSRFToken": "static_demo_csrf_token_librus2mail"}'>
 
     <!-- Pasek nawigacyjny -->
     <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
@@ -92,10 +92,6 @@
                            class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
                             📈 Raporty
                         </a>
-                        <a href="web_akcje.html"
-                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
-                            ⚡ Akcje CLI
-                        </a>
                         <a href="web_ustawienia.html"
                            class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
                             ⚙️ Ustawienia
@@ -128,6 +124,9 @@
                         </div>
                         
 
+                        <!-- Selektor roku szkolnego (bieżący vs archiwum) -->
+                        
+
                         
                         <a href="web_login.html"
                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors"
@@ -151,11 +150,13 @@
             <a href="web_terminarz.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">🔔 Terminarz</a>
             <a href="web_wiadomosci.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">✉️ Wiadomości</a>
             <a href="web_raporty_podsumowanie.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📈 Raporty</a>
-            <a href="web_akcje.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">⚡ Akcje</a>
             <a href="web_ustawienia.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">⚙️ Ustawienia</a>
         </div>
         
     </header>
+
+    <!-- Baner trybu archiwalnego (Read-Only) -->
+    
 
     <!-- Komunikaty Flash -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 w-full">
@@ -196,6 +197,8 @@
                     <span>Przedmiot szkolny</span>
                 </span>
                 
+                
+                
                 <span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
                     <span>🎓</span>
                     <span>Wliczany do średniej świadectwa</span>
@@ -217,10 +220,14 @@
         <!-- Główny widget proponowanej oceny i trendu -->
         <div class="flex items-center gap-4 bg-slate-50/80 p-4 rounded-2xl border border-slate-100 self-start md:self-auto">
             <div class="text-right">
-                <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Proponowana ocena</span>
+                <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    
+                    Proponowana ocena
+                    
+                </span>
                 <div class="flex items-baseline justify-end gap-1.5 mt-0.5">
                     
-                    <span class="text-2xl font-black text-indigo-700">4</span>
+                    <span class="text-2xl font-black  text-indigo-700 ">4</span>
                     <span class="text-xs font-bold text-slate-600">(dobry)</span>
                     
                 </div>
@@ -237,6 +244,8 @@
             </div>
         </div>
     </div>
+
+    
 
     <!-- ========================================================================= -->
     <!-- SEKCJA 1: STATYSTYKI OCEN (KAFELKI KPI)                                   -->
@@ -340,7 +349,7 @@ Diagnoza: Dobra, zrównoważona forma z pojedynczymi wahaniami (sporadyczne sła
         </div>
 
         <!-- Tempo ocen (Pacing & Velocity) -->
-        <div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-xs" title="Do końca I semestru (styczeń) pozostało ok. 104 dni">
+        <div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-xs" title="Do końca I semestru pozostało ok. 136 dni">
             <div class="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider">
                 <span>Tempo ocen</span>
                 <span>⏱️</span>
@@ -352,7 +361,7 @@ Diagnoza: Dobra, zrównoważona forma z pojedynczymi wahaniami (sporadyczne sła
             </div>
             <span class="text-[10px] text-slate-500 font-medium mt-0.5 block truncate">
                 
-                ok. 26 ocen do końca
+                ok. 34 ocen do końca
                 
             </span>
         </div>
@@ -380,6 +389,8 @@ Diagnoza: Dobra, zrównoważona forma z pojedynczymi wahaniami (sporadyczne sła
                     </span>
                     
                 </div>
+
+                
 
                 
                 <div class="mt-4 space-y-3.5">
@@ -1711,7 +1722,7 @@ Diagnoza: Dobra, zrównoważona forma z pojedynczymi wahaniami (sporadyczne sła
 <!-- ========================================================================= -->
 <script>
     // Dane przekazane z backendu do wykresu Chart.js
-    const timelineData = [{"category": "Sprawdzian", "comment": "-", "date": "2026-09-04", "date_raw": "2026-09-04 (pt.)", "grade": "4", "id": "1001", "index": 1, "is_custom": false, "numeric_grade": 4.0, "original_grade": "", "original_weight": "", "running_average": 4.0, "subject": "Matematyka", "teacher": "Renata Matyk", "weight": 3.0, "weight_raw": "3"}, {"category": "Odpowied\u017a", "comment": "w\u0142asno\u015bci liczb naturalnych i podzielno\u015b\u0107", "date": "2026-09-07", "date_raw": "2026-09-07 (pon.)", "grade": "4+", "id": "1040", "index": 2, "is_custom": false, "numeric_grade": 4.5, "original_grade": "", "original_weight": "", "running_average": 4.2, "subject": "Matematyka", "teacher": "Renata Matyk", "weight": 2.0, "weight_raw": "2"}, {"category": "Kartk\u00f3wka", "comment": "rachunki pami\u0119ciowe (kolejno\u015b\u0107 dzia\u0142a\u0144)", "date": "2026-09-08", "date_raw": "2026-09-08 (wt.)", "grade": "5", "id": "1002", "index": 3, "is_custom": false, "numeric_grade": 5.0, "original_grade": "", "original_weight": "", "running_average": 4.33, "subject": "Matematyka", "teacher": "Renata Matyk", "weight": 1.0, "weight_raw": "1"}, {"category": "Praca na lekcji", "comment": "rozwi\u0105zanie zadania z gwiazdk\u0105 na tablicy", "date": "2026-09-10", "date_raw": "2026-09-10 (czw.)", "grade": "6", "id": "1041", "index": 4, "is_custom": false, "numeric_grade": 6.0, "original_grade": "", "original_weight": "", "running_average": 4.57, "subject": "Matematyka", "teacher": "Renata Matyk", "weight": 1.0, "weight_raw": "1"}, {"category": "Kartk\u00f3wka", "comment": "kolejno\u015b\u0107 dzia\u0142a\u0144 i nawiasy kwadratowe", "date": "2026-09-11", "date_raw": "2026-09-11 (pt.)", "grade": "3+", "id": "1042", "index": 5, "is_custom": false, "numeric_grade": 3.5, "original_grade": "", "original_weight": "", "running_average": 4.33, "subject": "Matematyka", "teacher": "Renata Matyk", "weight": 2.0, "weight_raw": "2"}, {"category": "Sprawdzian", "comment": "-", "date": "2026-09-15", "date_raw": "2026-09-15 (wt.)", "grade": "5", "id": "1003", "index": 6, "is_custom": false, "numeric_grade": 5.0, "original_grade": "", "original_weight": "", "running_average": 4.5, "subject": "Matematyka", "teacher": "Renata Matyk", "weight": 3.0, "weight_raw": "3"}, {"category": "Odpowied\u017a", "comment": "aktywno\u015b\u0107 przy tablicy", "date": "2026-09-16", "date_raw": "2026-09-16 (\u015br.)", "grade": "+", "id": "1004", "index": 7, "is_custom": false, "numeric_grade": null, "original_grade": "", "original_weight": "", "running_average": null, "subject": "Matematyka", "teacher": "Renata Matyk", "weight": 1.0, "weight_raw": "-"}, {"category": "Zadanie domowe", "comment": "zadanie z gwiazdk\u0105 wykonane bezb\u0142\u0119dnie", "date": "2026-09-17", "date_raw": "2026-09-17 (czw.)", "grade": "5", "id": "1005", "index": 8, "is_custom": false, "numeric_grade": 5.0, "original_grade": "", "original_weight": "", "running_average": 4.54, "subject": "Matematyka", "teacher": "Renata Matyk", "weight": 1.0, "weight_raw": "1"}, {"category": "Projekt", "comment": "plakat: geometria i symetria w architekturze", "date": "2026-09-18", "date_raw": "2026-09-18 (pt.)", "grade": "5", "id": "1043", "index": 9, "is_custom": false, "numeric_grade": 5.0, "original_grade": "", "original_weight": "", "running_average": 4.6, "subject": "Matematyka", "teacher": "Renata Matyk", "weight": 2.0, "weight_raw": "2"}];
+    const timelineData = [{"category": "Sprawdzian", "comment": "-", "date": "2026-09-04", "date_raw": "2026-09-04 (pt.)", "grade": "4", "id": "1001", "index": 1, "is_custom": false, "is_proposed": false, "numeric_grade": 4.0, "original_grade": "", "original_weight": "", "running_average": 4.0, "semester": 1, "subject": "Matematyka", "teacher": "Renata Matyk", "weight": 3.0, "weight_raw": "3"}, {"category": "Odpowied\u017a", "comment": "w\u0142asno\u015bci liczb naturalnych i podzielno\u015b\u0107", "date": "2026-09-07", "date_raw": "2026-09-07 (pon.)", "grade": "4+", "id": "1040", "index": 2, "is_custom": false, "is_proposed": false, "numeric_grade": 4.5, "original_grade": "", "original_weight": "", "running_average": 4.2, "semester": 1, "subject": "Matematyka", "teacher": "Renata Matyk", "weight": 2.0, "weight_raw": "2"}, {"category": "Kartk\u00f3wka", "comment": "rachunki pami\u0119ciowe (kolejno\u015b\u0107 dzia\u0142a\u0144)", "date": "2026-09-08", "date_raw": "2026-09-08 (wt.)", "grade": "5", "id": "1002", "index": 3, "is_custom": false, "is_proposed": false, "numeric_grade": 5.0, "original_grade": "", "original_weight": "", "running_average": 4.33, "semester": 1, "subject": "Matematyka", "teacher": "Renata Matyk", "weight": 1.0, "weight_raw": "1"}, {"category": "Praca na lekcji", "comment": "rozwi\u0105zanie zadania z gwiazdk\u0105 na tablicy", "date": "2026-09-10", "date_raw": "2026-09-10 (czw.)", "grade": "6", "id": "1041", "index": 4, "is_custom": false, "is_proposed": false, "numeric_grade": 6.0, "original_grade": "", "original_weight": "", "running_average": 4.57, "semester": 1, "subject": "Matematyka", "teacher": "Renata Matyk", "weight": 1.0, "weight_raw": "1"}, {"category": "Kartk\u00f3wka", "comment": "kolejno\u015b\u0107 dzia\u0142a\u0144 i nawiasy kwadratowe", "date": "2026-09-11", "date_raw": "2026-09-11 (pt.)", "grade": "3+", "id": "1042", "index": 5, "is_custom": false, "is_proposed": false, "numeric_grade": 3.5, "original_grade": "", "original_weight": "", "running_average": 4.33, "semester": 1, "subject": "Matematyka", "teacher": "Renata Matyk", "weight": 2.0, "weight_raw": "2"}, {"category": "Sprawdzian", "comment": "-", "date": "2026-09-15", "date_raw": "2026-09-15 (wt.)", "grade": "5", "id": "1003", "index": 6, "is_custom": false, "is_proposed": false, "numeric_grade": 5.0, "original_grade": "", "original_weight": "", "running_average": 4.5, "semester": 1, "subject": "Matematyka", "teacher": "Renata Matyk", "weight": 3.0, "weight_raw": "3"}, {"category": "Odpowied\u017a", "comment": "aktywno\u015b\u0107 przy tablicy", "date": "2026-09-16", "date_raw": "2026-09-16 (\u015br.)", "grade": "+", "id": "1004", "index": 7, "is_custom": false, "is_proposed": false, "numeric_grade": null, "original_grade": "", "original_weight": "", "running_average": null, "semester": 1, "subject": "Matematyka", "teacher": "Renata Matyk", "weight": 1.0, "weight_raw": "-"}, {"category": "Zadanie domowe", "comment": "zadanie z gwiazdk\u0105 wykonane bezb\u0142\u0119dnie", "date": "2026-09-17", "date_raw": "2026-09-17 (czw.)", "grade": "5", "id": "1005", "index": 8, "is_custom": false, "is_proposed": false, "numeric_grade": 5.0, "original_grade": "", "original_weight": "", "running_average": 4.54, "semester": 1, "subject": "Matematyka", "teacher": "Renata Matyk", "weight": 1.0, "weight_raw": "1"}, {"category": "Projekt", "comment": "plakat: geometria i symetria w architekturze", "date": "2026-09-18", "date_raw": "2026-09-18 (pt.)", "grade": "5", "id": "1043", "index": 9, "is_custom": false, "is_proposed": false, "numeric_grade": 5.0, "original_grade": "", "original_weight": "", "running_average": 4.6, "semester": 1, "subject": "Matematyka", "teacher": "Renata Matyk", "weight": 2.0, "weight_raw": "2"}];
     const currentSumWeighted = 69.0;
     const currentSumWeights = 15.0;
     const currentAvg = 4.6;
@@ -1819,6 +1830,31 @@ Diagnoza: Dobra, zrównoważona forma z pojedynczymi wahaniami (sporadyczne sła
                         ctx.fillText(l.text, right - 6, yPos - 3);
                     }
                 });
+
+                // Rysowanie pionowej linii granicy semestrów (Milestone), jeśli w danych są oceny z obu semestrów
+                const { scales: { x } } = chart;
+                if (x && validTimelineData.length > 1) {
+                    const splitIdx = validTimelineData.findIndex((p, idx) => idx > 0 && p.semester === 2 && validTimelineData[idx - 1].semester === 1);
+                    if (splitIdx > 0) {
+                        const x1 = x.getPixelForValue(splitIdx - 1);
+                        const x2 = x.getPixelForValue(splitIdx);
+                        const xMid = (x1 + x2) / 2;
+                        if (xMid >= left && xMid <= right) {
+                            ctx.strokeStyle = '#6366f1';
+                            ctx.setLineDash([5, 5]);
+                            ctx.lineWidth = 1.5;
+                            ctx.beginPath();
+                            ctx.moveTo(xMid, top);
+                            ctx.lineTo(xMid, bottom);
+                            ctx.stroke();
+
+                            ctx.font = 'bold 9px Inter, sans-serif';
+                            ctx.fillStyle = '#4f46e5';
+                            ctx.textAlign = 'center';
+                            ctx.fillText('🏁 Koniec Semestru I', xMid, top + 12);
+                        }
+                    }
+                }
                 ctx.restore();
             }
         };
@@ -2167,7 +2203,7 @@ Diagnoza: Dobra, zrównoważona forma z pojedynczymi wahaniami (sporadyczne sła
 
         <!-- Formularz edycji -->
         <form id="edit-grade-form" onsubmit="submitEditGrade(event)" class="space-y-4">
-            <input type="hidden" name="csrf_token" value="318f6e250a17e1f6b4dd7cfaeae63a32169620d23e45bc7f5cc45fb86e0a2adf">
+            <input type="hidden" name="csrf_token" value="static_demo_csrf_token_librus2mail">
             <input type="hidden" id="modal-grade-id" name="grade_id" value="">
 
             <div>

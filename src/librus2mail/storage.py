@@ -328,6 +328,16 @@ class BaseStorage(ABC):
         """Zapisuje znacznik czasu (ISO) ostatniej synchronizacji planu lekcji."""
         pass
 
+    @abstractmethod
+    def archive_school_year(self, user_login: str, school_year_label: str) -> Path:
+        """Archiwizuje dane bieżącego roku szkolnego i przygotowuje stan na nowy rok."""
+        pass
+
+    @abstractmethod
+    def list_archived_years(self, user_login: str) -> list[dict[str, Any]]:
+        """Zwraca listę zarchiwizowanych lat szkolnych."""
+        pass
+
 
 class FileStorage(BaseStorage):
     """Trwałe przechowywanie stanu w plikach JSON w wyznaczonym katalogu (np. storage/<login>.json)."""
@@ -905,6 +915,185 @@ class FileStorage(BaseStorage):
         data['librus_login'] = str(user_login)
         data[FIELD_SCHEDULE_LAST_SYNC] = date_iso
         write_json_atomic(path, data)
+
+    def archive_school_year(self, user_login: str, school_year_label: str) -> Path:
+        """
+        Archiwizuje dane bieżącego roku szkolnego do katalogu storage/archive/<login>_<rok>.json.
+        Czyści dane roczne (oceny, terminarz, plan lekcji), zachowując konfigurację ucznia
+        oraz historię wiadomości/ogłoszeń (zasada ciągłości korespondencji z końca sierpnia).
+        """
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
+        if not data:
+            data = {'librus_login': str(user_login)}
+
+        # Normalizacja etykiety roku (np. '2024/2025' -> '2024_2025')
+        norm_label = re.sub(r'[^a-zA-Z0-9_-]', '_', school_year_label.strip())
+        archive_dir = self.storage_dir / 'archive'
+        archive_dir.mkdir(parents=True, exist_ok=True)
+
+        safe_login = str(user_login).replace('/', '_').replace('\\', '_')
+        archive_path = archive_dir / f"{safe_login}_{norm_label}.json"
+
+        # 1. Kopia archiwalna z metadanymi
+        archive_data = dict(data)
+        archive_data['archived_at'] = datetime.now().isoformat()
+        archive_data['school_year_label'] = school_year_label
+        write_json_atomic(archive_path, archive_data)
+        logger.info(f"Zarchiwizowano rok szkolny {school_year_label} dla {user_login} do {archive_path}")
+
+        # 2. Wyczyszczenie stanu bieżącego na nowy rok szkolny:
+        new_year_data = {
+            'librus_login': data.get('librus_login', str(user_login)),
+            'student_name': data.get('student_name'),
+            'excluded_certificate_subjects': data.get('excluded_certificate_subjects', []),
+            'subject_categories': data.get('subject_categories', {}),
+            'known_messages': data.get('known_messages', []),
+            'known_notifications': data.get('known_notifications', []),
+            'messages_history': data.get('messages_history', []),
+            'notifications_history': data.get('notifications_history', []),
+            'known_grades': [],
+            'grades_history': {},
+            'all_subjects': [],
+            'timetable_entries': [],
+            'schedule_history': [],
+            'last_notify_time': None,
+            'last_collect_time': None,
+            'rollover_at': datetime.now().isoformat(),
+        }
+        write_json_atomic(path, new_year_data)
+        return archive_path
+
+    def list_archived_years(self, user_login: str) -> list[dict[str, Any]]:
+        """
+        Zwraca listę dostępnych zarchiwizowanych lat szkolnych dla danego użytkownika,
+        posortowaną od najnowszych.
+        """
+        archive_dir = self.storage_dir / 'archive'
+        if not archive_dir.is_dir():
+            return []
+
+        safe_login = str(user_login).replace('/', '_').replace('\\', '_')
+        prefix = f"{safe_login}_"
+        results = []
+
+        for f in archive_dir.glob(f"{safe_login}_*.json"):
+            if not f.is_file():
+                continue
+            norm_key = f.stem[len(prefix):]
+            data = read_json_safe(f)
+            label = data.get('school_year_label')
+            if not label:
+                parts = norm_key.split('_')
+                if len(parts) == 2 and all(p.isdigit() for p in parts):
+                    label = f"{parts[0]}/{parts[1]}"
+                else:
+                    label = norm_key.replace('_', '/')
+
+            results.append({
+                'label': label,
+                'norm_key': norm_key,
+                'path': str(f),
+                'archived_at': data.get('archived_at'),
+            })
+
+        results.sort(key=lambda x: str(x['label']), reverse=True)
+        return results
+
+    def get_archived_storage(self, user_login: str, school_year_label: str) -> dict[str, Any] | None:
+        """Wczytuje zrzut zarchiwizowanego roku szkolnego jako słownik."""
+        norm_label = re.sub(r'[^a-zA-Z0-9_-]', '_', school_year_label.strip())
+        safe_login = str(user_login).replace('/', '_').replace('\\', '_')
+        archive_path = self.storage_dir / 'archive' / f"{safe_login}_{norm_label}.json"
+        if not archive_path.is_file():
+            return None
+        return read_json_safe(archive_path)
+
+    def get_archived_view(self, school_year_label: str) -> "ArchivedFileStorage":
+        """Zwraca widok tylko-do-odczytu (ArchivedFileStorage) dla wskazanego roku szkolnego."""
+        return ArchivedFileStorage(self, school_year_label)
+
+
+class ArchivedFileStorage(FileStorage):
+    """
+    Widok pamięci stanu tylko do odczytu (Read-Only) skierowany na plik archiwalny
+    w katalogu storage/archive/<login>_<rok>.json.
+    Blokuje wszelkie operacje modyfikacji stanu.
+    """
+
+    def __init__(self, parent_storage: FileStorage, school_year_label: str):
+        super().__init__(storage_dir=parent_storage.storage_dir)
+        self.parent_storage = parent_storage
+        self.school_year_label = school_year_label
+        self.norm_label = re.sub(r'[^a-zA-Z0-9_-]', '_', school_year_label.strip())
+        self.archive_dir = self.storage_dir / 'archive'
+
+    def _get_file_path(self, user_login: str) -> Path:
+        safe_login = str(user_login).replace('/', '_').replace('\\', '_')
+        return self.archive_dir / f"{safe_login}_{self.norm_label}.json"
+
+    def list_archived_years(self, user_login: str) -> list[dict[str, Any]]:
+        return self.parent_storage.list_archived_years(user_login)
+
+    # Blokada operacji zapisujących:
+    def write_json_atomic(self, path: Path | str, data: Any) -> None:
+        logger.warning(f"Próba zapisu do zarchiwizowanego roku szkolnego {self.school_year_label} ({path}) - zablokowano.")
+
+    def save_known_items(self, user_login: str, messages: set, notifications: set, grades: set) -> None:
+        pass
+
+    def save_last_error(self, user_login: str, error_str: str, step: str = "") -> None:
+        pass
+
+    def clear_last_error(self, user_login: str) -> None:
+        pass
+
+    def save_grades_details(self, user_login: str, grades: list[dict]) -> None:
+        pass
+
+    def save_subjects(self, user_login: str, subjects: list[str]) -> None:
+        pass
+
+    def update_grade_custom(self, user_login: str, grade_id: str, new_grade: str, new_weight: str) -> dict | None:
+        logger.warning("Nie można edytować ocen w trybie archiwalnym.")
+        return None
+
+    def reset_grade_custom(self, user_login: str, grade_id: str) -> dict | None:
+        logger.warning("Nie można resetować ocen w trybie archiwalnym.")
+        return None
+
+    def set_subject_certificate_inclusion(self, user_login: str, subject: str, included: bool) -> list[str]:
+        return self.get_excluded_certificate_subjects(user_login)
+
+    def set_subject_category(self, user_login: str, subject: str, category_key: str | None) -> dict[str, str]:
+        return self.get_subject_categories(user_login)
+
+    def save_last_progress_report_date(self, user_login: str, date_iso: str, report_key: str | None = None) -> None:
+        pass
+
+    def set_student_name(self, user_login: str, name: str) -> None:
+        pass
+
+    def save_last_notify_time(self, user_login: str, date_iso: str) -> None:
+        pass
+
+    def save_timetable_entries(self, user_login: str, entries: list[dict]) -> None:
+        pass
+
+    def save_last_timetable_sync(self, user_login: str, date_iso: str) -> None:
+        pass
+
+    def mark_timetable_entries_notified(self, user_login: str, entry_ids: list[str], notified_at_iso: str | None = None) -> None:
+        pass
+
+    def save_schedule_entries(self, user_login: str, entries: list[dict]) -> None:
+        pass
+
+    def save_last_schedule_sync(self, user_login: str, date_iso: str) -> None:
+        pass
+
+    def archive_school_year(self, user_login: str, school_year_label: str) -> Path:
+        raise PermissionError("Nie można archiwizować z poziomu widoku archiwalnego.")
 
 
 def create_storage(storage_dir: str | Path = 'storage', *args, **kwargs) -> FileStorage:

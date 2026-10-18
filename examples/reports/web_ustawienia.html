@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="318f6e250a17e1f6b4dd7cfaeae63a32169620d23e45bc7f5cc45fb86e0a2adf">
+    <meta name="csrf-token" content="static_demo_csrf_token_librus2mail">
     <title>Ustawienia Systemu - Librus2mail - Librus2mail</title>
     <!-- Favicon z logo Librus2mail (gradient indigo-sky + 🏫) -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%25%22%20y1%3D%22100%25%22%20x2%3D%22100%25%22%20y2%3D%220%25%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%234f46e5%22/%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%230ea5e9%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2216%22%20fill%3D%22url%28%23g%29%22/%3E%3Ctext%20x%3D%2232%22%20y%3D%2234%22%20font-size%3D%2234%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%F0%9F%8F%AB%3C/text%3E%3C/svg%3E">
@@ -42,7 +42,7 @@
     </style>
     
 </head>
-<body class="h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white" hx-headers='{"X-CSRFToken": "318f6e250a17e1f6b4dd7cfaeae63a32169620d23e45bc7f5cc45fb86e0a2adf"}'>
+<body class="h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white" hx-headers='{"X-CSRFToken": "static_demo_csrf_token_librus2mail"}'>
 
     <!-- Pasek nawigacyjny -->
     <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
@@ -89,10 +89,6 @@
                            class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
                             📈 Raporty
                         </a>
-                        <a href="web_akcje.html"
-                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
-                            ⚡ Akcje CLI
-                        </a>
                         <a href="web_ustawienia.html"
                            class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors bg-indigo-50 text-indigo-700">
                             ⚙️ Ustawienia
@@ -125,6 +121,9 @@
                         </div>
                         
 
+                        <!-- Selektor roku szkolnego (bieżący vs archiwum) -->
+                        
+
                         
                         <a href="web_login.html"
                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors"
@@ -148,11 +147,13 @@
             <a href="web_terminarz.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">🔔 Terminarz</a>
             <a href="web_wiadomosci.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">✉️ Wiadomości</a>
             <a href="web_raporty_podsumowanie.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📈 Raporty</a>
-            <a href="web_akcje.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">⚡ Akcje</a>
             <a href="web_ustawienia.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap bg-indigo-600 text-white">⚙️ Ustawienia</a>
         </div>
         
     </header>
+
+    <!-- Baner trybu archiwalnego (Read-Only) -->
+    
 
     <!-- Komunikaty Flash -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 w-full">
@@ -185,7 +186,7 @@
 
     <!-- Główny formularz ustawień -->
     <form method="POST" action="/ustawienia" class="mt-8 space-y-8">
-        <input type="hidden" name="csrf_token" value="318f6e250a17e1f6b4dd7cfaeae63a32169620d23e45bc7f5cc45fb86e0a2adf">
+        <input type="hidden" name="csrf_token" value="static_demo_csrf_token_librus2mail">
 
         <!-- ================================================================= -->
         <!-- SEKCJA 1: KONTA UCZNIÓW -->
@@ -1078,7 +1079,93 @@
         </div>
 
         <!-- ================================================================= -->
-        <!-- SEKCJA 5: KALENDARIUM ZDARZEŃ NA PULPICIE (DASHBOARD) -->
+        <!-- SEKCJA 5: ROK SZKOLNY, SEMESTRY I PREDYKCJA OCEN ROCZNYCH -->
+        <!-- ================================================================= -->
+        <div id="semestry" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 scroll-mt-20">
+            <div class="border-b border-slate-100 pb-4 mb-6">
+                <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>🎓</span> Rok szkolny, semestry i predykcja ocen rocznych
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Skonfiguruj datę podziału roku na semestry oraz regułę wyliczania ocen rocznych na świadectwo.
+                </p>
+            </div>
+
+            <div class="space-y-6">
+                <!-- 1. DATA PODZIAŁU NA SEMESTRY -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                        Data graniczna podziału na semestry (semester_split_date)
+                    </label>
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                        <input type="date" name="semester_split_date" id="semester_split_date"
+                               value=""
+                               class="w-full sm:w-64 text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <span class="text-xs text-slate-500">
+                            Format: RRRR-MM-DD. Oceny do tej daty włącznie zaliczają się do <strong>Semestru I</strong>, a po niej do <strong>Semestru II</strong>.
+                        </span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
+                        💡 Pozostaw puste, aby system przyjął domyślny 1 lutego bieżącego roku szkolnego. Podział ten służy do filtrowania ocen, wyliczania średniej semestralnej oraz wykrywania przedmiotów zakończonych w I semestrze (np. Technika, Muzyka, Filozofia).
+                    </p>
+                </div>
+
+                <!-- 2. METODA PREDYKCJI OCEN ROCZNYCH -->
+                
+                <div class="pt-4 border-t border-slate-100">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-2">
+                        Algorytm predykcji oceny rocznej na świadectwo (dla przedmiotów całorocznych)
+                    </label>
+                    <p class="text-xs text-slate-500 mb-4">
+                        Wybierz sposób prognozowania oceny rocznej, gdy nauczyciel nie wpisał jeszcze oficjalnej propozycji w Librusie. Oficjalna propozycja wystawiona przez szkołę zawsze ma pierwszeństwo i zastępuje poniższą regułę.
+                    </p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- Opcja 1: all_year_weighted -->
+                        <label class="flex flex-col p-4 border-2 border-indigo-600 bg-indigo-50/40 rounded-2xl cursor-pointer transition">
+                            <div class="flex items-center gap-2 mb-2">
+                                <input type="radio" name="annual_grade_algorithm" value="all_year_weighted"
+                                       checked
+                                       class="text-indigo-600 focus:ring-indigo-500">
+                                <span class="text-xs font-bold text-slate-900">⚖️ Całoroczna średnia ważona</span>
+                            </div>
+                            <span class="text-[11px] text-slate-600 leading-relaxed">
+                                Domyślny tryb Librusa. Wszystkie oceny cząstkowe z obu semestrów liczone są razem ze swoimi wagami w jedną średnią roczną.
+                            </span>
+                        </label>
+
+                        <!-- Opcja 2: semesters_average -->
+                        <label class="flex flex-col p-4 border-2 border-slate-200 bg-white hover:border-slate-300 rounded-2xl cursor-pointer transition">
+                            <div class="flex items-center gap-2 mb-2">
+                                <input type="radio" name="annual_grade_algorithm" value="semesters_average"
+                                       
+                                       class="text-indigo-600 focus:ring-indigo-500">
+                                <span class="text-xs font-bold text-slate-900">📐 Średnia z dwóch semestrów</span>
+                            </div>
+                            <span class="text-[11px] text-slate-600 leading-relaxed">
+                                Średnia arytmetyczna z oceny za Semestr I i oceny za Semestr II: <code>(O₁ + O₂) / 2</code>. Równomierny wpływ obu półroczy.
+                            </span>
+                        </label>
+
+                        <!-- Opcja 3: progress_favored -->
+                        <label class="flex flex-col p-4 border-2 border-slate-200 bg-white hover:border-slate-300 rounded-2xl cursor-pointer transition">
+                            <div class="flex items-center gap-2 mb-2">
+                                <input type="radio" name="annual_grade_algorithm" value="progress_favored"
+                                       
+                                       class="text-indigo-600 focus:ring-indigo-500">
+                                <span class="text-xs font-bold text-slate-900">🚀 Promowanie progresu (WSO)</span>
+                            </div>
+                            <span class="text-[11px] text-slate-600 leading-relaxed">
+                                Jeśli uczeń w II semestrze poprawił ocenę względem I semestru, ocena roczna podąża za progresem (np. I sem: 4, II sem: 5 ➔ Roczna: 5).
+                            </span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================================================================= -->
+        <!-- SEKCJA 6: KALENDARIUM ZDARZEŃ NA PULPICIE (DASHBOARD) -->
         <!-- ================================================================= -->
         <div id="kalendarium" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 scroll-mt-20">
             <div class="border-b border-slate-100 pb-4 mb-6">
@@ -1214,6 +1301,92 @@
         </div>
 
     </form>
+
+    <!-- ================================================================= -->
+    <!-- SEKCJA: ARCHIWIZACJA I ZARZĄDZANIE ROKIEM SZKOLNYM -->
+    <!-- ================================================================= -->
+    <div class="mt-10 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7">
+        <div class="border-b border-slate-100 pb-4 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+                <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>📦</span> Archiwizacja i zarządzanie rokiem szkolnym
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Tworzy trwały snapshot bieżącego roku w <code>storage/archive/</code> i przygotowuje czysty stan na nowy rok szkolny.
+                </p>
+            </div>
+            
+        </div>
+
+        <!-- Wskazówka jak przełączać lata -->
+        <div class="mb-6 p-4 rounded-xl bg-indigo-50/70 border border-indigo-200 text-xs text-indigo-950 flex items-start gap-3">
+            <span class="text-xl flex-shrink-0">💡</span>
+            <div class="leading-relaxed">
+                <span class="font-bold">Jak przeglądać dane z minionych lat?</span>
+                <p class="text-indigo-800 mt-1">
+                    Po wykonaniu archiwizacji archiwalny okres staje się w każdej chwili dostępny w <strong>rozwijanym menu lat w górnym pasku nawigacyjnym</strong> (tuż obok wyboru profilu ucznia, np. <em>👤 Uczeń | 🏫 Rok bieżący ▾</em>). Wybranie zarchiwizowanego roku natychmiast przełącza cały panel (oceny, świadectwo, wykresy, terminarz i wiadomości) w bezpieczny tryb tylko do odczytu.
+                </p>
+            </div>
+        </div>
+
+        
+
+        
+        <form method="POST" action="/actions/archive-year" onsubmit="return confirm('Czy na pewno chcesz zarchiwizować bieżący rok szkolny? Oceny zostaną przeniesione do archiwum, a na bieżący rok rozpocznie się nowy czysty stan. Preferencje i wiadomości zostaną zachowane.');" class="p-4 bg-slate-50/70 rounded-2xl border border-slate-200 max-w-xl">
+            <input type="hidden" name="csrf_token" value="static_demo_csrf_token_librus2mail">
+            <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">Ręczna archiwizacja bieżącego roku szkolnego:</h4>
+            <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+                Wpisz etykietę zamykanego roku (np. <code>2024/2025</code>). System utworzy trwały snapshot w <code>storage/archive/</code>, wyczyści oceny, terminarz i plan lekcji do czystego stanu, pozostawiając konfigurację oraz ciągłość wiadomości. Zarchiwizowany rok natychmiast pojawi się w menu wyboru okresu w prawym górnym rogu ekranu.
+            </p>
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <input type="text" name="school_year_label" placeholder="np. 2024/2025" required
+                       class="px-3.5 py-2 text-xs font-bold border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white flex-1">
+                <button type="submit"
+                        class="px-4 py-2 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-xl shadow-sm transition whitespace-nowrap cursor-pointer">
+                    📦 Zarchiwizuj i rozpocznij nowy rok
+                </button>
+            </div>
+        </form>
+        
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- SEKCJA: ZAAWANSOWANE AKCJE I NARZĘDZIA CLI -->
+    <!-- ================================================================= -->
+    <div class="mt-10 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div class="max-w-2xl">
+                <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>⚡</span> Zaawansowane akcje i narzędzia CLI
+                </h2>
+                <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+                    Dedykowany panel do ręcznego uruchamiania zadań konsolowych bezpośrednio z poziomu przeglądarki: wymuszenie natychmiastowej synchronizacji z Librusem (Sync), wysyłka powiadomień e-mail, generowanie raportów postępów oraz motywacyjnych raportów ucznia z podglądem logów konsoli w czasie rzeczywistym.
+                </p>
+                <div class="flex flex-wrap gap-2 mt-3">
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                        🔄 librus_collector (Sync)
+                    </span>
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                        📧 librus_updates_notifier
+                    </span>
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                        📈 librus_progress_report
+                    </span>
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                        🎓 librus_student_report
+                    </span>
+                </div>
+            </div>
+            <div class="flex sm:flex-col items-center sm:items-end justify-start gap-2 flex-shrink-0">
+                <a href="web_akcje.html"
+                   class="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition cursor-pointer">
+                    <span>⚡</span>
+                    <span>Przejdź do Akcji CLI →</span>
+                </a>
+                <span class="text-[10px] text-slate-400">Podgląd konsoli na żywo</span>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>

@@ -420,6 +420,42 @@
         </div>
         {% endif %}
     </div>
+
+    <!-- Sekcja 5: Przedmioty zakończone w I semestrze -->
+    {% if opportunities_data.completed %}
+    <div class="bg-purple-50/50 rounded-2xl border border-purple-200 p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h3 class="text-base font-extrabold text-purple-950 flex items-center gap-2">
+                    <span>🏁</span>
+                    <span>Przedmioty zakończone w I semestrze (oceny zamknięte)</span>
+                </h3>
+                <p class="text-xs text-purple-700 mt-0.5">
+                    Poniższe przedmioty były realizowane wyłącznie w pierwszym semestrze (np. technika, muzyka, plastyka). Ich oceny są ostateczne i nie ulegną zmianie w II semestrze.
+                </p>
+            </div>
+            <span class="px-2.5 py-1 rounded-full text-xs font-extrabold bg-purple-100 text-purple-800 border border-purple-200">
+                {{ opportunities_data.completed|length }} {{ 'przedmiot' if opportunities_data.completed|length == 1 else 'przedmioty' if opportunities_data.completed|length in [2, 3, 4] else 'przedmiotów' }}
+            </span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {% for item in opportunities_data.completed %}
+            <div class="p-3.5 bg-white rounded-xl border border-purple-200 shadow-2xs flex items-center justify-between">
+                <div>
+                    <span class="font-extrabold text-sm text-slate-800">{{ item.subject }}</span>
+                    <span class="block text-[11px] text-slate-500">Śr. I sem: <strong>{{ "%.2f"|format(item.average) }}</strong></span>
+                </div>
+                <div class="text-right">
+                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg font-black text-sm bg-purple-100 text-purple-900 border border-purple-300">
+                        {{ item.proposed_grade_num or '—' }}
+                    </span>
+                    <span class="block text-[10px] text-purple-700 font-semibold">{{ item.proposed_grade_word }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <!-- ============================================================== -->

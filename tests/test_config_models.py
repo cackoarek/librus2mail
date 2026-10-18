@@ -54,12 +54,28 @@ class TestConfigModels(unittest.TestCase):
             'work_in_loop': False,
             'delay_between_users_s': 25,
             'read_grades': False,
+            'semester_split_date': '2027-02-01',
+            'annual_grade_algorithm': 'semesters_average',
         })
         self.assertFalse(app.work_in_loop)
         self.assertFalse(app['work_in_loop'])
         self.assertEqual(app.delay_between_users_s, 25)
         self.assertEqual(app['delay_between_users_s'], 25)
         self.assertFalse(app.read_grades)
+        self.assertEqual(app.semester_split_date, '2027-02-01')
+        self.assertEqual(app.annual_grade_algorithm, 'semesters_average')
+
+        # Domyślne wartości i walidacja nieprawidłowych
+        default_app = AppSettings.model_validate({})
+        self.assertIsNone(default_app.semester_split_date)
+        self.assertEqual(default_app.annual_grade_algorithm, 'all_year_weighted')
+
+        invalid_app = AppSettings.model_validate({
+            'semester_split_date': 'nieprawidlowa-data',
+            'annual_grade_algorithm': 'nieznany_algorytm',
+        })
+        self.assertIsNone(invalid_app.semester_split_date)
+        self.assertEqual(invalid_app.annual_grade_algorithm, 'all_year_weighted')
 
     def test_load_from_yaml_and_env_override(self):
         with tempfile.NamedTemporaryFile('w', suffix='.yaml', delete=False) as f:

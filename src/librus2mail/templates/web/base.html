@@ -89,10 +89,6 @@
                            class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors {{ 'bg-indigo-50 text-indigo-700' if request.endpoint == 'web.reports_view' else 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
                             📈 Raporty
                         </a>
-                        <a href="{{ url_for('web.actions_view') }}"
-                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors {{ 'bg-indigo-50 text-indigo-700' if request.endpoint == 'web.actions_view' else 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
-                            ⚡ Akcje CLI
-                        </a>
                         <a href="{{ url_for('web.settings_view') }}"
                            class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors {{ 'bg-indigo-50 text-indigo-700' if request.endpoint == 'web.settings_view' else 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
                             ⚙️ Ustawienia
@@ -119,6 +115,25 @@
                         <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-lg text-xs font-semibold text-slate-700 border border-slate-200">
                             <span>👤</span>
                             <span>{{ active_student.name }}</span>
+                        </div>
+                        {% endif %}
+
+                        <!-- Selektor roku szkolnego (bieżący vs archiwum) -->
+                        {% if archived_years or is_archive_mode %}
+                        <div class="relative inline-block text-left">
+                            <select onchange="window.location.href='/school-year/switch?year=' + encodeURIComponent(this.value) + '&next=' + encodeURIComponent(window.location.pathname)"
+                                    class="border text-xs font-bold rounded-lg px-2.5 py-2 pr-7 focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer transition-colors
+                                    {% if is_archive_mode %} bg-amber-100 border-amber-300 text-amber-950 font-black shadow-xs {% else %} bg-slate-100 border-slate-300 text-slate-800 {% endif %}"
+                                    title="Przełącz rok szkolny">
+                                <option value="current" {% if not is_archive_mode %}selected{% endif %}>
+                                    🏫 Rok bieżący
+                                </option>
+                                {% for y in archived_years %}
+                                <option value="{{ y.label }}" {% if is_archive_mode and active_school_year == y.label %}selected{% endif %}>
+                                    📁 {{ y.label }} (Archiwum)
+                                </option>
+                                {% endfor %}
+                            </select>
                         </div>
                         {% endif %}
 
@@ -153,11 +168,25 @@
             <a href="{{ url_for('web.timetable_view') }}" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap {{ 'bg-indigo-600 text-white' if request.endpoint == 'web.timetable_view' else 'text-slate-600 bg-white border border-slate-200' }}">🔔 Terminarz</a>
             <a href="{{ url_for('web.messages_view') }}" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap {{ 'bg-indigo-600 text-white' if request.endpoint == 'web.messages_view' else 'text-slate-600 bg-white border border-slate-200' }}">✉️ Wiadomości</a>
             <a href="{{ url_for('web.reports_view') }}" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap {{ 'bg-indigo-600 text-white' if request.endpoint == 'web.reports_view' else 'text-slate-600 bg-white border border-slate-200' }}">📈 Raporty</a>
-            <a href="{{ url_for('web.actions_view') }}" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap {{ 'bg-indigo-600 text-white' if request.endpoint == 'web.actions_view' else 'text-slate-600 bg-white border border-slate-200' }}">⚡ Akcje</a>
             <a href="{{ url_for('web.settings_view') }}" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap {{ 'bg-indigo-600 text-white' if request.endpoint == 'web.settings_view' else 'text-slate-600 bg-white border border-slate-200' }}">⚙️ Ustawienia</a>
         </div>
         {% endif %}
     </header>
+
+    <!-- Baner trybu archiwalnego (Read-Only) -->
+    {% if is_archive_mode %}
+    <div class="bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-amber-950 px-4 py-2.5 border-b border-amber-600/30 text-xs font-bold flex flex-wrap items-center justify-between gap-3 shadow-sm">
+        <div class="flex items-center gap-2">
+            <span class="text-base">🏛️</span>
+            <span>Przeglądasz zarchiwizowany rok szkolny <strong>{{ active_school_year }}</strong> w trybie tylko do odczytu. Wszelkie operacje modyfikacji są zablokowane.</span>
+        </div>
+        <a href="{{ url_for('web.switch_school_year', year='current', next=request.path) }}"
+           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-950 hover:bg-black text-white font-extrabold text-xs shadow-xs transition-colors">
+            <span>↩️</span>
+            <span>Wróć do roku bieżącego</span>
+        </a>
+    </div>
+    {% endif %}
 
     <!-- Komunikaty Flash -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 w-full">

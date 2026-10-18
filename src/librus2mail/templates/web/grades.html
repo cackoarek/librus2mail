@@ -95,27 +95,189 @@
     </div>
 </div>
 
-<!-- Pasek podzakładek (horyzontalny styl jak w dziale Raporty) -->
-<div class="flex items-center gap-1.5 p-1 bg-slate-200/70 rounded-xl overflow-x-auto scrollbar-none w-fit mb-6">
-    <button type="button"
-            onclick="switchGradesTab('oceny')"
-            id="grades-tab-btn-oceny"
-            class="grades-tab-btn px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'oceny' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
-        📝 Aktualne oceny
-    </button>
-    <button type="button"
-            onclick="switchGradesTab('swiadectwo')"
-            id="grades-tab-btn-swiadectwo"
-            class="grades-tab-btn px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'swiadectwo' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
-        📜 Świadectwo
-    </button>
-    <button type="button"
-            onclick="switchGradesTab('optymalizator')"
-            id="grades-tab-btn-optymalizator"
-            class="grades-tab-btn px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'optymalizator' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
-        🧮 Optymalizator Celu
-    </button>
+<!-- Pasek podzakładek i filtr semestralny -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+    <!-- Podzakładki (Oceny, Świadectwo, Optymalizator) -->
+    <div class="flex items-center gap-1.5 p-1 bg-slate-200/70 rounded-xl overflow-x-auto scrollbar-none w-fit">
+        <button type="button"
+                onclick="switchGradesTab('oceny')"
+                id="grades-tab-btn-oceny"
+                class="grades-tab-btn px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'oceny' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
+            📝 Aktualne oceny
+        </button>
+        <button type="button"
+                onclick="switchGradesTab('swiadectwo')"
+                id="grades-tab-btn-swiadectwo"
+                class="grades-tab-btn px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'swiadectwo' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
+            📜 Świadectwo
+        </button>
+        <button type="button"
+                onclick="switchGradesTab('optymalizator')"
+                id="grades-tab-btn-optymalizator"
+                class="grades-tab-btn px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'optymalizator' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
+            🧮 Optymalizator Celu
+        </button>
+    </div>
+
+    <!-- Filtr okresu (semestry) -->
+    <div class="flex items-center gap-1 p-1 bg-slate-200/60 rounded-xl text-xs w-fit">
+        <a href="{{ url_for('web.grades_view', tab=active_tab, semester='all') }}"
+           class="px-3 py-1.5 rounded-lg font-bold transition-all {{ 'bg-indigo-600 text-white shadow-xs' if active_semester == 'all' else 'text-slate-600 hover:text-slate-900 hover:bg-white/60' }}"
+           title="Wszystkie oceny zebrane w całym roku szkolnym">
+            🔘 Cały rok
+        </a>
+        <a href="{{ url_for('web.grades_view', tab=active_tab, semester='sem1') }}"
+           class="px-3 py-1.5 rounded-lg font-bold transition-all {{ 'bg-indigo-600 text-white shadow-xs' if active_semester == 'sem1' else 'text-slate-600 hover:text-slate-900 hover:bg-white/60' }}"
+           title="Oceny wystawione w Semestrze I (do {{ semester_split_date or 'lutego' }})">
+            ⚪ Semestr I
+        </a>
+        <a href="{{ url_for('web.grades_view', tab=active_tab, semester='sem2') }}"
+           class="px-3 py-1.5 rounded-lg font-bold transition-all {{ 'bg-indigo-600 text-white shadow-xs' if active_semester == 'sem2' else 'text-slate-600 hover:text-slate-900 hover:bg-white/60' }}"
+           title="Oceny bieżącego Semestru II">
+            ⚪ Semestr II
+        </a>
+    </div>
 </div>
+
+<!-- Makro renderowania karty przedmiotu -->
+{% macro render_subject_card(subj, sdata) %}
+<div class="rounded-2xl border {{ 'border-rose-200 bg-slate-50/30 shadow-2xs' if sdata.is_excluded else 'bg-white border-slate-200 shadow-sm' }} overflow-hidden transition-all hover:border-slate-300">
+    <!-- Pasek przedmiotu -->
+    <div class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 {{ 'bg-rose-50/20' if sdata.is_excluded else 'bg-slate-50/50' }} border-b border-slate-100">
+        <div>
+            <div class="flex flex-wrap items-center gap-2">
+                <h3 class="text-base font-extrabold text-slate-900">
+                    {{ subj }}
+                </h3>
+
+                <!-- Badge statusu semestralnego -->
+                {% if sdata.is_completed %}
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-100 text-purple-700 border border-purple-200" title="Przedmiot zrealizowany w I semestrze - ocena ustalona">
+                    <span>🏁</span> Zakończony w I sem.
+                </span>
+                {% elif active_semester != 'all' and sdata.status == 'in_progress' %}
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <span>🟢</span> {{ sdata.status_label }}
+                </span>
+                {% endif %}
+
+                <!-- Oficjalna propozycja belfra -->
+                {% if sdata.is_official_proposal %}
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs"
+                      title="Oficjalna propozycja wpisana w Librusie przez: {{ sdata.official_proposed_grade.teacher or 'Nauczyciel' }}{% if sdata.official_proposed_grade.date %} ({{ sdata.official_proposed_grade.date }}){% endif %}">
+                    <span>🎯</span> Propozycja: {{ sdata.proposed_grade_label }}
+                </span>
+                {% endif %}
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-500">
+                <span>Liczba ocen: <strong>{{ sdata.count }}</strong> (suma wag: {{ sdata.sum_weights|round(1) }})</span>
+                <span class="text-slate-300 hidden sm:inline">•</span>
+
+                <!-- Interaktywna pigułka statusu świadectwa -->
+                {% if sdata.is_excluded %}
+                <button type="button"
+                        onclick="toggleSubjectInclusion('{{ subj|e }}', true)"
+                        class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-700 border border-rose-300 hover:bg-rose-200 hover:border-rose-400 transition-all cursor-pointer group shadow-2xs"
+                        title="Przedmiot wykluczony ze średniej. Kliknij, aby włączyć go z powrotem.">
+                    <span>🚫</span>
+                    <span>Nie zaliczany do średniej</span>
+                    <span class="text-[10px] text-rose-600 group-hover:text-rose-900 font-semibold underline ml-0.5">Włącz</span>
+                </button>
+                {% else %}
+                <button type="button"
+                        onclick="toggleSubjectInclusion('{{ subj|e }}', false)"
+                        class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-white text-slate-600 border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/60 hover:text-indigo-700 transition-all cursor-pointer group shadow-2xs"
+                        title="Przedmiot wliczany do średniej. Kliknij, aby go wykluczyć (np. Godzina wychowawcza).">
+                    <span class="text-xs">🎓</span>
+                    <span>Wliczany do średniej</span>
+                    <span class="text-[10px] text-slate-400 group-hover:text-indigo-600 group-hover:underline opacity-0 group-hover:opacity-100 transition-opacity">Wyłącz</span>
+                </button>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Średnia ważona z odznaką oraz odseparowany przycisk do analizy -->
+        <div class="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
+            <div class="text-right">
+                <span class="block text-[10px] uppercase font-bold text-slate-400">
+                    {% if sdata.is_completed %}Ocena I semestru{% elif active_semester == 'sem2' %}Średnia II semestru{% elif active_semester == 'sem1' %}Średnia I semestru{% else %}Średnia roczna{% endif %}
+                </span>
+                <span class="text-xl font-extrabold
+                    {% if sdata.average and sdata.average >= 4.75 %} text-emerald-600
+                    {% elif sdata.average and sdata.average >= 3.75 %} text-sky-600
+                    {% elif sdata.average and sdata.average >= 2.75 %} text-amber-600
+                    {% elif sdata.average %} text-rose-600
+                    {% else %} text-slate-400 {% endif %}">
+                    {{ sdata.average or '-' }}
+                </span>
+            </div>
+
+            <!-- Widoczne odseparowanie od średniej -->
+            <div class="h-8 w-[1px] bg-slate-200 hidden sm:block"></div>
+
+            <a href="{{ url_for('web.subject_detail_view', subject_name=subj) }}"
+               class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-900 border border-indigo-200/80 transition-all shadow-2xs hover:shadow-xs group cursor-pointer"
+               title="Zobacz pełne statystyki, cele oceny, analizę ryzyka i wykres trajektorii">
+                <span>📊 Wykres & analiza</span>
+                <span class="group-hover:translate-x-0.5 transition-transform font-extrabold">&rarr;</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Karty / Pigułki ocen -->
+    <div class="p-4 sm:p-5 bg-white">
+        <div class="flex flex-wrap gap-2.5">
+            {% if not sdata.grades %}
+            <div class="text-xs text-slate-400 italic py-1 flex items-center gap-1.5">
+                <span>⚪</span>
+                <span>Brak ocen z tego przedmiotu w tym okresie</span>
+            </div>
+            {% else %}
+            {% for g in sdata.grades %}
+            <div onclick="openEditGradeModal({
+                    id: '{{ g.id }}',
+                    subject: '{{ subj|e }}',
+                    grade: '{{ g.grade|e }}',
+                    weight: '{{ g.weight or '1'|e }}',
+                    category: '{{ g.category or 'Ocena'|e }}',
+                    date: '{{ g.date or ''|e }}',
+                    teacher: '{{ g.teacher or ''|e }}',
+                    is_custom: {{ 'true' if g.is_custom else 'false' }},
+                    original_grade: '{{ g.original_grade or ''|e }}',
+                    original_weight: '{{ g.original_weight or ''|e }}'
+                 })"
+                 class="group relative inline-flex items-center gap-2 px-3 py-2 rounded-xl border {{ 'border-amber-300 bg-amber-50/40 ring-1 ring-amber-200' if g.is_custom else 'border-slate-200 bg-white' }} hover:bg-slate-50 hover:border-indigo-400 hover:shadow-md shadow-xs transition-all cursor-pointer"
+                 title="Kliknij, aby edytować ocenę lub wagę{% if g.is_custom %} (skorygowana ręcznie, oryg. waga: {{ g.original_weight }}){% endif %}">
+                <!-- Odznaka oceny -->
+                <span class="w-7 h-7 rounded-lg flex items-center justify-center font-extrabold text-sm
+                    {% if g.grade in ['5', '6', '5+', '6-'] %} bg-emerald-100 text-emerald-800
+                    {% elif g.grade in ['4', '4+', '4-'] %} bg-sky-100 text-sky-800
+                    {% elif g.grade in ['3', '3+', '3-'] %} bg-amber-100 text-amber-800
+                    {% elif g.grade in ['1', '2', '1+', '2+'] %} bg-rose-100 text-rose-800
+                    {% else %} bg-slate-100 text-slate-700 {% endif %}">
+                    {{ g.grade }}
+                </span>
+
+                <!-- Szczegóły: Kategoria & Waga -->
+                <div class="text-left">
+                    <div class="text-xs font-bold text-slate-800 truncate max-w-[140px] sm:max-w-[200px] flex items-center gap-1" title="{{ g.category or 'Ocena' }}">
+                        <span>{{ g.category or 'Ocena' }}</span>
+                        {% if g.is_custom %}
+                        <span class="text-[9px] font-bold text-amber-700 bg-amber-100 px-1 py-0.2 rounded" title="Waga lub ocena skorygowana ręcznie">✏️ zmieniona</span>
+                        {% endif %}
+                    </div>
+                    <div class="text-[10px] text-slate-400 font-medium">
+                        waga: <strong class="{{ 'text-amber-700 font-bold' if g.is_custom else 'text-slate-600' }}">{{ g.weight or '1' }}</strong> • {{ g.date or '' }}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endmacro %}
 
 <!-- ========================================== -->
 <!-- ZAKŁADKA 1: AKTUALNE OCENY                 -->
@@ -131,122 +293,46 @@
     </div>
     {% else %}
 
+    {% set active_items = [] %}
+    {% set completed_items = [] %}
+    {% for subj, sdata in subject_averages.items() %}
+        {% if sdata.is_completed and active_semester == 'sem2' %}
+            {% set _ = completed_items.append((subj, sdata)) %}
+        {% else %}
+            {% set _ = active_items.append((subj, sdata)) %}
+        {% endif %}
+    {% endfor %}
+
+    <!-- 1. Przedmioty w toku / aktywne -->
     <div class="space-y-4">
-        {% for subj, sdata in subject_averages.items() %}
-        <div class="rounded-2xl border {{ 'border-rose-200 bg-slate-50/30 shadow-2xs' if sdata.is_excluded else 'bg-white border-slate-200 shadow-sm' }} overflow-hidden transition-all hover:border-slate-300">
-            <!-- Pasek przedmiotu -->
-            <div class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 {{ 'bg-rose-50/20' if sdata.is_excluded else 'bg-slate-50/50' }} border-b border-slate-100">
-                <div>
-                    <h3 class="text-base font-extrabold text-slate-900">
-                        {{ subj }}
-                    </h3>
-                    <div class="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-500">
-                        <span>Liczba ocen: <strong>{{ sdata.count }}</strong> (suma wag: {{ sdata.sum_weights|round(1) }})</span>
-                        <span class="text-slate-300 hidden sm:inline">•</span>
-
-                        <!-- Interaktywna pigułka statusu świadectwa (Styl Linear / Notion) -->
-                        {% if sdata.is_excluded %}
-                        <button type="button"
-                                onclick="toggleSubjectInclusion('{{ subj|e }}', true)"
-                                class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-700 border border-rose-300 hover:bg-rose-200 hover:border-rose-400 transition-all cursor-pointer group shadow-2xs"
-                                title="Przedmiot wykluczony ze średniej. Kliknij, aby włączyć go z powrotem.">
-                            <span>🚫</span>
-                            <span>Nie zaliczany do średniej</span>
-                            <span class="text-[10px] text-rose-600 group-hover:text-rose-900 font-semibold underline ml-0.5">Włącz</span>
-                        </button>
-                        {% else %}
-                        <button type="button"
-                                onclick="toggleSubjectInclusion('{{ subj|e }}', false)"
-                                class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-white text-slate-600 border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/60 hover:text-indigo-700 transition-all cursor-pointer group shadow-2xs"
-                                title="Przedmiot wliczany do średniej. Kliknij, aby go wykluczyć (np. Godzina wychowawcza).">
-                            <span class="text-xs">🎓</span>
-                            <span>Wliczany do średniej</span>
-                            <span class="text-[10px] text-slate-400 group-hover:text-indigo-600 group-hover:underline opacity-0 group-hover:opacity-100 transition-opacity">Wyłącz</span>
-                        </button>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Średnia ważona z odznaką oraz odseparowany przycisk do analizy -->
-                <div class="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
-                    <div class="text-right">
-                        <span class="block text-[10px] uppercase font-bold text-slate-400">Średnia ważona</span>
-                        <span class="text-xl font-extrabold
-                            {% if sdata.average and sdata.average >= 4.75 %} text-emerald-600
-                            {% elif sdata.average and sdata.average >= 3.75 %} text-sky-600
-                            {% elif sdata.average and sdata.average >= 2.75 %} text-amber-600
-                            {% elif sdata.average %} text-rose-600
-                            {% else %} text-slate-400 {% endif %}">
-                            {{ sdata.average or '-' }}
-                        </span>
-                    </div>
-
-                    <!-- Widoczne odseparowanie od średniej -->
-                    <div class="h-8 w-[1px] bg-slate-200 hidden sm:block"></div>
-
-                    <a href="{{ url_for('web.subject_detail_view', subject_name=subj) }}"
-                       class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-900 border border-indigo-200/80 transition-all shadow-2xs hover:shadow-xs group cursor-pointer"
-                       title="Zobacz pełne statystyki, cele oceny, analizę ryzyka i wykres trajektorii">
-                        <span>📊 Wykres & analiza</span>
-                        <span class="group-hover:translate-x-0.5 transition-transform font-extrabold">&rarr;</span>
-                    </a>
-                </div>
-            </div>
-
-            <!-- Karty / Pigułki ocen (wewnątrz tego samego zaokrąglonego kafelka) -->
-            <div class="p-4 sm:p-5 bg-white">
-                <div class="flex flex-wrap gap-2.5">
-                    {% if not sdata.grades %}
-                    <div class="text-xs text-slate-400 italic py-1 flex items-center gap-1.5">
-                        <span>⚪</span>
-                        <span>Brak ocen z tego przedmiotu w dzienniku</span>
-                    </div>
-                    {% else %}
-                    {% for g in sdata.grades %}
-                    <div onclick="openEditGradeModal({
-                            id: '{{ g.id }}',
-                            subject: '{{ subj|e }}',
-                            grade: '{{ g.grade|e }}',
-                            weight: '{{ g.weight or '1'|e }}',
-                            category: '{{ g.category or 'Ocena'|e }}',
-                            date: '{{ g.date or ''|e }}',
-                            teacher: '{{ g.teacher or ''|e }}',
-                            is_custom: {{ 'true' if g.is_custom else 'false' }},
-                            original_grade: '{{ g.original_grade or ''|e }}',
-                            original_weight: '{{ g.original_weight or ''|e }}'
-                         })"
-                         class="group relative inline-flex items-center gap-2 px-3 py-2 rounded-xl border {{ 'border-amber-300 bg-amber-50/40 ring-1 ring-amber-200' if g.is_custom else 'border-slate-200 bg-white' }} hover:bg-slate-50 hover:border-indigo-400 hover:shadow-md shadow-xs transition-all cursor-pointer"
-                         title="Kliknij, aby edytować ocenę lub wagę{% if g.is_custom %} (skorygowana ręcznie, oryg. waga: {{ g.original_weight }}){% endif %}">
-                        <!-- Odznaka oceny -->
-                        <span class="w-7 h-7 rounded-lg flex items-center justify-center font-extrabold text-sm
-                            {% if g.grade in ['5', '6', '5+', '6-'] %} bg-emerald-100 text-emerald-800
-                            {% elif g.grade in ['4', '4+', '4-'] %} bg-sky-100 text-sky-800
-                            {% elif g.grade in ['3', '3+', '3-'] %} bg-amber-100 text-amber-800
-                            {% elif g.grade in ['1', '2', '1+', '2+'] %} bg-rose-100 text-rose-800
-                            {% else %} bg-slate-100 text-slate-700 {% endif %}">
-                            {{ g.grade }}
-                        </span>
-
-                        <!-- Szczegóły: Kategoria & Waga -->
-                        <div class="text-left">
-                            <div class="text-xs font-bold text-slate-800 truncate max-w-[140px] sm:max-w-[200px] flex items-center gap-1" title="{{ g.category or 'Ocena' }}">
-                                <span>{{ g.category or 'Ocena' }}</span>
-                                {% if g.is_custom %}
-                                <span class="text-[9px] font-bold text-amber-700 bg-amber-100 px-1 py-0.2 rounded" title="Waga lub ocena skorygowana ręcznie">✏️ zmieniona</span>
-                                {% endif %}
-                            </div>
-                            <div class="text-[10px] text-slate-400 font-medium">
-                                waga: <strong class="{{ 'text-amber-700 font-bold' if g.is_custom else 'text-slate-600' }}">{{ g.weight or '1' }}</strong> • {{ g.date or '' }}
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                    {% endif %}
-                </div>
-            </div>
-        </div>
+        {% for subj, sdata in active_items %}
+            {{ render_subject_card(subj, sdata) }}
         {% endfor %}
     </div>
+
+    <!-- 2. Sekcja przedmiotów zakończonych w I semestrze (w trybie Semestr II) -->
+    {% if completed_items %}
+    <div class="mt-8 pt-6 border-t-2 border-dashed border-purple-200">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h3 class="text-sm font-extrabold text-purple-900 flex items-center gap-2">
+                    <span>🏁</span> Przedmioty zrealizowane w I semestrze
+                </h3>
+                <p class="text-xs text-purple-700/80 mt-0.5">
+                    Przedmioty jednosemestralne zakończone przed feriami. Ich ocena z I semestru jest oceną ostateczną i wlicza się do świadectwa.
+                </p>
+            </div>
+            <span class="text-xs font-bold px-2.5 py-1 bg-purple-100 text-purple-800 rounded-lg border border-purple-300">
+                {{ completed_items|length }} {{ 'przedmiot' if completed_items|length == 1 else 'przedmioty' if completed_items|length in [2, 3, 4] else 'przedmiotów' }}
+            </span>
+        </div>
+        <div class="space-y-4">
+            {% for subj, sdata in completed_items %}
+                {{ render_subject_card(subj, sdata) }}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
 
     {% endif %}
 </div>
@@ -319,6 +405,18 @@
                         <td class="py-3.5 px-4 sm:px-6">
                             <div class="flex flex-wrap items-center gap-2">
                                 <span class="font-extrabold text-slate-900">{{ s.subject }}</span>
+                                {% if s.is_completed %}
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black bg-purple-100 text-purple-800 border border-purple-200" title="Przedmiot zakończony w I semestrze (np. technika, muzyka) – ocena końcowa jest wiążąca na świadectwie">
+                                    <span>🏁</span>
+                                    <span>Zakończony (Semestr I)</span>
+                                </span>
+                                {% endif %}
+                                {% if s.is_official_proposal %}
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300" title="Oficjalna propozycja oceny wpisana przez nauczyciela w Librusie">
+                                    <span>🏛️</span>
+                                    <span>Propozycja ze szkoły</span>
+                                </span>
+                                {% endif %}
                             </div>
                             {% if s.numeric_count == 0 %}
                             <span class="text-[10px] text-slate-400 italic">brak zarejestrowanych ocen cząstkowych</span>
@@ -371,15 +469,30 @@
                         <!-- Proponowana: Słownie (wyróżniona kolumna niebieskim akcentem) -->
                         <td class="py-3.5 px-4 sm:px-6 text-left bg-blue-50/35 group-hover:bg-blue-100/40 transition-colors">
                             {% if s.proposed_grade_num %}
-                            <span class="font-black text-sm capitalize tracking-tight
-                                {% if s.proposed_grade_num == 6 %} text-emerald-900
-                                {% elif s.proposed_grade_num == 5 %} text-teal-900
-                                {% elif s.proposed_grade_num == 4 %} text-blue-900
-                                {% elif s.proposed_grade_num == 3 %} text-amber-900
-                                {% elif s.proposed_grade_num == 2 %} text-orange-900
-                                {% else %} text-rose-900 {% endif %}">
-                                {{ s.proposed_grade_word }}
-                            </span>
+                            <div class="flex flex-col">
+                                <span class="font-black text-sm capitalize tracking-tight
+                                    {% if s.proposed_grade_num == 6 %} text-emerald-900
+                                    {% elif s.proposed_grade_num == 5 %} text-teal-900
+                                    {% elif s.proposed_grade_num == 4 %} text-blue-900
+                                    {% elif s.proposed_grade_num == 3 %} text-amber-900
+                                    {% elif s.proposed_grade_num == 2 %} text-orange-900
+                                    {% else %} text-rose-900 {% endif %}">
+                                    {{ s.proposed_grade_word }}
+                                </span>
+                                {% if s.is_official_proposal %}
+                                <span class="text-[10px] font-bold text-amber-700 flex items-center gap-1 mt-0.5" title="Wpisana przez nauczyciela w Librusie">
+                                    <span>🏛️</span> Wpisana przez nauczyciela
+                                </span>
+                                {% elif s.is_completed %}
+                                <span class="text-[10px] font-semibold text-purple-700 flex items-center gap-1 mt-0.5">
+                                    <span>🏁</span> Ocena końcowa z Sem. I
+                                </span>
+                                {% else %}
+                                <span class="text-[10px] text-slate-400 font-medium">
+                                    📐 Prognoza ze średniej
+                                </span>
+                                {% endif %}
+                            </div>
                             {% else %}
                             <span class="text-xs font-semibold text-slate-400 italic">
                                 brak ocen (pominięty)
@@ -423,6 +536,18 @@
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-200/90 text-slate-600 border border-slate-300 shadow-2xs">
                                     Nie zaliczany do średniej
                                 </span>
+                                {% if s.is_completed %}
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black bg-purple-100 text-purple-800 border border-purple-200">
+                                    <span>🏁</span>
+                                    <span>Zakończony (Semestr I)</span>
+                                </span>
+                                {% endif %}
+                                {% if s.is_official_proposal %}
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300">
+                                    <span>🏛️</span>
+                                    <span>Propozycja ze szkoły</span>
+                                </span>
+                                {% endif %}
                             </div>
                             {% if s.numeric_count == 0 %}
                             <span class="text-[10px] text-slate-400 italic">brak zarejestrowanych ocen cząstkowych</span>

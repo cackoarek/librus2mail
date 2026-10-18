@@ -104,7 +104,25 @@ storage_dir: "storage"
 
 
 # ------------------------------------------------------------------------------
-# 4. POWIADOMIENIA O AWARIACH I BŁĘDACH (ERROR ALERTS)
+# 4. ROK SZKOLNY, SEMESTRY I PREDYKCJA OCEN ROCZNYCH (SEMESTERS & ANNUAL GRADES)
+# ------------------------------------------------------------------------------
+# Data graniczna podziału roku szkolnego na Semestr I i Semestr II (format: YYYY-MM-DD).
+# Oceny wystawione do tej daty włącznie należą do Semestru I, a po niej do Semestru II.
+# Pozwala to na analizę postępów w II semestrze oraz automatyczne wykrywanie
+# przedmiotów zakończonych w I semestrze (np. Technika, Muzyka, Filozofia).
+# Domyślnie (gdy pominięte lub puste): 1 lutego bieżącego roku szkolnego.
+# semester_split_date: "2027-02-01"
+
+# Metoda predykcji oceny rocznej na świadectwo dla przedmiotów całorocznych:
+# - all_year_weighted: Całoroczna średnia ważona ze wszystkich ocen cząstkowych (domyślna, jak w Librusie).
+# - semesters_average: Średnia arytmetyczna z oceny za Semestr I i oceny za Semestr II: (O1 + O2) / 2.
+# - progress_favored: Promowanie progresu ucznia w II semestrze (np. I sem: 4, II sem: 5 -> Roczna: 5).
+# UWAGA: Wpisanie przez nauczyciela oficjalnej propozycji rocznej w Librusie zawsze zastępuje predykcję!
+annual_grade_algorithm: "all_year_weighted"
+
+
+# ------------------------------------------------------------------------------
+# 5. POWIADOMIENIA O AWARIACH I BŁĘDACH (ERROR ALERTS)
 # ------------------------------------------------------------------------------
 # Wysyłanie alertów e-mail w razie utraty połączenia, wygaśnięcia sesji lub błędu parsowania (domyślnie: true).
 send_error_notifications: true
@@ -115,7 +133,7 @@ error_cooldown_s: 3600
 
 
 # ------------------------------------------------------------------------------
-# 5. KONFIGURACJA WYSYŁKI WIADOMOŚCI E-MAIL (mail)
+# 6. KONFIGURACJA WYSYŁKI WIADOMOŚCI E-MAIL (mail)
 # ------------------------------------------------------------------------------
 mail:
   # Adres e-mail konta wysyłającego powiadomienia:
@@ -143,7 +161,7 @@ mail:
 
 
 # ------------------------------------------------------------------------------
-# 6. PANEL WEBOWY DASHBOARD RODZICA (web)
+# 7. PANEL WEBOWY DASHBOARD RODZICA (web)
 # ------------------------------------------------------------------------------
 # Interaktywny, lekki pulpit rodzica dostępny przez przeglądarkę WWW (Flask + TailwindCSS + HTMX).
 # Uruchomienie: python librus_web.py (lub komenda: librus-web)
@@ -171,7 +189,7 @@ web:
 
 
 # ------------------------------------------------------------------------------
-# 7. KALENDARIUM ZDARZEŃ NA PULPICIE GŁÓWNYM (timeline)
+# 8. KALENDARIUM ZDARZEŃ NA PULPICIE GŁÓWNYM (timeline)
 # ------------------------------------------------------------------------------
 # Pełnoszerokościowy graficzny moduł prezentujący dzień po dniu zdarzenia szkolne
 # bezpośrednio na pulpicie głównym (dashboard) pod kafelkami podsumowującymi.

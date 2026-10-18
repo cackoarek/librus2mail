@@ -268,6 +268,7 @@ def schedule_view():
         next_date=sched_ctx['next_date'],
         view_mode=view_mode,
         sched_ctx=sched_ctx,
+        sorted_dates=sched_ctx['sorted_dates'],
     )
 
 
@@ -910,7 +911,6 @@ def setup_submit():
                 'read_grades': f'student_grades_{idx}' in form,
                 'read_timetable': f'student_timetable_{idx}' in form,
                 'read_schedule': f'student_schedule_{idx}' in form,
-                'schedule_retention_days': int(form.get('schedule_retention_days', 30)),
                 'schedule_day_offset': int(form.get('schedule_day_offset', 1)),
                 'one_summary_message': is_one_summary,
                 'notification_receivers': receivers or [form.get('mail_login', '').strip()],
@@ -970,7 +970,6 @@ def setup_submit():
         'wait_time_s': wait_time_s,
         'schedule': sched_cfg,
         'schedule_day_offset': int(form.get('schedule_day_offset', 1)),
-        'schedule_retention_days': int(form.get('schedule_retention_days', 30)),
         'one_summary_message': (form.get('one_summary_message', '1') == '1'),
         'work_in_loop': True if 'collection_mode' in form else ('work_in_loop' in form),
         'storage_dir': getattr(request, 'app_storage_dir', 'storage') or 'storage',
@@ -1059,7 +1058,6 @@ def settings_view():
                     'read_grades': f'student_grades_{idx}' in form,
                     'read_timetable': f'student_timetable_{idx}' in form,
                     'read_schedule': f'student_schedule_{idx}' in form,
-                    'schedule_retention_days': int(form.get('schedule_retention_days', 30)),
                     'schedule_day_offset': int(form.get('schedule_day_offset', 1)),
                     'one_summary_message': is_one_summary,
                     'notification_receivers': receivers,
@@ -1121,7 +1119,7 @@ def settings_view():
         new_config['wait_time_s'] = wait_time_s
         new_config['schedule'] = sched_cfg
         new_config['schedule_day_offset'] = int(form.get('schedule_day_offset', config.get('schedule_day_offset', 1)))
-        new_config['schedule_retention_days'] = int(form.get('schedule_retention_days', config.get('schedule_retention_days', 30)))
+        new_config.pop('schedule_retention_days', None)
         new_config['one_summary_message'] = (form.get('one_summary_message', '1') == '1')
         new_config['work_in_loop'] = True if 'collection_mode' in form else ('work_in_loop' in form if 'work_in_loop' in form else config.get('work_in_loop', True))
         new_config['send_error_notifications'] = 'send_error_notifications' in form

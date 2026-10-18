@@ -50,8 +50,9 @@ def make_offline_friendly(html: str) -> str:
     html = re.sub(r'href="/raporty/podsumowanie(\?[^"]*)?"', 'href="web_raporty_podsumowanie.html"', html)
     html = re.sub(r'href="/(?:oceny|przedmiot)/Matematyka(\?[^"]*)?"', 'href="web_przedmiot_matematyka.html"', html)
 
-    # W podglądzie statycznym formularz logowania kieruje od razu na pulpit
+    # W podglądzie statycznym formularz logowania kieruje od razu na pulpit oraz skrypt wyboru daty
     html = re.sub(r'action="/login[^"]*"', 'action="web_dashboard.html" method="GET"', html)
+    html = html.replace("window.location.href='/plan?date='", "window.location.href='web_plan.html?date='")
     return html
 
 

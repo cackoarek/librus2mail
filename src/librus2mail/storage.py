@@ -4,7 +4,7 @@ import logging
 import re
 import shutil
 from abc import ABC, abstractmethod
-from datetime import date, datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -309,10 +309,8 @@ class BaseStorage(ABC):
         self,
         user_login: str,
         entries: list[dict],
-        retention_days: int | None = 30,
-        reference_date: datetime | date | None = None,
     ) -> None:
-        """Zapisuje listę lekcji i zmian z planu lekcji wraz z opcjonalną retencją starszych wpisów."""
+        """Zapisuje listę lekcji i zmian z planu lekcji w storage."""
         pass
 
     @abstractmethod
@@ -852,11 +850,9 @@ class FileStorage(BaseStorage):
         self,
         user_login: str,
         entries: list[dict],
-        retention_days: int | None = 30,
-        reference_date: datetime | date | None = None,
     ) -> None:
-        """Zapisuje listę wpisów z planu lekcji w storage z automatyczną retencją (domyślnie >30 dni)."""
-        if not entries and retention_days is None:
+        """Zapisuje listę wpisów z planu lekcji w storage bezterminowo."""
+        if not entries:
             return
         path = self._get_file_path(user_login)
         data = read_json_safe(path)
@@ -869,7 +865,7 @@ class FileStorage(BaseStorage):
                 existing[eid] = e
 
         now_iso = datetime.now().isoformat()
-        for e in entries or []:
+        for e in entries:
             eid = e.get('id') or f"{e.get('date')}_{e.get('lesson_no')}_{e.get('subject')}"
             if eid:
                 e['id'] = eid
@@ -881,24 +877,6 @@ class FileStorage(BaseStorage):
                     e_copy['added_at'] = e_copy.get('added_at') or now_iso
                     e_copy['updated_at'] = now_iso
                     existing[eid] = e_copy
-
-        # Retencja wpisów starszych niż retention_days (domyślnie 30 dni)
-        if retention_days is not None and retention_days > 0:
-            if reference_date:
-                ref_d = reference_date.date() if isinstance(reference_date, datetime) else reference_date
-            else:
-                ref_d = datetime.now().date()
-            cutoff_date_str = (ref_d - timedelta(days=retention_days)).isoformat()
-
-            retained = {}
-            for eid, item in existing.items():
-                item_date = item.get('date')
-                if item_date:
-                    if item_date >= cutoff_date_str:
-                        retained[eid] = item
-                else:
-                    retained[eid] = item
-            existing = retained
 
         data['schedule_history'] = sorted(
             existing.values(),

@@ -1295,6 +1295,15 @@ class TestWebDashboard(unittest.TestCase):
         self.assertEqual(res_param.status_code, 200)
         self.assertIn(b'Matematyka', res_param.data)
         self.assertIn(b'Geografia', res_param.data)
+        self.assertIn(b'id="schedule-calendar-date"', res_param.data)
+        self.assertIn(b'type="date"', res_param.data)
+        self.assertIn(b'value="2026-09-23"', res_param.data)
+
+        # 3b. Wybór historycznego dnia z kalendarza bez wpisów (?date=2026-08-15)
+        res_empty_day = client_finished.get('/plan?date=2026-08-15')
+        self.assertEqual(res_empty_day.status_code, 200)
+        self.assertIn(b'value="2026-08-15"', res_empty_day.data)
+        self.assertIn('Brak lekcji w planie dla tego dnia', res_empty_day.data.decode('utf-8'))
 
         # 4. Widok wszystkich dni (?view=all)
         res_all = client_finished.get('/plan?view=all')

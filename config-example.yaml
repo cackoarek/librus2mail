@@ -36,10 +36,6 @@ librus_users:
     # Pobieranie planu lekcji wraz z zastępstwami i odwołanymi lekcjami (domyślnie: true).
     read_schedule: true
 
-    # Retencja wpisów z planu lekcji w dniach (domyślnie: 30).
-    # Lekcje starsze niż podana liczba dni są automatycznie usuwane z lokalnej bazy storage.
-    schedule_retention_days: 30
-
     # Przesunięcie dnia dla planu lekcji w powiadomieniu (w dniach względem daty raportu/uruchomienia):
     # - 1: prezentuje plan na kolejny dzień szkolny (jutro, a w piątek/weekend na najbliższy poniedziałek - domyślnie).
     # - 0: prezentuje plan na bieżący dzień raportu (dzisiaj).

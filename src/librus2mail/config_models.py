@@ -152,7 +152,6 @@ class LibrusUserConfig(BaseConfigModel):
     read_grades: bool = True
     read_timetable: bool = True
     read_schedule: bool = True
-    schedule_retention_days: int = 30
     schedule_day_offset: int = 1
     one_summary_message: bool = True
     notification_receivers: list[EmailStr] = Field(default_factory=list)
@@ -254,7 +253,6 @@ class AppSettings(BaseSettings, collections.abc.MutableMapping):
     send_error_notifications: bool = True
     error_cooldown_s: int = 3600
     schedule_day_offset: int = 1
-    schedule_retention_days: int = 30
     one_summary_message: bool = True
     read_schedule: bool = True
     read_timetable: bool = True

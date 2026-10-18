@@ -103,8 +103,6 @@ class LibrusCollector:
         try:
             if user_key not in self.parsers:
                 eff_user_config = dict(user_config)
-                if 'schedule_retention_days' not in eff_user_config and 'schedule_retention_days' in self.config:
-                    eff_user_config['schedule_retention_days'] = self.config['schedule_retention_days']
                 self.parsers[user_key] = Librus(eff_user_config, storage=self.storage)
             librus = self.parsers[user_key]
 

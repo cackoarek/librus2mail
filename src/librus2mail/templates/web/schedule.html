@@ -122,8 +122,21 @@
         {% endif %}
     </div>
 
-    <!-- Prawa strona: Skocz do bieżącego dnia oraz przełącznik widoku (dzień vs wszystkie) -->
+    <!-- Prawa strona: Kalendarz / Wybór dnia, Skocz do bieżącego dnia oraz przełącznik widoku (dzień vs wszystkie) -->
     <div class="flex items-center gap-2 flex-wrap">
+        <!-- Kalendarz / Wybór konkretnego dnia -->
+        <div class="flex items-center gap-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl px-2.5 py-1.5 transition-colors focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 shadow-2xs">
+            <span class="text-xs">📅</span>
+            <label for="schedule-calendar-date" class="text-xs font-bold text-slate-600 hidden md:inline cursor-pointer">
+                Kalendarz:
+            </label>
+            <input type="date"
+                   id="schedule-calendar-date"
+                   value="{{ selected_date }}"
+                   onchange="if(this.value) window.location.href='{{ url_for('web.schedule_view') }}?date=' + this.value + '&view={{ view_mode }}'"
+                   class="bg-transparent text-xs font-bold text-slate-800 border-none p-0 focus:outline-none cursor-pointer">
+        </div>
+
         {% if today_date in days_data | map(attribute='date') | list and selected_date != today_date %}
         <a href="{{ url_for('web.schedule_view', date=today_date, view=view_mode) }}"
            class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition">

@@ -1130,13 +1130,30 @@ def settings_view():
         new_config['web']['port'] = int(form.get('web_port') or existing_web.get('port', 5000))
         new_config['web']['host'] = form.get('web_host', '').strip() or existing_web.get('host', '127.0.0.1')
         new_config['web']['password'] = effective_web_pwd
-        new_config['web']['timeline_enabled'] = 'timeline_enabled' in form
+
+        # 5. Kalendarium zdarzeń (dedykowana sekcja 'timeline' w konfiguracji)
+        existing_timeline = config.get('timeline', {}) if isinstance(config.get('timeline'), (dict, collections.abc.Mapping)) else {}
+
+        selected_event_types: list[str] = []
+        for etype in ['grades', 'messages', 'notifications', 'tests']:
+            if f'timeline_type_{etype}' in form:
+                selected_event_types.append(etype)
+        if not selected_event_types and 'timeline_settings_present' not in form:
+            selected_event_types = existing_timeline.get('event_types', ['grades', 'messages', 'notifications', 'tests'])
+
         try:
             timeline_days_in = int(form.get('timeline_days', 5))
-            new_config['web']['timeline_days'] = max(1, min(14, timeline_days_in))
+            effective_days = max(1, min(14, timeline_days_in))
         except (ValueError, TypeError):
-            new_config['web']['timeline_days'] = 5
-        new_config['web']['timeline_hide_weekends'] = 'timeline_hide_weekends' in form
+            effective_days = 5
+
+        new_config['timeline'] = {
+            'enabled': 'timeline_enabled' in form,
+            'days': effective_days,
+            'hide_weekends': 'timeline_hide_weekends' in form,
+            'reverse_order': 'timeline_reverse_order' in form,
+            'event_types': selected_event_types,
+        }
 
         try:
             save_config_yaml(new_config, config_path)
@@ -1159,12 +1176,23 @@ def settings_view():
     mail = config.get('mail', {}) if isinstance(config.get('mail'), (dict, collections.abc.Mapping)) else {}
     web_cfg = config.get('web', {}) if isinstance(config.get('web'), (dict, collections.abc.Mapping)) else {}
 
+    timeline_cfg = config.get('timeline', {}) if isinstance(config.get('timeline'), (dict, collections.abc.Mapping)) else {}
+    if not timeline_cfg:
+        timeline_cfg = {
+            'enabled': web_cfg.get('timeline_enabled', config.get('timeline_enabled', True)),
+            'days': web_cfg.get('timeline_days', config.get('timeline_days', 5)),
+            'hide_weekends': web_cfg.get('timeline_hide_weekends', config.get('timeline_hide_weekends', False)),
+            'reverse_order': web_cfg.get('timeline_reverse_order', False),
+            'event_types': web_cfg.get('timeline_event_types', ['grades', 'messages', 'notifications', 'tests']),
+        }
+
     return render_template(
         'web/settings.html',
         config=config,
         users=users,
         mail=mail,
         web_cfg=web_cfg,
+        timeline_cfg=timeline_cfg,
         reports_schedules=get_reports_schedules(config),
         config_path=config_path,
     )

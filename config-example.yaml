@@ -173,14 +173,30 @@ web:
   # Czas trwania blokady adresu IP w sekundach po przekroczeniu limitu prób (domyślnie: 900 = 15 minut):
   lockout_duration_s: 900
 
-  # Moduł kalendarium zdarzeń na pulpicie głównym:
-  # Czy wyświetlać moduł kalendarium ostatnich dni (domyślnie: true):
-  timeline_enabled: true
+
+# ------------------------------------------------------------------------------
+# 7. KALENDARIUM ZDARZEŃ NA PULPICIE GŁÓWNYM (timeline)
+# ------------------------------------------------------------------------------
+# Pełnoszerokościowy graficzny moduł prezentujący dzień po dniu zdarzenia szkolne
+# bezpośrednio na pulpicie głównym (dashboard) pod kafelkami podsumowującymi.
+timeline:
+  # Czy wyświetlać moduł kalendarium na pulpicie (domyślnie: true):
+  enabled: true
 
   # Liczba dni wstecz objętych kalendarium (zakres: 1 - 14, domyślnie: 5):
-  timeline_days: 5
+  days: 5
 
   # Czy ukrywać dni weekendu (sobota i niedziela), prezentując tylko dni szkolne (domyślnie: false):
-  timeline_hide_weekends: false
+  hide_weekends: false
+
+  # Odwrotna kolejność kart (najnowsze / dzisiejszy dzień na początku, u góry na telefonie) (domyślnie: false):
+  reverse_order: false
+
+  # Typy zdarzeń uwzględniane w kalendarium (domyślnie wszystkie 4):
+  event_types:
+    - grades          # 📝 Oceny
+    - messages        # ✉️ Wiadomości
+    - notifications   # 📢 Ogłoszenia szkolne
+    - tests           # 🔔 Sprawdziany i zapowiedzi sprawdzianów
 
 

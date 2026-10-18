@@ -1874,6 +1874,13 @@ class TestWebDashboard(unittest.TestCase):
         self.assertIn("Zajęcia SKS", html)
         self.assertIn("Apel szkolny", html)
         self.assertIn("Dziś", html)
+        # Ikona zębatki powinna linkować bezpośrednio do sekcji #kalendarium w Ustawieniach
+        self.assertIn('href="/ustawienia#kalendarium"', html)
+
+        # Sprawdzenie obecności kotwicy #kalendarium w widoku /ustawienia
+        res_settings = client.get('/ustawienia')
+        self.assertEqual(res_settings.status_code, 200)
+        self.assertIn('id="kalendarium"', res_settings.data.decode('utf-8'))
 
         # 3. Test opcji hide_weekends=True (ukrywanie weekendów)
         ref_monday = datetime(2026, 9, 21, 10, 0, 0)
@@ -1885,9 +1892,26 @@ class TestWebDashboard(unittest.TestCase):
         self.assertEqual(school_dates, ['2026-09-15', '2026-09-16', '2026-09-17', '2026-09-18', '2026-09-21'])
         self.assertFalse(any(d['is_weekend'] for d in school_days))
 
-        # 4. Test wyłączenia kalendarium w konfiguracji (timeline_enabled = False)
+        # 4. Test opcji reverse_order=True (odwrotne sortowanie - dzisiaj na początku/u góry)
+        rev_days, _ = build_recent_days_timeline(
+            grades, messages, notifications, timetable, now=ref_now, days_count=5, reverse_order=True
+        )
+        self.assertEqual(rev_days[0]['date'], '2026-09-18')
+        self.assertTrue(rev_days[0]['is_today'])
+        self.assertEqual(rev_days[-1]['date'], '2026-09-14')
+
+        # 5. Test filtrowania typów zdarzeń (enabled_types)
+        filtered_days, filtered_total = build_recent_days_timeline(
+            grades, messages, notifications, timetable, now=ref_now, days_count=5, enabled_types=['grades']
+        )
+        # Tylko 2 oceny, brak powiadomień, wiadomości i sprawdzianów
+        self.assertEqual(filtered_total, 2)
+        all_ev_types = [ev['type'] for d in filtered_days for ev in d['events']]
+        self.assertTrue(all(t == 'grade' for t in all_ev_types))
+
+        # 6. Test wyłączenia kalendarium w dedykowanej sekcji timeline (enabled: False)
         cfg_disabled = dict(self.mock_config)
-        cfg_disabled['web'] = {'timeline_enabled': False}
+        cfg_disabled['timeline'] = {'enabled': False}
         with open(self.config_path, 'w', encoding='utf-8') as f:
             import yaml
             yaml.dump(cfg_disabled, f)
@@ -1897,9 +1921,9 @@ class TestWebDashboard(unittest.TestCase):
         self.assertEqual(res_disabled.status_code, 200)
         self.assertNotIn("Kalendarium ostatnich", res_disabled.data.decode('utf-8'))
 
-        # 5. Test niestandardowej liczby dni wstecz (np. 3 dni)
+        # 7. Test niestandardowej liczby dni wstecz w dedykowanej sekcji timeline (days: 3)
         cfg_3days = dict(self.mock_config)
-        cfg_3days['web'] = {'timeline_enabled': True, 'timeline_days': 3}
+        cfg_3days['timeline'] = {'enabled': True, 'days': 3}
         with open(self.config_path, 'w', encoding='utf-8') as f:
             yaml.dump(cfg_3days, f)
 
@@ -1909,15 +1933,19 @@ class TestWebDashboard(unittest.TestCase):
         html_3days = res_3days.data.decode('utf-8')
         self.assertIn("Kalendarium ostatnich 3 dni", html_3days)
 
-        # 6. Test zapisu ustawień kalendarium przez formularz POST /ustawienia
+        # 8. Test zapisu ustawień kalendarium przez formularz POST /ustawienia (dedykowana sekcja timeline)
         post_data = {
             'student_login_0': '123456',
             'student_name_0': 'Jan Kowalski',
             'mail_provider': 'gmail',
             'mail_login': 'parent@example.com',
+            'timeline_settings_present': '1',
             'timeline_enabled': 'on',
             'timeline_days': '7',
             'timeline_hide_weekends': 'on',
+            'timeline_reverse_order': 'on',
+            'timeline_type_grades': 'on',
+            'timeline_type_tests': 'on',
             'collection_mode': 'interval',
             'collection_interval_hours': '1',
         }
@@ -1925,9 +1953,12 @@ class TestWebDashboard(unittest.TestCase):
         self.assertEqual(res_post.status_code, 200)
         with open(self.config_path, encoding='utf-8') as f:
             saved_cfg = yaml.safe_load(f)
-        self.assertTrue(saved_cfg['web']['timeline_enabled'])
-        self.assertEqual(saved_cfg['web']['timeline_days'], 7)
-        self.assertTrue(saved_cfg['web']['timeline_hide_weekends'])
+        self.assertIn('timeline', saved_cfg)
+        self.assertTrue(saved_cfg['timeline']['enabled'])
+        self.assertEqual(saved_cfg['timeline']['days'], 7)
+        self.assertTrue(saved_cfg['timeline']['hide_weekends'])
+        self.assertTrue(saved_cfg['timeline']['reverse_order'])
+        self.assertEqual(saved_cfg['timeline']['event_types'], ['grades', 'tests'])
 
 
 if __name__ == '__main__':

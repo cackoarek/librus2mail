@@ -469,6 +469,11 @@
             background-color: var(--theme-scrollbar-thumb);
             border-radius: 9999px;
         }
+
+        /* Płynne otwieranie mobilnego panelu drawer */
+        #mobile-drawer {
+            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
     </style>
     
 <style>
@@ -486,72 +491,71 @@
 
     <!-- Pasek nawigacyjny -->
     <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <!-- Lewa strona: Logo + Menu -->
-                <div class="flex items-center gap-8">
-                    <a href="web_dashboard.html" class="flex items-center gap-3 group">
-                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-sky-500 flex items-center justify-center text-white text-xl shadow-md shadow-indigo-100 group-hover:scale-105 transition-transform">
+        <div class="max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16 gap-2">
+                <!-- Lewa strona: Logo + Nawigacja Desktop -->
+                <div class="flex items-center gap-2 xl:gap-3 2xl:gap-6 flex-shrink-0">
+                    <a href="web_dashboard.html" class="flex items-center gap-2.5 sm:gap-3 group flex-shrink-0">
+                        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-sky-500 flex items-center justify-center text-white text-lg sm:text-xl shadow-md shadow-indigo-100 group-hover:scale-105 transition-transform flex-shrink-0">
                             🏫
                         </div>
-                        <div>
-                            <span class="font-extrabold text-lg text-slate-900 tracking-tight flex items-center gap-1.5">
+                        <div class="min-w-0">
+                            <span class="font-extrabold text-base sm:text-lg text-slate-900 tracking-tight flex items-center gap-1">
                                 Librus<span class="text-indigo-600">2mail</span>
                             </span>
-                            <span class="block text-[10px] uppercase font-bold text-slate-400 tracking-wider">Web Dashboard</span>
+                            <span class="hidden sm:block text-[9px] sm:text-[10px] uppercase font-bold text-slate-400 tracking-wider truncate">Web Dashboard</span>
                         </div>
                     </a>
 
-                    <!-- Nawigacja Desktop -->
+                    <!-- Nawigacja Desktop (widoczna na dużych ekranach od xl >= 1280px) -->
                     
-                    <nav class="hidden md:flex items-center gap-1">
+                    <nav class="hidden xl:flex items-center gap-1 2xl:gap-1.5 flex-shrink-0">
                         <a href="web_dashboard.html"
-                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
                             📊 Pulpit
                         </a>
                         <a href="web_plan.html"
-                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
-                            📅 Plan lekcji
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📅 Plan<span class="hidden 2xl:inline"> lekcji</span>
                         </a>
                         <a href="web_oceny.html"
-                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
                             📝 Oceny
                         </a>
                         <a href="web_terminarz.html"
-                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
                             🔔 Terminarz
                         </a>
                         <a href="web_wiadomosci.html"
-                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
                             ✉️ Wiadomości
                         </a>
                         <a href="web_raporty_podsumowanie.html"
-                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors bg-indigo-50 text-indigo-700">
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors bg-indigo-50 text-indigo-700">
                             📈 Raporty
                         </a>
                         <a href="web_ustawienia.html"
-                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
                             ⚙️ Ustawienia
                         </a>
                     </nav>
                     
                 </div>
 
-                <!-- Prawa strona: Przełącznik motywu + Przełącznik ucznia + Auth -->
-                <div class="flex items-center gap-2 sm:gap-3">
-                    <!-- Selektor motywu / skórki -->
+                <!-- Prawa strona: Przełącznik motywu + Uczeń + Rok + Auth + Hamburger -->
+                <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                    <!-- Selektor motywu / skórki (kompaktowy przycisk 36x36px) -->
                     <div class="relative inline-block text-left" id="theme-menu-container">
                         <button type="button"
                                 id="theme-menu-button"
                                 onclick="toggleThemeDropdown()"
-                                class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold border border-slate-200 hover:border-slate-300 transition-colors cursor-pointer"
+                                class="flex items-center justify-center gap-1 w-9 h-9 sm:w-auto sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-bold border border-slate-200 hover:border-slate-300 transition-colors cursor-pointer shadow-2xs"
                                 style="background-color: var(--theme-bg-card); color: var(--theme-text-primary);"
                                 title="Wybierz motyw panelu"
                                 aria-expanded="false"
                                 aria-haspopup="true">
-                            <span id="theme-active-icon">☀️</span>
-                            <span class="hidden sm:inline font-semibold" id="theme-active-name">Jasny</span>
-                            <span class="text-[10px] opacity-60">▾</span>
+                            <span id="theme-active-icon" class="text-sm">☀️</span>
+                            <span class="text-[9px] opacity-60">▾</span>
                         </button>
                         <div id="theme-dropdown"
                              class="hidden absolute right-0 mt-2 w-48 rounded-xl shadow-xl border border-slate-200 z-50 py-1.5 focus:outline-none"
@@ -583,11 +587,13 @@
                             </button>
                         </div>
                     </div>
+
                     
+                        <!-- Selektor ucznia (Desktop: od sm) -->
                         
-                        <div class="relative inline-block text-left">
+                        <div class="hidden sm:inline-block relative text-left">
                             <select onchange="window.location.href='/student/' + this.value + '?next=' + encodeURIComponent(window.location.pathname + window.location.search)"
-                                    class="bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold rounded-lg px-3 py-2 pr-8 focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
+                                    class="bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold rounded-xl px-2.5 py-1.5 pr-6 max-w-[125px] xl:max-w-[145px] 2xl:max-w-[190px] truncate focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
                                 
                                 <option value="11030948" >
                                     👤 Jan Kowalski (11030948)
@@ -601,36 +607,204 @@
                         </div>
                         
 
-                        <!-- Selektor roku szkolnego (bieżący vs archiwum) -->
+                        <!-- Selektor roku szkolnego (Desktop: od sm) -->
                         
 
+                        <!-- Wskaźnik ucznia na małych ekranach mobilnych (< sm) otwierający Drawer -->
+                        
+                        <button type="button"
+                                onclick="openMobileMenu()"
+                                class="sm:hidden flex items-center gap-1 px-2 py-1 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 transition-colors"
+                                title="Profil: Jan Kowalski (8979296)">
+                            <span>👤</span>
+                            <span class="max-w-[70px] truncate text-[11px]">Jan</span>
+                            
+                        </button>
+                        
+
+                        <!-- Wyloguj -->
                         
                         <a href="web_login.html"
-                           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors"
+                           class="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors"
                            title="Wyloguj rodzica">
-                            🔒 Wyloguj
+                            <span>🔒</span>
+                            <span class="hidden 2xl:inline">Wyloguj</span>
                         </a>
                         
                     
 
                     
+
+                    <!-- Przycisk Mobile Menu (Hamburger ☰ - widoczny poniżej xl) -->
+                    
+                    <button type="button"
+                            id="mobile-menu-toggle-btn"
+                            onclick="toggleMobileMenu()"
+                            class="xl:hidden flex items-center justify-center w-9 h-9 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shadow-2xs"
+                            style="background-color: var(--theme-bg-card); color: var(--theme-text-primary);"
+                            aria-label="Otwórz menu nawigacji">
+                        <span class="text-lg leading-none">☰</span>
+                    </button>
+                    
                 </div>
             </div>
         </div>
 
-        <!-- Mobilny pasek skrótów -->
+        <!-- Pasek nawigacyjny na średnich i małych ekranach (< xl) -->
         
-        <div class="md:hidden border-t border-slate-100 bg-slate-50 px-2 py-1.5 overflow-x-auto flex gap-1 scrollbar-none">
-            <a href="web_dashboard.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📊 Pulpit</a>
-            <a href="web_plan.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📅 Plan</a>
-            <a href="web_oceny.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📝 Oceny</a>
-            <a href="web_terminarz.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">🔔 Terminarz</a>
-            <a href="web_wiadomosci.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">✉️ Wiadomości</a>
-            <a href="web_raporty_podsumowanie.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap bg-indigo-600 text-white">📈 Raporty</a>
-            <a href="web_ustawienia.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">⚙️ Ustawienia</a>
+        <div class="xl:hidden border-t border-slate-100 bg-slate-50 px-3 py-1.5 overflow-x-auto flex items-center gap-1.5 scrollbar-none">
+            <a href="web_dashboard.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📊 Pulpit</a>
+            <a href="web_plan.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📅 Plan lekcji</a>
+            <a href="web_oceny.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📝 Oceny</a>
+            <a href="web_terminarz.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">🔔 Terminarz</a>
+            <a href="web_wiadomosci.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">✉️ Wiadomości</a>
+            <a href="web_raporty_podsumowanie.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap bg-indigo-600 text-white">📈 Raporty</a>
+            <a href="web_ustawienia.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">⚙️ Ustawienia</a>
         </div>
         
     </header>
+
+    <!-- Mobilny Drawer (Menu boczne z wysuwanym panelem) -->
+    
+    <div id="mobile-drawer-backdrop"
+         onclick="closeMobileMenu()"
+         class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 transition-opacity xl:hidden">
+    </div>
+
+    <aside id="mobile-drawer"
+           class="fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] z-50 shadow-2xl flex flex-col transform translate-x-full xl:hidden border-l border-slate-200"
+           style="background-color: var(--theme-bg-card); color: var(--theme-text-primary);"
+           aria-label="Menu mobilne">
+        <!-- Nagłówek Drawer -->
+        <div class="p-4 border-b border-slate-100 flex items-center justify-between" style="border-color: var(--theme-border);">
+            <div class="flex items-center gap-2">
+                <span class="text-xl">🏫</span>
+                <span class="font-extrabold text-sm tracking-tight">Menu nawigacji</span>
+            </div>
+            <button type="button"
+                    onclick="closeMobileMenu()"
+                    class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                    style="color: var(--theme-text-muted);"
+                    aria-label="Zamknij menu">
+                ✕
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-4 space-y-5">
+            <!-- Sekcja 1: Profil ucznia -->
+            
+            <div>
+                <label class="block text-[11px] font-extrabold uppercase tracking-wider mb-2" style="color: var(--theme-text-muted);">
+                    👤 Wybierz profil ucznia:
+                </label>
+                <div class="space-y-1.5">
+                    
+                    <a href="/student/11030948?next=/raporty/szanse"
+                       class="flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold transition-all
+                       
+                       border-slate-200 hover:bg-slate-50 text-slate-700
+                       ">
+                        <span class="flex items-center gap-2">
+                            <span>👤</span>
+                            <span>Jan Kowalski (11030948)</span>
+                        </span>
+                        
+                    </a>
+                    
+                    <a href="/student/8979296?next=/raporty/szanse"
+                       class="flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold transition-all
+                       
+                       border-indigo-500 bg-indigo-50/70 text-indigo-700
+                       ">
+                        <span class="flex items-center gap-2">
+                            <span>👤</span>
+                            <span>Jan Kowalski (8979296)</span>
+                        </span>
+                        
+                        <span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-indigo-600 text-white">Aktywny</span>
+                        
+                    </a>
+                    
+                </div>
+            </div>
+            
+
+            <!-- Sekcja 2: Rok szkolny (bieżący vs archiwa) -->
+            
+
+            <!-- Sekcja 3: Nawigacja po modułach -->
+            <div>
+                <label class="block text-[11px] font-extrabold uppercase tracking-wider mb-2" style="color: var(--theme-text-muted);">
+                    🧭 Moduły:
+                </label>
+                <div class="space-y-1">
+                    <a href="web_dashboard.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
+                        <span class="text-base">📊</span> <span>Pulpit główny</span>
+                    </a>
+                    <a href="web_plan.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
+                        <span class="text-base">📅</span> <span>Plan lekcji</span>
+                    </a>
+                    <a href="web_oceny.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
+                        <span class="text-base">📝</span> <span>Oceny i średnie</span>
+                    </a>
+                    <a href="web_terminarz.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
+                        <span class="text-base">🔔</span> <span>Terminarz i sprawdziany</span>
+                    </a>
+                    <a href="web_wiadomosci.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
+                        <span class="text-base">✉️</span> <span>Wiadomości i ogłoszenia</span>
+                    </a>
+                    <a href="web_raporty_podsumowanie.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors bg-indigo-600 text-white">
+                        <span class="text-base">📈</span> <span>Raporty i analizy</span>
+                    </a>
+                    <a href="web_ustawienia.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
+                        <span class="text-base">⚙️</span> <span>Ustawienia systemu</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Sekcja 4: Motyw w Drawerze -->
+            <div>
+                <label class="block text-[11px] font-extrabold uppercase tracking-wider mb-2" style="color: var(--theme-text-muted);">
+                    🎨 Motyw wyglądu:
+                </label>
+                <div class="grid grid-cols-2 gap-1.5">
+                    <button type="button" onclick="setTheme('light')" class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 text-xs font-bold cursor-pointer hover:border-indigo-400">
+                        <span>☀️</span> Jasny
+                    </button>
+                    <button type="button" onclick="setTheme('dark')" class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 text-xs font-bold cursor-pointer hover:border-indigo-400">
+                        <span>🌙</span> Grafit
+                    </button>
+                    <button type="button" onclick="setTheme('midnight')" class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 text-xs font-bold cursor-pointer hover:border-indigo-400">
+                        <span>🌌</span> OLED
+                    </button>
+                    <button type="button" onclick="setTheme('forest')" class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 text-xs font-bold cursor-pointer hover:border-indigo-400">
+                        <span>🌲</span> Szmaragd
+                    </button>
+                    <button type="button" onclick="setTheme('auto')" class="col-span-2 flex items-center justify-center gap-2 p-2 rounded-lg border border-slate-200 text-xs font-bold cursor-pointer hover:border-indigo-400">
+                        <span>💻</span> Auto (Systemowy)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sekcja 5: Wyloguj / Tryb otwarty -->
+            <div class="pt-2 border-t border-slate-100" style="border-color: var(--theme-border);">
+                
+                <a href="web_login.html"
+                   class="flex items-center justify-center gap-2 w-full p-2.5 rounded-xl text-xs font-bold text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 transition">
+                    🔒 Wyloguj rodzica
+                </a>
+                
+            </div>
+        </div>
+    </aside>
+    
 
     <!-- Baner trybu archiwalnego (Read-Only) -->
     
@@ -1415,6 +1589,46 @@
         document.addEventListener('DOMContentLoaded', function() {
             const saved = localStorage.getItem('librus2mail_theme') || 'auto';
             applyTheme(saved);
+        });
+
+        // ==========================================================================
+        // Mobile Drawer Controller
+        // ==========================================================================
+        function openMobileMenu() {
+            const backdrop = document.getElementById('mobile-drawer-backdrop');
+            const drawer = document.getElementById('mobile-drawer');
+            if (backdrop && drawer) {
+                backdrop.classList.remove('hidden');
+                drawer.classList.remove('translate-x-full');
+                document.body.classList.add('overflow-hidden');
+            }
+        }
+
+        function closeMobileMenu() {
+            const backdrop = document.getElementById('mobile-drawer-backdrop');
+            const drawer = document.getElementById('mobile-drawer');
+            if (backdrop && drawer) {
+                backdrop.classList.add('hidden');
+                drawer.classList.add('translate-x-full');
+                document.body.classList.remove('overflow-hidden');
+            }
+        }
+
+        function toggleMobileMenu() {
+            const drawer = document.getElementById('mobile-drawer');
+            if (drawer && drawer.classList.contains('translate-x-full')) {
+                openMobileMenu();
+            } else {
+                closeMobileMenu();
+            }
+        }
+
+        // Klawisz Escape zamyka otwarte menu i panel mobilny
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeMobileMenu();
+                closeThemeDropdown();
+            }
         });
     </script>
 

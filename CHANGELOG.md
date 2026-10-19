@@ -51,6 +51,7 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
   - Naprawiono widoczność nieaktywnych oraz aktywnych podzakładek w modułach Oceny („Aktualne oceny”, „Świadectwo”, „Optymalizator celu”) i Raporty.
   - Poprawiono czytelność boksów informacyjnych i poradników w zakładce Ustawienia (np. sekcja „Jak przeglądać dane z minionych lat?”).
   - Naprawiono czytelność datepickera `semester_split_date` (kontrast wybranej daty i tła kontrolki).
+- **Poprawka weryfikacji trwających lekcji w nocy i rano**: Naprawiono błąd, w którym po północy lub wczesnym rankiem (przed rozpoczęciem pierwszej lekcji o 08:00) dzień był błędnie oznaczany jako „Dzisiaj (lekcje w toku)”. Wprowadzono precyzyjny podział na trzy stany dnia: przed rozpoczęciem lekcji (`🌅 Dzisiaj (przed lekcjami • start HH:MM)`), w trakcie lekcji (`🟢 Dzisiaj (lekcje w toku)`) oraz po ich zakończeniu (`Dzisiaj (lekcje zakończone)`).
 - **Zabezpieczenie przed obcinaniem zakładek w nagłówku**: Wyeliminowano problem spychania przycisku „Ustawienia” poza ekran i ucinania etykiety „Raporty” na ekranach o szerokości około 1300 px.
 - **Kalkulacja średniej ze świadectwa dla przedmiotów bez ocen**: Zabezpieczenie funkcji `calculate_subject_averages` oraz `calculate_certificate_summary` przed traktowaniem braku ocen jako stopnia 0 przy wyliczaniu średniej końcowej — przedmioty bez ocen otrzymują poprawny status „brak ocen” (`unrated_count`) i nie zaniżają średniej ze świadectwa.
 

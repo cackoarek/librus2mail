@@ -364,6 +364,8 @@ def schedule_view():
         default_target_date=sched_ctx['default_target_date'],
         today_date=sched_ctx['today_date'],
         lessons_ongoing=sched_ctx['lessons_ongoing'],
+        is_before_lessons=sched_ctx['is_before_lessons'],
+        lessons_finished=sched_ctx['lessons_finished'],
         target_reason=sched_ctx['target_reason'],
         prev_date=sched_ctx['prev_date'],
         next_date=sched_ctx['next_date'],

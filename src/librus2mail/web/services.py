@@ -1310,20 +1310,43 @@ def build_schedule_day_context(
     today_lessons = by_date.get(today_str, [])
     active_today_lessons = [les for les in today_lessons if not les.get('is_cancelled')]
     lessons_ongoing = False
+    is_before_lessons = False
+    lessons_finished = False
+
     if today_lessons:
-        last_lesson = max(active_today_lessons or today_lessons, key=lambda x: x.get('time_to', ''))
+        cand_lessons = active_today_lessons or today_lessons
+        first_lesson = min(cand_lessons, key=lambda x: x.get('time_from', ''))
+        last_lesson = max(cand_lessons, key=lambda x: x.get('time_to', ''))
+        first_time_from = first_lesson.get('time_from', '')
         last_time_to = last_lesson.get('time_to', '')
-        if last_time_to:
-            lessons_ongoing = (current_time_str <= last_time_to)
+
+        if first_time_from and last_time_to:
+            if current_time_str < first_time_from:
+                is_before_lessons = True
+            elif current_time_str <= last_time_to:
+                lessons_ongoing = True
+            else:
+                lessons_finished = True
+        elif last_time_to:
+            if current_time_str <= last_time_to:
+                lessons_ongoing = (now.hour >= 7)
+                is_before_lessons = (now.hour < 7)
+            else:
+                lessons_finished = True
         else:
-            lessons_ongoing = (now.hour < 15)
+            if now.hour < 7:
+                is_before_lessons = True
+            elif now.hour < 15:
+                lessons_ongoing = True
+            else:
+                lessons_finished = True
 
     sorted_dates = sorted(by_date.keys())
     future_dates = [d for d in sorted_dates if d > today_str]
 
-    if lessons_ongoing and today_str in by_date:
+    if (lessons_ongoing or is_before_lessons) and today_str in by_date:
         default_target_date = today_str
-        target_reason = 'today_ongoing'
+        target_reason = 'today_ongoing' if lessons_ongoing else 'today_before_lessons'
     elif future_dates:
         default_target_date = future_dates[0]
         target_reason = 'next_school_day'
@@ -1502,6 +1525,11 @@ def build_schedule_day_context(
             'is_selected': (d_str == selected_date),
             'is_past': (d_str < today_str),
             'is_future': (d_str > today_str),
+            'start_time': start_time,
+            'end_time': end_time,
+            'is_before_lessons': is_before_lessons if (d_str == today_str) else False,
+            'lessons_ongoing': lessons_ongoing if (d_str == today_str) else False,
+            'lessons_finished': lessons_finished if (d_str == today_str) else False,
             'lessons': day_lessons,
             'total_count': len(day_lessons),
             'active_count': len(active_day_lessons),
@@ -1534,6 +1562,9 @@ def build_schedule_day_context(
         'is_today': True,
         'is_past': False,
         'is_future': False,
+        'is_before_lessons': False,
+        'lessons_ongoing': False,
+        'lessons_finished': False,
     }
 
     return {
@@ -1542,6 +1573,8 @@ def build_schedule_day_context(
         'today_str': today_str,
         'today_date': today_str,
         'lessons_ongoing': lessons_ongoing,
+        'is_before_lessons': is_before_lessons,
+        'lessons_finished': lessons_finished,
         'default_target_date': default_target_date,
         'target_reason': target_reason,
         'selected_date': selected_date,

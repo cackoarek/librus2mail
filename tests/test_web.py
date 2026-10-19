@@ -1423,6 +1423,21 @@ class TestWebDashboard(unittest.TestCase):
         self.assertIn('Trwa przerwa między lekcjami', break_html)
         self.assertIn('Dzwonek za 5 min', break_html)
 
+        # 1c. Przed rozpoczęciem lekcji w bieżącym dniu (2026-09-23 00:28 - w nocy / rano przed 08:00)
+        app_before = create_app(
+            config_path=self.config_path,
+            storage_dir=self.storage_dir,
+            no_auth=True,
+            actual_date=datetime(2026, 9, 23, 0, 28, 0),
+        )
+        res_before = app_before.test_client().get('/plan')
+        self.assertEqual(res_before.status_code, 200)
+        before_html = res_before.data.decode('utf-8')
+        self.assertIn('Dzisiaj (przed lekcjami', before_html)
+        self.assertNotIn('Dzisiaj (lekcje w toku)', before_html)
+        self.assertNotIn('TRWA TERAZ', before_html)
+        self.assertNotIn('Odbyła się', before_html)
+
         # 2. Po zakończeniu lekcji w bieżącym dniu (2026-09-23 12:00) -> domyślnie kolejny dzień nauki (2026-09-24)
         app_finished = create_app(
             config_path=self.config_path,

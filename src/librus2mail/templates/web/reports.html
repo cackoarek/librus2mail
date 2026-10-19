@@ -54,29 +54,35 @@
 
 <!-- Pasek podzakładek (6 modułów analitycznych) -->
 <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mt-6 pb-2 no-print">
-    <div class="flex items-center gap-1.5 p-1 bg-slate-200/70 rounded-xl overflow-x-auto scrollbar-none w-full lg:w-auto">
+    <div class="flex items-center gap-1.5 p-1 bg-slate-200/70 dark:bg-slate-800/90 rounded-xl overflow-x-auto scrollbar-none w-full lg:w-auto border border-transparent dark:border-slate-700/60">
         <a href="{{ url_for('web.reports_view', report_type='podsumowanie') }}"
-           class="px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'podsumowanie' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
+           {{ 'data-active="true"' if active_tab == 'podsumowanie' else '' }}
+           class="subtab-btn reports-tab-btn px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'subtab-btn-active active bg-white text-indigo-700 shadow-sm border border-transparent' if active_tab == 'podsumowanie' else 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-700/50' }}">
             📬 Podsumowanie dzienne
         </a>
         <a href="{{ url_for('web.reports_view', report_type='postepy', days=days) }}"
-           class="px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'postepy' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
+           {{ 'data-active="true"' if active_tab == 'postepy' else '' }}
+           class="subtab-btn reports-tab-btn px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'subtab-btn-active active bg-white text-indigo-700 shadow-sm border border-transparent' if active_tab == 'postepy' else 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-700/50' }}">
             📈 Postępy
         </a>
         <a href="{{ url_for('web.reports_view', report_type='uczen', variant=active_variant, days=days) }}"
-           class="px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'uczen' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
+           {{ 'data-active="true"' if active_tab == 'uczen' else '' }}
+           class="subtab-btn reports-tab-btn px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'subtab-btn-active active bg-white text-indigo-700 shadow-sm border border-transparent' if active_tab == 'uczen' else 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-700/50' }}">
             🌟 Raport ucznia
         </a>
         <a href="{{ url_for('web.reports_view', report_type='szanse') }}"
-           class="px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'szanse' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
+           {{ 'data-active="true"' if active_tab == 'szanse' else '' }}
+           class="subtab-btn reports-tab-btn px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'subtab-btn-active active bg-white text-indigo-700 shadow-sm border border-transparent' if active_tab == 'szanse' else 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-700/50' }}">
             🎯 Matryca Szans i Ryzyk
         </a>
         <a href="{{ url_for('web.reports_view', report_type='profil') }}"
-           class="px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'profil' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
+           {{ 'data-active="true"' if active_tab == 'profil' else '' }}
+           class="subtab-btn reports-tab-btn px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'subtab-btn-active active bg-white text-indigo-700 shadow-sm border border-transparent' if active_tab == 'profil' else 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-700/50' }}">
             🧭 Profil i Balans
         </a>
         <a href="{{ url_for('web.reports_view', report_type='stabilnosc') }}"
-           class="px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-white text-indigo-700 shadow-sm' if active_tab == 'stabilnosc' else 'text-slate-600 hover:text-slate-900 hover:bg-white/50' }}">
+           {{ 'data-active="true"' if active_tab == 'stabilnosc' else '' }}
+           class="subtab-btn reports-tab-btn px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'subtab-btn-active active bg-white text-indigo-700 shadow-sm border border-transparent' if active_tab == 'stabilnosc' else 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-700/50' }}">
             📊 Porównanie i Stabilność
         </a>
     </div>
@@ -85,13 +91,13 @@
     {% if active_tab in ('postepy', 'uczen') %}
     <div class="flex flex-wrap items-center gap-2">
         <!-- Selektor okresu (3, 7, 14, 30 dni) -->
-        <div class="flex items-center gap-1 bg-slate-100 border border-slate-200 p-1 rounded-xl shadow-xs">
-            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-2 flex items-center gap-1">
+        <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/60 p-1 rounded-xl shadow-xs">
+            <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider px-2 flex items-center gap-1">
                 <span>⏱️</span> Okres:
             </span>
             {% for d in [3, 7, 14, 30] %}
             <a href="{{ url_for('web.reports_view', report_type=active_tab, variant=active_variant if active_tab == 'uczen' else None, days=d) }}"
-               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-indigo-600 text-white shadow-sm' if days == d else 'text-slate-600 hover:text-slate-900 hover:bg-white' }}"
+               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-indigo-600 text-white shadow-sm' if days == d else 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700/50' }}"
                title="Analiza z ostatnich {{ d }} dni{% if d == 7 %} (domyślnie){% endif %}">
                 {{ d }} dni
             </a>
@@ -100,20 +106,20 @@
 
         <!-- Przełącznik stylów raportu ucznia (Kids / Teens / Youth) -->
         {% if active_tab == 'uczen' %}
-        <div class="flex items-center gap-1 bg-indigo-50/80 border border-indigo-200/80 p-1 rounded-xl shadow-xs">
-            <span class="text-[11px] font-bold text-indigo-900 uppercase tracking-wider px-2">Styl:</span>
+        <div class="flex items-center gap-1 bg-indigo-50/80 dark:bg-slate-800/90 border border-indigo-200/80 dark:border-slate-700/60 p-1 rounded-xl shadow-xs">
+            <span class="text-[11px] font-bold text-indigo-900 dark:text-indigo-300 uppercase tracking-wider px-2">Styl:</span>
             <a href="{{ url_for('web.reports_view', report_type='uczen', variant='kids', days=days) }}"
-               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-indigo-600 text-white shadow-sm' if active_variant == 'kids' else 'text-indigo-700 hover:bg-indigo-100' }}"
+               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-indigo-600 text-white shadow-sm' if active_variant == 'kids' else 'text-indigo-700 dark:text-slate-400 hover:bg-indigo-100 dark:hover:bg-slate-700/50 dark:hover:text-white' }}"
                title="Wariant dla klas 4–6 szkoły podstawowej (Karta Mocy)">
                 🎈 Kids
             </a>
             <a href="{{ url_for('web.reports_view', report_type='uczen', variant='teens', days=days) }}"
-               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-indigo-600 text-white shadow-sm' if active_variant == 'teens' else 'text-indigo-700 hover:bg-indigo-100' }}"
+               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-indigo-600 text-white shadow-sm' if active_variant == 'teens' else 'text-indigo-700 dark:text-slate-400 hover:bg-indigo-100 dark:hover:bg-slate-700/50 dark:hover:text-white' }}"
                title="Wariant dla klas 7–8 szkoły podstawowej (Weekly Briefing)">
                 🚀 Teens
             </a>
             <a href="{{ url_for('web.reports_view', report_type='uczen', variant='youth', days=days) }}"
-               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-indigo-600 text-white shadow-sm' if active_variant == 'youth' else 'text-indigo-700 hover:bg-indigo-100' }}"
+               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap {{ 'bg-indigo-600 text-white shadow-sm' if active_variant == 'youth' else 'text-indigo-700 dark:text-slate-400 hover:bg-indigo-100 dark:hover:bg-slate-700/50 dark:hover:text-white' }}"
                title="Wariant dla liceum i technikum (Student Performance Dashboard)">
                 🎓 Youth
             </a>
@@ -122,12 +128,12 @@
     </div>
     {% elif active_tab == 'podsumowanie' %}
     <!-- Selektor daty dla Podsumowania dziennego -->
-    <div class="flex items-center gap-1.5 bg-slate-100 border border-slate-200 p-1 rounded-xl shadow-xs">
-        <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-2 flex items-center gap-1">
+    <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/60 p-1 rounded-xl shadow-xs">
+        <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider px-2 flex items-center gap-1">
             <span>📅</span> Dzień:
         </span>
         <a href="{{ url_for('web.reports_view', report_type='podsumowanie', date=prev_date_str) }}"
-           class="px-2 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer"
+           class="px-2 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700/50 transition-all cursor-pointer"
            title="Poprzedni dzień ({{ prev_date_str }})">
             ◀
         </a>
@@ -135,15 +141,15 @@
                id="summary-date-picker"
                value="{{ selected_date_str }}"
                onchange="window.location.href='{{ url_for('web.reports_view', report_type='podsumowanie') }}?date=' + this.value"
-               class="bg-white border border-slate-300 text-slate-800 text-xs font-bold rounded-lg px-2.5 py-1 focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
+               class="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-white text-xs font-bold rounded-lg px-2.5 py-1 focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
         <a href="{{ url_for('web.reports_view', report_type='podsumowanie', date=next_date_str) }}"
-           class="px-2 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer"
+           class="px-2 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700/50 transition-all cursor-pointer"
            title="Następny dzień ({{ next_date_str }})">
             ▶
         </a>
         {% if selected_date_str != default_date_str %}
         <a href="{{ url_for('web.reports_view', report_type='podsumowanie', date=default_date_str) }}"
-           class="px-2.5 py-1 rounded-md text-[11px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-all cursor-pointer"
+           class="px-2.5 py-1 rounded-md text-[11px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800/60 transition-all cursor-pointer"
            title="Wróć do dnia bieżącego ({{ default_date_str }})">
             Dziś
         </a>
@@ -646,14 +652,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 scales: {
                     r: {
-                        angleLines: { color: '#e2e8f0' },
-                        grid: { color: '#e2e8f0' },
+                        angleLines: { color: () => document.documentElement.classList.contains('dark') ? 'rgba(255, 255, 255, 0.08)' : '#e2e8f0' },
+                        grid: { color: () => document.documentElement.classList.contains('dark') ? 'rgba(255, 255, 255, 0.12)' : '#e2e8f0' },
                         suggestedMin: 2.0,
                         suggestedMax: 6.0,
-                        ticks: { stepSize: 1, font: { size: 10 } },
+                        ticks: {
+                            stepSize: 1,
+                            font: { size: 10 },
+                            backdropColor: 'transparent',
+                            color: () => document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b'
+                        },
                         pointLabels: {
                             font: { size: 11, weight: 'bold' },
-                            color: '#334155',
+                            color: () => document.documentElement.classList.contains('dark') ? '#f8fafc' : '#334155',
                             padding: 8,
                         }
                     }
@@ -662,6 +673,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     legend: { display: false }
                 }
             }
+        });
+        window.addEventListener('themechange', () => {
+            const chart = Chart.getChart(ctx);
+            if (chart) chart.update();
         });
     }
 });
@@ -823,18 +838,29 @@ document.addEventListener('DOMContentLoaded', () => {
                     x: {
                         min: 1.0,
                         max: 6.0,
-                        grid: { color: '#f1f5f9' },
-                        ticks: { stepSize: 1, font: { size: 11 } }
+                        grid: { color: () => document.documentElement.classList.contains('dark') ? 'rgba(255, 255, 255, 0.08)' : '#f1f5f9' },
+                        ticks: {
+                            stepSize: 1,
+                            font: { size: 11 },
+                            color: () => document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b'
+                        }
                     },
                     y: {
                         grid: { display: false },
-                        ticks: { font: { size: 11, weight: 'bold' } }
+                        ticks: {
+                            font: { size: 11, weight: 'bold' },
+                            color: () => document.documentElement.classList.contains('dark') ? '#f8fafc' : '#1e293b'
+                        }
                     }
                 },
                 plugins: {
                     legend: { display: false }
                 }
             }
+        });
+        window.addEventListener('themechange', () => {
+            const chart = Chart.getChart(ctx);
+            if (chart) chart.update();
         });
     }
 });

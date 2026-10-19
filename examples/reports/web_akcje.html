@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pl" class="h-full bg-slate-50">
+<html lang="pl" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,8 +7,58 @@
     <title>Centrum Akcji CLI - Jan Kowalski (8979296) - Librus2mail</title>
     <!-- Favicon z logo Librus2mail (gradient indigo-sky + 🏫) -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%25%22%20y1%3D%22100%25%22%20x2%3D%22100%25%22%20y2%3D%220%25%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%234f46e5%22/%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%230ea5e9%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2216%22%20fill%3D%22url%28%23g%29%22/%3E%3Ctext%20x%3D%2232%22%20y%3D%2234%22%20font-size%3D%2234%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%F0%9F%8F%AB%3C/text%3E%3C/svg%3E">
-    <!-- TailwindCSS CDN -->
+
+    <!-- Pre-render Theme Initializer (zapobiega migotaniu białego tła przed załadowaniem DOM) -->
+    <script>
+        (function() {
+            try {
+                const THEMES = ['light', 'dark', 'midnight', 'forest'];
+                let saved = localStorage.getItem('librus2mail_theme') || 'auto';
+                let effective = saved;
+                if (saved === 'auto') {
+                    effective = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                if (!THEMES.includes(effective)) effective = 'light';
+                document.documentElement.setAttribute('data-theme', effective);
+                if (effective !== 'light') {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+            } catch (e) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        })();
+    </script>
+
+    <!-- TailwindCSS CDN & Config -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        theme: {
+                            body: 'var(--theme-bg-body)',
+                            card: 'var(--theme-bg-card)',
+                            'card-hover': 'var(--theme-bg-card-hover)',
+                            header: 'var(--theme-bg-header)',
+                            border: 'var(--theme-border)',
+                            'text-primary': 'var(--theme-text-primary)',
+                            'text-secondary': 'var(--theme-text-secondary)',
+                            'text-muted': 'var(--theme-text-muted)',
+                            accent: 'var(--theme-accent)',
+                            'accent-hover': 'var(--theme-accent-hover)',
+                            'accent-soft': 'var(--theme-accent-soft)',
+                            'accent-text': 'var(--theme-accent-text)',
+                        }
+                    }
+                }
+            }
+        };
+    </script>
+
     <!-- HTMX CDN -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script>
@@ -35,14 +85,394 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+        /* ==========================================================================
+           Librus2mail Multi-Skin Design Tokens
+           ========================================================================== */
+        :root, [data-theme="light"] {
+            --theme-bg-body: #f8fafc;
+            --theme-bg-card: #ffffff;
+            --theme-bg-card-hover: #f1f5f9;
+            --theme-bg-header: rgba(255, 255, 255, 0.95);
+            --theme-bg-subtle: #f1f5f9;
+            --theme-border: #e2e8f0;
+            --theme-border-subtle: #f1f5f9;
+            --theme-text-primary: #0f172a;
+            --theme-text-secondary: #334155;
+            --theme-text-muted: #64748b;
+            --theme-accent: #4f46e5;
+            --theme-accent-hover: #4338ca;
+            --theme-accent-soft: #eef2ff;
+            --theme-accent-text: #4338ca;
+            --theme-input-bg: #ffffff;
+            --theme-input-border: #cbd5e1;
+            --theme-scrollbar-thumb: #cbd5e1;
+        }
+
+        [data-theme="dark"] {
+            --theme-bg-body: #0b1120;
+            --theme-bg-card: #151e32;
+            --theme-bg-card-hover: #1e293b;
+            --theme-bg-header: rgba(15, 23, 42, 0.95);
+            --theme-bg-subtle: #1e293b;
+            --theme-border: #243049;
+            --theme-border-subtle: #1e293b;
+            --theme-text-primary: #f8fafc;
+            --theme-text-secondary: #cbd5e1;
+            --theme-text-muted: #8191a6;
+            --theme-accent: #6366f1;
+            --theme-accent-hover: #818cf8;
+            --theme-accent-soft: rgba(99, 102, 241, 0.18);
+            --theme-accent-text: #a5b4fc;
+            --theme-input-bg: #1e293b;
+            --theme-input-border: #334155;
+            --theme-scrollbar-thumb: #334155;
+        }
+
+        [data-theme="midnight"] {
+            --theme-bg-body: #020617;
+            --theme-bg-card: #090e1a;
+            --theme-bg-card-hover: #111827;
+            --theme-bg-header: rgba(4, 7, 19, 0.96);
+            --theme-bg-subtle: #0f172a;
+            --theme-border: #1e293b;
+            --theme-border-subtle: #0f172a;
+            --theme-text-primary: #ffffff;
+            --theme-text-secondary: #cbd5e1;
+            --theme-text-muted: #64748b;
+            --theme-accent: #0ea5e9;
+            --theme-accent-hover: #38bdf8;
+            --theme-accent-soft: rgba(14, 165, 233, 0.16);
+            --theme-accent-text: #38bdf8;
+            --theme-input-bg: #0f172a;
+            --theme-input-border: #1e293b;
+            --theme-scrollbar-thumb: #1e293b;
+        }
+
+        [data-theme="forest"] {
+            --theme-bg-body: #051610;
+            --theme-bg-card: #0a241b;
+            --theme-bg-card-hover: #103629;
+            --theme-bg-header: rgba(7, 27, 20, 0.96);
+            --theme-bg-subtle: #0d2e23;
+            --theme-border: #144735;
+            --theme-border-subtle: #0d2e23;
+            --theme-text-primary: #ecfdf5;
+            --theme-text-secondary: #a7f3d0;
+            --theme-text-muted: #6ee7b7;
+            --theme-accent: #10b981;
+            --theme-accent-hover: #34d399;
+            --theme-accent-soft: rgba(16, 185, 129, 0.16);
+            --theme-accent-text: #6ee7b7;
+            --theme-input-bg: #0d2e23;
+            --theme-input-border: #144735;
+            --theme-scrollbar-thumb: #144735;
+        }
+
+        html {
+            background-color: var(--theme-bg-body);
+        }
+
+        html.dark {
+            color-scheme: dark;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--theme-bg-body);
+            color: var(--theme-text-primary);
+            transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+        }
+
         .htmx-indicator { display: none; }
         .htmx-request .htmx-indicator { display: inline-flex; }
         .htmx-request.htmx-indicator { display: inline-flex; }
+
+        /* ==========================================================================
+           Automatyczne kaskadowanie motywu dla istniejących komponentów
+           ========================================================================== */
+        html.dark header {
+            background-color: var(--theme-bg-header) !important;
+            border-color: var(--theme-border) !important;
+        }
+        html.dark footer {
+            background-color: var(--theme-bg-card) !important;
+            border-color: var(--theme-border) !important;
+            color: var(--theme-text-muted) !important;
+        }
+
+        /* Karty i kontenery (w tym klasy z modyfikatorem przezroczystości Tailwind np. bg-slate-50/50, bg-slate-200/70) */
+        html.dark .bg-white:not([data-keep-color]),
+        html.dark [class*="bg-white/"]:not([data-keep-color]) {
+            background-color: var(--theme-bg-card) !important;
+        }
+        html.dark .bg-slate-50:not([data-keep-color]),
+        html.dark [class*="bg-slate-50/"]:not([data-keep-color]) {
+            background-color: var(--theme-bg-subtle) !important;
+        }
+        html.dark .bg-slate-100:not([data-keep-color]),
+        html.dark [class*="bg-slate-100/"]:not([data-keep-color]) {
+            background-color: var(--theme-bg-subtle) !important;
+        }
+        html.dark .bg-slate-200:not([data-keep-color]),
+        html.dark [class*="bg-slate-200/"]:not([data-keep-color]) {
+            background-color: var(--theme-bg-subtle) !important;
+        }
+
+        /* Segmented pill tabs & podzakładki (np. Oceny, Raporty, filtry okresów) */
+        html.dark [class*="bg-slate-200"].rounded-xl,
+        html.dark [class*="bg-slate-100"].rounded-xl,
+        html.dark [class*="bg-slate-200"] {
+            background-color: var(--theme-bg-subtle) !important;
+            border-color: var(--theme-border) !important;
+        }
+
+        /* Domyślny stan nieaktywny dla podzakładek w trybach ciemnych */
+        html.dark .subtab-btn:not(.subtab-btn-active):not(.active),
+        html.dark .grades-tab-btn:not(.subtab-btn-active):not(.active),
+        html.dark .reports-tab-btn:not(.subtab-btn-active):not(.active) {
+            color: var(--theme-text-muted) !important;
+            background-color: transparent !important;
+            border-color: transparent !important;
+            box-shadow: none !important;
+        }
+        html.dark .subtab-btn:not(.subtab-btn-active):not(.active):hover,
+        html.dark .grades-tab-btn:not(.subtab-btn-active):not(.active):hover,
+        html.dark .reports-tab-btn:not(.subtab-btn-active):not(.active):hover {
+            color: var(--theme-text-primary) !important;
+            background-color: var(--theme-bg-card-hover) !important;
+        }
+
+        /* Aktywna podzakładka w trybach ciemnych - wyrazisty akcent motywu + biały tekst! */
+        html.dark .subtab-btn.subtab-btn-active,
+        html.dark .subtab-btn.active,
+        html.dark .subtab-btn[data-active="true"],
+        html.dark .grades-tab-btn.active,
+        html.dark .grades-tab-btn.subtab-btn-active,
+        html.dark .grades-tab-btn[data-active="true"],
+        html.dark .reports-tab-btn.active,
+        html.dark .reports-tab-btn.subtab-btn-active,
+        html.dark .reports-tab-btn[data-active="true"],
+        html.dark .subtab-btn.active.bg-white,
+        html.dark .grades-tab-btn.active.bg-white,
+        html.dark .reports-tab-btn.active.bg-white {
+            background-color: var(--theme-accent) !important;
+            color: #ffffff !important;
+            font-weight: 800 !important;
+            border-color: transparent !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 0 1px rgba(255, 255, 255, 0.25) !important;
+        }
+
+        /* Stany najechania (hover) */
+        html.dark .hover\:bg-slate-50:hover,
+        html.dark .hover\:bg-slate-100:hover,
+        html.dark [class*="hover:bg-slate-"]:hover,
+        html.dark .group:hover .group-hover\:bg-slate-100 {
+            background-color: var(--theme-bg-card-hover) !important;
+        }
+        html.dark [class*="hover:bg-white"]:hover {
+            background-color: var(--theme-bg-card-hover) !important;
+        }
+
+        /* Obramowania */
+        html.dark .border-slate-100,
+        html.dark .border-slate-200,
+        html.dark .border-slate-300,
+        html.dark [class*="border-slate-"] {
+            border-color: var(--theme-border) !important;
+        }
+        html.dark .border-t.border-slate-100,
+        html.dark .border-b.border-slate-100,
+        html.dark .border-t.border-slate-200,
+        html.dark .border-b.border-slate-200 {
+            border-color: var(--theme-border) !important;
+        }
+
+        /* Typografia */
+        html.dark .text-slate-900:not([data-keep-color]),
+        html.dark .text-slate-800:not([data-keep-color]) {
+            color: var(--theme-text-primary) !important;
+        }
+        html.dark .text-slate-700:not([data-keep-color]),
+        html.dark .text-slate-600:not([data-keep-color]) {
+            color: var(--theme-text-secondary) !important;
+        }
+        html.dark .text-slate-500:not([data-keep-color]),
+        html.dark .text-slate-400:not([data-keep-color]) {
+            color: var(--theme-text-muted) !important;
+        }
+
+        /* Pola formularzy, dropdowny, select, datepicker */
+        html.dark input[type="text"],
+        html.dark input[type="password"],
+        html.dark input[type="number"],
+        html.dark input[type="email"],
+        html.dark input[type="date"],
+        html.dark input[type="time"],
+        html.dark input[type="datetime-local"],
+        html.dark input[type="search"],
+        html.dark input[type="url"],
+        html.dark select,
+        html.dark textarea {
+            background-color: var(--theme-input-bg) !important;
+            border-color: var(--theme-input-border) !important;
+            color: var(--theme-text-primary) !important;
+            color-scheme: dark;
+        }
+        html.dark select option {
+            background-color: var(--theme-bg-card) !important;
+            color: var(--theme-text-primary) !important;
+        }
+
+        /* Ikona kalendarza dla kontrolek date / time */
+        html.dark input[type="date"]::-webkit-calendar-picker-indicator,
+        html.dark input[type="time"]::-webkit-calendar-picker-indicator,
+        html.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+            filter: invert(0.9) brightness(1.2);
+            cursor: pointer;
+        }
+
+        /* ==========================================================================
+           Akcenty Indigo / motyw bazowy i aktywne elementy
+           ========================================================================== */
+        html.dark .bg-indigo-50,
+        html.dark [class*="bg-indigo-50/"],
+        html.dark .bg-indigo-100,
+        html.dark [class*="bg-indigo-100/"] {
+            background-color: var(--theme-accent-soft) !important;
+        }
+        html.dark .text-indigo-500,
+        html.dark .text-indigo-600,
+        html.dark .text-indigo-700,
+        html.dark .text-indigo-800,
+        html.dark .text-indigo-900,
+        html.dark .text-indigo-950 {
+            color: var(--theme-accent-text) !important;
+        }
+        html.dark .hover\:text-indigo-800:hover,
+        html.dark .hover\:text-indigo-700:hover,
+        html.dark [class*="hover:text-indigo-"]:hover {
+            color: var(--theme-accent-hover) !important;
+        }
+        html.dark .border-indigo-100,
+        html.dark .border-indigo-200,
+        html.dark .border-indigo-300,
+        html.dark [class*="border-indigo-"] {
+            border-color: var(--theme-border) !important;
+        }
+
+        /* Uniwersalna czytelność boksów informacyjnych i wskazówek we wszystkich trybach ciemnych */
+        html.dark [class*="bg-indigo-50"],
+        html.dark [class*="bg-sky-50"] {
+            background-color: var(--theme-accent-soft) !important;
+            border-color: var(--theme-border) !important;
+        }
+        html.dark [class*="bg-indigo-50"] .font-bold,
+        html.dark [class*="bg-indigo-50"] .font-extrabold,
+        html.dark [class*="bg-indigo-50"] strong,
+        html.dark [class*="bg-sky-50"] .font-bold,
+        html.dark [class*="bg-sky-50"] .font-extrabold,
+        html.dark [class*="bg-sky-50"] strong {
+            color: var(--theme-text-primary) !important;
+        }
+        html.dark [class*="bg-indigo-50"] p,
+        html.dark [class*="bg-indigo-50"] .leading-relaxed,
+        html.dark [class*="bg-indigo-50"] .text-indigo-800,
+        html.dark [class*="bg-indigo-50"] .text-indigo-950,
+        html.dark [class*="bg-sky-50"] p,
+        html.dark [class*="bg-sky-50"] .leading-relaxed,
+        html.dark [class*="bg-sky-50"] .text-sky-800,
+        html.dark [class*="bg-sky-50"] .text-sky-900 {
+            color: var(--theme-text-secondary) !important;
+        }
+        html.dark [class*="bg-indigo-50"] em,
+        html.dark [class*="bg-sky-50"] em {
+            color: var(--theme-accent-text) !important;
+        }
+
+        /* Pigułki i etykiety statusowe w trybie ciemnym */
+        html.dark .bg-emerald-50, html.dark [class*="bg-emerald-50/"] { background-color: rgba(16, 185, 129, 0.15) !important; }
+        html.dark .bg-emerald-100, html.dark [class*="bg-emerald-100/"] { background-color: rgba(16, 185, 129, 0.22) !important; }
+        html.dark .text-emerald-700, html.dark .text-emerald-800, html.dark .text-emerald-900, html.dark .text-emerald-950 { color: #6ee7b7 !important; }
+        html.dark .border-emerald-200, html.dark .border-emerald-100, html.dark .border-emerald-300, html.dark [class*="border-emerald-"] { border-color: rgba(16, 185, 129, 0.35) !important; }
+        html.dark [class*="bg-emerald-50"] .font-bold,
+        html.dark [class*="bg-emerald-50"] .font-extrabold,
+        html.dark [class*="bg-emerald-50"] strong {
+            color: #ecfdf5 !important;
+        }
+
+        html.dark .bg-rose-50, html.dark [class*="bg-rose-50/"] { background-color: rgba(244, 63, 94, 0.15) !important; }
+        html.dark .bg-rose-100, html.dark [class*="bg-rose-100/"] { background-color: rgba(244, 63, 94, 0.22) !important; }
+        html.dark .text-rose-700, html.dark .text-rose-800, html.dark .text-rose-900, html.dark .text-rose-950 { color: #fda4af !important; }
+        html.dark .border-rose-200, html.dark .border-rose-100, html.dark .border-rose-300, html.dark [class*="border-rose-"] { border-color: rgba(244, 63, 94, 0.35) !important; }
+        html.dark [class*="bg-rose-50"] .font-bold,
+        html.dark [class*="bg-rose-50"] .font-extrabold,
+        html.dark [class*="bg-rose-50"] strong {
+            color: #ffe4e6 !important;
+        }
+
+        html.dark .bg-amber-50, html.dark [class*="bg-amber-50/"] { background-color: rgba(245, 158, 11, 0.15) !important; }
+        html.dark .bg-amber-100, html.dark [class*="bg-amber-100/"] { background-color: rgba(245, 158, 11, 0.22) !important; }
+        html.dark .text-amber-700, html.dark .text-amber-800, html.dark .text-amber-900, html.dark .text-amber-950 { color: #fcd34d !important; }
+        html.dark .border-amber-200, html.dark .border-amber-100, html.dark .border-amber-300, html.dark [class*="border-amber-"] { border-color: rgba(245, 158, 11, 0.35) !important; }
+        html.dark [class*="bg-amber-50"] .font-bold,
+        html.dark [class*="bg-amber-50"] .font-extrabold,
+        html.dark [class*="bg-amber-50"] strong {
+            color: #fef08a !important;
+        }
+        html.dark [class*="bg-amber-50"] p,
+        html.dark [class*="bg-amber-50"] .leading-relaxed {
+            color: #fde68a !important;
+        }
+
+        html.dark .bg-sky-50, html.dark [class*="bg-sky-50/"] { background-color: rgba(14, 165, 233, 0.15) !important; }
+        html.dark .bg-sky-100, html.dark [class*="bg-sky-100/"] { background-color: rgba(14, 165, 233, 0.22) !important; }
+        html.dark .text-sky-700, html.dark .text-sky-800, html.dark .text-sky-900, html.dark .text-sky-950 { color: #7dd3fc !important; }
+        html.dark .border-sky-200, html.dark .border-sky-100, html.dark .border-sky-300, html.dark [class*="border-sky-"] { border-color: rgba(14, 165, 233, 0.35) !important; }
+
+        html.dark .bg-blue-50, html.dark [class*="bg-blue-50/"] { background-color: rgba(59, 130, 246, 0.15) !important; }
+        html.dark .bg-blue-100, html.dark [class*="bg-blue-100/"] { background-color: rgba(59, 130, 246, 0.22) !important; }
+        html.dark .text-blue-700, html.dark .text-blue-800, html.dark .text-blue-900, html.dark .text-blue-950 { color: #93c5fd !important; }
+        html.dark .border-blue-200, html.dark .border-blue-100, html.dark .border-blue-300, html.dark [class*="border-blue-"] { border-color: rgba(59, 130, 246, 0.35) !important; }
+
+        html.dark .bg-purple-50, html.dark [class*="bg-purple-50/"] { background-color: rgba(168, 85, 247, 0.15) !important; }
+        html.dark .bg-purple-100, html.dark [class*="bg-purple-100/"] { background-color: rgba(168, 85, 247, 0.22) !important; }
+        html.dark .text-purple-700, html.dark .text-purple-800, html.dark .text-purple-900, html.dark .text-purple-950 { color: #d8b4fe !important; }
+        html.dark .border-purple-200, html.dark .border-purple-100, html.dark .border-purple-300, html.dark [class*="border-purple-"] { border-color: rgba(168, 85, 247, 0.35) !important; }
+
+        /* Tabele w trybie ciemnym */
+        html.dark thead { background-color: var(--theme-bg-subtle) !important; }
+        html.dark th { color: var(--theme-text-muted) !important; }
+        html.dark tbody tr:hover { background-color: var(--theme-bg-card-hover) !important; }
+
+        /* Tła okien modalnych */
+        html.dark .fixed.inset-0.bg-slate-900\/50,
+        html.dark .fixed.inset-0.bg-black\/50,
+        html.dark .fixed.inset-0.bg-slate-900\/60 {
+            background-color: rgba(0, 0, 0, 0.75) !important;
+        }
+
+        /* Pasek skrótów mobilnych */
+        html.dark .md\:hidden.bg-slate-50 {
+            background-color: var(--theme-bg-card) !important;
+            border-color: var(--theme-border) !important;
+        }
+        html.dark .md\:hidden a.bg-white {
+            background-color: var(--theme-bg-subtle) !important;
+            border-color: var(--theme-border) !important;
+            color: var(--theme-text-secondary) !important;
+        }
+
+        /* Paski przewijania */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb {
+            background-color: var(--theme-scrollbar-thumb);
+            border-radius: 9999px;
+        }
     </style>
     
 </head>
-<body class="h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white" hx-headers='{"X-CSRFToken": "static_demo_csrf_token_librus2mail"}'>
+<body class="h-full flex flex-col antialiased selection:bg-indigo-500 selection:text-white" hx-headers='{"X-CSRFToken": "static_demo_csrf_token_librus2mail"}'>
 
     <!-- Pasek nawigacyjny -->
     <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
@@ -97,20 +527,60 @@
                     
                 </div>
 
-                <!-- Prawa strona: Przełącznik ucznia + Auth -->
-                <div class="flex items-center gap-3">
+                <!-- Prawa strona: Przełącznik motywu + Przełącznik ucznia + Auth -->
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <!-- Selektor motywu / skórki -->
+                    <div class="relative inline-block text-left" id="theme-menu-container">
+                        <button type="button"
+                                id="theme-menu-button"
+                                onclick="toggleThemeDropdown()"
+                                class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold border border-slate-200 hover:border-slate-300 transition-colors cursor-pointer"
+                                style="background-color: var(--theme-bg-card); color: var(--theme-text-primary);"
+                                title="Wybierz motyw panelu"
+                                aria-expanded="false"
+                                aria-haspopup="true">
+                            <span id="theme-active-icon">☀️</span>
+                            <span class="hidden sm:inline font-semibold" id="theme-active-name">Jasny</span>
+                            <span class="text-[10px] opacity-60">▾</span>
+                        </button>
+                        <div id="theme-dropdown"
+                             class="hidden absolute right-0 mt-2 w-48 rounded-xl shadow-xl border border-slate-200 z-50 py-1.5 focus:outline-none"
+                             style="background-color: var(--theme-bg-card);"
+                             role="menu">
+                            <div class="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 mb-1">
+                                Motyw panelu
+                            </div>
+                            <button type="button" onclick="setTheme('light')" class="w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer" style="color: var(--theme-text-primary);">
+                                <span class="flex items-center gap-2"><span>☀️</span> Jasny (Domyślny)</span>
+                                <span class="theme-check text-indigo-600 hidden font-bold" data-theme-check="light">✓</span>
+                            </button>
+                            <button type="button" onclick="setTheme('dark')" class="w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer" style="color: var(--theme-text-primary);">
+                                <span class="flex items-center gap-2"><span>🌙</span> Ciemny (Grafit)</span>
+                                <span class="theme-check text-indigo-600 hidden font-bold" data-theme-check="dark">✓</span>
+                            </button>
+                            <button type="button" onclick="setTheme('midnight')" class="w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer" style="color: var(--theme-text-primary);">
+                                <span class="flex items-center gap-2"><span>🌌</span> Północ (OLED)</span>
+                                <span class="theme-check text-indigo-600 hidden font-bold" data-theme-check="midnight">✓</span>
+                            </button>
+                            <button type="button" onclick="setTheme('forest')" class="w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer" style="color: var(--theme-text-primary);">
+                                <span class="flex items-center gap-2"><span>🌲</span> Szmaragd (Leśny)</span>
+                                <span class="theme-check text-indigo-600 hidden font-bold" data-theme-check="forest">✓</span>
+                            </button>
+                            <div class="border-t border-slate-100 my-1"></div>
+                            <button type="button" onclick="setTheme('auto')" class="w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer" style="color: var(--theme-text-primary);">
+                                <span class="flex items-center gap-2"><span>💻</span> Auto (Systemowy)</span>
+                                <span class="theme-check text-indigo-600 hidden font-bold" data-theme-check="auto">✓</span>
+                            </button>
+                        </div>
+                    </div>
                     
                         
                         <div class="relative inline-block text-left">
                             <select onchange="window.location.href='/student/' + this.value + '?next=' + encodeURIComponent(window.location.pathname + window.location.search)"
                                     class="bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold rounded-lg px-3 py-2 pr-8 focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
                                 
-                                <option value="8912345" >
-                                    👤 Jan Kowalski (klasa 5A) (8912345)
-                                </option>
-                                
-                                <option value="8976543" >
-                                    👤 Anna Kowalska (Liceum 2A) (8976543)
+                                <option value="11030948" >
+                                    👤 Jan Kowalski (11030948)
                                 </option>
                                 
                                 <option value="8979296" selected>
@@ -430,6 +900,102 @@
             </div>
         </div>
     </footer>
+
+    <!-- Theme Manager Script -->
+    <script>
+        const THEME_DATA = {
+            light: { name: 'Jasny', icon: '☀️' },
+            dark: { name: 'Ciemny', icon: '🌙' },
+            midnight: { name: 'Północ', icon: '🌌' },
+            forest: { name: 'Szmaragd', icon: '🌲' },
+            auto: { name: 'Auto', icon: '💻' }
+        };
+
+        function getEffectiveTheme(theme) {
+            if (theme === 'auto') {
+                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            return theme;
+        }
+
+        function applyTheme(theme) {
+            const effective = getEffectiveTheme(theme);
+            document.documentElement.setAttribute('data-theme', effective);
+            if (effective !== 'light') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+
+            // Aktualizacja ikony i nazwy w pasku nawigacyjnym
+            const activeIcon = document.getElementById('theme-active-icon');
+            const activeName = document.getElementById('theme-active-name');
+            if (activeIcon) activeIcon.textContent = THEME_DATA[theme]?.icon || '☀️';
+            if (activeName) activeName.textContent = THEME_DATA[theme]?.name || 'Jasny';
+
+            // Zaznaczenie w menu dropdown
+            document.querySelectorAll('[data-theme-check]').forEach(el => {
+                const isCurrent = el.getAttribute('data-theme-check') === theme;
+                el.classList.toggle('hidden', !isCurrent);
+            });
+
+            // Aktualizacja kafelków w zakładce Ustawienia (jeśli obecne)
+            document.querySelectorAll('.theme-card-selector').forEach(card => {
+                const cTheme = card.getAttribute('data-theme-card');
+                const isSelected = cTheme === theme;
+                card.classList.toggle('ring-2', isSelected);
+                card.classList.toggle('ring-indigo-500', isSelected);
+                card.classList.toggle('border-indigo-500', isSelected);
+                const checkEl = card.querySelector('.theme-card-selected-badge');
+                if (checkEl) checkEl.classList.toggle('hidden', !isSelected);
+            });
+
+            // Emitowanie zdarzenia dla innych komponentów (np. wykresów Chart.js)
+            window.dispatchEvent(new CustomEvent('themechange', { detail: { theme, effective } }));
+        }
+
+        function setTheme(theme) {
+            try {
+                localStorage.setItem('librus2mail_theme', theme);
+            } catch (e) {}
+            applyTheme(theme);
+            closeThemeDropdown();
+        }
+
+        function toggleThemeDropdown() {
+            const dropdown = document.getElementById('theme-dropdown');
+            if (!dropdown) return;
+            dropdown.classList.toggle('hidden');
+        }
+
+        function closeThemeDropdown() {
+            const dropdown = document.getElementById('theme-dropdown');
+            if (dropdown) dropdown.classList.add('hidden');
+        }
+
+        // Zamknięcie menu po kliknięciu poza obszar
+        document.addEventListener('click', function(e) {
+            const container = document.getElementById('theme-menu-container');
+            if (container && !container.contains(e.target)) {
+                closeThemeDropdown();
+            }
+        });
+
+        // Reakcja na zmianę preferencji systemowych
+        try {
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+                if ((localStorage.getItem('librus2mail_theme') || 'auto') === 'auto') {
+                    applyTheme('auto');
+                }
+            });
+        } catch (e) {}
+
+        // Inicjalizacja stanu kontrolek po załadowaniu DOM
+        document.addEventListener('DOMContentLoaded', function() {
+            const saved = localStorage.getItem('librus2mail_theme') || 'auto';
+            applyTheme(saved);
+        });
+    </script>
 
     
 </body>

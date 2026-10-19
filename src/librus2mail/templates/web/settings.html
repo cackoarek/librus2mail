@@ -622,7 +622,7 @@
                     <div class="flex flex-col sm:flex-row sm:items-center gap-3">
                         <input type="date" name="semester_split_date" id="semester_split_date"
                                value="{{ config.get('semester_split_date', '') or '' }}"
-                               class="w-full sm:w-64 text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                               class="w-full sm:w-64 text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                         <span class="text-xs text-slate-500">
                             Format: RRRR-MM-DD. Oceny do tej daty włącznie zaliczają się do <strong>Semestru I</strong>, a po niej do <strong>Semestru II</strong>.
                         </span>
@@ -808,6 +808,109 @@
                     </div>
                 </div>
             </div>
+        <!-- ================================================================= -->
+        <!-- SEKCJA: WYGLĄD I MOTYW PANELU (SKÓRKI) -->
+        <!-- ================================================================= -->
+        <div id="wyglad-i-motyw" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 scroll-mt-20">
+            <div class="border-b border-slate-100 pb-4 mb-6">
+                <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>🎨</span> Wygląd i skórki panelu (Theme Engine)
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Wybierz preferowany motyw wizualny panelu. Zmiana motywu jest natychmiastowa i zostaje zapamiętana w przeglądarce.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Karta 1: Jasny -->
+                <button type="button"
+                        onclick="setTheme('light')"
+                        data-theme-card="light"
+                        class="theme-card-selector text-left p-4 rounded-xl border-2 border-slate-200 hover:border-indigo-400 bg-white transition-all cursor-pointer relative group">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-2xl">☀️</span>
+                        <span class="theme-card-selected-badge hidden px-2 py-0.5 text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full">
+                            Aktywny ✓
+                        </span>
+                    </div>
+                    <div class="font-bold text-sm text-slate-900">Jasny (Domyślny)</div>
+                    <p class="text-xs text-slate-500 mt-1">Czysty, czytelny motyw ze zrównoważonym kontrastem i akcentem indygo.</p>
+                    <div class="mt-4 flex gap-1.5 items-center">
+                        <div class="w-5 h-5 rounded-md bg-slate-50 border border-slate-200"></div>
+                        <div class="w-5 h-5 rounded-md bg-white border border-slate-200"></div>
+                        <div class="w-5 h-5 rounded-md bg-indigo-600"></div>
+                    </div>
+                </button>
+
+                <!-- Karta 2: Ciemny Grafit -->
+                <button type="button"
+                        onclick="setTheme('dark')"
+                        data-theme-card="dark"
+                        class="theme-card-selector text-left p-4 rounded-xl border-2 border-slate-200 hover:border-indigo-400 bg-slate-900 text-white transition-all cursor-pointer relative group">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-2xl">🌙</span>
+                        <span class="theme-card-selected-badge hidden px-2 py-0.5 text-[10px] font-bold text-indigo-300 bg-indigo-950/80 border border-indigo-700 rounded-full">
+                            Aktywny ✓
+                        </span>
+                    </div>
+                    <div class="font-bold text-sm text-white">Ciemny (Grafit)</div>
+                    <p class="text-xs text-slate-400 mt-1">Nowoczesne barwy Slate 900, doskonałe do wieczornego przeglądania ocen.</p>
+                    <div class="mt-4 flex gap-1.5 items-center">
+                        <div class="w-5 h-5 rounded-md bg-slate-950 border border-slate-800"></div>
+                        <div class="w-5 h-5 rounded-md bg-slate-800 border border-slate-700"></div>
+                        <div class="w-5 h-5 rounded-md bg-indigo-500"></div>
+                    </div>
+                </button>
+
+                <!-- Karta 3: Północ OLED -->
+                <button type="button"
+                        onclick="setTheme('midnight')"
+                        data-theme-card="midnight"
+                        class="theme-card-selector text-left p-4 rounded-xl border-2 border-slate-200 hover:border-sky-400 bg-black text-white transition-all cursor-pointer relative group">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-2xl">🌌</span>
+                        <span class="theme-card-selected-badge hidden px-2 py-0.5 text-[10px] font-bold text-sky-300 bg-sky-950/80 border border-sky-700 rounded-full">
+                            Aktywny ✓
+                        </span>
+                    </div>
+                    <div class="font-bold text-sm text-white">Północ (OLED)</div>
+                    <p class="text-xs text-slate-400 mt-1">Głęboka, prawdziwa czerń i błękit Sky – energooszczędność i maksymalny kontrast.</p>
+                    <div class="mt-4 flex gap-1.5 items-center">
+                        <div class="w-5 h-5 rounded-md bg-black border border-slate-800"></div>
+                        <div class="w-5 h-5 rounded-md bg-slate-900 border border-slate-700"></div>
+                        <div class="w-5 h-5 rounded-md bg-sky-500"></div>
+                    </div>
+                </button>
+
+                <!-- Karta 4: Szmaragd / Leśny -->
+                <button type="button"
+                        onclick="setTheme('forest')"
+                        data-theme-card="forest"
+                        class="theme-card-selector text-left p-4 rounded-xl border-2 border-slate-200 hover:border-emerald-400 bg-emerald-950 text-white transition-all cursor-pointer relative group">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-2xl">🌲</span>
+                        <span class="theme-card-selected-badge hidden px-2 py-0.5 text-[10px] font-bold text-emerald-300 bg-emerald-900/80 border border-emerald-600 rounded-full">
+                            Aktywny ✓
+                        </span>
+                    </div>
+                    <div class="font-bold text-sm text-emerald-100">Szmaragd (Leśny)</div>
+                    <p class="text-xs text-emerald-300/70 mt-1">Ciemnozielona tonacja leśna o łagodnym dla oczu kontraście.</p>
+                    <div class="mt-4 flex gap-1.5 items-center">
+                        <div class="w-5 h-5 rounded-md bg-emerald-950 border border-emerald-800"></div>
+                        <div class="w-5 h-5 rounded-md bg-emerald-900 border border-emerald-700"></div>
+                        <div class="w-5 h-5 rounded-md bg-emerald-500"></div>
+                    </div>
+                </button>
+            </div>
+
+            <div class="mt-4 p-3.5 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <span class="text-xs text-slate-600 flex items-center gap-2">
+                    <span>💻</span> Możesz także wybrać automatyczne dopasowywanie do motywu systemu operacyjnego (Auto):
+                </span>
+                <button type="button" onclick="setTheme('auto')" class="px-3.5 py-1.5 text-xs font-bold rounded-lg border border-slate-300 hover:bg-slate-100 transition cursor-pointer shrink-0">
+                    Włącz tryb Auto (System)
+                </button>
+            </div>
         </div>
 
         <!-- Zapis zmian -->
@@ -846,12 +949,12 @@
         </div>
 
         <!-- Wskazówka jak przełączać lata -->
-        <div class="mb-6 p-4 rounded-xl bg-indigo-50/70 border border-indigo-200 text-xs text-indigo-950 flex items-start gap-3">
+        <div class="mb-6 p-4 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 text-xs text-indigo-950 dark:text-slate-200 flex items-start gap-3">
             <span class="text-xl flex-shrink-0">💡</span>
             <div class="leading-relaxed">
-                <span class="font-bold">Jak przeglądać dane z minionych lat?</span>
-                <p class="text-indigo-800 mt-1">
-                    Po wykonaniu archiwizacji archiwalny okres staje się w każdej chwili dostępny w <strong>rozwijanym menu lat w górnym pasku nawigacyjnym</strong> (tuż obok wyboru profilu ucznia, np. <em>👤 Uczeń | 🏫 Rok bieżący ▾</em>). Wybranie zarchiwizowanego roku natychmiast przełącza cały panel (oceny, świadectwo, wykresy, terminarz i wiadomości) w bezpieczny tryb tylko do odczytu.
+                <span class="font-bold text-indigo-950 dark:text-white">Jak przeglądać dane z minionych lat?</span>
+                <p class="text-indigo-800 dark:text-slate-300 mt-1">
+                    Po wykonaniu archiwizacji archiwalny okres staje się w każdej chwili dostępny w <strong class="dark:text-white">rozwijanym menu lat w górnym pasku nawigacyjnym</strong> (tuż obok wyboru profilu ucznia, np. <em class="dark:text-indigo-300">👤 Uczeń | 🏫 Rok bieżący ▾</em>). Wybranie zarchiwizowanego roku natychmiast przełącza cały panel (oceny, świadectwo, wykresy, terminarz i wiadomości) w bezpieczny tryb tylko do odczytu.
                 </p>
             </div>
         </div>
@@ -890,16 +993,16 @@
             </p>
 
             {% if all_students and all_students|length > 1 %}
-            <div class="mb-4 p-3.5 bg-indigo-50/70 border border-indigo-200 rounded-xl text-xs text-indigo-950">
+            <div class="mb-4 p-3.5 bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 rounded-xl text-xs text-indigo-950 dark:text-slate-200">
                 <label class="flex items-start gap-3 cursor-pointer">
                     <input type="checkbox" id="archive_all_students" name="archive_all_students" value="1"
                            class="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
                     <div>
-                        <span class="font-extrabold text-indigo-950 block text-xs">
+                        <span class="font-extrabold text-indigo-950 dark:text-white block text-xs">
                             Zarchiwizuj jednocześnie dla wszystkich dzieci ({% for s in all_students %}{{ s.name }}{% if not loop.last %}, {% endif %}{% endfor %})
                         </span>
-                        <span class="text-[11px] text-indigo-800 block mt-0.5">
-                            Gdy zaznaczone, rok zostanie zarchiwizowany równolegle dla każdego dziecka. Gdy odznaczone, zarchiwizowany zostanie wyłącznie aktualny profil: <strong>{{ active_student.name }}</strong> (dla pozostałych dzieci należy powtórzyć operację po przełączeniu profilu).
+                        <span class="text-[11px] text-indigo-800 dark:text-slate-300 block mt-0.5">
+                            Gdy zaznaczone, rok zostanie zarchiwizowany równolegle dla każdego dziecka. Gdy odznaczone, zarchiwizowany zostanie wyłącznie aktualny profil: <strong class="dark:text-white">{{ active_student.name }}</strong> (dla pozostałych dzieci należy powtórzyć operację po przełączeniu profilu).
                         </span>
                     </div>
                 </label>
@@ -950,13 +1053,13 @@
                 </div>
 
                 <!-- Zakres: Wszystkie dzieci -->
-                <div id="archive-modal-scope-all" class="hidden p-3.5 bg-indigo-50/80 border border-indigo-200 rounded-xl text-xs text-indigo-950">
-                    <div class="font-extrabold flex items-center gap-1.5 mb-1 text-indigo-900">
+                <div id="archive-modal-scope-all" class="hidden p-3.5 bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 rounded-xl text-xs text-indigo-950 dark:text-slate-200">
+                    <div class="font-extrabold flex items-center gap-1.5 mb-1 text-indigo-900 dark:text-white">
                         <span>👨‍👩‍👧‍👦</span> Zakres: Jednocześnie wszystkie dzieci
                     </div>
-                    <p class="text-indigo-800 leading-relaxed text-[11px]">
+                    <p class="text-indigo-800 dark:text-slate-300 leading-relaxed text-[11px]">
                         Zostaną zarchiwizowane dane dla każdego profilu:
-                        <strong>{% for s in all_students %}{{ s.name }}{% if not loop.last %}, {% endif %}{% endfor %}</strong>.
+                        <strong class="dark:text-white">{% for s in all_students %}{{ s.name }}{% if not loop.last %}, {% endif %}{% endfor %}</strong>.
                         Oceny, terminarz i plan lekcji każdego dziecka zostaną zarchiwizowane do <code>storage/archive/</code>, a na nowy rok szkolny rozpocznie się czysty stan.
                     </p>
                 </div>

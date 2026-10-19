@@ -1086,10 +1086,11 @@
                         max: 6.2,
                         ticks: {
                             stepSize: 1,
-                            font: { family: 'Inter', weight: 'bold' }
+                            font: { family: 'Inter', weight: 'bold' },
+                            color: () => document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b'
                         },
                         grid: {
-                            color: '#f1f5f9'
+                            color: () => document.documentElement.classList.contains('dark') ? 'rgba(255, 255, 255, 0.08)' : '#f1f5f9'
                         }
                     },
                     x: {
@@ -1099,7 +1100,7 @@
                                 return item ? (item.date ? item.date.substring(5) : ('#' + (index+1))) : '';
                             },
                             font: { family: 'Inter', size: 10, weight: '600' },
-                            color: '#64748b'
+                            color: () => document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b'
                         },
                         grid: {
                             display: false
@@ -1112,6 +1113,7 @@
                         position: 'top',
                         labels: {
                             font: { family: 'Inter', size: 12, weight: 'bold' },
+                            color: () => document.documentElement.classList.contains('dark') ? '#f8fafc' : '#0f172a',
                             usePointStyle: true,
                             boxWidth: 8
                         }
@@ -1190,17 +1192,18 @@
                             ticks: {
                                 stepSize: 1,
                                 backdropColor: 'transparent',
-                                font: { family: 'Inter', size: 10, weight: 'bold' }
+                                font: { family: 'Inter', size: 10, weight: 'bold' },
+                                color: () => document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b'
                             },
                             pointLabels: {
                                 font: { family: 'Inter', size: 11, weight: 'bold' },
-                                color: '#334155'
+                                color: () => document.documentElement.classList.contains('dark') ? '#f8fafc' : '#334155'
                             },
                             grid: {
-                                color: '#e2e8f0'
+                                color: () => document.documentElement.classList.contains('dark') ? 'rgba(255, 255, 255, 0.12)' : '#e2e8f0'
                             },
                             angleLines: {
-                                color: '#f1f5f9'
+                                color: () => document.documentElement.classList.contains('dark') ? 'rgba(255, 255, 255, 0.08)' : '#f1f5f9'
                             }
                         }
                     },
@@ -1259,22 +1262,23 @@
                             max: 6,
                             ticks: {
                                 stepSize: 1,
-                                font: { family: 'Inter', size: 10, weight: 'bold' }
+                                font: { family: 'Inter', size: 10, weight: 'bold' },
+                                color: () => document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b'
                             },
                             grid: {
-                                color: '#f1f5f9'
+                                color: () => document.documentElement.classList.contains('dark') ? 'rgba(255, 255, 255, 0.08)' : '#f1f5f9'
                             },
                             title: {
                                 display: true,
                                 text: 'Średnia ważona w skali 1–6',
                                 font: { family: 'Inter', size: 10, weight: '600' },
-                                color: '#94a3b8'
+                                color: () => document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b'
                             }
                         },
                         y: {
                             ticks: {
                                 font: { family: 'Inter', size: 11, weight: 'bold' },
-                                color: '#334155'
+                                color: () => document.documentElement.classList.contains('dark') ? '#f8fafc' : '#334155'
                             },
                             grid: {
                                 display: false
@@ -1298,6 +1302,14 @@
                 }
             });
         }
+
+        // Automatyczna aktualizacja wykresów po zmianie motywu
+        window.addEventListener('themechange', () => {
+            const chart1 = Chart.getChart('trajectoryChart');
+            if (chart1) chart1.update();
+            const chart2 = Chart.getChart('categoryRadarChart');
+            if (chart2) chart2.update();
+        });
     }
 
     // Interaktywny mini-symulator ocen na żywo

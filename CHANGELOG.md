@@ -15,6 +15,12 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 - **Obsługa przedmiotów szkolnych bez ocen w bazie i na świadectwie**:
   - Wzbogacenie danych demonstracyjnych w `examples/storage/8979296.json` o przedmiot „Sztuka” (wliczany do średniej, bez ocen) oraz „Godzina wychowawcza” (oceny 4 i 5, wyłączona ze średniej na świadectwie).
 - **Deterministyczny token CSRF w statycznym eksporcie widoków HTML**: Użycie stałego identyfikatora tokenu CSRF w trybie demonstracyjnym (`export_web_views`), eliminujące zbędne diffy w gicie w plikach `examples/reports/*.html` przy ponownym uruchamianiu `regenerate_reports.sh`.
+- **Wielomotywowy silnik skórek panelu WWW (Theme Engine)**:
+  - Obsługa 4 skórek out-of-the-box: Jasny (☀️ Domyślny), Ciemny Grafit (🌙 Slate Dark), Północ (🌌 OLED True Black), Szmaragdowy (🌲 Forest Green) oraz trybu Auto (💻 zgodnego z motywem systemu).
+  - Skalowalna architektura Design Tokens (zmienne CSS `--theme-*` i selektory `[data-theme="..."]`), umożliwiająca łatwe dopisywanie kolejnych skórek bez konieczności modyfikowania szablonów podstron.
+  - Szybki selektor motywu w prawym górnym rogu paska nawigacyjnego oraz sekcja wyboru z interaktywnymi kafelkami podglądu palet w zakładce Ustawienia.
+  - Skrypt pre-renderujący w `<head>` eliminujący efekt migania jasnego tła (*Flash-of-White*) i trwała pamięć wyboru w `localStorage`.
+  - Dynamiczna adaptacja kolorystyki osi, siatek i legend wykresów Chart.js w czasie rzeczywistym przy zmianie motywu (`themechange` event).
 - **Animowany podgląd możliwości aplikacji (Showcase GIF / WebP) w nagłówku README**:
   - Zoptymalizowany animowany GIF (`docs/assets/librus2mail_showcase.gif`) oraz wersja WebP prezentujące pełny przekrój możliwości ekosystemu Librus2mail.
   - Zautomatyzowany skrypt `scripts/generate_showcase.py` (Headless Chrome + ffmpeg) generujący bezstratne klatki z widoków demonstracyjnych `examples/reports/`.

@@ -2266,6 +2266,44 @@ class TestWebDashboard(unittest.TestCase):
         self.assertIn('2027/2028', [a['label'] for a in storage.list_archived_years('123456')])
         self.assertIn('2027/2028', [a['label'] for a in storage.list_archived_years('654321')])
 
+    def test_theme_engine_integration(self):
+        """Weryfikuje integrację silnika skórek: obecność tokenów CSS, skryptu pre-render, selektora w nagłówku i kafelków w ustawieniach."""
+        app = create_app(
+            config_path=self.config_path,
+            storage_dir=self.storage_dir,
+            no_auth=True,
+            secret_key='test-secret',
+        )
+        client = app.test_client()
+        res_dashboard = client.get('/')
+        self.assertEqual(res_dashboard.status_code, 200)
+        html_dashboard = res_dashboard.data.decode('utf-8')
+
+        # Weryfikacja tokenów i skryptu pre-render w base.html
+        self.assertIn('librus2mail_theme', html_dashboard)
+        self.assertIn('data-theme', html_dashboard)
+        self.assertIn('THEME_DATA', html_dashboard)
+        self.assertIn('--theme-bg-body', html_dashboard)
+        self.assertIn('--theme-bg-card', html_dashboard)
+
+        # Weryfikacja selektora motywów w nagłówku
+        self.assertIn('id="theme-menu-container"', html_dashboard)
+        self.assertIn("setTheme('light')", html_dashboard)
+        self.assertIn("setTheme('dark')", html_dashboard)
+        self.assertIn("setTheme('midnight')", html_dashboard)
+        self.assertIn("setTheme('forest')", html_dashboard)
+        self.assertIn("setTheme('auto')", html_dashboard)
+
+        # Weryfikacja sekcji wyboru motywu w Ustawieniach
+        res_settings = client.get('/ustawienia')
+        self.assertEqual(res_settings.status_code, 200)
+        html_settings = res_settings.data.decode('utf-8')
+        self.assertIn('id="wyglad-i-motyw"', html_settings)
+        self.assertIn('data-theme-card="light"', html_settings)
+        self.assertIn('data-theme-card="dark"', html_settings)
+        self.assertIn('data-theme-card="midnight"', html_settings)
+        self.assertIn('data-theme-card="forest"', html_settings)
+
 
 if __name__ == '__main__':
     unittest.main()

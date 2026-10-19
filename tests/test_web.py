@@ -1404,7 +1404,24 @@ class TestWebDashboard(unittest.TestCase):
         res_ongoing = client_ongoing.get('/plan')
         self.assertEqual(res_ongoing.status_code, 200)
         self.assertIn(b'2026-09-23', res_ongoing.data)
-        self.assertIn('Dzisiaj (lekcje w toku)', res_ongoing.data.decode('utf-8'))
+        ongoing_html = res_ongoing.data.decode('utf-8')
+        self.assertIn('Dzisiaj (lekcje w toku)', ongoing_html)
+        self.assertIn('TRWA TERAZ', ongoing_html)
+        self.assertIn('Odbyła się', ongoing_html)
+        self.assertIn('Lekcja w toku', ongoing_html)
+
+        # 1b. Podczas przerwy między lekcjami (2026-09-23 08:50) -> informacja o przerwie
+        app_break = create_app(
+            config_path=self.config_path,
+            storage_dir=self.storage_dir,
+            no_auth=True,
+            actual_date=datetime(2026, 9, 23, 8, 50, 0),
+        )
+        res_break = app_break.test_client().get('/plan')
+        self.assertEqual(res_break.status_code, 200)
+        break_html = res_break.data.decode('utf-8')
+        self.assertIn('Trwa przerwa między lekcjami', break_html)
+        self.assertIn('Dzwonek za 5 min', break_html)
 
         # 2. Po zakończeniu lekcji w bieżącym dniu (2026-09-23 12:00) -> domyślnie kolejny dzień nauki (2026-09-24)
         app_finished = create_app(

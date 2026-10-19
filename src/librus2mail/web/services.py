@@ -1253,6 +1253,17 @@ def simulate_new_grade(
     }
 
 
+def _parse_time_minutes(time_str: str | None) -> int | None:
+    """Konwertuje godzinę w formacie HH:MM na liczbę minut od północy."""
+    if not time_str or ':' not in str(time_str):
+        return None
+    try:
+        parts = str(time_str).strip().split(':')
+        return int(parts[0]) * 60 + int(parts[1])
+    except (ValueError, IndexError):
+        return None
+
+
 def build_schedule_day_context(
     all_lessons: list[dict[str, Any]],
     timetable_entries: list[dict[str, Any]] | None = None,
@@ -1352,6 +1363,7 @@ def build_schedule_day_context(
     selected_day_data = None
 
     tomorrow_str = (now.date() + timedelta(days=1)).strftime('%Y-%m-%d')
+    now_minutes = now.hour * 60 + now.minute
 
     for d_str in sorted_dates:
         d_obj = parse_date_safe(d_str)
@@ -1373,6 +1385,105 @@ def build_schedule_day_context(
         start_time = active_day_lessons[0].get('time_from') if active_day_lessons else (day_lessons[0].get('time_from') if day_lessons else '')
         end_time = active_day_lessons[-1].get('time_to') if active_day_lessons else (day_lessons[-1].get('time_to') if day_lessons else '')
         time_span = f"{start_time} – {end_time}" if start_time and end_time else ""
+
+        current_lesson = None
+        next_lesson = None
+        is_break_now = False
+        break_info = None
+
+        if d_str == today_str:
+            next_lesson_found = False
+            for les in day_lessons:
+                from_min = _parse_time_minutes(les.get('time_from'))
+                to_min = _parse_time_minutes(les.get('time_to'))
+                is_canc = bool(les.get('is_cancelled'))
+
+                if is_canc:
+                    les['live_status'] = 'cancelled'
+                    les['is_current'] = False
+                    les['is_completed'] = False
+                    les['is_upcoming'] = False
+                    les['is_next'] = False
+                elif from_min is not None and to_min is not None:
+                    if from_min <= now_minutes <= to_min:
+                        les['live_status'] = 'in_progress'
+                        les['is_current'] = True
+                        les['is_completed'] = False
+                        les['is_upcoming'] = False
+                        les['is_next'] = False
+                        current_lesson = les
+                        les['minutes_left'] = max(0, to_min - now_minutes)
+                        duration = max(1, to_min - from_min)
+                        elapsed = max(0, min(duration, now_minutes - from_min))
+                        les['progress_pct'] = int(round((elapsed / duration) * 100))
+                    elif now_minutes > to_min:
+                        les['live_status'] = 'completed'
+                        les['is_current'] = False
+                        les['is_completed'] = True
+                        les['is_upcoming'] = False
+                        les['is_next'] = False
+                    else:  # now_minutes < from_min
+                        les['live_status'] = 'upcoming'
+                        les['is_current'] = False
+                        les['is_completed'] = False
+                        les['is_upcoming'] = True
+                        les['minutes_until'] = max(0, from_min - now_minutes)
+                        if not next_lesson_found:
+                            les['is_next'] = True
+                            next_lesson_found = True
+                            next_lesson = les
+                        else:
+                            les['is_next'] = False
+                else:
+                    les['live_status'] = 'unknown'
+                    les['is_current'] = False
+                    les['is_completed'] = False
+                    les['is_upcoming'] = False
+                    les['is_next'] = False
+
+            # Wykrywanie przerwy między lekcjami
+            if lessons_ongoing and not current_lesson:
+                completed_active = [les for les in active_day_lessons if les.get('is_completed')]
+                upcoming_active = [les for les in active_day_lessons if les.get('is_upcoming')]
+                if completed_active and upcoming_active:
+                    prev_l = completed_active[-1]
+                    next_l = upcoming_active[0]
+                    prev_to = _parse_time_minutes(prev_l.get('time_to'))
+                    next_from = _parse_time_minutes(next_l.get('time_from'))
+                    if prev_to is not None and next_from is not None and prev_to <= now_minutes < next_from:
+                        is_break_now = True
+                        break_info = {
+                            'minutes_left': max(0, next_from - now_minutes),
+                            'next_subject': next_l.get('subject', ''),
+                            'next_classroom': next_l.get('classroom', ''),
+                            'next_teacher': next_l.get('teacher', ''),
+                            'next_time_from': next_l.get('time_from', ''),
+                            'after_lesson_no': prev_l.get('lesson_no', ''),
+                        }
+                        prev_l['has_break_after'] = True
+                        prev_l['break_after_info'] = break_info
+
+        elif d_str < today_str:
+            for les in day_lessons:
+                is_canc = bool(les.get('is_cancelled'))
+                les['live_status'] = 'cancelled' if is_canc else 'completed'
+                les['is_current'] = False
+                les['is_completed'] = not is_canc
+                les['is_upcoming'] = False
+                les['is_next'] = False
+        else:  # d_str > today_str
+            first_active_seen = False
+            for les in day_lessons:
+                is_canc = bool(les.get('is_cancelled'))
+                les['live_status'] = 'cancelled' if is_canc else 'upcoming'
+                les['is_current'] = False
+                les['is_completed'] = False
+                les['is_upcoming'] = not is_canc
+                if not is_canc and not first_active_seen:
+                    les['is_next'] = True
+                    first_active_seen = True
+                else:
+                    les['is_next'] = False
 
         if d_str == today_str:
             label = f"Dzisiaj ({w_name.lower()}, {f_date})"
@@ -1399,6 +1510,11 @@ def build_schedule_day_context(
             'tests_count': tests_count,
             'time_span': time_span,
             'has_any': len(day_lessons) > 0,
+            'is_break_now': is_break_now,
+            'break_info': break_info,
+            'current_lesson': current_lesson,
+            'next_lesson': next_lesson,
+            'completed_count': sum(1 for x in day_lessons if x.get('is_completed')),
         }
         days_data.append(day_dict)
         if d_str == selected_date:

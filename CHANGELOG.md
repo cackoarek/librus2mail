@@ -10,6 +10,13 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 ## [Unreleased]
 
 ### Dodane
+- **Śledzenie lekcji w czasie rzeczywistym w Planie lekcji i na Pulpicie (Live Lesson Tracker)**:
+  - Automatyczne wykrywanie lekcji trwającej w danej chwili (`🟢 TRWA TERAZ`) z pulsującym wskaźnikiem, licznikiem czasu do dzwonka (`⏱️ jeszcze X min`) oraz wyeksponowanym numerem sali i nazwiskiem nauczyciela.
+  - Oznaczanie lekcji, które się już odbyły (`✓ Odbyła się`) ze stonowanym tłem i wyciszonym kontrastem, co ułatwia rodzicowi natychmiastowe zorientowanie się w bieżącym planie dnia.
+  - Wykrywanie przerw międzylekcyjnych z automatycznym banerem informującym o czasie do kolejnego dzwonka (`☕ Trwa przerwa między lekcjami (do HH:MM) • Dzwonek za X min →`) oraz zapowiedzią najbliższego przedmiotu (`⏳ Następna lekcja`).
+  - Spójna prezentacja statusów na żywo zarówno w pełnym widoku `/plan`, jak i w kafelku planu lekcji na pulpicie głównym (`/`).
+- **Wysuwany panel boczny nawigacji (Mobile Drawer / Sheet)**:
+  - Dedykowane menu boczne otwierane przyciskiem `☰` poniżej breakpointu `xl`, zawierające pełną nawigację po modułach, wygodny przełącznik profili dzieci, szybki wybór motywów oraz wylogowanie.
 - **Dedykowany modal potwierdzenia archiwizacji roku szkolnego**: Zastąpienie przeglądarkowego okna `confirm()` własnym, ostylowanym modalem w zakładce Ustawienia z dynamicznym podsumowaniem zakresu operacji i obsługą klawiszy Enter oraz Escape.
 - **Obsługa wielu dzieci przy archiwizacji roku**: Możliwość zarchiwizowania okresu jednocześnie dla wszystkich dzieci (checkbox w oknie modalnym) oraz systemowe przypomnienie `flash` o konieczności archiwizacji drugiego dziecka przy operacji pojedynczej.
 - **Obsługa przedmiotów szkolnych bez ocen w bazie i na świadectwie**:
@@ -29,12 +36,22 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
   - Indywidualnie konfigurowalny czas trwania każdego slajdu, parametry scrolla oraz opcja procentowego skalowania wielkości czcionki (`font_scale`).
 
 ### Zmienione
+- **Responsywność i ergonomia paska nawigacyjnego (Navbar)**:
+  - Rozszerzenie kontenera nagłówka do `max-w-[1600px]` z płynnym dopasowaniem szerokości, co zapobiega ściskaniu elementów na ekranach laptopów (1280–1400 px).
+  - Zastosowanie kompaktowej typografii i paddingów zakładek (`px-2.5 py-1.5`, `text-xs`) na ekranach `xl`, powiększającej się automatycznie do `px-3 py-2` i `text-sm` na dużych monitorach `2xl`.
+  - Kompaktowy selektor motywu (kwadratowy przycisk 36x36 px z ikoną aktywnej skórki i strzałką menu) zwalniający cenną przestrzeń w nagłówku.
+  - Zabezpieczenie kontenerów flex (`flex-shrink-0`) oraz zoptymalizowanie maksymalnych szerokości pól wyboru ucznia i rocznika archiwalnego.
 - **Ergonomia nawigacji panelu WWW**:
   - Przeniesienie „Akcji CLI” z górnego paska nawigacyjnego do dedykowanej karty na samym dole zakładki „Ustawienia” z wygodnym przyciskiem przejścia i powrotną ścieżką breadcrumbs.
   - Zwolnienie miejsca w nagłówku aplikacji na przełącznik uczniów oraz wybór archiwalnych lat szkolnych.
 - **Rozbudowa opisu archiwizacji w Ustawieniach**: Dodanie jasnej instrukcji informującej rodzica, że zarchiwizowane okresy można w każdej chwili przeglądać w menu wyboru ucznia na górnym pasku.
 
 ### Naprawione
+- **Poprawki kontrastu i czytelności we wszystkich ciemnych motywach (Ciemny, Północ, Szmaragd)**:
+  - Naprawiono widoczność nieaktywnych oraz aktywnych podzakładek w modułach Oceny („Aktualne oceny”, „Świadectwo”, „Optymalizator celu”) i Raporty.
+  - Poprawiono czytelność boksów informacyjnych i poradników w zakładce Ustawienia (np. sekcja „Jak przeglądać dane z minionych lat?”).
+  - Naprawiono czytelność datepickera `semester_split_date` (kontrast wybranej daty i tła kontrolki).
+- **Zabezpieczenie przed obcinaniem zakładek w nagłówku**: Wyeliminowano problem spychania przycisku „Ustawienia” poza ekran i ucinania etykiety „Raporty” na ekranach o szerokości około 1300 px.
 - **Kalkulacja średniej ze świadectwa dla przedmiotów bez ocen**: Zabezpieczenie funkcji `calculate_subject_averages` oraz `calculate_certificate_summary` przed traktowaniem braku ocen jako stopnia 0 przy wyliczaniu średniej końcowej — przedmioty bez ocen otrzymują poprawny status „brak ocen” (`unrated_count`) i nie zaniżają średniej ze świadectwa.
 
 ---

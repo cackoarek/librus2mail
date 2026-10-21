@@ -38,6 +38,7 @@ TIMETABLE_URL = 'https://synergia.librus.pl/terminarz'
 PLAN_LEKCJI_URL = 'https://synergia.librus.pl/przegladaj_plan_lekcji'
 
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+DEFAULT_TIMEOUT = 20
 
 
 class Librus:
@@ -114,7 +115,7 @@ class Librus:
             'Referer': 'https://portal.librus.pl/'
         }
         try:
-            res = self.__session.get(PORTAL_RODZINA_URL, headers=init_headers)
+            res = self.__session.get(PORTAL_RODZINA_URL, headers=init_headers, timeout=DEFAULT_TIMEOUT)
         except requests.RequestException as e:
             logger.error(f"Inicjalizacja autoryzacji konta {self.__librus_login} nie powiodła się: {e}")
             raise LibrusNetworkError(f"Błąd sieciowy przy inicjalizacji autoryzacji: {e}", request=getattr(e, 'request', None), response=getattr(e, 'response', None)) from e
@@ -139,7 +140,7 @@ class Librus:
             'pass': self.__librus_password
         }
         try:
-            post_res = self.__session.post(login_target_url, data=login_payload, headers=post_headers)
+            post_res = self.__session.post(login_target_url, data=login_payload, headers=post_headers, timeout=DEFAULT_TIMEOUT)
         except requests.RequestException as e:
             logger.error(f"Wysyłanie formularza logowania dla {self.__librus_login} nie powiodło się: {e}")
             raise LibrusNetworkError(f"Błąd sieciowy przy logowaniu: {e}", request=getattr(e, 'request', None), response=getattr(e, 'response', None)) from e
@@ -182,7 +183,7 @@ class Librus:
             'Referer': login_target_url
         }
         try:
-            grant_res = self.__session.get(next_url, headers=grant_headers)
+            grant_res = self.__session.get(next_url, headers=grant_headers, timeout=DEFAULT_TIMEOUT)
         except requests.RequestException as e:
             logger.error(f"Błąd sieciowy podczas pobierania grantu dla {self.__librus_login}: {e}")
             raise LibrusNetworkError(f"Błąd sieciowy podczas pobierania grantu: {e}", request=getattr(e, 'request', None), response=getattr(e, 'response', None)) from e
@@ -217,7 +218,7 @@ class Librus:
                 **self.__generate_baner_header(),
             }
             try:
-                two_fa_res = self.__session.post(action_target, data=two_fa_payload, headers=two_fa_headers)
+                two_fa_res = self.__session.post(action_target, data=two_fa_payload, headers=two_fa_headers, timeout=DEFAULT_TIMEOUT)
             except requests.RequestException as e:
                 logger.error(f"Błąd sieciowy podczas wysyłania 2FA dla {self.__librus_login}: {e}")
                 raise LibrusNetworkError(f"Błąd sieciowy podczas pomijania 2FA: {e}", request=getattr(e, 'request', None), response=getattr(e, 'response', None)) from e
@@ -232,7 +233,7 @@ class Librus:
                     final_grant = f"https://api.librus.pl{final_grant}"
                 logger.info("Pobieram docelowy grant autoryzacji")
                 try:
-                    grant_res = self.__session.get(final_grant, headers=grant_headers)
+                    grant_res = self.__session.get(final_grant, headers=grant_headers, timeout=DEFAULT_TIMEOUT)
                 except requests.RequestException as e:
                     logger.error(f"Błąd sieciowy podczas pobierania grantu po 2FA dla {self.__librus_login}: {e}")
                     raise LibrusNetworkError(f"Błąd sieciowy podczas pobierania grantu po 2FA: {e}", request=getattr(e, 'request', None), response=getattr(e, 'response', None)) from e
@@ -260,7 +261,7 @@ class Librus:
         url = f"{MESSAGE_BODY_URL}{link}"
         logger.info(f"Pobieram treść wiadomość {link}")
         try:
-            res = self.__session.get(url, headers=self.__headers)
+            res = self.__session.get(url, headers=self.__headers, timeout=DEFAULT_TIMEOUT)
         except requests.RequestException as e:
             logger.error(f"Błąd sieciowy przy pobieraniu wiadomości {link}: {e}")
             raise LibrusNetworkError(f"Błąd sieciowy przy pobieraniu wiadomości: {e}", request=getattr(e, 'request', None), response=getattr(e, 'response', None)) from e
@@ -479,7 +480,7 @@ class Librus:
         if month and year:
             headers = {**self.__headers, 'Referer': TIMETABLE_URL}
             try:
-                res = self.__session.post(TIMETABLE_URL, data={'miesiac': str(month), 'rok': str(year)}, headers=headers)
+                res = self.__session.post(TIMETABLE_URL, data={'miesiac': str(month), 'rok': str(year)}, headers=headers, timeout=DEFAULT_TIMEOUT)
             except requests.RequestException as e:
                 logger.error(f"Błąd sieciowy przy pobieraniu terminarza dla {month}/{year}: {e}")
                 raise LibrusNetworkError(f"Błąd sieciowy przy pobieraniu terminarza: {e}", request=getattr(e, 'request', None), response=getattr(e, 'response', None)) from e
@@ -509,7 +510,7 @@ class Librus:
                     next_year = now.year + 1 if now.month == 12 else now.year
                     sleep(2)
                     headers = {**self.__headers, 'Referer': TIMETABLE_URL}
-                    res_next = self.__session.post(TIMETABLE_URL, data={'miesiac': str(next_month), 'rok': str(next_year)}, headers=headers)
+                    res_next = self.__session.post(TIMETABLE_URL, data={'miesiac': str(next_month), 'rok': str(next_year)}, headers=headers, timeout=DEFAULT_TIMEOUT)
                     if res_next.status_code == 200:
                         soup_next = BeautifulSoup(res_next.content, 'html.parser')
                         next_entries = self._parse_timetable_soup(soup_next)
@@ -557,7 +558,7 @@ class Librus:
             try:
                 if w_idx > 0:
                     sleep(1)
-                res = self.__session.post(PLAN_LEKCJI_URL, data={'tydzien': week_str}, headers=headers)
+                res = self.__session.post(PLAN_LEKCJI_URL, data={'tydzien': week_str}, headers=headers, timeout=DEFAULT_TIMEOUT)
                 if res.status_code == 200:
                     soup = BeautifulSoup(res.content, 'html.parser')
                     try:
@@ -605,7 +606,7 @@ class Librus:
             'Referer': 'https://synergia.librus.pl/'
         }
         try:
-            res = self.__session.get(url, headers=headers)
+            res = self.__session.get(url, headers=headers, timeout=DEFAULT_TIMEOUT)
         except requests.RequestException as e:
             logger.error(f"Błąd sieciowy podczas pobierania {url}: {e}")
             raise LibrusNetworkError(f"Błąd sieciowy podczas pobierania {url}: {e}", request=getattr(e, 'request', None), response=getattr(e, 'response', None)) from e

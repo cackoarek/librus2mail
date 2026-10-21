@@ -1952,8 +1952,11 @@ class TestLibrus(unittest.TestCase):
         </html>
         """
         self.librus.logged = True
-        with patch.object(self.librus, 'parse_page') as mock_parse:
+        with patch.object(self.librus, 'parse_page') as mock_parse, \
+             patch.object(self.librus._Librus__session, 'post') as mock_post, \
+             patch('librus2mail.librus.sleep'):
             from bs4 import BeautifulSoup
+            mock_post.return_value = MagicMock(status_code=404)
             mock_parse.return_value = BeautifulSoup(sample_calendar_html, 'html.parser')
             entries = self.librus.fetch_timetable()
 
@@ -2449,6 +2452,8 @@ class TestLibrus(unittest.TestCase):
     def test_fetch_schedule_disabled_and_enabled(self):
         import copy
 
+        import requests
+
         # 1. Test when read_schedule: False
         cfg_disabled = copy.deepcopy(self.config)
         cfg_disabled['read_schedule'] = False
@@ -2467,13 +2472,25 @@ class TestLibrus(unittest.TestCase):
             <tr><td class="center">1</td><td>08:00-08:45</td><td id="timetableEntryBox" data-date="2026-09-21">Fizyka s. 12</td></tr>
         </table>
         """
-        with patch.object(l_enabled, 'parse_page') as mock_parse:
-            from bs4 import BeautifulSoup
-            mock_parse.return_value = BeautifulSoup(sample_html, 'html.parser')
+        mock_response = MagicMock(status_code=200, content=sample_html.encode('utf-8'))
+        with patch.object(l_enabled._Librus__session, 'post', return_value=mock_response), \
+             patch('librus2mail.librus.sleep'):
             res_en = l_enabled.fetch_schedule(force=True)
             self.assertEqual(len(res_en), 1)
             self.assertEqual(res_en[0]['subject'], 'Fizyka')
             self.assertEqual(l_enabled.schedule, res_en)
+
+        # 3. Test fallback to parse_page when POST fails
+        l_fallback = Librus(self.config)
+        l_fallback.logged = True
+        with patch.object(l_fallback._Librus__session, 'post', side_effect=requests.RequestException("Network error")), \
+             patch.object(l_fallback, 'parse_page') as mock_parse, \
+             patch('librus2mail.librus.sleep'):
+            from bs4 import BeautifulSoup
+            mock_parse.return_value = BeautifulSoup(sample_html, 'html.parser')
+            res_fb = l_fallback.fetch_schedule(force=True)
+            self.assertEqual(len(res_fb), 1)
+            self.assertEqual(res_fb[0]['subject'], 'Fizyka')
 
     def test_schedule_summary_preparation_and_email_rendering(self):
         from librus2mail.mail_sender import MailSender

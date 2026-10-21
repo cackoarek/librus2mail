@@ -585,8 +585,12 @@
                             <select onchange="window.location.href='/student/' + this.value + '?next=' + encodeURIComponent(window.location.pathname + window.location.search)"
                                     class="bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold rounded-xl px-2.5 py-1.5 pr-6 max-w-[125px] xl:max-w-[145px] 2xl:max-w-[190px] truncate focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
                                 
-                                <option value="11030948" >
-                                    👤 Jan Kowalski (11030948)
+                                <option value="8912345" >
+                                    👤 Jan Kowalski (klasa 5A) (8912345)
+                                </option>
+                                
+                                <option value="8976543" >
+                                    👤 Anna Kowalska (Liceum 2A) (8976543)
                                 </option>
                                 
                                 <option value="8979296" selected>
@@ -689,14 +693,26 @@
                 </label>
                 <div class="space-y-1.5">
                     
-                    <a href="/student/11030948?next=/"
+                    <a href="/student/8912345?next=/"
                        class="flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold transition-all
                        
                        border-slate-200 hover:bg-slate-50 text-slate-700
                        ">
                         <span class="flex items-center gap-2">
                             <span>👤</span>
-                            <span>Jan Kowalski (11030948)</span>
+                            <span>Jan Kowalski (klasa 5A) (8912345)</span>
+                        </span>
+                        
+                    </a>
+                    
+                    <a href="/student/8976543?next=/"
+                       class="flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold transition-all
+                       
+                       border-slate-200 hover:bg-slate-50 text-slate-700
+                       ">
+                        <span class="flex items-center gap-2">
+                            <span>👤</span>
+                            <span>Anna Kowalska (Liceum 2A) (8976543)</span>
                         </span>
                         
                     </a>
@@ -921,19 +937,17 @@
             <span class="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl text-lg">🗓️</span>
             <div>
                 <h2 class="text-base font-bold text-slate-900">
-                    Kalendarium ostatnich 3 dni
+                    Kalendarium ostatnich 5 dni
                 </h2>
                 <p class="text-xs text-slate-500 mt-0.5">
                     Dzień po dniu: oceny, wiadomości, ogłoszenia szkolne i zapowiedziane sprawdziany
-                    
-                    <span class="text-slate-400 font-medium">(tylko dni szkolne)</span>
                     
                 </p>
             </div>
         </div>
         <div class="flex items-center gap-2 flex-wrap">
             <span class="px-3 py-1 bg-indigo-50 text-indigo-700 font-extrabold text-xs rounded-full border border-indigo-100">
-                Łącznie: 16 zdarzeń
+                Łącznie: 31 zdarzeń
             </span>
             <a href="web_ustawienia.html#kalendarium"
                class="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition"
@@ -945,37 +959,33 @@
 
     <!-- Siatka dni w układzie kalendarza -->
     <div class="p-4 sm:p-5">
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 items-stretch">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5 items-stretch">
             
             <div class="rounded-xl flex flex-col h-full transition-all border
                 
-                    bg-indigo-50/40 border-indigo-300 ring-2 ring-indigo-500/20 shadow-sm
+                    bg-slate-50/70 border-slate-200/80 hover:border-slate-300
                 ">
 
                 <!-- Nagłówek karty dnia -->
                 <div class="p-3 border-b flex items-center justify-between
-                     border-indigo-200/80 bg-indigo-100/30 ">
+                     border-slate-200/60 bg-white/50 ">
                     <div>
                         <div class="flex items-center gap-1.5">
                             <span class="text-xs font-extrabold text-slate-900">
-                                Piątek
-                            </span>
-                            
-                            <span class="px-1.5 py-0.5 bg-indigo-600 text-white text-[10px] font-bold rounded-md uppercase tracking-wider">
-                                Dziś
+                                Poniedziałek
                             </span>
                             
                         </div>
                         <span class="text-[11px] font-semibold text-slate-400">
-                            18.09
+                            14.09
                         </span>
                     </div>
 
                     <span class="text-[11px] font-bold px-2 py-0.5 rounded-full
                         
-                             bg-indigo-100 text-indigo-700 
+                             bg-slate-200/80 text-slate-700 
                         ">
-                        4
+                        6
                     </span>
                 </div>
 
@@ -988,57 +998,24 @@
                             <!-- Typ: Ocena -->
                             
                             <div class="flex items-start gap-2">
-                                <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center bg-indigo-50 text-indigo-600 border border-indigo-100 text-xs">
-                                    🔔
-                                </div>
-                                <div class="min-w-0 flex-1">
-                                    <div class="flex items-center justify-between gap-1">
-                                        <span class="font-bold text-indigo-950 truncate" title="Sprawdzian: Język polski">
-                                            Sprawdzian: Język polski
-                                        </span>
-                                        
-                                        <span class="text-[10px] font-semibold text-indigo-600 shrink-0">Lekcja 4</span>
-                                        
-                                    </div>
-                                    
-                                    <div class="text-[11px] text-slate-600 mt-0.5 line-clamp-2" title="Lektura: Hobbit">
-                                        Lektura: Hobbit
-                                    </div>
-                                    
-                                    <a href="web_terminarz.html" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-0.5 mt-1">
-                                        W terminarzu ➔
-                                    </a>
-                                </div>
-                            </div>
-
-                            <!-- Typ: Sprawdzian zapowiedziany na przyszłość -->
-                            
-
-                        </div>
-                        
-                        <div class="bg-white rounded-lg p-2.5 border border-slate-200/90 shadow-2xs hover:shadow-xs transition text-xs">
-
-                            <!-- Typ: Ocena -->
-                            
-                            <div class="flex items-start gap-2">
                                 <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center bg-violet-50 text-violet-600 border border-violet-100 text-xs">
                                     🗓️
                                 </div>
                                 <div class="min-w-0 flex-1">
                                     <div class="flex items-center justify-between gap-1">
-                                        <span class="font-bold text-violet-950 truncate" title="Zapowiedziano: Kartkówka (Język angielski)">
-                                            Zapowiedziano: Kartkówka (Język angielski)
+                                        <span class="font-bold text-violet-950 truncate" title="Zapowiedziano: Kartkówka (Język francuski)">
+                                            Zapowiedziano: Kartkówka (Język francuski)
                                         </span>
                                         
-                                        <span class="text-[10px] text-slate-400 shrink-0">14:51</span>
+                                        <span class="text-[10px] text-slate-400 shrink-0">11:30</span>
                                         
                                     </div>
                                     <div class="text-[10px] font-bold text-violet-700 mt-0.5">
-                                        Termin: 23.09
+                                        Termin: 25.09
                                     </div>
                                     
-                                    <div class="text-[11px] text-slate-600 mt-0.5 line-clamp-2" title="słownictwo part - słówka z zeszytu">
-                                        słownictwo part - słówka z zeszytu
+                                    <div class="text-[11px] text-slate-600 mt-0.5 line-clamp-2" title="Odmiana czasowników être i avoir">
+                                        Odmiana czasowników être i avoir
                                     </div>
                                     
                                     <a href="web_terminarz.html" class="text-[10px] font-bold text-violet-600 hover:text-violet-800 inline-flex items-center gap-0.5 mt-1">
@@ -1061,14 +1038,45 @@
                                 </div>
                                 <div class="min-w-0 flex-1">
                                     <div class="flex items-center justify-between gap-1">
-                                        <a href="web_oceny.html" class="font-bold text-slate-900 truncate hover:text-indigo-600 transition" title="Język angielski">
-                                            Język angielski
+                                        <a href="web_oceny.html" class="font-bold text-slate-900 truncate hover:text-indigo-600 transition" title="Język polski">
+                                            Język polski
+                                        </a>
+                                        
+                                    </div>
+                                    <div class="text-[11px] text-slate-500 mt-0.5">
+                                        waga: <strong>2</strong>
+                                         • Sprawdzian
+                                    </div>
+                                    
+                                    <a href="web_oceny.html" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-0.5 mt-1">
+                                        Szczegóły ➔
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Typ: Wiadomość -->
+                            
+
+                        </div>
+                        
+                        <div class="bg-white rounded-lg p-2.5 border border-slate-200/90 shadow-2xs hover:shadow-xs transition text-xs">
+
+                            <!-- Typ: Ocena -->
+                            
+                            <div class="flex items-start gap-2">
+                                <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center font-extrabold text-xs shadow-2xs bg-amber-100 text-amber-800 border border-amber-200">
+                                    3
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-1">
+                                        <a href="web_oceny.html" class="font-bold text-slate-900 truncate hover:text-indigo-600 transition" title="Fizyka">
+                                            Fizyka
                                         </a>
                                         
                                     </div>
                                     <div class="text-[11px] text-slate-500 mt-0.5">
                                         waga: <strong>1</strong>
-                                         • Zadanie domowe
+                                         • Kartkówka
                                     </div>
                                     
                                     <a href="web_oceny.html" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-0.5 mt-1">
@@ -1092,18 +1100,14 @@
                                 </div>
                                 <div class="min-w-0 flex-1">
                                     <div class="flex items-center justify-between gap-1">
-                                        <a href="web_oceny.html" class="font-bold text-slate-900 truncate hover:text-indigo-600 transition" title="Matematyka">
-                                            Matematyka
+                                        <a href="web_oceny.html" class="font-bold text-slate-900 truncate hover:text-indigo-600 transition" title="Historia">
+                                            Historia
                                         </a>
                                         
                                     </div>
                                     <div class="text-[11px] text-slate-500 mt-0.5">
-                                        waga: <strong>2</strong>
-                                         • Projekt
-                                    </div>
-                                    
-                                    <div class="text-[11px] text-slate-600 italic mt-0.5 truncate" title="plakat: geometria i symetria w architekturze">
-                                        "plakat: geometria i symetria w architekturze"
+                                        waga: <strong>1</strong>
+                                         • Odpowiedź
                                     </div>
                                     
                                     <a href="web_oceny.html" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-0.5 mt-1">
@@ -1113,6 +1117,625 @@
                             </div>
 
                             <!-- Typ: Wiadomość -->
+                            
+
+                        </div>
+                        
+                        <div class="bg-white rounded-lg p-2.5 border border-slate-200/90 shadow-2xs hover:shadow-xs transition text-xs">
+
+                            <!-- Typ: Ocena -->
+                            
+                            <div class="flex items-start gap-2">
+                                <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center font-extrabold text-xs shadow-2xs bg-amber-100 text-amber-800 border border-amber-200">
+                                    3
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-1">
+                                        <a href="web_oceny.html" class="font-bold text-slate-900 truncate hover:text-indigo-600 transition" title="Informatyka">
+                                            Informatyka
+                                        </a>
+                                        
+                                    </div>
+                                    <div class="text-[11px] text-slate-500 mt-0.5">
+                                        waga: <strong>1</strong>
+                                         • Kartkówka
+                                    </div>
+                                    
+                                    <a href="web_oceny.html" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-0.5 mt-1">
+                                        Szczegóły ➔
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Typ: Wiadomość -->
+                            
+
+                        </div>
+                        
+                        <div class="bg-white rounded-lg p-2.5 border border-slate-200/90 shadow-2xs hover:shadow-xs transition text-xs">
+
+                            <!-- Typ: Ocena -->
+                            
+                            <div class="flex items-start gap-2">
+                                <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center font-extrabold text-xs shadow-2xs bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                    5
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-1">
+                                        <a href="web_oceny.html" class="font-bold text-slate-900 truncate hover:text-indigo-600 transition" title="Godzina wychowawcza">
+                                            Godzina wychowawcza
+                                        </a>
+                                        
+                                    </div>
+                                    <div class="text-[11px] text-slate-500 mt-0.5">
+                                        waga: <strong>1</strong>
+                                         • Zaangażowanie
+                                    </div>
+                                    
+                                    <div class="text-[11px] text-slate-600 italic mt-0.5 truncate" title="Wzorowa postawa i pomoc w sprawach organizacyjnych klasy">
+                                        "Wzorowa postawa i pomoc w sprawach organizacyjnych klasy"
+                                    </div>
+                                    
+                                    <a href="web_oceny.html" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-0.5 mt-1">
+                                        Szczegóły ➔
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Typ: Wiadomość -->
+                            
+
+                        </div>
+                        
+                    
+                </div>
+
+            </div>
+            
+            <div class="rounded-xl flex flex-col h-full transition-all border
+                
+                    bg-slate-50/70 border-slate-200/80 hover:border-slate-300
+                ">
+
+                <!-- Nagłówek karty dnia -->
+                <div class="p-3 border-b flex items-center justify-between
+                     border-slate-200/60 bg-white/50 ">
+                    <div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-xs font-extrabold text-slate-900">
+                                Wtorek
+                            </span>
+                            
+                        </div>
+                        <span class="text-[11px] font-semibold text-slate-400">
+                            15.09
+                        </span>
+                    </div>
+
+                    <span class="text-[11px] font-bold px-2 py-0.5 rounded-full
+                        
+                             bg-slate-200/80 text-slate-700 
+                        ">
+                        9
+                    </span>
+                </div>
+
+                <!-- Lista zdarzeń w danym dniu -->
+                <div class="p-2.5 flex-1 max-h-[380px] overflow-y-auto space-y-2">
+                    
+                        
+                        <div class="bg-white rounded-lg p-2.5 border border-slate-200/90 shadow-2xs hover:shadow-xs transition text-xs">
+
+                            <!-- Typ: Ocena -->
+                            
+                            <div class="flex items-start gap-2">
+                                <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center bg-indigo-50 text-indigo-600 border border-indigo-100 text-xs">
+                                    🔔
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-1">
+                                        <span class="font-bold text-indigo-950 truncate" title="Kartkówka: Historia">
+                                            Kartkówka: Historia
+                                        </span>
+                                        
+                                        <span class="text-[10px] font-semibold text-indigo-600 shrink-0">Lekcja 2</span>
+                                        
+                                    </div>
+                                    
+                                    <div class="text-[11px] text-slate-600 mt-0.5 line-clamp-2" title="Wojny perskie">
+                                        Wojny perskie
+                                    </div>
+                                    
+                                    <a href="web_terminarz.html" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-0.5 mt-1">
+                                        W terminarzu ➔
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Typ: Sprawdzian zapowiedziany na przyszłość -->
+                            
+
+                        </div>
+                        
+                        <div class="bg-white rounded-lg p-2.5 border border-slate-200/90 shadow-2xs hover:shadow-xs transition text-xs">
+
+                            <!-- Typ: Ocena -->
+                            
+                            <div class="flex items-start gap-2">
+                                <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center font-extrabold text-xs shadow-2xs bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                    5
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-1">
+                                        <a href="web_oceny.html" class="font-bold text-slate-900 truncate hover:text-indigo-600 transition" title="Matematyka">
+                                            Matematyka
+                                        </a>
+                                        
+                                    </div>
+                                    <div class="text-[11px] text-slate-500 mt-0.5">
+                                        waga: <strong>3</strong>
+                                         • Sprawdzian
+                                    </div>
+                                    
+                                    <a href="web_oceny.html" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-0.5 mt-1">
+                                        Szczegóły ➔
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Typ: Wiadomość -->
+                            
+
+                        </div>
+                        
+                        <div class="bg-white rounded-lg p-2.5 border border-slate-200/90 shadow-2xs hover:shadow-xs transition text-xs">
+
+                            <!-- Typ: Ocena -->
+                            
+                            <div class="flex items-start gap-2">
+                                <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center font-extrabold text-xs shadow-2xs bg-slate-100 text-slate-700 border border-slate-200">
+                                    -
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-1">
+                                        <a href="web_oceny.html" class="font-bold text-slate-900 truncate hover:text-indigo-600 transition" title="Język angielski">
+                                            Język angielski
+                                        </a>
+                                        
+                                    </div>
+                                    <div class="text-[11px] text-slate-500 mt-0.5">
+                                        waga: <strong>-</strong>
+                                         • inna
+                                    </div>
+                                    
+                                    <div class="text-[11px] text-slate-600 italic mt-0.5 truncate" title="praca na lekcji (mówi nieproszony, przeszkadza na lekcji)">
+                                        "praca na lekcji (mówi nieproszony, przeszkadza na lekcji)"
+                                    </div>
+                                    
+                                    <a href="web_oceny.html" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-0.5 mt-1">
+                                        Szczegóły ➔
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Typ: Wiadomość -->
+                            
+
+                        </div>
+                        
+                        <div class="bg-white rounded-lg p-2.5 border border-slate-200/90 shadow-2xs hover:shadow-xs transition text-xs">
+
+                            <!-- Typ: Ocena -->
+                            
+                            <div class="flex items-start gap-2">
+                                <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center font-extrabold text-xs shadow-2xs bg-slate-100 text-slate-700 border border-slate-200">
+                                    -
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-1">
+                                        <a href="web_oceny.html" class="font-bold text-slate-900 truncate hover:text-indigo-600 transition" title="Fizyka">
+                                            Fizyka
+                                        </a>
+                                        
+                                    </div>
+                                    <div class="text-[11px] text-slate-500 mt-0.5">
+                                        waga: <strong>-</strong>
+                                         • Aktywność
+                                    </div>
+                                    
+                                    <div class="text-[11px] text-slate-600 italic mt-0.5 truncate" title="brak zeszytu i linijki">
+                                        "brak zeszytu i linijki"
+                                    </div>
+                                    
+                                    <a href="web_oceny.html" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-0.5 mt-1">
+                                        Szczegóły ➔
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Typ: Wiadomość -->
+                            
+
+                        </div>
+                        
+                        <div class="bg-white rounded-lg p-2.5 border border-slate-200/90 shadow-2xs hover:shadow-xs transition text-xs">
+
+                            <!-- Typ: Ocena -->
+                            
+                            <div class="flex items-start gap-2">
+                                <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center font-extrabold text-xs shadow-2xs bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                    5
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-1">
+                                        <a href="web_oceny.html" class="font-bold text-slate-900 truncate hover:text-indigo-600 transition" title="Biologia">
+                                            Biologia
+                                        </a>
+                                        
+                                    </div>
+                                    <div class="text-[11px] text-slate-500 mt-0.5">
+                                        waga: <strong>1</strong>
+                                         • Kartkówka
+                                    </div>
+                                    
+                                    <a href="web_oceny.html" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-0.5 mt-1">
+                                        Szczegóły ➔
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Typ: Wiadomość -->
+                            
+
+                        </div>
+                        
+                        <div class="bg-white rounded-lg p-2.5 border border-slate-200/90 shadow-2xs hover:shadow-xs transition text-xs">
+
+                            <!-- Typ: Ocena -->
+                            
+                            <div class="flex items-start gap-2">
+                                <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center font-extrabold text-xs shadow-2xs bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                    5
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-1">
+                                        <a href="web_oceny.html" class="font-bold text-slate-900 truncate hover:text-indigo-600 transition" title="Geografia">
+                                            Geografia
+                                        </a>
+                                        
+                                    </div>
+                                    <div class="text-[11px] text-slate-500 mt-0.5">
+                                        waga: <strong>3</strong>
+                                         • Sprawdzian
+                                    </div>
+                                    
+                                    <a href="web_oceny.html" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-0.5 mt-1">
+                                        Szczegóły ➔
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Typ: Wiadomość -->
+                            
+
+                        </div>
+                        
+                        <div class="bg-white rounded-lg p-2.5 border border-slate-200/90 shadow-2xs hover:shadow-xs transition text-xs">
+
+                            <!-- Typ: Ocena -->
+                            
+                            <div class="flex items-start gap-2">
+                                <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center font-extrabold text-xs shadow-2xs bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                    5
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-1">
+                                        <a href="web_oceny.html" class="font-bold text-slate-900 truncate hover:text-indigo-600 transition" title="Wychowanie fizyczne">
+                                            Wychowanie fizyczne
+                                        </a>
+                                        
+                                    </div>
+                                    <div class="text-[11px] text-slate-500 mt-0.5">
+                                        waga: <strong>1</strong>
+                                         • Sprawdzian
+                                    </div>
+                                    
+                                    <a href="web_oceny.html" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-0.5 mt-1">
+                                        Szczegóły ➔
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Typ: Wiadomość -->
+                            
+
+                        </div>
+                        
+                        <div class="bg-white rounded-lg p-2.5 border border-slate-200/90 shadow-2xs hover:shadow-xs transition text-xs">
+
+                            <!-- Typ: Ocena -->
+                            
+                            <div class="flex items-start gap-2">
+                                <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center bg-sky-50 text-sky-600 border border-sky-100 text-xs">
+                                    ✉️
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-1">
+                                        <span class="font-bold text-slate-900 truncate" title="Zajęcia wych.fizycznego">
+                                            Zajęcia wych.fizycznego
+                                        </span>
+                                        
+                                        <span class="text-[10px] text-slate-400 shrink-0">09:24</span>
+                                        
+                                    </div>
+                                    
+                                    <div class="text-[10px] font-medium text-slate-500 truncate mt-0.5">
+                                        Od: Staszewska Elżbieta (Nauczyciel)
+                                    </div>
+                                    
+                                    
+                                    <div class="text-[11px] text-slate-600 mt-1 line-clamp-2" title="Drodzy Rodzice,
+
+Przypominam, że ze względu na sprzyjające warunki pogodowe, lekcje wychowania fizycznego w najbliższym ...">
+                                        Drodzy Rodzice,
+
+Przypominam, że ze względu na sprzyjające warunki pogodowe, lekcje wychowania fizycznego w najbliższym ...
+                                    </div>
+                                    
+                                    <a href="web_wiadomosci.html" class="text-[10px] font-bold text-sky-600 hover:text-sky-800 inline-flex items-center gap-0.5 mt-1">
+                                        Zobacz wiadomość ➔
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Typ: Ogłoszenie -->
+                            
+
+                        </div>
+                        
+                        <div class="bg-white rounded-lg p-2.5 border border-slate-200/90 shadow-2xs hover:shadow-xs transition text-xs">
+
+                            <!-- Typ: Ocena -->
+                            
+                            <div class="flex items-start gap-2">
+                                <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center bg-amber-50 text-amber-600 border border-amber-100 text-xs">
+                                    📢
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-1">
+                                        <span class="font-bold text-slate-900 truncate" title="17 września - upamiętnienie agresji Rosji Sowieckiej na Polskę">
+                                            17 września - upamiętnienie agresji Rosji Sowieckiej na Polskę
+                                        </span>
+                                        
+                                    </div>
+                                    
+                                    <div class="text-[10px] font-medium text-slate-500 truncate mt-0.5">
+                                        Daniel Marecki (Dyrekcja)
+                                    </div>
+                                    
+                                    
+                                    <div class="text-[11px] text-slate-600 mt-1 line-clamp-2" title="W czwartek 17 września w naszej szkole odbędzie się uroczysty apel upamiętniający rocznicę agresji ZSRR na Polskę oraz D...">
+                                        W czwartek 17 września w naszej szkole odbędzie się uroczysty apel upamiętniający rocznicę agresji ZSRR na Polskę oraz D...
+                                    </div>
+                                    
+                                    <a href="web_wiadomosci.html" class="text-[10px] font-bold text-amber-600 hover:text-amber-800 inline-flex items-center gap-0.5 mt-1">
+                                        Zobacz ogłoszenie ➔
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Typ: Sprawdzian w tym dniu -->
+                            
+
+                        </div>
+                        
+                    
+                </div>
+
+            </div>
+            
+            <div class="rounded-xl flex flex-col h-full transition-all border
+                
+                    bg-slate-50/70 border-slate-200/80 hover:border-slate-300
+                ">
+
+                <!-- Nagłówek karty dnia -->
+                <div class="p-3 border-b flex items-center justify-between
+                     border-slate-200/60 bg-white/50 ">
+                    <div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-xs font-extrabold text-slate-900">
+                                Środa
+                            </span>
+                            
+                        </div>
+                        <span class="text-[11px] font-semibold text-slate-400">
+                            16.09
+                        </span>
+                    </div>
+
+                    <span class="text-[11px] font-bold px-2 py-0.5 rounded-full
+                        
+                             bg-slate-200/80 text-slate-700 
+                        ">
+                        5
+                    </span>
+                </div>
+
+                <!-- Lista zdarzeń w danym dniu -->
+                <div class="p-2.5 flex-1 max-h-[380px] overflow-y-auto space-y-2">
+                    
+                        
+                        <div class="bg-white rounded-lg p-2.5 border border-slate-200/90 shadow-2xs hover:shadow-xs transition text-xs">
+
+                            <!-- Typ: Ocena -->
+                            
+                            <div class="flex items-start gap-2">
+                                <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center font-extrabold text-xs shadow-2xs bg-slate-100 text-slate-700 border border-slate-200">
+                                    +
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-1">
+                                        <a href="web_oceny.html" class="font-bold text-slate-900 truncate hover:text-indigo-600 transition" title="Matematyka">
+                                            Matematyka
+                                        </a>
+                                        
+                                    </div>
+                                    <div class="text-[11px] text-slate-500 mt-0.5">
+                                        waga: <strong>-</strong>
+                                         • Odpowiedź
+                                    </div>
+                                    
+                                    <div class="text-[11px] text-slate-600 italic mt-0.5 truncate" title="aktywność przy tablicy">
+                                        "aktywność przy tablicy"
+                                    </div>
+                                    
+                                    <a href="web_oceny.html" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-0.5 mt-1">
+                                        Szczegóły ➔
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Typ: Wiadomość -->
+                            
+
+                        </div>
+                        
+                        <div class="bg-white rounded-lg p-2.5 border border-slate-200/90 shadow-2xs hover:shadow-xs transition text-xs">
+
+                            <!-- Typ: Ocena -->
+                            
+                            <div class="flex items-start gap-2">
+                                <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center font-extrabold text-xs shadow-2xs bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                    5
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-1">
+                                        <a href="web_oceny.html" class="font-bold text-slate-900 truncate hover:text-indigo-600 transition" title="Język angielski">
+                                            Język angielski
+                                        </a>
+                                        
+                                    </div>
+                                    <div class="text-[11px] text-slate-500 mt-0.5">
+                                        waga: <strong>2</strong>
+                                         • Sprawdzian
+                                    </div>
+                                    
+                                    <a href="web_oceny.html" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-0.5 mt-1">
+                                        Szczegóły ➔
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Typ: Wiadomość -->
+                            
+
+                        </div>
+                        
+                        <div class="bg-white rounded-lg p-2.5 border border-slate-200/90 shadow-2xs hover:shadow-xs transition text-xs">
+
+                            <!-- Typ: Ocena -->
+                            
+                            <div class="flex items-start gap-2">
+                                <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center font-extrabold text-xs shadow-2xs bg-slate-100 text-slate-700 border border-slate-200">
+                                    np
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-1">
+                                        <a href="web_oceny.html" class="font-bold text-slate-900 truncate hover:text-indigo-600 transition" title="Biologia">
+                                            Biologia
+                                        </a>
+                                        
+                                    </div>
+                                    <div class="text-[11px] text-slate-500 mt-0.5">
+                                        waga: <strong>-</strong>
+                                         • Praca domowa
+                                    </div>
+                                    
+                                    <div class="text-[11px] text-slate-600 italic mt-0.5 truncate" title="brak zadania domowego">
+                                        "brak zadania domowego"
+                                    </div>
+                                    
+                                    <a href="web_oceny.html" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-0.5 mt-1">
+                                        Szczegóły ➔
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Typ: Wiadomość -->
+                            
+
+                        </div>
+                        
+                        <div class="bg-white rounded-lg p-2.5 border border-slate-200/90 shadow-2xs hover:shadow-xs transition text-xs">
+
+                            <!-- Typ: Ocena -->
+                            
+                            <div class="flex items-start gap-2">
+                                <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center font-extrabold text-xs shadow-2xs bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                    5
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-1">
+                                        <a href="web_oceny.html" class="font-bold text-slate-900 truncate hover:text-indigo-600 transition" title="Chemia">
+                                            Chemia
+                                        </a>
+                                        
+                                    </div>
+                                    <div class="text-[11px] text-slate-500 mt-0.5">
+                                        waga: <strong>2</strong>
+                                         • Sprawdzian
+                                    </div>
+                                    
+                                    <a href="web_oceny.html" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-0.5 mt-1">
+                                        Szczegóły ➔
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Typ: Wiadomość -->
+                            
+
+                        </div>
+                        
+                        <div class="bg-white rounded-lg p-2.5 border border-slate-200/90 shadow-2xs hover:shadow-xs transition text-xs">
+
+                            <!-- Typ: Ocena -->
+                            
+                            <div class="flex items-start gap-2">
+                                <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center bg-sky-50 text-sky-600 border border-sky-100 text-xs">
+                                    ✉️
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-1">
+                                        <span class="font-bold text-slate-900 truncate" title="Zajęcia SKS dla uczniów klas 5-6">
+                                            Zajęcia SKS dla uczniów klas 5-6
+                                        </span>
+                                        
+                                        <span class="text-[10px] text-slate-400 shrink-0">15:39</span>
+                                        
+                                    </div>
+                                    
+                                    <div class="text-[10px] font-medium text-slate-500 truncate mt-0.5">
+                                        Od: Feryc Michał (Nauczyciel)
+                                    </div>
+                                    
+                                    
+                                    <div class="text-[11px] text-slate-600 mt-1 line-clamp-2" title="Dzień dobry,
+
+Od przyszłego tygodnia ruszają bezpłatne zajęcia SKS z piłki siatkowej i koszykówki dla uczniów klas 5-6. ...">
+                                        Dzień dobry,
+
+Od przyszłego tygodnia ruszają bezpłatne zajęcia SKS z piłki siatkowej i koszykówki dla uczniów klas 5-6. ...
+                                    </div>
+                                    
+                                    <a href="web_wiadomosci.html" class="text-[10px] font-bold text-sky-600 hover:text-sky-800 inline-flex items-center gap-0.5 mt-1">
+                                        Zobacz wiadomość ➔
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Typ: Ogłoszenie -->
                             
 
                         </div>
@@ -1391,29 +2014,33 @@
             
             <div class="rounded-xl flex flex-col h-full transition-all border
                 
-                    bg-slate-50/70 border-slate-200/80 hover:border-slate-300
+                    bg-indigo-50/40 border-indigo-300 ring-2 ring-indigo-500/20 shadow-sm
                 ">
 
                 <!-- Nagłówek karty dnia -->
                 <div class="p-3 border-b flex items-center justify-between
-                     border-slate-200/60 bg-white/50 ">
+                     border-indigo-200/80 bg-indigo-100/30 ">
                     <div>
                         <div class="flex items-center gap-1.5">
                             <span class="text-xs font-extrabold text-slate-900">
-                                Środa
+                                Piątek
+                            </span>
+                            
+                            <span class="px-1.5 py-0.5 bg-indigo-600 text-white text-[10px] font-bold rounded-md uppercase tracking-wider">
+                                Dziś
                             </span>
                             
                         </div>
                         <span class="text-[11px] font-semibold text-slate-400">
-                            16.09
+                            18.09
                         </span>
                     </div>
 
                     <span class="text-[11px] font-bold px-2 py-0.5 rounded-full
                         
-                             bg-slate-200/80 text-slate-700 
+                             bg-indigo-100 text-indigo-700 
                         ">
-                        5
+                        4
                     </span>
                 </div>
 
@@ -1426,32 +2053,65 @@
                             <!-- Typ: Ocena -->
                             
                             <div class="flex items-start gap-2">
-                                <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center font-extrabold text-xs shadow-2xs bg-slate-100 text-slate-700 border border-slate-200">
-                                    +
+                                <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center bg-indigo-50 text-indigo-600 border border-indigo-100 text-xs">
+                                    🔔
                                 </div>
                                 <div class="min-w-0 flex-1">
                                     <div class="flex items-center justify-between gap-1">
-                                        <a href="web_oceny.html" class="font-bold text-slate-900 truncate hover:text-indigo-600 transition" title="Matematyka">
-                                            Matematyka
-                                        </a>
+                                        <span class="font-bold text-indigo-950 truncate" title="Sprawdzian: Język polski">
+                                            Sprawdzian: Język polski
+                                        </span>
+                                        
+                                        <span class="text-[10px] font-semibold text-indigo-600 shrink-0">Lekcja 4</span>
                                         
                                     </div>
-                                    <div class="text-[11px] text-slate-500 mt-0.5">
-                                        waga: <strong>-</strong>
-                                         • Odpowiedź
+                                    
+                                    <div class="text-[11px] text-slate-600 mt-0.5 line-clamp-2" title="Lektura: Hobbit">
+                                        Lektura: Hobbit
                                     </div>
                                     
-                                    <div class="text-[11px] text-slate-600 italic mt-0.5 truncate" title="aktywność przy tablicy">
-                                        "aktywność przy tablicy"
-                                    </div>
-                                    
-                                    <a href="web_oceny.html" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-0.5 mt-1">
-                                        Szczegóły ➔
+                                    <a href="web_terminarz.html" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-0.5 mt-1">
+                                        W terminarzu ➔
                                     </a>
                                 </div>
                             </div>
 
-                            <!-- Typ: Wiadomość -->
+                            <!-- Typ: Sprawdzian zapowiedziany na przyszłość -->
+                            
+
+                        </div>
+                        
+                        <div class="bg-white rounded-lg p-2.5 border border-slate-200/90 shadow-2xs hover:shadow-xs transition text-xs">
+
+                            <!-- Typ: Ocena -->
+                            
+                            <div class="flex items-start gap-2">
+                                <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center bg-violet-50 text-violet-600 border border-violet-100 text-xs">
+                                    🗓️
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-1">
+                                        <span class="font-bold text-violet-950 truncate" title="Zapowiedziano: Kartkówka (Język angielski)">
+                                            Zapowiedziano: Kartkówka (Język angielski)
+                                        </span>
+                                        
+                                        <span class="text-[10px] text-slate-400 shrink-0">14:51</span>
+                                        
+                                    </div>
+                                    <div class="text-[10px] font-bold text-violet-700 mt-0.5">
+                                        Termin: 23.09
+                                    </div>
+                                    
+                                    <div class="text-[11px] text-slate-600 mt-0.5 line-clamp-2" title="słownictwo part - słówka z zeszytu">
+                                        słownictwo part - słówka z zeszytu
+                                    </div>
+                                    
+                                    <a href="web_terminarz.html" class="text-[10px] font-bold text-violet-600 hover:text-violet-800 inline-flex items-center gap-0.5 mt-1">
+                                        Szczegóły w terminarzu ➔
+                                    </a>
+                                </div>
+                            </div>
+
                             
 
                         </div>
@@ -1472,43 +2132,8 @@
                                         
                                     </div>
                                     <div class="text-[11px] text-slate-500 mt-0.5">
-                                        waga: <strong>2</strong>
-                                         • Sprawdzian
-                                    </div>
-                                    
-                                    <a href="web_oceny.html" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-0.5 mt-1">
-                                        Szczegóły ➔
-                                    </a>
-                                </div>
-                            </div>
-
-                            <!-- Typ: Wiadomość -->
-                            
-
-                        </div>
-                        
-                        <div class="bg-white rounded-lg p-2.5 border border-slate-200/90 shadow-2xs hover:shadow-xs transition text-xs">
-
-                            <!-- Typ: Ocena -->
-                            
-                            <div class="flex items-start gap-2">
-                                <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center font-extrabold text-xs shadow-2xs bg-slate-100 text-slate-700 border border-slate-200">
-                                    np
-                                </div>
-                                <div class="min-w-0 flex-1">
-                                    <div class="flex items-center justify-between gap-1">
-                                        <a href="web_oceny.html" class="font-bold text-slate-900 truncate hover:text-indigo-600 transition" title="Biologia">
-                                            Biologia
-                                        </a>
-                                        
-                                    </div>
-                                    <div class="text-[11px] text-slate-500 mt-0.5">
-                                        waga: <strong>-</strong>
-                                         • Praca domowa
-                                    </div>
-                                    
-                                    <div class="text-[11px] text-slate-600 italic mt-0.5 truncate" title="brak zadania domowego">
-                                        "brak zadania domowego"
+                                        waga: <strong>1</strong>
+                                         • Zadanie domowe
                                     </div>
                                     
                                     <a href="web_oceny.html" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-0.5 mt-1">
@@ -1532,14 +2157,18 @@
                                 </div>
                                 <div class="min-w-0 flex-1">
                                     <div class="flex items-center justify-between gap-1">
-                                        <a href="web_oceny.html" class="font-bold text-slate-900 truncate hover:text-indigo-600 transition" title="Chemia">
-                                            Chemia
+                                        <a href="web_oceny.html" class="font-bold text-slate-900 truncate hover:text-indigo-600 transition" title="Matematyka">
+                                            Matematyka
                                         </a>
                                         
                                     </div>
                                     <div class="text-[11px] text-slate-500 mt-0.5">
                                         waga: <strong>2</strong>
-                                         • Sprawdzian
+                                         • Projekt
+                                    </div>
+                                    
+                                    <div class="text-[11px] text-slate-600 italic mt-0.5 truncate" title="plakat: geometria i symetria w architekturze">
+                                        "plakat: geometria i symetria w architekturze"
                                     </div>
                                     
                                     <a href="web_oceny.html" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-0.5 mt-1">
@@ -1549,48 +2178,6 @@
                             </div>
 
                             <!-- Typ: Wiadomość -->
-                            
-
-                        </div>
-                        
-                        <div class="bg-white rounded-lg p-2.5 border border-slate-200/90 shadow-2xs hover:shadow-xs transition text-xs">
-
-                            <!-- Typ: Ocena -->
-                            
-                            <div class="flex items-start gap-2">
-                                <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center bg-sky-50 text-sky-600 border border-sky-100 text-xs">
-                                    ✉️
-                                </div>
-                                <div class="min-w-0 flex-1">
-                                    <div class="flex items-center justify-between gap-1">
-                                        <span class="font-bold text-slate-900 truncate" title="Zajęcia SKS dla uczniów klas 5-6">
-                                            Zajęcia SKS dla uczniów klas 5-6
-                                        </span>
-                                        
-                                        <span class="text-[10px] text-slate-400 shrink-0">15:39</span>
-                                        
-                                    </div>
-                                    
-                                    <div class="text-[10px] font-medium text-slate-500 truncate mt-0.5">
-                                        Od: Feryc Michał (Nauczyciel)
-                                    </div>
-                                    
-                                    
-                                    <div class="text-[11px] text-slate-600 mt-1 line-clamp-2" title="Dzień dobry,
-
-Od przyszłego tygodnia ruszają bezpłatne zajęcia SKS z piłki siatkowej i koszykówki dla uczniów klas 5-6. ...">
-                                        Dzień dobry,
-
-Od przyszłego tygodnia ruszają bezpłatne zajęcia SKS z piłki siatkowej i koszykówki dla uczniów klas 5-6. ...
-                                    </div>
-                                    
-                                    <a href="web_wiadomosci.html" class="text-[10px] font-bold text-sky-600 hover:text-sky-800 inline-flex items-center gap-0.5 mt-1">
-                                        Zobacz wiadomość ➔
-                                    </a>
-                                </div>
-                            </div>
-
-                            <!-- Typ: Ogłoszenie -->
                             
 
                         </div>

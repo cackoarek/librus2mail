@@ -601,7 +601,93 @@
         </div>
 
         <!-- ================================================================= -->
-        <!-- SEKCJA 5: KALENDARIUM ZDARZEŃ NA PULPICIE (DASHBOARD) -->
+        <!-- SEKCJA 5: ROK SZKOLNY, SEMESTRY I PREDYKCJA OCEN ROCZNYCH -->
+        <!-- ================================================================= -->
+        <div id="semestry" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 scroll-mt-20">
+            <div class="border-b border-slate-100 pb-4 mb-6">
+                <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>🎓</span> Rok szkolny, semestry i predykcja ocen rocznych
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Skonfiguruj datę podziału roku na semestry oraz regułę wyliczania ocen rocznych na świadectwo.
+                </p>
+            </div>
+
+            <div class="space-y-6">
+                <!-- 1. DATA PODZIAŁU NA SEMESTRY -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                        Data graniczna podziału na semestry (semester_split_date)
+                    </label>
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                        <input type="date" name="semester_split_date" id="semester_split_date"
+                               value="{{ config.get('semester_split_date', '') or '' }}"
+                               class="w-full sm:w-64 text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <span class="text-xs text-slate-500">
+                            Format: RRRR-MM-DD. Oceny do tej daty włącznie zaliczają się do <strong>Semestru I</strong>, a po niej do <strong>Semestru II</strong>.
+                        </span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
+                        💡 Pozostaw puste, aby system przyjął domyślny 1 lutego bieżącego roku szkolnego. Podział ten służy do filtrowania ocen, wyliczania średniej semestralnej oraz wykrywania przedmiotów zakończonych w I semestrze (np. Technika, Muzyka, Filozofia).
+                    </p>
+                </div>
+
+                <!-- 2. METODA PREDYKCJI OCEN ROCZNYCH -->
+                {% set cur_algo = config.get('annual_grade_algorithm', 'all_year_weighted') %}
+                <div class="pt-4 border-t border-slate-100">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-2">
+                        Algorytm predykcji oceny rocznej na świadectwo (dla przedmiotów całorocznych)
+                    </label>
+                    <p class="text-xs text-slate-500 mb-4">
+                        Wybierz sposób prognozowania oceny rocznej, gdy nauczyciel nie wpisał jeszcze oficjalnej propozycji w Librusie. Oficjalna propozycja wystawiona przez szkołę zawsze ma pierwszeństwo i zastępuje poniższą regułę.
+                    </p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- Opcja 1: all_year_weighted -->
+                        <label class="flex flex-col p-4 border-2 {% if cur_algo == 'all_year_weighted' %}border-indigo-600 bg-indigo-50/40{% else %}border-slate-200 bg-white hover:border-slate-300{% endif %} rounded-2xl cursor-pointer transition">
+                            <div class="flex items-center gap-2 mb-2">
+                                <input type="radio" name="annual_grade_algorithm" value="all_year_weighted"
+                                       {% if cur_algo == 'all_year_weighted' %}checked{% endif %}
+                                       class="text-indigo-600 focus:ring-indigo-500">
+                                <span class="text-xs font-bold text-slate-900">⚖️ Całoroczna średnia ważona</span>
+                            </div>
+                            <span class="text-[11px] text-slate-600 leading-relaxed">
+                                Domyślny tryb Librusa. Wszystkie oceny cząstkowe z obu semestrów liczone są razem ze swoimi wagami w jedną średnią roczną.
+                            </span>
+                        </label>
+
+                        <!-- Opcja 2: semesters_average -->
+                        <label class="flex flex-col p-4 border-2 {% if cur_algo == 'semesters_average' %}border-indigo-600 bg-indigo-50/40{% else %}border-slate-200 bg-white hover:border-slate-300{% endif %} rounded-2xl cursor-pointer transition">
+                            <div class="flex items-center gap-2 mb-2">
+                                <input type="radio" name="annual_grade_algorithm" value="semesters_average"
+                                       {% if cur_algo == 'semesters_average' %}checked{% endif %}
+                                       class="text-indigo-600 focus:ring-indigo-500">
+                                <span class="text-xs font-bold text-slate-900">📐 Średnia z dwóch semestrów</span>
+                            </div>
+                            <span class="text-[11px] text-slate-600 leading-relaxed">
+                                Średnia arytmetyczna z oceny za Semestr I i oceny za Semestr II: <code>(O₁ + O₂) / 2</code>. Równomierny wpływ obu półroczy.
+                            </span>
+                        </label>
+
+                        <!-- Opcja 3: progress_favored -->
+                        <label class="flex flex-col p-4 border-2 {% if cur_algo == 'progress_favored' %}border-indigo-600 bg-indigo-50/40{% else %}border-slate-200 bg-white hover:border-slate-300{% endif %} rounded-2xl cursor-pointer transition">
+                            <div class="flex items-center gap-2 mb-2">
+                                <input type="radio" name="annual_grade_algorithm" value="progress_favored"
+                                       {% if cur_algo == 'progress_favored' %}checked{% endif %}
+                                       class="text-indigo-600 focus:ring-indigo-500">
+                                <span class="text-xs font-bold text-slate-900">🚀 Promowanie progresu (WSO)</span>
+                            </div>
+                            <span class="text-[11px] text-slate-600 leading-relaxed">
+                                Jeśli uczeń w II semestrze poprawił ocenę względem I semestru, ocena roczna podąża za progresem (np. I sem: 4, II sem: 5 ➔ Roczna: 5).
+                            </span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================================================================= -->
+        <!-- SEKCJA 6: KALENDARIUM ZDARZEŃ NA PULPICIE (DASHBOARD) -->
         <!-- ================================================================= -->
         <div id="kalendarium" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 scroll-mt-20">
             <div class="border-b border-slate-100 pb-4 mb-6">
@@ -722,6 +808,109 @@
                     </div>
                 </div>
             </div>
+        <!-- ================================================================= -->
+        <!-- SEKCJA: WYGLĄD I MOTYW PANELU (SKÓRKI) -->
+        <!-- ================================================================= -->
+        <div id="wyglad-i-motyw" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 scroll-mt-20">
+            <div class="border-b border-slate-100 pb-4 mb-6">
+                <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>🎨</span> Wygląd i skórki panelu (Theme Engine)
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Wybierz preferowany motyw wizualny panelu. Zmiana motywu jest natychmiastowa i zostaje zapamiętana w przeglądarce.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Karta 1: Jasny -->
+                <button type="button"
+                        onclick="setTheme('light')"
+                        data-theme-card="light"
+                        class="theme-card-selector text-left p-4 rounded-xl border-2 border-slate-200 hover:border-indigo-400 bg-white transition-all cursor-pointer relative group">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-2xl">☀️</span>
+                        <span class="theme-card-selected-badge hidden px-2 py-0.5 text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full">
+                            Aktywny ✓
+                        </span>
+                    </div>
+                    <div class="font-bold text-sm text-slate-900">Jasny (Domyślny)</div>
+                    <p class="text-xs text-slate-500 mt-1">Czysty, czytelny motyw ze zrównoważonym kontrastem i akcentem indygo.</p>
+                    <div class="mt-4 flex gap-1.5 items-center">
+                        <div class="w-5 h-5 rounded-md bg-slate-50 border border-slate-200"></div>
+                        <div class="w-5 h-5 rounded-md bg-white border border-slate-200"></div>
+                        <div class="w-5 h-5 rounded-md bg-indigo-600"></div>
+                    </div>
+                </button>
+
+                <!-- Karta 2: Ciemny Grafit -->
+                <button type="button"
+                        onclick="setTheme('dark')"
+                        data-theme-card="dark"
+                        class="theme-card-selector text-left p-4 rounded-xl border-2 border-slate-200 hover:border-indigo-400 bg-slate-900 text-white transition-all cursor-pointer relative group">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-2xl">🌙</span>
+                        <span class="theme-card-selected-badge hidden px-2 py-0.5 text-[10px] font-bold text-indigo-300 bg-indigo-950/80 border border-indigo-700 rounded-full">
+                            Aktywny ✓
+                        </span>
+                    </div>
+                    <div class="font-bold text-sm text-white">Ciemny (Grafit)</div>
+                    <p class="text-xs text-slate-400 mt-1">Nowoczesne barwy Slate 900, doskonałe do wieczornego przeglądania ocen.</p>
+                    <div class="mt-4 flex gap-1.5 items-center">
+                        <div class="w-5 h-5 rounded-md bg-slate-950 border border-slate-800"></div>
+                        <div class="w-5 h-5 rounded-md bg-slate-800 border border-slate-700"></div>
+                        <div class="w-5 h-5 rounded-md bg-indigo-500"></div>
+                    </div>
+                </button>
+
+                <!-- Karta 3: Północ OLED -->
+                <button type="button"
+                        onclick="setTheme('midnight')"
+                        data-theme-card="midnight"
+                        class="theme-card-selector text-left p-4 rounded-xl border-2 border-slate-200 hover:border-sky-400 bg-black text-white transition-all cursor-pointer relative group">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-2xl">🌌</span>
+                        <span class="theme-card-selected-badge hidden px-2 py-0.5 text-[10px] font-bold text-sky-300 bg-sky-950/80 border border-sky-700 rounded-full">
+                            Aktywny ✓
+                        </span>
+                    </div>
+                    <div class="font-bold text-sm text-white">Północ (OLED)</div>
+                    <p class="text-xs text-slate-400 mt-1">Głęboka, prawdziwa czerń i błękit Sky – energooszczędność i maksymalny kontrast.</p>
+                    <div class="mt-4 flex gap-1.5 items-center">
+                        <div class="w-5 h-5 rounded-md bg-black border border-slate-800"></div>
+                        <div class="w-5 h-5 rounded-md bg-slate-900 border border-slate-700"></div>
+                        <div class="w-5 h-5 rounded-md bg-sky-500"></div>
+                    </div>
+                </button>
+
+                <!-- Karta 4: Szmaragd / Leśny -->
+                <button type="button"
+                        onclick="setTheme('forest')"
+                        data-theme-card="forest"
+                        class="theme-card-selector text-left p-4 rounded-xl border-2 border-slate-200 hover:border-emerald-400 bg-emerald-950 text-white transition-all cursor-pointer relative group">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-2xl">🌲</span>
+                        <span class="theme-card-selected-badge hidden px-2 py-0.5 text-[10px] font-bold text-emerald-300 bg-emerald-900/80 border border-emerald-600 rounded-full">
+                            Aktywny ✓
+                        </span>
+                    </div>
+                    <div class="font-bold text-sm text-emerald-100">Szmaragd (Leśny)</div>
+                    <p class="text-xs text-emerald-300/70 mt-1">Ciemnozielona tonacja leśna o łagodnym dla oczu kontraście.</p>
+                    <div class="mt-4 flex gap-1.5 items-center">
+                        <div class="w-5 h-5 rounded-md bg-emerald-950 border border-emerald-800"></div>
+                        <div class="w-5 h-5 rounded-md bg-emerald-900 border border-emerald-700"></div>
+                        <div class="w-5 h-5 rounded-md bg-emerald-500"></div>
+                    </div>
+                </button>
+            </div>
+
+            <div class="mt-4 p-3.5 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <span class="text-xs text-slate-600 flex items-center gap-2">
+                    <span>💻</span> Możesz także wybrać automatyczne dopasowywanie do motywu systemu operacyjnego (Auto):
+                </span>
+                <button type="button" onclick="setTheme('auto')" class="px-3.5 py-1.5 text-xs font-bold rounded-lg border border-slate-300 hover:bg-slate-100 transition cursor-pointer shrink-0">
+                    Włącz tryb Auto (System)
+                </button>
+            </div>
         </div>
 
         <!-- Zapis zmian -->
@@ -737,10 +926,275 @@
         </div>
 
     </form>
+
+    <!-- ================================================================= -->
+    <!-- SEKCJA: ARCHIWIZACJA I ZARZĄDZANIE ROKIEM SZKOLNYM -->
+    <!-- ================================================================= -->
+    <div class="mt-10 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7">
+        <div class="border-b border-slate-100 pb-4 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+                <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>📦</span> Archiwizacja i zarządzanie rokiem szkolnym
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Tworzy trwały snapshot bieżącego roku w <code>storage/archive/</code> i przygotowuje czysty stan na nowy rok szkolny.
+                </p>
+            </div>
+            {% if archived_years %}
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                <span>📁</span>
+                <span>Zarchiwizowano: {{ archived_years|length }} {{ 'rok' if archived_years|length == 1 else 'lata' if archived_years|length in [2, 3, 4] else 'lat' }}</span>
+            </span>
+            {% endif %}
+        </div>
+
+        <!-- Wskazówka jak przełączać lata -->
+        <div class="mb-6 p-4 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 text-xs text-indigo-950 dark:text-slate-200 flex items-start gap-3">
+            <span class="text-xl flex-shrink-0">💡</span>
+            <div class="leading-relaxed">
+                <span class="font-bold text-indigo-950 dark:text-white">Jak przeglądać dane z minionych lat?</span>
+                <p class="text-indigo-800 dark:text-slate-300 mt-1">
+                    Po wykonaniu archiwizacji archiwalny okres staje się w każdej chwili dostępny w <strong class="dark:text-white">rozwijanym menu lat w górnym pasku nawigacyjnym</strong> (tuż obok wyboru profilu ucznia, np. <em class="dark:text-indigo-300">👤 Uczeń | 🏫 Rok bieżący ▾</em>). Wybranie zarchiwizowanego roku natychmiast przełącza cały panel (oceny, świadectwo, wykresy, terminarz i wiadomości) w bezpieczny tryb tylko do odczytu.
+                </p>
+            </div>
+        </div>
+
+        {% if archived_years %}
+        <div class="mb-6">
+            <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Dostępne archiwa:</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {% for ay in archived_years %}
+                <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <div class="font-bold text-sm text-slate-900">{{ ay.label }}</div>
+                        <div class="text-[10px] text-slate-400">Utworzono: {{ ay.archived_at[:10] if ay.archived_at else '—' }}</div>
+                    </div>
+                    <a href="{{ url_for('web.switch_school_year', year=ay.label) }}"
+                       class="px-2.5 py-1 text-xs font-bold bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-200 rounded-lg shadow-2xs transition">
+                        Przeglądaj →
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if is_archive_mode %}
+        <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-center gap-2">
+            <span>⚠️</span>
+            <span>Przeglądasz zarchiwizowany rok szkolny w trybie tylko do odczytu. Archiwizacja nowego roku jest zablokowana do czasu powrotu do roku bieżącego.</span>
+        </div>
+        {% else %}
+        <form id="archive-year-form" method="POST" action="{{ url_for('web.action_archive_year') }}" onsubmit="event.preventDefault(); openArchiveConfirmModal();" class="p-5 bg-slate-50/70 rounded-2xl border border-slate-200 max-w-2xl">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">Ręczna archiwizacja bieżącego roku szkolnego:</h4>
+            <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+                Wpisz etykietę zamykanego roku (np. <code>2024/2025</code>). System utworzy trwały snapshot w <code>storage/archive/</code>, wyczyści oceny, terminarz i plan lekcji do czystego stanu, pozostawiając konfigurację oraz ciągłość wiadomości. Zarchiwizowany rok natychmiast pojawi się w menu wyboru okresu w prawym górnym rogu ekranu.
+            </p>
+
+            {% if all_students and all_students|length > 1 %}
+            <div class="mb-4 p-3.5 bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 rounded-xl text-xs text-indigo-950 dark:text-slate-200">
+                <label class="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" id="archive_all_students" name="archive_all_students" value="1"
+                           class="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                    <div>
+                        <span class="font-extrabold text-indigo-950 dark:text-white block text-xs">
+                            Zarchiwizuj jednocześnie dla wszystkich dzieci ({% for s in all_students %}{{ s.name }}{% if not loop.last %}, {% endif %}{% endfor %})
+                        </span>
+                        <span class="text-[11px] text-indigo-800 dark:text-slate-300 block mt-0.5">
+                            Gdy zaznaczone, rok zostanie zarchiwizowany równolegle dla każdego dziecka. Gdy odznaczone, zarchiwizowany zostanie wyłącznie aktualny profil: <strong class="dark:text-white">{{ active_student.name }}</strong> (dla pozostałych dzieci należy powtórzyć operację po przełączeniu profilu).
+                        </span>
+                    </div>
+                </label>
+            </div>
+            {% endif %}
+
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <input type="text" id="archive_school_year_input" name="school_year_label" placeholder="np. 2024/2025" required
+                       onkeydown="if(event.key === 'Enter'){ event.preventDefault(); openArchiveConfirmModal(); }"
+                       class="px-3.5 py-2 text-xs font-bold border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white flex-1">
+                <button type="button" onclick="openArchiveConfirmModal()"
+                        class="px-4 py-2 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-xl shadow-sm transition whitespace-nowrap cursor-pointer">
+                    📦 Zarchiwizuj i rozpocznij nowy rok
+                </button>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+
+    <!-- Modal potwierdzenia archiwizacji roku szkolnego (Custom Application Modal) -->
+    <div id="archive-confirm-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 hidden" onclick="handleArchiveModalBackdrop(event)">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 sm:p-7 relative" onclick="event.stopPropagation()">
+            <!-- Przycisk zamknięcia X -->
+            <button type="button" onclick="closeArchiveConfirmModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-lg font-bold p-1 rounded-lg hover:bg-slate-100 transition cursor-pointer" title="Zamknij">
+                ✕
+            </button>
+
+            <!-- Nagłówek z ikoną -->
+            <div class="flex items-start gap-4 mb-4">
+                <div class="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center text-2xl flex-shrink-0 shadow-xs">
+                    📦
+                </div>
+                <div>
+                    <h3 class="text-base font-extrabold text-slate-900">
+                        Potwierdzenie archiwizacji roku szkolnego
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        Tworzenie trwałego snapshotu i przygotowanie czystego stanu.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Zawartość / Szczegóły archiwizacji -->
+            <div class="space-y-3.5 my-5">
+                <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
+                    <span class="text-slate-600 font-medium">Etykieta zamykanego roku:</span>
+                    <span id="archive-modal-year-display" class="font-extrabold font-mono text-slate-900 px-2.5 py-1 bg-white border border-slate-200 rounded-lg"></span>
+                </div>
+
+                <!-- Zakres: Wszystkie dzieci -->
+                <div id="archive-modal-scope-all" class="hidden p-3.5 bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 rounded-xl text-xs text-indigo-950 dark:text-slate-200">
+                    <div class="font-extrabold flex items-center gap-1.5 mb-1 text-indigo-900 dark:text-white">
+                        <span>👨‍👩‍👧‍👦</span> Zakres: Jednocześnie wszystkie dzieci
+                    </div>
+                    <p class="text-indigo-800 dark:text-slate-300 leading-relaxed text-[11px]">
+                        Zostaną zarchiwizowane dane dla każdego profilu:
+                        <strong class="dark:text-white">{% for s in all_students %}{{ s.name }}{% if not loop.last %}, {% endif %}{% endfor %}</strong>.
+                        Oceny, terminarz i plan lekcji każdego dziecka zostaną zarchiwizowane do <code>storage/archive/</code>, a na nowy rok szkolny rozpocznie się czysty stan.
+                    </p>
+                </div>
+
+                <!-- Zakres: Tylko bieżące dziecko -->
+                <div id="archive-modal-scope-single" class="p-3.5 bg-amber-50/80 border border-amber-200 rounded-xl text-xs text-amber-950">
+                    <div class="font-extrabold flex items-center gap-1.5 mb-1 text-amber-900">
+                        <span>👤</span> Zakres: Wyłącznie aktywny uczeń
+                    </div>
+                    <p class="text-amber-900 leading-relaxed text-[11px]">
+                        Zarchiwizowane zostaną dane tylko dla profilu: <strong>{{ active_student.name if active_student else 'aktywnego ucznia' }}</strong>.
+                        {% if all_students and all_students|length > 1 %}
+                        <span class="block mt-2 p-2 bg-amber-100/70 border border-amber-300 rounded-lg text-amber-950 font-semibold text-[11px]">
+                            ⚠️ <strong>Ważne:</strong> Po zakończeniu przełącz profil ucznia w prawym górnym rogu menu i powtórz archiwizację dla pozostałych dzieci ({% for s in all_students if s.login != active_login %}{{ s.name }}{% if not loop.last %}, {% endif %}{% endfor %}).
+                        </span>
+                        {% endif %}
+                    </p>
+                </div>
+
+                <!-- Bezpieczeństwo i gwarancja ciągłości -->
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/80 text-[11px] text-slate-600 flex items-center gap-2">
+                    <span class="text-emerald-600 text-sm">🛡️</span>
+                    <span>Historia wiadomości i ogłoszeń ze szkoły oraz preferencje powiadomień zostaną zachowane.</span>
+                </div>
+            </div>
+
+            <!-- Przyciski akcji -->
+            <div class="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
+                <button type="button" onclick="closeArchiveConfirmModal()"
+                        class="px-4 py-2.5 text-xs font-bold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer">
+                    Anuluj
+                </button>
+                <button type="button" onclick="submitArchiveForm()"
+                        class="px-5 py-2.5 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-xl shadow-md shadow-amber-200 transition cursor-pointer">
+                    📦 Tak, zarchiwizuj i rozpocznij nowy rok
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- SEKCJA: ZAAWANSOWANE AKCJE I NARZĘDZIA CLI -->
+    <!-- ================================================================= -->
+    <div class="mt-10 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div class="max-w-2xl">
+                <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>⚡</span> Zaawansowane akcje i narzędzia CLI
+                </h2>
+                <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+                    Dedykowany panel do ręcznego uruchamiania zadań konsolowych bezpośrednio z poziomu przeglądarki: wymuszenie natychmiastowej synchronizacji z Librusem (Sync), wysyłka powiadomień e-mail, generowanie raportów postępów oraz motywacyjnych raportów ucznia z podglądem logów konsoli w czasie rzeczywistym.
+                </p>
+                <div class="flex flex-wrap gap-2 mt-3">
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                        🔄 librus_collector (Sync)
+                    </span>
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                        📧 librus_updates_notifier
+                    </span>
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                        📈 librus_progress_report
+                    </span>
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                        🎓 librus_student_report
+                    </span>
+                </div>
+            </div>
+            <div class="flex sm:flex-col items-center sm:items-end justify-start gap-2 flex-shrink-0">
+                <a href="{{ url_for('web.actions_view') }}"
+                   class="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition cursor-pointer">
+                    <span>⚡</span>
+                    <span>Przejdź do Akcji CLI →</span>
+                </a>
+                <span class="text-[10px] text-slate-400">Podgląd konsoli na żywo</span>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
 let studentSettingsCount = {{ users|length }};
+
+function openArchiveConfirmModal() {
+    const input = document.getElementById('archive_school_year_input');
+    const val = input ? input.value.trim() : '';
+    if (!val) {
+        if (input) {
+            input.focus();
+            if (input.reportValidity) input.reportValidity();
+        }
+        return;
+    }
+
+    const yearDisplay = document.getElementById('archive-modal-year-display');
+    if (yearDisplay) yearDisplay.textContent = val;
+
+    const isAll = document.getElementById('archive_all_students')?.checked;
+    const scopeAll = document.getElementById('archive-modal-scope-all');
+    const scopeSingle = document.getElementById('archive-modal-scope-single');
+
+    if (isAll) {
+        if (scopeAll) scopeAll.classList.remove('hidden');
+        if (scopeSingle) scopeSingle.classList.add('hidden');
+    } else {
+        if (scopeAll) scopeAll.classList.add('hidden');
+        if (scopeSingle) scopeSingle.classList.remove('hidden');
+    }
+
+    const modal = document.getElementById('archive-confirm-modal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeArchiveConfirmModal() {
+    const modal = document.getElementById('archive-confirm-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function handleArchiveModalBackdrop(event) {
+    if (event.target.id === 'archive-confirm-modal') {
+        closeArchiveConfirmModal();
+    }
+}
+
+function submitArchiveForm() {
+    const form = document.getElementById('archive-year-form');
+    if (form) {
+        form.submit();
+    }
+}
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeArchiveConfirmModal();
+    }
+});
 
 function toggleGmailAuthModeSettings() {
     const isGmail = document.querySelector('input[name="mail_provider"]:checked')?.value === 'gmail';

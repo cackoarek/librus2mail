@@ -9,6 +9,8 @@ import unittest
 from datetime import datetime, timedelta
 from unittest.mock import patch
 
+import yaml
+
 from librus2mail.web import create_app, export_web_views
 from librus2mail.web import main as web_main
 from librus2mail.web.app import get_app_version
@@ -444,9 +446,22 @@ class TestWebDashboard(unittest.TestCase):
         self.assertEqual(cert_ex['excluded_subjects'][0]['subject'], 'Fizyka')
         self.assertTrue(cert_ex['excluded_subjects'][0]['is_excluded'])
         # Przedmioty wykluczone znajdują się na dole listy subjects
-        self.assertEqual(cert_ex['subjects'][-1]['subject'], 'Fizyka')
         self.assertEqual(cert_ex['rated_count'], 1)  # tylko Matematyka
         self.assertEqual(cert_ex['certificate_average'], 4.00)
+
+        # Test kalkulacji z calculate_subject_averages dla przedmiotu bez ocen (np. Sztuka)
+        full_subj_avgs = calculate_subject_averages(
+            grades,
+            all_subjects=['Matematyka', 'Fizyka', 'Sztuka'],
+        )
+        self.assertIn('Sztuka', full_subj_avgs)
+        self.assertIsNone(full_subj_avgs['Sztuka']['average'])
+        self.assertIsNone(full_subj_avgs['Sztuka']['proposed_grade_num'])
+        self.assertEqual(full_subj_avgs['Sztuka']['proposed_grade_label'], 'Brak ocen')
+        cert_full = calculate_certificate_summary(full_subj_avgs)
+        self.assertEqual(cert_full['rated_count'], 2)
+        self.assertEqual(cert_full['unrated_count'], 1)
+        self.assertEqual(cert_full['certificate_average'], 4.00)
 
         # Test ustalania pełnej nazwy ucznia (resolve_student_name)
         storage = get_storage(self.mock_config, self.storage_dir)
@@ -481,6 +496,113 @@ class TestWebDashboard(unittest.TestCase):
         # Tie-breaker po wyższym ID dla tej samej daty 16.10
         self.assertEqual(sorted_res[0]['subject'], 'Język angielski')
         self.assertEqual(sorted_res[1]['subject'], 'Język polski')
+
+    def test_semester_split_and_annual_grade_algorithms(self):
+        """Weryfikuje podział ocen na semestry, detekcję przedmiotów zakończonych oraz algorytmy ocen rocznych."""
+        split_date = "2027-02-01"
+        ref_in_sem2 = datetime(2027, 3, 15, 10, 0, 0)
+
+        grades = [
+            # Technika: oceny tylko w I semestrze (zakończony)
+            {'subject': 'Technika', 'grade': '5', 'weight': '2', 'date': '2026-11-10', 'id': '101'},
+            {'subject': 'Technika', 'grade': '5', 'weight': '1', 'date': '2026-12-05', 'id': '102'},
+
+            # Matematyka: oceny w I i II semestrze (w toku), w II semestrze progres (I sem: 4, II sem: 5)
+            {'subject': 'Matematyka', 'grade': '4', 'weight': '2', 'date': '2026-10-15', 'id': '103'},
+            {'subject': 'Matematyka', 'grade': '4', 'weight': '2', 'date': '2027-01-20', 'id': '104'},
+            {'subject': 'Matematyka', 'grade': '5', 'weight': '2', 'date': '2027-02-25', 'id': '105'},
+            {'subject': 'Matematyka', 'grade': '5', 'weight': '3', 'date': '2027-03-05', 'id': '106'},
+
+            # Fizyka: z oficjalną propozycją belfra
+            {'subject': 'Fizyka', 'grade': '3', 'weight': '1', 'date': '2026-11-20', 'id': '107'},
+            {'subject': 'Fizyka', 'grade': '4', 'weight': '1', 'date': '2027-02-15', 'id': '108'},
+            {'subject': 'Fizyka', 'grade': '5', 'weight': '0', 'date': '2027-03-10', 'category': 'Proponowana ocena roczna', 'teacher': 'Nauczyciel Fizyki', 'id': '109'},
+        ]
+
+        # 1. Cały rok szkolny (semester='all')
+        avgs_all = calculate_subject_averages(
+            grades,
+            semester='all',
+            semester_split_date=split_date,
+            ref_date=ref_in_sem2,
+        )
+        self.assertTrue(avgs_all['Technika']['is_completed'])
+        self.assertEqual(avgs_all['Technika']['status_label'], 'Zakończony w I semestrze')
+        self.assertEqual(avgs_all['Technika']['average'], 5.0)
+
+        self.assertFalse(avgs_all['Matematyka']['is_completed'])
+        self.assertEqual(avgs_all['Matematyka']['status_label'], 'W toku (Semestr II)')
+        # Średnia roczna matematyki: (4*4 + 5*5) / 9 = 41 / 9 = 4.56
+        self.assertEqual(avgs_all['Matematyka']['average'], 4.56)
+
+        # 2. Filtr Semestr I (semester='sem1')
+        avgs_sem1 = calculate_subject_averages(
+            grades,
+            semester='sem1',
+            semester_split_date=split_date,
+            ref_date=ref_in_sem2,
+        )
+        self.assertEqual(avgs_sem1['Matematyka']['average'], 4.0)
+        self.assertEqual(len(avgs_sem1['Matematyka']['grades']), 2)
+
+        # 3. Filtr Semestr II (semester='sem2')
+        avgs_sem2 = calculate_subject_averages(
+            grades,
+            semester='sem2',
+            semester_split_date=split_date,
+            ref_date=ref_in_sem2,
+        )
+        # Matematyka w II semestrze ma same 5: średnia 5.0
+        self.assertEqual(avgs_sem2['Matematyka']['average'], 5.0)
+        self.assertEqual(len(avgs_sem2['Matematyka']['grades']), 2)
+        # Technika zakończona w I semestrze zachowuje swoją ocenę z I semestru
+        self.assertEqual(avgs_sem2['Technika']['average'], 5.0)
+
+        # 4. Algorytmy predykcji ocen rocznych
+        # A) all_year_weighted: Matematyka ma średnią 4.56 -> predykcja 4 (dobry, bo próg na 5 to 4.75)
+        avgs_algo1 = calculate_subject_averages(
+            grades,
+            semester='all',
+            semester_split_date=split_date,
+            ref_date=ref_in_sem2,
+            annual_grade_algorithm='all_year_weighted',
+        )
+        self.assertEqual(avgs_algo1['Matematyka']['proposed_grade_num'], 4)
+
+        # B) semesters_average: I sem = 4, II sem = 5 -> średnia 4.5 -> 4
+        avgs_algo2 = calculate_subject_averages(
+            grades,
+            semester='all',
+            semester_split_date=split_date,
+            ref_date=ref_in_sem2,
+            annual_grade_algorithm='semesters_average',
+        )
+        self.assertEqual(avgs_algo2['Matematyka']['proposed_grade_num'], 4)
+
+        # C) progress_favored: I sem = 4, II sem = 5 -> progres -> 5 (bardzo dobry)!
+        avgs_algo3 = calculate_subject_averages(
+            grades,
+            semester='all',
+            semester_split_date=split_date,
+            ref_date=ref_in_sem2,
+            annual_grade_algorithm='progress_favored',
+        )
+        self.assertEqual(avgs_algo3['Matematyka']['proposed_grade_num'], 5)
+
+        # 5. Oficjalna propozycja nauczyciela na Fizyce ma pierwszeństwo (zaproponował 5)
+        self.assertTrue(avgs_all['Fizyka']['is_official_proposal'])
+        self.assertEqual(avgs_all['Fizyka']['proposed_grade_num'], 5)
+        self.assertIsNotNone(avgs_all['Fizyka']['official_proposed_grade'])
+        self.assertEqual(avgs_all['Fizyka']['official_proposed_grade']['teacher'], 'Nauczyciel Fizyki')
+
+        # 6. Zestawienie na świadectwo uwzględnia ocenę proponowaną i algorytmy
+        cert = calculate_certificate_summary(avgs_algo3)
+        subj_map = {s['subject']: s for s in cert['subjects']}
+        self.assertEqual(subj_map['Technika']['proposed_grade_num'], 5)
+        self.assertTrue(subj_map['Technika']['is_completed'])
+        self.assertEqual(subj_map['Matematyka']['proposed_grade_num'], 5)
+        self.assertEqual(subj_map['Fizyka']['proposed_grade_num'], 5)
+        self.assertTrue(subj_map['Fizyka']['is_official_proposal'])
 
     def test_login_rate_limiter_unit(self):
         """Testuje jednostkowo działanie klasy LoginRateLimiter (licznik prób i blokada)."""
@@ -1074,6 +1196,9 @@ class TestWebDashboard(unittest.TestCase):
         self.assertEqual(res_get.status_code, 200)
         self.assertIn(b'Ustawienia Systemu', res_get.data)
         self.assertIn(b'Jan Kowalski', res_get.data)
+        self.assertIn(b'/akcje', res_get.data)
+        self.assertIn('Zaawansowane akcje i narzędzia CLI'.encode(), res_get.data)
+        self.assertNotIn('⚡ Akcje CLI'.encode(), res_get.data)  # Wyczyszczone z navbaru
 
         # 2. POST /ustawienia z pustym hasłem (powinno zachować stare) i nową nazwą
         post_data = {
@@ -1095,6 +1220,8 @@ class TestWebDashboard(unittest.TestCase):
             'report_weekday_0': 'friday',
             'report_time_0': '17:00',
             'report_interval_days_0': '7',
+            'semester_split_date': '2027-02-15',
+            'annual_grade_algorithm': 'progress_favored',
             'web_password': '',  # puste -> zachowanie starego
         }
         res_save = client.post('/ustawienia', data=post_data, follow_redirects=True)
@@ -1123,6 +1250,8 @@ class TestWebDashboard(unittest.TestCase):
         self.assertEqual(updated_cfg['web']['password'], 'SuperParentPassword')
         self.assertTrue(updated_cfg.get('one_summary_message'))
         self.assertTrue(updated_cfg['librus_users'][0].get('one_summary_message'))
+        self.assertEqual(updated_cfg.get('semester_split_date'), '2027-02-15')
+        self.assertEqual(updated_cfg.get('annual_grade_algorithm'), 'progress_favored')
 
         # 3. Zmiana dostawcy na SMTP ukrywa wskazówkę Gmaila (klasa hidden)
         post_data_smtp = dict(post_data)
@@ -1275,7 +1404,39 @@ class TestWebDashboard(unittest.TestCase):
         res_ongoing = client_ongoing.get('/plan')
         self.assertEqual(res_ongoing.status_code, 200)
         self.assertIn(b'2026-09-23', res_ongoing.data)
-        self.assertIn('Dzisiaj (lekcje w toku)', res_ongoing.data.decode('utf-8'))
+        ongoing_html = res_ongoing.data.decode('utf-8')
+        self.assertIn('Dzisiaj (lekcje w toku)', ongoing_html)
+        self.assertIn('TRWA TERAZ', ongoing_html)
+        self.assertIn('Odbyła się', ongoing_html)
+        self.assertIn('Lekcja w toku', ongoing_html)
+
+        # 1b. Podczas przerwy między lekcjami (2026-09-23 08:50) -> informacja o przerwie
+        app_break = create_app(
+            config_path=self.config_path,
+            storage_dir=self.storage_dir,
+            no_auth=True,
+            actual_date=datetime(2026, 9, 23, 8, 50, 0),
+        )
+        res_break = app_break.test_client().get('/plan')
+        self.assertEqual(res_break.status_code, 200)
+        break_html = res_break.data.decode('utf-8')
+        self.assertIn('Trwa przerwa między lekcjami', break_html)
+        self.assertIn('Dzwonek za 5 min', break_html)
+
+        # 1c. Przed rozpoczęciem lekcji w bieżącym dniu (2026-09-23 00:28 - w nocy / rano przed 08:00)
+        app_before = create_app(
+            config_path=self.config_path,
+            storage_dir=self.storage_dir,
+            no_auth=True,
+            actual_date=datetime(2026, 9, 23, 0, 28, 0),
+        )
+        res_before = app_before.test_client().get('/plan')
+        self.assertEqual(res_before.status_code, 200)
+        before_html = res_before.data.decode('utf-8')
+        self.assertIn('Dzisiaj (przed lekcjami', before_html)
+        self.assertNotIn('Dzisiaj (lekcje w toku)', before_html)
+        self.assertNotIn('TRWA TERAZ', before_html)
+        self.assertNotIn('Odbyła się', before_html)
 
         # 2. Po zakończeniu lekcji w bieżącym dniu (2026-09-23 12:00) -> domyślnie kolejny dzień nauki (2026-09-24)
         app_finished = create_app(
@@ -1980,6 +2141,200 @@ class TestWebDashboard(unittest.TestCase):
         self.assertTrue(saved_cfg['timeline']['hide_weekends'])
         self.assertTrue(saved_cfg['timeline']['reverse_order'])
         self.assertEqual(saved_cfg['timeline']['event_types'], ['grades', 'tests'])
+
+    def test_annual_archive_and_historical_browser(self):
+        """Testuje moduł archiwizacji rocznej (storage.py) oraz przeglądarkę historyczną w panelu WWW."""
+        app = create_app(config_path=self.config_path, storage_dir=self.storage_dir, no_auth=True)
+        client = app.test_client()
+        storage = app.config['STORAGE']
+        login = '123456'
+
+        # 1. Zapisujemy stan początkowy z ocenami, wiadomościami i konfiguracją ucznia
+        storage.save_grades_details(login, [
+            {'id': 'gr_hist_1', 'subject': 'Matematyka', 'grade': '5', 'weight': '2', 'date': '2024-11-10'},
+            {'id': 'gr_hist_2', 'subject': 'Historia', 'grade': '4', 'weight': '1', 'date': '2024-12-05'},
+        ])
+        storage.save_messages_details(login, [
+            {'id': 'msg_august', 'title': 'Rozpoczęcie roku', 'date': '2024-08-30'},
+        ])
+        storage.set_subject_certificate_inclusion(login, 'Religia', False)
+        storage.set_subject_category(login, 'Matematyka', 'sciences')
+
+        # 2. Wykonujemy archiwizację roku 2024/2025
+        archive_path = storage.archive_school_year(login, '2024/2025')
+        self.assertTrue(archive_path.is_file())
+        self.assertIn('123456_2024_2025.json', archive_path.name)
+
+        # Sprawdzamy stan pliku archiwalnego
+        arch_data = json.loads(archive_path.read_text(encoding='utf-8'))
+        self.assertEqual(arch_data.get('school_year_label'), '2024/2025')
+        self.assertIn('archived_at', arch_data)
+        self.assertEqual(len(arch_data.get('grades_history', {})), 5)
+
+        # Sprawdzamy czysty stan bieżący:
+        # - Wiadomości i konfiguracja są zachowane
+        # - Oceny są wyczyszczone do zera
+        curr_grades = storage.get_grades_history(login)
+        self.assertEqual(len(curr_grades), 0)
+        curr_messages = storage.get_stored_messages(login)
+        self.assertTrue(any(m.get('id') == 'msg_august' for m in curr_messages))
+        self.assertIn('religia', [s.lower() for s in storage.get_excluded_certificate_subjects(login)])
+        self.assertEqual(storage.get_subject_categories(login).get('Matematyka'), 'sciences')
+
+        # 3. Lista zarchiwizowanych lat
+        arch_list = storage.list_archived_years(login)
+        self.assertEqual(len(arch_list), 1)
+        self.assertEqual(arch_list[0]['label'], '2024/2025')
+
+        # 4. Widok archiwalny (ArchivedFileStorage)
+        arch_view = storage.get_archived_view('2024/2025')
+        arch_grades = arch_view.get_grades_history(login)
+        self.assertEqual(len(arch_grades), 5)
+        self.assertTrue(any(g['subject'] == 'Matematyka' for g in arch_grades))
+
+        # Próba modyfikacji w widoku archiwalnym jest ignorowana
+        res_mut = arch_view.update_grade_custom(login, 'gr_hist_1', '6', '3')
+        self.assertIsNone(res_mut)
+        self.assertEqual(arch_view.get_grades_history(login)[0]['grade'], '5')
+
+        # 5. Integracja WWW: Przełączenie na rok archiwalny
+        res_switch = client.get('/school-year/switch?year=2024/2025', follow_redirects=True)
+        self.assertEqual(res_switch.status_code, 200)
+        html_arch = res_switch.data.decode('utf-8')
+        self.assertIn('Przeglądasz zarchiwizowany rok szkolny', html_arch)
+        self.assertIn('2024/2025', html_arch)
+        self.assertIn('Wróć do roku bieżącego', html_arch)
+
+        # Sprawdzenie widoku ocen w trybie archiwalnym - widzi oceny z tamtego roku
+        res_grades_view = client.get('/oceny')
+        self.assertEqual(res_grades_view.status_code, 200)
+        html_grades = res_grades_view.data.decode('utf-8')
+        self.assertIn('Matematyka', html_grades)
+        self.assertIn('Historia', html_grades)
+
+        # 6. Blokada operacji POST/API w trybie archiwalnym
+        def extract_csrf(html_str: str) -> str:
+            import re
+            match = re.search(r'name=["\']csrf_token["\']\s+value=["\']([^"\']+)["\']', html_str)
+            return match.group(1) if match else 'test_token'
+
+        csrf_tok = extract_csrf(res_switch.data.decode('utf-8'))
+        res_blocked = client.post('/api/grade/update', json={
+            'grade_id': 'gr_hist_1',
+            'grade': '6',
+            'weight': '3',
+            'csrf_token': csrf_tok,
+        })
+        self.assertEqual(res_blocked.status_code, 403)
+        self.assertIn('trybie archiwalnym', res_blocked.get_json().get('message', ''))
+
+        # 7. Powrót do roku bieżącego
+        res_return = client.get('/school-year/switch?year=current', follow_redirects=True)
+        self.assertEqual(res_return.status_code, 200)
+        html_current = res_return.data.decode('utf-8')
+        self.assertNotIn('Przeglądasz zarchiwizowany rok szkolny', html_current)
+
+        # 8. Test formularza akcji archiwizacji POST /actions/archive-year
+        # Dodajemy ocenę do bieżącego roku i archiwizujemy przez endpoint
+        storage.save_grades_details(login, [
+            {'id': 'gr_2025_1', 'subject': 'Fizyka', 'grade': '6', 'weight': '3', 'date': '2025-10-01'},
+        ])
+        csrf_curr = extract_csrf(html_current)
+        res_action_arch = client.post('/actions/archive-year', data={
+            'school_year_label': '2025/2026',
+            'csrf_token': csrf_curr,
+        }, follow_redirects=True)
+        self.assertEqual(res_action_arch.status_code, 200)
+        html_after_arch = res_action_arch.data.decode('utf-8')
+        self.assertIn('Pomyślnie zarchiwizowano rok szkolny 2025/2026', html_after_arch)
+
+        # Sprawdzamy czy są teraz 2 archiwa
+        updated_arch_list = storage.list_archived_years(login)
+        self.assertEqual(len(updated_arch_list), 2)
+        arch_labels = [a['label'] for a in updated_arch_list]
+        self.assertIn('2025/2026', arch_labels)
+        self.assertIn('2024/2025', arch_labels)
+
+        # 9. Test wielodzietności: przypomnienie o drugim dziecku oraz checkbox 'archive_all_students'
+        # Dopisujemy drugie dziecko do configu
+        with open(self.config_path, encoding='utf-8') as f:
+            multi_cfg = yaml.safe_load(f)
+        multi_cfg['librus_users'].append({
+            'librus_login': '654321',
+            'librus_login_name': 'Kasia Kowalska',
+            'librus_password': 'secret_pass_2',
+            'receivers': ['mama@example.com'],
+        })
+        with open(self.config_path, 'w', encoding='utf-8') as f:
+            yaml.safe_dump(multi_cfg, f)
+
+        # Tworzymy aplikację z nowym configiem zawierającym dwoje dzieci
+        multi_app = create_app(config_path=self.config_path, storage_dir=self.storage_dir, no_auth=True)
+        multi_client = multi_app.test_client()
+
+        # a) Archiwizacja pojedyncza (bez zaznaczonego checkboxa 'archive_all_students')
+        res_single = multi_client.post('/actions/archive-year', data={
+            'school_year_label': '2026/2027',
+            'csrf_token': csrf_curr,
+        }, follow_redirects=True)
+        self.assertEqual(res_single.status_code, 200)
+        html_single = res_single.data.decode('utf-8')
+        self.assertIn('Pomyślnie zarchiwizowano rok szkolny 2026/2027', html_single)
+        self.assertIn('Pamiętaj: operacja dotyczyła wyłącznie tego profilu', html_single)
+        self.assertIn('Kasia Kowalska', html_single)
+
+        # b) Archiwizacja masowa ze zaznaczonym checkboxem 'archive_all_students'
+        res_all = multi_client.post('/actions/archive-year', data={
+            'school_year_label': '2027/2028',
+            'archive_all_students': '1',
+            'csrf_token': csrf_curr,
+        }, follow_redirects=True)
+        self.assertEqual(res_all.status_code, 200)
+        html_all = res_all.data.decode('utf-8')
+        self.assertIn('Pomyślnie zarchiwizowano rok szkolny 2027/2028 jednocześnie dla wszystkich dzieci', html_all)
+        self.assertIn('Kasia Kowalska', html_all)
+
+        # Sprawdzamy, czy archiwum powstało zarówno dla pierwszego, jak i dla drugiego dziecka
+        self.assertIn('2027/2028', [a['label'] for a in storage.list_archived_years('123456')])
+        self.assertIn('2027/2028', [a['label'] for a in storage.list_archived_years('654321')])
+
+    def test_theme_engine_integration(self):
+        """Weryfikuje integrację silnika skórek: obecność tokenów CSS, skryptu pre-render, selektora w nagłówku i kafelków w ustawieniach."""
+        app = create_app(
+            config_path=self.config_path,
+            storage_dir=self.storage_dir,
+            no_auth=True,
+            secret_key='test-secret',
+        )
+        client = app.test_client()
+        res_dashboard = client.get('/')
+        self.assertEqual(res_dashboard.status_code, 200)
+        html_dashboard = res_dashboard.data.decode('utf-8')
+
+        # Weryfikacja tokenów i skryptu pre-render w base.html
+        self.assertIn('librus2mail_theme', html_dashboard)
+        self.assertIn('data-theme', html_dashboard)
+        self.assertIn('THEME_DATA', html_dashboard)
+        self.assertIn('--theme-bg-body', html_dashboard)
+        self.assertIn('--theme-bg-card', html_dashboard)
+
+        # Weryfikacja selektora motywów w nagłówku
+        self.assertIn('id="theme-menu-container"', html_dashboard)
+        self.assertIn("setTheme('light')", html_dashboard)
+        self.assertIn("setTheme('dark')", html_dashboard)
+        self.assertIn("setTheme('midnight')", html_dashboard)
+        self.assertIn("setTheme('forest')", html_dashboard)
+        self.assertIn("setTheme('auto')", html_dashboard)
+
+        # Weryfikacja sekcji wyboru motywu w Ustawieniach
+        res_settings = client.get('/ustawienia')
+        self.assertEqual(res_settings.status_code, 200)
+        html_settings = res_settings.data.decode('utf-8')
+        self.assertIn('id="wyglad-i-motyw"', html_settings)
+        self.assertIn('data-theme-card="light"', html_settings)
+        self.assertIn('data-theme-card="dark"', html_settings)
+        self.assertIn('data-theme-card="midnight"', html_settings)
+        self.assertIn('data-theme-card="forest"', html_settings)
 
 
 if __name__ == '__main__':

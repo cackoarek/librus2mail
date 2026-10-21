@@ -36,6 +36,18 @@
                     <span>📖</span>
                     <span>Przedmiot szkolny</span>
                 </span>
+                {% if analytics.is_completed %}
+                <span class="px-3 py-1 rounded-full text-xs font-black bg-purple-100 text-purple-800 border border-purple-200 flex items-center gap-1" title="Przedmiot zrealizowany w I semestrze (np. technika, muzyka)">
+                    <span>🏁</span>
+                    <span>Zakończony w I semestrze</span>
+                </span>
+                {% endif %}
+                {% if analytics.official_proposed_grade %}
+                <span class="px-3 py-1 rounded-full text-xs font-black bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1" title="Nauczyciel wpisał oficjalną propozycję oceny w Librusie">
+                    <span>🏛️</span>
+                    <span>Oficjalna propozycja ze szkoły</span>
+                </span>
+                {% endif %}
                 {% if analytics.is_excluded %}
                 <span class="px-3 py-1 rounded-full text-xs font-extrabold bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1">
                     <span>🚫</span>
@@ -63,10 +75,16 @@
         <!-- Główny widget proponowanej oceny i trendu -->
         <div class="flex items-center gap-4 bg-slate-50/80 p-4 rounded-2xl border border-slate-100 self-start md:self-auto">
             <div class="text-right">
-                <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Proponowana ocena</span>
+                <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    {% if analytics.official_proposed_grade %}
+                    🏛️ Ocena ze szkoły
+                    {% else %}
+                    Proponowana ocena
+                    {% endif %}
+                </span>
                 <div class="flex items-baseline justify-end gap-1.5 mt-0.5">
                     {% if analytics.predicted_grade_num %}
-                    <span class="text-2xl font-black text-indigo-700">{{ analytics.predicted_grade_num }}</span>
+                    <span class="text-2xl font-black {% if analytics.official_proposed_grade %} text-amber-600 {% else %} text-indigo-700 {% endif %}">{{ analytics.predicted_grade_num }}</span>
                     <span class="text-xs font-bold text-slate-600">({{ analytics.predicted_grade_word }})</span>
                     {% else %}
                     <span class="text-base font-bold text-slate-400">—</span>
@@ -87,6 +105,18 @@
             </div>
         </div>
     </div>
+
+    {% if analytics.is_completed %}
+    <div class="p-4 rounded-2xl bg-purple-50 border border-purple-200 text-purple-900 flex items-start gap-3">
+        <span class="text-2xl flex-shrink-0">🏁</span>
+        <div>
+            <h4 class="font-bold text-sm">Przedmiot zrealizowany i zakończony w I semestrze</h4>
+            <p class="text-xs text-purple-700 mt-0.5">
+                Ten przedmiot był realizowany wyłącznie w pierwszym semestrze (np. technika, muzyka, plastyka). Otrzymana ocena ({{ analytics.predicted_grade_num }} - {{ analytics.predicted_grade_word }}) jest oceną ostateczną i zostanie przepisana na świadectwo roczne bez konieczności zdobywania kolejnych ocen w II semestrze.
+            </p>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- ========================================================================= -->
     <!-- SEKCJA 1: STATYSTYKI OCEN (KAFELKI KPI)                                   -->
@@ -233,6 +263,28 @@
                     </span>
                     {% endif %}
                 </div>
+
+                {% if analytics.official_proposed_grade %}
+                <div class="mt-4 p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs">
+                    <div class="flex items-center gap-1.5 font-bold">
+                        <span>🏛️</span>
+                        <span>Oficjalna propozycja oceny ze szkoły: {{ analytics.predicted_grade_num }} ({{ analytics.predicted_grade_word }})</span>
+                    </div>
+                    <p class="mt-1 text-amber-800">
+                        Nauczyciel wprowadził już oficjalną ocenę proponowaną w Librusie. Podwyższenie stopnia może wymagać spełnienia kryteriów ze statutu szkoły.
+                    </p>
+                </div>
+                {% elif analytics.is_completed %}
+                <div class="mt-4 p-3.5 rounded-2xl bg-purple-50 border border-purple-200 text-purple-900 text-xs">
+                    <div class="flex items-center gap-1.5 font-bold">
+                        <span>🏁</span>
+                        <span>Przedmiot zakończony w semestrze I</span>
+                    </div>
+                    <p class="mt-1 text-purple-800">
+                        Oceny z tego przedmiotu zostały zamknięte. Wyliczona ocena ({{ analytics.predicted_grade_num }}) stanowi końcowy wynik na świadectwie.
+                    </p>
+                </div>
+                {% endif %}
 
                 {% if analytics.target_analysis.is_max %}
                 <div class="mt-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm">
@@ -958,6 +1010,31 @@
                         ctx.fillText(l.text, right - 6, yPos - 3);
                     }
                 });
+
+                // Rysowanie pionowej linii granicy semestrów (Milestone), jeśli w danych są oceny z obu semestrów
+                const { scales: { x } } = chart;
+                if (x && validTimelineData.length > 1) {
+                    const splitIdx = validTimelineData.findIndex((p, idx) => idx > 0 && p.semester === 2 && validTimelineData[idx - 1].semester === 1);
+                    if (splitIdx > 0) {
+                        const x1 = x.getPixelForValue(splitIdx - 1);
+                        const x2 = x.getPixelForValue(splitIdx);
+                        const xMid = (x1 + x2) / 2;
+                        if (xMid >= left && xMid <= right) {
+                            ctx.strokeStyle = '#6366f1';
+                            ctx.setLineDash([5, 5]);
+                            ctx.lineWidth = 1.5;
+                            ctx.beginPath();
+                            ctx.moveTo(xMid, top);
+                            ctx.lineTo(xMid, bottom);
+                            ctx.stroke();
+
+                            ctx.font = 'bold 9px Inter, sans-serif';
+                            ctx.fillStyle = '#4f46e5';
+                            ctx.textAlign = 'center';
+                            ctx.fillText('🏁 Koniec Semestru I', xMid, top + 12);
+                        }
+                    }
+                }
                 ctx.restore();
             }
         };
@@ -1009,10 +1086,11 @@
                         max: 6.2,
                         ticks: {
                             stepSize: 1,
-                            font: { family: 'Inter', weight: 'bold' }
+                            font: { family: 'Inter', weight: 'bold' },
+                            color: () => document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b'
                         },
                         grid: {
-                            color: '#f1f5f9'
+                            color: () => document.documentElement.classList.contains('dark') ? 'rgba(255, 255, 255, 0.08)' : '#f1f5f9'
                         }
                     },
                     x: {
@@ -1022,7 +1100,7 @@
                                 return item ? (item.date ? item.date.substring(5) : ('#' + (index+1))) : '';
                             },
                             font: { family: 'Inter', size: 10, weight: '600' },
-                            color: '#64748b'
+                            color: () => document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b'
                         },
                         grid: {
                             display: false
@@ -1035,6 +1113,7 @@
                         position: 'top',
                         labels: {
                             font: { family: 'Inter', size: 12, weight: 'bold' },
+                            color: () => document.documentElement.classList.contains('dark') ? '#f8fafc' : '#0f172a',
                             usePointStyle: true,
                             boxWidth: 8
                         }
@@ -1113,17 +1192,18 @@
                             ticks: {
                                 stepSize: 1,
                                 backdropColor: 'transparent',
-                                font: { family: 'Inter', size: 10, weight: 'bold' }
+                                font: { family: 'Inter', size: 10, weight: 'bold' },
+                                color: () => document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b'
                             },
                             pointLabels: {
                                 font: { family: 'Inter', size: 11, weight: 'bold' },
-                                color: '#334155'
+                                color: () => document.documentElement.classList.contains('dark') ? '#f8fafc' : '#334155'
                             },
                             grid: {
-                                color: '#e2e8f0'
+                                color: () => document.documentElement.classList.contains('dark') ? 'rgba(255, 255, 255, 0.12)' : '#e2e8f0'
                             },
                             angleLines: {
-                                color: '#f1f5f9'
+                                color: () => document.documentElement.classList.contains('dark') ? 'rgba(255, 255, 255, 0.08)' : '#f1f5f9'
                             }
                         }
                     },
@@ -1182,22 +1262,23 @@
                             max: 6,
                             ticks: {
                                 stepSize: 1,
-                                font: { family: 'Inter', size: 10, weight: 'bold' }
+                                font: { family: 'Inter', size: 10, weight: 'bold' },
+                                color: () => document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b'
                             },
                             grid: {
-                                color: '#f1f5f9'
+                                color: () => document.documentElement.classList.contains('dark') ? 'rgba(255, 255, 255, 0.08)' : '#f1f5f9'
                             },
                             title: {
                                 display: true,
                                 text: 'Średnia ważona w skali 1–6',
                                 font: { family: 'Inter', size: 10, weight: '600' },
-                                color: '#94a3b8'
+                                color: () => document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b'
                             }
                         },
                         y: {
                             ticks: {
                                 font: { family: 'Inter', size: 11, weight: 'bold' },
-                                color: '#334155'
+                                color: () => document.documentElement.classList.contains('dark') ? '#f8fafc' : '#334155'
                             },
                             grid: {
                                 display: false
@@ -1221,6 +1302,14 @@
                 }
             });
         }
+
+        // Automatyczna aktualizacja wykresów po zmianie motywu
+        window.addEventListener('themechange', () => {
+            const chart1 = Chart.getChart('trajectoryChart');
+            if (chart1) chart1.update();
+            const chart2 = Chart.getChart('categoryRadarChart');
+            if (chart2) chart2.update();
+        });
     }
 
     // Interaktywny mini-symulator ocen na żywo

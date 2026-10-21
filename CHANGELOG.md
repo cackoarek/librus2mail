@@ -9,6 +9,52 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ## [Unreleased]
 
+### Dodane
+- **Śledzenie lekcji w czasie rzeczywistym w Planie lekcji i na Pulpicie (Live Lesson Tracker)**:
+  - Automatyczne wykrywanie lekcji trwającej w danej chwili (`🟢 TRWA TERAZ`) z pulsującym wskaźnikiem, licznikiem czasu do dzwonka (`⏱️ jeszcze X min`) oraz wyeksponowanym numerem sali i nazwiskiem nauczyciela.
+  - Oznaczanie lekcji, które się już odbyły (`✓ Odbyła się`) ze stonowanym tłem i wyciszonym kontrastem, co ułatwia rodzicowi natychmiastowe zorientowanie się w bieżącym planie dnia.
+  - Wykrywanie przerw międzylekcyjnych z automatycznym banerem informującym o czasie do kolejnego dzwonka (`☕ Trwa przerwa między lekcjami (do HH:MM) • Dzwonek za X min →`) oraz zapowiedzią najbliższego przedmiotu (`⏳ Następna lekcja`).
+  - Spójna prezentacja statusów na żywo zarówno w pełnym widoku `/plan`, jak i w kafelku planu lekcji na pulpicie głównym (`/`).
+- **Wysuwany panel boczny nawigacji (Mobile Drawer / Sheet)**:
+  - Dedykowane menu boczne otwierane przyciskiem `☰` poniżej breakpointu `xl`, zawierające pełną nawigację po modułach, wygodny przełącznik profili dzieci, szybki wybór motywów oraz wylogowanie.
+- **Dedykowany modal potwierdzenia archiwizacji roku szkolnego**: Zastąpienie przeglądarkowego okna `confirm()` własnym, ostylowanym modalem w zakładce Ustawienia z dynamicznym podsumowaniem zakresu operacji i obsługą klawiszy Enter oraz Escape.
+- **Obsługa wielu dzieci przy archiwizacji roku**: Możliwość zarchiwizowania okresu jednocześnie dla wszystkich dzieci (checkbox w oknie modalnym) oraz systemowe przypomnienie `flash` o konieczności archiwizacji drugiego dziecka przy operacji pojedynczej.
+- **Obsługa przedmiotów szkolnych bez ocen w bazie i na świadectwie**:
+  - Wzbogacenie danych demonstracyjnych w `examples/storage/8979296.json` o przedmiot „Sztuka” (wliczany do średniej, bez ocen) oraz „Godzina wychowawcza” (oceny 4 i 5, wyłączona ze średniej na świadectwie).
+- **Deterministyczny token CSRF w statycznym eksporcie widoków HTML**: Użycie stałego identyfikatora tokenu CSRF w trybie demonstracyjnym (`export_web_views`), eliminujące zbędne diffy w gicie w plikach `examples/reports/*.html` przy ponownym uruchamianiu `regenerate_reports.sh`.
+- **Wielomotywowy silnik skórek panelu WWW (Theme Engine)**:
+  - Obsługa 4 skórek out-of-the-box: Jasny (☀️ Domyślny), Ciemny Grafit (🌙 Slate Dark), Północ (🌌 OLED True Black), Szmaragdowy (🌲 Forest Green) oraz trybu Auto (💻 zgodnego z motywem systemu).
+  - Skalowalna architektura Design Tokens (zmienne CSS `--theme-*` i selektory `[data-theme="..."]`), umożliwiająca łatwe dopisywanie kolejnych skórek bez konieczności modyfikowania szablonów podstron.
+  - Szybki selektor motywu w prawym górnym rogu paska nawigacyjnego oraz sekcja wyboru z interaktywnymi kafelkami podglądu palet w zakładce Ustawienia.
+  - Skrypt pre-renderujący w `<head>` eliminujący efekt migania jasnego tła (*Flash-of-White*) i trwała pamięć wyboru w `localStorage`.
+  - Dynamiczna adaptacja kolorystyki osi, siatek i legend wykresów Chart.js w czasie rzeczywistym przy zmianie motywu (`themechange` event).
+- **Animowany podgląd możliwości aplikacji (Showcase GIF / WebP) w nagłówku README**:
+  - Zoptymalizowany animowany GIF (`docs/assets/librus2mail_showcase.gif`) oraz wersja WebP prezentujące pełny przekrój możliwości ekosystemu Librus2mail.
+  - Zautomatyzowany skrypt `scripts/generate_showcase.py` (Headless Chrome + ffmpeg) generujący bezstratne klatki z widoków demonstracyjnych `examples/reports/`.
+  - Płynne pionowe przewijanie zawartości stron (`CSS translateY`) przy unieruchomionej górnej belce nawigacyjnej.
+  - Dedykowany slajd tytułowy (Intro) oraz slajd podsumowujący (Outro).
+  - Indywidualnie konfigurowalny czas trwania każdego slajdu, parametry scrolla oraz opcja procentowego skalowania wielkości czcionki (`font_scale`).
+
+### Zmienione
+- **Responsywność i ergonomia paska nawigacyjnego (Navbar)**:
+  - Rozszerzenie kontenera nagłówka do `max-w-[1600px]` z płynnym dopasowaniem szerokości, co zapobiega ściskaniu elementów na ekranach laptopów (1280–1400 px).
+  - Zastosowanie kompaktowej typografii i paddingów zakładek (`px-2.5 py-1.5`, `text-xs`) na ekranach `xl`, powiększającej się automatycznie do `px-3 py-2` i `text-sm` na dużych monitorach `2xl`.
+  - Kompaktowy selektor motywu (kwadratowy przycisk 36x36 px z ikoną aktywnej skórki i strzałką menu) zwalniający cenną przestrzeń w nagłówku.
+  - Zabezpieczenie kontenerów flex (`flex-shrink-0`) oraz zoptymalizowanie maksymalnych szerokości pól wyboru ucznia i rocznika archiwalnego.
+- **Ergonomia nawigacji panelu WWW**:
+  - Przeniesienie „Akcji CLI” z górnego paska nawigacyjnego do dedykowanej karty na samym dole zakładki „Ustawienia” z wygodnym przyciskiem przejścia i powrotną ścieżką breadcrumbs.
+  - Zwolnienie miejsca w nagłówku aplikacji na przełącznik uczniów oraz wybór archiwalnych lat szkolnych.
+- **Rozbudowa opisu archiwizacji w Ustawieniach**: Dodanie jasnej instrukcji informującej rodzica, że zarchiwizowane okresy można w każdej chwili przeglądać w menu wyboru ucznia na górnym pasku.
+
+### Naprawione
+- **Poprawki kontrastu i czytelności we wszystkich ciemnych motywach (Ciemny, Północ, Szmaragd)**:
+  - Naprawiono widoczność nieaktywnych oraz aktywnych podzakładek w modułach Oceny („Aktualne oceny”, „Świadectwo”, „Optymalizator celu”) i Raporty.
+  - Poprawiono czytelność boksów informacyjnych i poradników w zakładce Ustawienia (np. sekcja „Jak przeglądać dane z minionych lat?”).
+  - Naprawiono czytelność datepickera `semester_split_date` (kontrast wybranej daty i tła kontrolki).
+- **Poprawka weryfikacji trwających lekcji w nocy i rano**: Naprawiono błąd, w którym po północy lub wczesnym rankiem (przed rozpoczęciem pierwszej lekcji o 08:00) dzień był błędnie oznaczany jako „Dzisiaj (lekcje w toku)”. Wprowadzono precyzyjny podział na trzy stany dnia: przed rozpoczęciem lekcji (`🌅 Dzisiaj (przed lekcjami • start HH:MM)`), w trakcie lekcji (`🟢 Dzisiaj (lekcje w toku)`) oraz po ich zakończeniu (`Dzisiaj (lekcje zakończone)`).
+- **Zabezpieczenie przed obcinaniem zakładek w nagłówku**: Wyeliminowano problem spychania przycisku „Ustawienia” poza ekran i ucinania etykiety „Raporty” na ekranach o szerokości około 1300 px.
+- **Kalkulacja średniej ze świadectwa dla przedmiotów bez ocen**: Zabezpieczenie funkcji `calculate_subject_averages` oraz `calculate_certificate_summary` przed traktowaniem braku ocen jako stopnia 0 przy wyliczaniu średniej końcowej — przedmioty bez ocen otrzymują poprawny status „brak ocen” (`unrated_count`) i nie zaniżają średniej ze świadectwa.
+
 ---
 
 ## [2.6.0] – 2026-10-18

@@ -5,6 +5,7 @@ from __future__ import annotations
 import collections.abc
 import logging
 import os
+import re
 from typing import Any
 
 from pydantic import (
@@ -258,6 +259,8 @@ class AppSettings(BaseSettings, collections.abc.MutableMapping):
     read_timetable: bool = True
     read_messages: bool = True
     read_grades: bool = True
+    semester_split_date: str | None = None
+    annual_grade_algorithm: str = "all_year_weighted"
     mail: MailConfig = Field(default_factory=MailConfig)
     schedule: ScheduleConfig = Field(default_factory=ScheduleConfig)
     web: WebConfig = Field(default_factory=WebConfig)
@@ -438,7 +441,36 @@ class AppSettings(BaseSettings, collections.abc.MutableMapping):
             except Exception as e:
                 logger.warning(f"Nie udało się sparsować LIBRUS_SCHEDULE_REPORTS jako JSON: {e}")
 
+        # 7. Obsługa semester_split_date i annual_grade_algorithm ze zmiennych środowiskowych
+        sem_split_env = os.getenv('LIBRUS_SEMESTER_SPLIT_DATE')
+        if sem_split_env and not data.get('semester_split_date'):
+            data['semester_split_date'] = sem_split_env.strip()
+
+        annual_algo_env = os.getenv('LIBRUS_ANNUAL_GRADE_ALGORITHM')
+        if annual_algo_env and not data.get('annual_grade_algorithm'):
+            data['annual_grade_algorithm'] = annual_algo_env.strip()
+
         return data
+
+    @field_validator('semester_split_date', mode='before')
+    @classmethod
+    def validate_semester_split_date(cls, v: Any) -> str | None:
+        if v is None:
+            return None
+        v_str = str(v).strip()
+        if not v_str:
+            return None
+        if re.match(r'^\d{4}-\d{2}-\d{2}$', v_str):
+            return v_str
+        return None
+
+    @field_validator('annual_grade_algorithm', mode='before')
+    @classmethod
+    def validate_annual_grade_algorithm(cls, v: Any) -> str:
+        valid_algos = {'all_year_weighted', 'semesters_average', 'progress_favored'}
+        if isinstance(v, str) and v.strip() in valid_algos:
+            return v.strip()
+        return 'all_year_weighted'
 
     def __getitem__(self, item: str) -> Any:
         if hasattr(self, item):

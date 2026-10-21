@@ -68,7 +68,9 @@
     "1040",
     "1041",
     "1042",
-    "1043"
+    "1043",
+    "1044",
+    "1045"
   ],
   "last_error": {
     "error": "HTTPError: HTTP 403: Forbidden",
@@ -592,6 +594,30 @@
       "comment": "plakat: geometria i symetria w architekturze",
       "added_at": "2026-09-18T10:00:00",
       "href": "/przegladaj_oceny/szczegoly/1043"
+    },
+    "1044": {
+      "id": "1044",
+      "subject": "Godzina wychowawcza",
+      "grade": "4",
+      "weight": "1",
+      "category": "Aktywność",
+      "date": "2026-09-07 (pn.)",
+      "teacher": "Renata Matyk",
+      "comment": "Udział w dyskusji o samorządzie klasowym",
+      "added_at": "2026-09-07T08:00:00",
+      "href": "/przegladaj_oceny/szczegoly/1044"
+    },
+    "1045": {
+      "id": "1045",
+      "subject": "Godzina wychowawcza",
+      "grade": "5",
+      "weight": "1",
+      "category": "Zaangażowanie",
+      "date": "2026-09-14 (pn.)",
+      "teacher": "Renata Matyk",
+      "comment": "Wzorowa postawa i pomoc w sprawach organizacyjnych klasy",
+      "added_at": "2026-09-14T08:00:00",
+      "href": "/przegladaj_oceny/szczegoly/1045"
     }
   },
   "last_progress_report_date": "2026-09-19T09:54:36.910857",
@@ -1077,5 +1103,24 @@
   ],
   "schedule_last_sync": "2026-09-18T18:00:00.000000",
   "last_notify_time": "2026-09-19T14:38:18.631315",
-  "student_name": "Jan Kowalski"
+  "student_name": "Jan Kowalski",
+  "excluded_certificate_subjects": [
+    "Godzina wychowawcza"
+  ],
+  "all_subjects": [
+    "Biologia",
+    "Chemia",
+    "Fizyka",
+    "Geografia",
+    "Godzina wychowawcza",
+    "Historia",
+    "Informatyka",
+    "Język angielski",
+    "Język polski",
+    "Matematyka",
+    "Muzyka",
+    "Plastyka",
+    "Sztuka",
+    "Wychowanie fizyczne"
+  ]
 }

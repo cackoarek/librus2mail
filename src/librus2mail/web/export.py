@@ -9,6 +9,8 @@ from .app import create_app
 
 logger = logging.getLogger(__name__)
 
+STATIC_DEMO_CSRF_TOKEN = "static_demo_csrf_token_librus2mail"
+
 
 def make_offline_friendly(html: str) -> str:
     """Zastępuje adresy URL względnymi odnośnikami do wygenerowanych plików HTML dla przeglądania offline."""
@@ -53,6 +55,11 @@ def make_offline_friendly(html: str) -> str:
     # W podglądzie statycznym formularz logowania kieruje od razu na pulpit oraz skrypt wyboru daty
     html = re.sub(r'action="/login[^"]*"', 'action="web_dashboard.html" method="GET"', html)
     html = html.replace("window.location.href='/plan?date='", "window.location.href='web_plan.html?date='")
+
+    # Zastąpienie ewentualnych losowych tokenów CSRF stałym deterministycznym tokenem demo dla czystego diffu w git
+    html = re.sub(r'content="[a-f0-9]{64}"', f'content="{STATIC_DEMO_CSRF_TOKEN}"', html)
+    html = re.sub(r'"X-CSRFToken":\s*"[a-f0-9]{64}"', f'"X-CSRFToken": "{STATIC_DEMO_CSRF_TOKEN}"', html)
+    html = re.sub(r'name="csrf_token"\s+value="[a-f0-9]{64}"', f'name="csrf_token" value="{STATIC_DEMO_CSRF_TOKEN}"', html)
     return html
 
 
@@ -87,6 +94,7 @@ def export_web_views(
         web_password='ExampleParentPassword123',
         no_auth=False,
         actual_date=actual_date,
+        static_csrf_token=STATIC_DEMO_CSRF_TOKEN,
     )
     client_locked = app_locked.test_client()
     login_res = client_locked.get('/login')
@@ -105,6 +113,7 @@ def export_web_views(
         config_path='non_existent_config.yaml',
         storage_dir=storage_dir,
         no_auth=True,
+        static_csrf_token=STATIC_DEMO_CSRF_TOKEN,
     )
     client_empty = app_empty.test_client()
     setup_res = client_empty.get('/setup')
@@ -125,6 +134,7 @@ def export_web_views(
         web_password='ExampleParentPassword123',
         no_auth=False,
         actual_date=actual_date,
+        static_csrf_token=STATIC_DEMO_CSRF_TOKEN,
     )
     client_auth = app_auth.test_client()
 

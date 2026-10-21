@@ -171,53 +171,265 @@ def get_active_student_login(
     return students[0]['login']
 
 
+def resolve_semester_split_date(
+    semester_split_date: str | date | None = None,
+    ref_date: date | datetime | None = None,
+) -> date:
+    """Zwraca datę graniczną podziału roku szkolnego na Semestr I i Semestr II (jako date).
+
+    Jeśli podano jawną poprawną datę (np. w konfiguracji), zostaje ona sparsowana i zwrócona.
+    W przeciwnym wypadku system domyślnie przyjmuje 1 lutego danego roku szkolnego.
+    """
+    if semester_split_date:
+        parsed = parse_date_safe(semester_split_date)
+        if parsed:
+            return parsed
+
+    ref = ref_date or date.today()
+    if isinstance(ref, datetime):
+        ref = ref.date()
+
+    # Rok szkolny: wrzesień–grudzień (miesiące 9-12) -> luty kolejnego roku; styczeń–sierpień (1-8) -> luty bieżącego roku
+    if ref.month in (9, 10, 11, 12):
+        return date(ref.year + 1, 2, 1)
+    return date(ref.year, 2, 1)
+
+
+def get_grade_semester(grade: dict[str, Any], split_date: date) -> int:
+    """Określa, do którego semestru należy ocena (1 lub 2) na podstawie daty wystawienia lub adnotacji."""
+    cat_lower = str(grade.get('category', '')).lower()
+    comm_lower = str(grade.get('comment', '')).lower()
+
+    if 'semestr i ' in cat_lower or 'semestr 1' in cat_lower or 'semestr i ' in comm_lower:
+        return 1
+    if 'semestr ii' in cat_lower or 'semestr 2' in cat_lower or 'semestr ii' in comm_lower:
+        return 2
+
+    g_dt = parse_grade_date(grade.get('date'), grade.get('added_at'))
+    if g_dt:
+        g_date = g_dt.date() if isinstance(g_dt, datetime) else g_dt
+        return 1 if g_date <= split_date else 2
+
+    return 1
+
+
+def extract_official_grades(grades_list: list[dict[str, Any]]) -> dict[str, Any]:
+    """Wyszukuje w historii ocen ewentualną oficjalną ocenę proponowaną i końcową wystawioną przez nauczyciela."""
+    proposed_grade = None
+    final_grade = None
+
+    for g in grades_list:
+        cat = str(g.get('category', '')).lower()
+        comm = str(g.get('comment', '')).lower()
+        combined = f"{cat} {comm}"
+
+        num_val = parse_numeric_grade(g.get('grade'))
+        if num_val is None:
+            continue
+
+        if ('proponowan' in combined or 'przewidywan' in combined) and not proposed_grade:
+            is_annual = ('roczn' in combined or 'końcow' in combined)
+            is_semester = ('śródrocz' in combined or 'semestraln' in combined)
+            proposed_grade = {
+                'grade': g.get('grade'),
+                'numeric': int(round(num_val)),
+                'category': g.get('category', ''),
+                'teacher': g.get('teacher', ''),
+                'date': g.get('date', ''),
+                'is_annual': is_annual or not is_semester,
+                'is_semester': is_semester,
+            }
+
+        if ('ocena śródroczna' in combined or 'ocena semestralna' in combined or 'ocena roczna' in combined or 'ocena końcowa' in combined) and ('proponowan' not in combined and 'przewidywan' not in combined) and not final_grade:
+            is_annual = ('roczn' in combined or 'końcow' in combined)
+            is_semester = ('śródrocz' in combined or 'semestraln' in combined)
+            final_grade = {
+                'grade': g.get('grade'),
+                'numeric': int(round(num_val)),
+                'category': g.get('category', ''),
+                'teacher': g.get('teacher', ''),
+                'date': g.get('date', ''),
+                'is_annual': is_annual or not is_semester,
+                'is_semester': is_semester,
+            }
+
+    return {
+        'proposed_grade': proposed_grade,
+        'final_grade': final_grade,
+    }
+
+
+def _compute_grades_stats(g_list: list[dict[str, Any]]) -> tuple[float | None, float, float, int]:
+    """Pomocnicze wyliczanie (średnia, suma wag, suma ważona, liczba ocen numerycznych)."""
+    sum_weighted = 0.0
+    sum_weights = 0.0
+    numeric_count = 0
+
+    for g in g_list:
+        n_grade = parse_numeric_grade(g.get('grade'))
+        w = parse_weight(g.get('weight'))
+        if n_grade is not None:
+            numeric_count += 1
+            effective_weight = w if w is not None and w > 0 else 1.0
+            sum_weighted += n_grade * effective_weight
+            sum_weights += effective_weight
+
+    avg = round(sum_weighted / sum_weights, 2) if sum_weights > 0 else None
+    return avg, sum_weights, sum_weighted, numeric_count
+
+
 def calculate_subject_averages(
     grades_history: list[dict[str, Any]],
     excluded_subjects: list[str] | set[str] | None = None,
     all_subjects: list[str] | set[str] | None = None,
+    semester: str = "all",
+    semester_split_date: str | date | None = None,
+    ref_date: date | datetime | None = None,
+    annual_grade_algorithm: str = "all_year_weighted",
 ) -> dict[str, dict[str, Any]]:
-    """Wylicza średnie ważone i statystyki per przedmiot na podstawie historii ocen (oraz listy wszystkich przedmiotów)."""
+    """Wylicza średnie ważone i statystyki per przedmiot na podstawie historii ocen z uwzględnieniem semestrów."""
     norm_excluded = {s.strip().lower() for s in (excluded_subjects or [])}
     by_subject = defaultdict(list)
     for g in grades_history:
         subj = g.get('subject', 'Inne')
         by_subject[subj].append(g)
 
-    # Upewnij się, że przedmioty bez ocen (np. Taniec, Historia) również są uwzględnione
+    # Upewnij się, że przedmioty bez ocen również są uwzględnione
     if all_subjects:
         for s in all_subjects:
             s_clean = str(s).strip()
             if s_clean and s_clean not in by_subject:
                 by_subject[s_clean] = []
 
+    split_date = resolve_semester_split_date(semester_split_date, ref_date=ref_date)
+    ref_now_date = (ref_date.date() if isinstance(ref_date, datetime) else ref_date) or date.today()
+    is_in_sem2 = (ref_now_date > split_date)
+
     result = {}
     for subj, g_list in by_subject.items():
-        sum_weighted = 0.0
-        sum_weights = 0.0
-        numeric_count = 0
+        all_sorted = sort_grades_descending(g_list)
+        sem1_grades = [g for g in g_list if get_grade_semester(g, split_date) == 1]
+        sem2_grades = [g for g in g_list if get_grade_semester(g, split_date) == 2]
 
-        for g in g_list:
-            n_grade = parse_numeric_grade(g.get('grade'))
-            w = parse_weight(g.get('weight'))
-            if n_grade is not None:
-                numeric_count += 1
-                effective_weight = w if w is not None and w > 0 else 1.0
-                sum_weighted += n_grade * effective_weight
-                sum_weights += effective_weight
+        annual_avg, annual_weights, annual_weighted, annual_num_count = _compute_grades_stats(g_list)
+        sem1_avg, sem1_weights, sem1_weighted, sem1_num_count = _compute_grades_stats(sem1_grades)
+        sem2_avg, sem2_weights, sem2_weighted, sem2_num_count = _compute_grades_stats(sem2_grades)
 
-        avg = round(sum_weighted / sum_weights, 2) if sum_weights > 0 else None
-        sorted_grades = sort_grades_descending(g_list)
+        # Wykrywanie przedmiotów zakończonych w I semestrze
+        # Warunek: jesteśmy w II semestrze, przedmiot posiadał oceny w I semestrze i nie ma żadnej nowej oceny w II semestrze
+        if is_in_sem2 and len(sem2_grades) == 0 and len(sem1_grades) > 0:
+            is_completed = True
+            status = 'completed'
+            status_label = 'Zakończony w I semestrze'
+        else:
+            is_completed = False
+            status = 'in_progress'
+            status_label = 'W toku (Semestr II)' if is_in_sem2 else 'W toku (Semestr I)'
+
+        # Oficjalne wpisy nauczyciela (proponowane i końcowe)
+        extracted_official = extract_official_grades(g_list)
+        official_proposed = extracted_official.get('proposed_grade')
+        official_final = extracted_official.get('final_grade')
+
+        # Predykcja oceny na świadectwo w oparciu o wybrany algorytm
+        if is_completed:
+            pred_final_num = get_predicted_grade_tuple(sem1_avg)[0] if sem1_avg is not None else None
+            pred_final_label = get_predicted_grade_tuple(sem1_avg)[1] if sem1_avg is not None else "Brak ocen"
+        else:
+            if annual_grade_algorithm == 'semesters_average':
+                if sem1_avg is not None and sem2_avg is not None:
+                    s1_n = get_predicted_grade_tuple(sem1_avg)[0]
+                    s2_n = get_predicted_grade_tuple(sem2_avg)[0]
+                    calc_a = round((s1_n + s2_n) / 2.0, 2)
+                    pred_final_num, pred_final_label = get_predicted_grade_tuple(calc_a)
+                elif annual_avg is not None:
+                    pred_final_num, pred_final_label = get_predicted_grade_tuple(annual_avg)
+                else:
+                    pred_final_num, pred_final_label = None, "Brak ocen"
+            elif annual_grade_algorithm == 'progress_favored':
+                if sem1_avg is not None and sem2_avg is not None:
+                    s1_n = get_predicted_grade_tuple(sem1_avg)[0]
+                    s2_n = get_predicted_grade_tuple(sem2_avg)[0]
+                    if s2_n > s1_n:
+                        pred_final_num = s2_n
+                        pred_final_label = f"{s2_n} ({GRADE_WORDS.get(s2_n, '')})"
+                    else:
+                        calc_a = round((s1_n + s2_n) / 2.0, 2)
+                        pred_final_num, pred_final_label = get_predicted_grade_tuple(calc_a)
+                elif annual_avg is not None:
+                    pred_final_num, pred_final_label = get_predicted_grade_tuple(annual_avg)
+                else:
+                    pred_final_num, pred_final_label = None, "Brak ocen"
+            else:  # 'all_year_weighted' (domyślny)
+                if annual_avg is not None:
+                    pred_final_num, pred_final_label = get_predicted_grade_tuple(annual_avg)
+                else:
+                    pred_final_num, pred_final_label = None, "Brak ocen"
+
+        # Jeśli nauczyciel wystawił oficjalną propozycję, ma ona pierwszeństwo nad algorytmem
+        if official_proposed:
+            prop_num = int(official_proposed['numeric'])
+            prop_label = f"{prop_num} ({GRADE_WORDS.get(prop_num, '')})"
+            is_official_proposal = True
+        else:
+            prop_num = pred_final_num
+            prop_label = pred_final_label
+            is_official_proposal = False
+
+        # Dobór aktywnego zestawu ocen i średniej w zależności od wybranego semestru
+        if semester == 'sem1':
+            active_grades = sort_grades_descending(sem1_grades)
+            active_avg = sem1_avg
+            active_weights = sem1_weights
+            active_weighted = sem1_weighted
+            active_num_count = sem1_num_count
+        elif semester == 'sem2':
+            if is_completed:
+                # Przedmiot zakończony w semestrze I zachowuje oceny i średnią z I semestru
+                active_grades = sort_grades_descending(sem1_grades)
+                active_avg = sem1_avg
+                active_weights = sem1_weights
+                active_weighted = sem1_weighted
+                active_num_count = sem1_num_count
+            else:
+                active_grades = sort_grades_descending(sem2_grades)
+                active_avg = sem2_avg
+                active_weights = sem2_weights
+                active_weighted = sem2_weighted
+                active_num_count = sem2_num_count
+        else:  # 'all'
+            active_grades = all_sorted
+            active_avg = annual_avg
+            active_weights = annual_weights
+            active_weighted = annual_weighted
+            active_num_count = annual_num_count
+
         is_excluded = subj.strip().lower() in norm_excluded
 
         result[subj] = {
             'subject': subj,
-            'grades': sorted_grades,
-            'count': len(g_list),
-            'numeric_count': numeric_count,
-            'average': avg,
-            'sum_weights': sum_weights,
-            'sum_weighted': sum_weighted,
+            'grades': active_grades,
+            'all_grades': all_sorted,
+            'sem1_grades': sort_grades_descending(sem1_grades),
+            'sem2_grades': sort_grades_descending(sem2_grades),
+            'count': len(active_grades),
+            'numeric_count': active_num_count,
+            'average': active_avg,
+            'sem1_average': sem1_avg,
+            'sem2_average': sem2_avg,
+            'annual_average': annual_avg,
+            'sum_weights': active_weights,
+            'sum_weighted': active_weighted,
             'is_excluded': is_excluded,
+            'is_completed': is_completed,
+            'status': status,
+            'status_label': status_label,
+            'proposed_grade_num': prop_num,
+            'proposed_grade_label': prop_label,
+            'is_official_proposal': is_official_proposal,
+            'official_proposed_grade': official_proposed,
+            'official_final_grade': official_final,
+            'annual_grade_algorithm': annual_grade_algorithm,
         }
 
     return dict(sorted(result.items(), key=lambda item: item[0]))
@@ -652,6 +864,7 @@ def _compute_consistency_metrics(numeric_vals: list[float]) -> dict[str, Any]:
 def _compute_pacing_metrics(
     chronological_grades: list[dict[str, Any]],
     now: datetime | None = None,
+    split_date: date | None = None,
 ) -> dict[str, Any]:
     """Wylicza tempo zdobywania ocen i szacunek pozostałych prac do końca semestru."""
     ref_now = now or datetime.now()
@@ -680,11 +893,11 @@ def _compute_pacing_metrics(
         days_per_grade = 1.0
 
     cur_year = ref_now.year
-    if ref_now.month in (9, 10, 11, 12):
-        sem_end = datetime(cur_year + 1, 1, 31)
-        sem_name = "I semestru (styczeń)"
-    elif ref_now.month == 1:
-        sem_end = datetime(cur_year, 1, 31)
+    if split_date and ref_now.date() <= split_date:
+        sem_end = datetime.combine(split_date, datetime.min.time())
+        sem_name = "I semestru"
+    elif ref_now.month in (9, 10, 11, 12, 1):
+        sem_end = datetime(cur_year + (1 if ref_now.month in (9, 10, 11, 12) else 0), 1, 31)
         sem_name = "I semestru (styczeń)"
     else:
         sem_end = datetime(cur_year, 6, 25)
@@ -710,6 +923,8 @@ def get_subject_detailed_analytics(
     grades_history: list[dict[str, Any]],
     subject_name: str,
     excluded_subjects: list[str] | set[str] | None = None,
+    semester_split_date: str | date | None = None,
+    ref_date: date | datetime | None = None,
 ) -> dict[str, Any]:
     """Wylicza pełną analitykę, statystyki, średnią kroczącą, cele i ryzyka dla wybranego przedmiotu."""
     norm_excluded = {s.strip().lower() for s in (excluded_subjects or [])}
@@ -727,6 +942,9 @@ def get_subject_detailed_analytics(
                 canonical_name = g_subj
 
     is_excluded = canonical_name.lower() in norm_excluded
+
+    split_date = resolve_semester_split_date(semester_split_date, ref_date=ref_date)
+    ref_now_dt = ref_date if isinstance(ref_date, datetime) else (datetime.combine(ref_date, datetime.min.time()) if isinstance(ref_date, date) else datetime.now())
 
     # Chronologiczne sortowanie ocen (od najstarszej do najnowszej) dla osi czasu
     def grade_sort_key(item: dict[str, Any]):
@@ -761,6 +979,9 @@ def get_subject_detailed_analytics(
 
         dt = parse_grade_date(g.get('date'), g.get('added_at'))
         clean_date = dt.strftime("%Y-%m-%d") if dt else str(g.get('date') or g.get('added_at') or '')
+        cat_str = str(g.get('category') or 'Brak kategorii')
+        comm_str = str(g.get('comment') or '—')
+        is_prop_entry = bool(('proponowan' in cat_str.lower()) or ('przewidywan' in cat_str.lower()) or ('proponowan' in comm_str.lower()))
 
         timeline_data.append({
             'index': idx,
@@ -772,13 +993,15 @@ def get_subject_detailed_analytics(
             'numeric_grade': num_val,
             'weight': eff_weight,
             'weight_raw': str(g.get('weight', '')),
-            'category': str(g.get('category') or 'Brak kategorii'),
+            'category': cat_str,
             'teacher': str(g.get('teacher') or '—'),
-            'comment': str(g.get('comment') or '—'),
+            'comment': comm_str,
             'running_average': running_avg,
             'is_custom': bool(g.get('is_custom')),
             'original_grade': str(g.get('original_grade') or ''),
             'original_weight': str(g.get('original_weight') or ''),
+            'semester': get_grade_semester(g, split_date),
+            'is_proposed': is_prop_entry,
         })
 
     # Podsumowanie statystyk
@@ -798,9 +1021,27 @@ def get_subject_detailed_analytics(
         except statistics.StatisticsError:
             mode_grade = round(numeric_vals[-1], 2)
 
-    # Proponowana ocena
-    prop_num, prop_label = get_predicted_grade_tuple(final_avg) if final_avg is not None else (None, "Brak ocen")
-    prop_word = GRADE_WORDS.get(prop_num, "—") if prop_num else "—"
+    # Oceny oficjalne belfra i semestry
+    extracted_official = extract_official_grades(matching_grades)
+    official_proposed = extracted_official.get('proposed_grade')
+    official_final = extracted_official.get('final_grade')
+
+    sem1_grades = [g for g in matching_grades if get_grade_semester(g, split_date) == 1]
+    sem2_grades = [g for g in matching_grades if get_grade_semester(g, split_date) == 2]
+    sem1_avg = _compute_grades_stats(sem1_grades)[0]
+    sem2_avg = _compute_grades_stats(sem2_grades)[0]
+
+    is_in_sem2 = (ref_now_dt.date() > split_date)
+    is_completed = bool(is_in_sem2 and len(sem2_grades) == 0 and len(sem1_grades) > 0)
+
+    # Proponowana ocena: jeśli belfer wystawił oficjalną propozycję, ma pierwszeństwo
+    if official_proposed:
+        prop_num = int(official_proposed['numeric'])
+        prop_word = GRADE_WORDS.get(prop_num, "—")
+        prop_label = f"{prop_num} ({prop_word})"
+    else:
+        prop_num, prop_label = get_predicted_grade_tuple(final_avg) if final_avg is not None else (None, "Brak ocen")
+        prop_word = GRADE_WORDS.get(prop_num, "—") if prop_num else "—"
 
     # Histogram rozkładu ocen
     histogram_counts = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0}
@@ -835,11 +1076,16 @@ def get_subject_detailed_analytics(
             trend_desc = "Ostatnie oceny poniżej dotychczasowej średniej"
 
     target_analysis = _compute_target_analysis(final_avg, running_sum_weighted, running_sum_weights, prop_num)
+    if official_proposed and target_analysis.get('target_grade_num'):
+        if official_proposed['numeric'] >= target_analysis['target_grade_num']:
+            target_analysis['achieved_by_proposal'] = True
+            target_analysis['message'] = f"Nauczyciel wystawił już oficjalną propozycję: {official_proposed['numeric']} ({GRADE_WORDS.get(official_proposed['numeric'], '')})! 🎉 Cel został zrealizowany."
+
     risk_analysis = _compute_risk_analysis(final_avg, running_sum_weighted, running_sum_weights, prop_num)
     category_analytics = _compute_category_analytics(matching_grades, running_sum_weights)
     impact_analysis = _compute_impact_analysis(timeline_data, final_avg, running_sum_weighted, running_sum_weights)
     consistency_metrics = _compute_consistency_metrics(numeric_vals)
-    pacing_metrics = _compute_pacing_metrics(chronological_grades)
+    pacing_metrics = _compute_pacing_metrics(chronological_grades, now=ref_now_dt, split_date=split_date)
 
     # Tabela ocen posortowana malejąco (najnowsze wpisy u góry)
     table_grades = sorted(timeline_data, key=lambda x: x['index'], reverse=True)
@@ -851,6 +1097,12 @@ def get_subject_detailed_analytics(
         'numeric_count': numeric_count,
         'sum_weights': round(running_sum_weights, 2),
         'average': final_avg,
+        'sem1_average': sem1_avg,
+        'sem2_average': sem2_avg,
+        'is_completed': is_completed,
+        'semester_split_date': split_date.strftime("%Y-%m-%d"),
+        'official_proposed_grade': official_proposed,
+        'official_final_grade': official_final,
         'arithmetic_average': arithmetic_avg,
         'min_grade': min_grade,
         'max_grade': max_grade,
@@ -888,12 +1140,33 @@ def calculate_certificate_summary(
         is_excluded = bool(sdata.get('is_excluded')) or (subj.strip().lower() in norm_excluded)
         avg = sdata.get('average')
         num_count = sdata.get('numeric_count', 0)
+        is_official = bool(sdata.get('is_official_proposal'))
+        is_completed = bool(sdata.get('is_completed'))
 
-        if avg is not None and num_count > 0:
-            prop_num, prop_label = get_predicted_grade_tuple(avg)
+        has_valid_prop = (
+            sdata.get('proposed_grade_num') is not None
+            and int(sdata.get('proposed_grade_num') or 0) > 0
+        )
+        if has_valid_prop:
+            prop_num = int(sdata['proposed_grade_num'])
+            prop_label = sdata.get('proposed_grade_label') or f"{prop_num} ({GRADE_WORDS.get(prop_num, '—')})"
             prop_word = GRADE_WORDS.get(prop_num, "—")
             if not is_excluded:
                 rated_grades.append(prop_num)
+        elif avg is not None and num_count > 0:
+            p_num, p_label = get_predicted_grade_tuple(avg)
+            if p_num > 0:
+                prop_num = p_num
+                prop_label = p_label
+                prop_word = GRADE_WORDS.get(prop_num, "—")
+                if not is_excluded:
+                    rated_grades.append(prop_num)
+            else:
+                prop_num = None
+                prop_label = "Brak ocen"
+                prop_word = "brak ocen"
+                if not is_excluded:
+                    unrated_count += 1
         else:
             prop_num = None
             prop_label = "Brak ocen"
@@ -910,6 +1183,11 @@ def calculate_certificate_summary(
             'proposed_grade_word': prop_word,
             'proposed_grade_label': prop_label,
             'is_excluded': is_excluded,
+            'is_official_proposal': is_official,
+            'is_completed': is_completed,
+            'official_proposed_grade': sdata.get('official_proposed_grade'),
+            'status': sdata.get('status', 'in_progress'),
+            'status_label': sdata.get('status_label', ''),
         })
 
     included_subjects = [s for s in subjects_list if not s['is_excluded']]
@@ -975,6 +1253,17 @@ def simulate_new_grade(
     }
 
 
+def _parse_time_minutes(time_str: str | None) -> int | None:
+    """Konwertuje godzinę w formacie HH:MM na liczbę minut od północy."""
+    if not time_str or ':' not in str(time_str):
+        return None
+    try:
+        parts = str(time_str).strip().split(':')
+        return int(parts[0]) * 60 + int(parts[1])
+    except (ValueError, IndexError):
+        return None
+
+
 def build_schedule_day_context(
     all_lessons: list[dict[str, Any]],
     timetable_entries: list[dict[str, Any]] | None = None,
@@ -1021,20 +1310,43 @@ def build_schedule_day_context(
     today_lessons = by_date.get(today_str, [])
     active_today_lessons = [les for les in today_lessons if not les.get('is_cancelled')]
     lessons_ongoing = False
+    is_before_lessons = False
+    lessons_finished = False
+
     if today_lessons:
-        last_lesson = max(active_today_lessons or today_lessons, key=lambda x: x.get('time_to', ''))
+        cand_lessons = active_today_lessons or today_lessons
+        first_lesson = min(cand_lessons, key=lambda x: x.get('time_from', ''))
+        last_lesson = max(cand_lessons, key=lambda x: x.get('time_to', ''))
+        first_time_from = first_lesson.get('time_from', '')
         last_time_to = last_lesson.get('time_to', '')
-        if last_time_to:
-            lessons_ongoing = (current_time_str <= last_time_to)
+
+        if first_time_from and last_time_to:
+            if current_time_str < first_time_from:
+                is_before_lessons = True
+            elif current_time_str <= last_time_to:
+                lessons_ongoing = True
+            else:
+                lessons_finished = True
+        elif last_time_to:
+            if current_time_str <= last_time_to:
+                lessons_ongoing = (now.hour >= 7)
+                is_before_lessons = (now.hour < 7)
+            else:
+                lessons_finished = True
         else:
-            lessons_ongoing = (now.hour < 15)
+            if now.hour < 7:
+                is_before_lessons = True
+            elif now.hour < 15:
+                lessons_ongoing = True
+            else:
+                lessons_finished = True
 
     sorted_dates = sorted(by_date.keys())
     future_dates = [d for d in sorted_dates if d > today_str]
 
-    if lessons_ongoing and today_str in by_date:
+    if (lessons_ongoing or is_before_lessons) and today_str in by_date:
         default_target_date = today_str
-        target_reason = 'today_ongoing'
+        target_reason = 'today_ongoing' if lessons_ongoing else 'today_before_lessons'
     elif future_dates:
         default_target_date = future_dates[0]
         target_reason = 'next_school_day'
@@ -1074,6 +1386,7 @@ def build_schedule_day_context(
     selected_day_data = None
 
     tomorrow_str = (now.date() + timedelta(days=1)).strftime('%Y-%m-%d')
+    now_minutes = now.hour * 60 + now.minute
 
     for d_str in sorted_dates:
         d_obj = parse_date_safe(d_str)
@@ -1096,6 +1409,105 @@ def build_schedule_day_context(
         end_time = active_day_lessons[-1].get('time_to') if active_day_lessons else (day_lessons[-1].get('time_to') if day_lessons else '')
         time_span = f"{start_time} – {end_time}" if start_time and end_time else ""
 
+        current_lesson = None
+        next_lesson = None
+        is_break_now = False
+        break_info = None
+
+        if d_str == today_str:
+            next_lesson_found = False
+            for les in day_lessons:
+                from_min = _parse_time_minutes(les.get('time_from'))
+                to_min = _parse_time_minutes(les.get('time_to'))
+                is_canc = bool(les.get('is_cancelled'))
+
+                if is_canc:
+                    les['live_status'] = 'cancelled'
+                    les['is_current'] = False
+                    les['is_completed'] = False
+                    les['is_upcoming'] = False
+                    les['is_next'] = False
+                elif from_min is not None and to_min is not None:
+                    if from_min <= now_minutes <= to_min:
+                        les['live_status'] = 'in_progress'
+                        les['is_current'] = True
+                        les['is_completed'] = False
+                        les['is_upcoming'] = False
+                        les['is_next'] = False
+                        current_lesson = les
+                        les['minutes_left'] = max(0, to_min - now_minutes)
+                        duration = max(1, to_min - from_min)
+                        elapsed = max(0, min(duration, now_minutes - from_min))
+                        les['progress_pct'] = int(round((elapsed / duration) * 100))
+                    elif now_minutes > to_min:
+                        les['live_status'] = 'completed'
+                        les['is_current'] = False
+                        les['is_completed'] = True
+                        les['is_upcoming'] = False
+                        les['is_next'] = False
+                    else:  # now_minutes < from_min
+                        les['live_status'] = 'upcoming'
+                        les['is_current'] = False
+                        les['is_completed'] = False
+                        les['is_upcoming'] = True
+                        les['minutes_until'] = max(0, from_min - now_minutes)
+                        if not next_lesson_found:
+                            les['is_next'] = True
+                            next_lesson_found = True
+                            next_lesson = les
+                        else:
+                            les['is_next'] = False
+                else:
+                    les['live_status'] = 'unknown'
+                    les['is_current'] = False
+                    les['is_completed'] = False
+                    les['is_upcoming'] = False
+                    les['is_next'] = False
+
+            # Wykrywanie przerwy między lekcjami
+            if lessons_ongoing and not current_lesson:
+                completed_active = [les for les in active_day_lessons if les.get('is_completed')]
+                upcoming_active = [les for les in active_day_lessons if les.get('is_upcoming')]
+                if completed_active and upcoming_active:
+                    prev_l = completed_active[-1]
+                    next_l = upcoming_active[0]
+                    prev_to = _parse_time_minutes(prev_l.get('time_to'))
+                    next_from = _parse_time_minutes(next_l.get('time_from'))
+                    if prev_to is not None and next_from is not None and prev_to <= now_minutes < next_from:
+                        is_break_now = True
+                        break_info = {
+                            'minutes_left': max(0, next_from - now_minutes),
+                            'next_subject': next_l.get('subject', ''),
+                            'next_classroom': next_l.get('classroom', ''),
+                            'next_teacher': next_l.get('teacher', ''),
+                            'next_time_from': next_l.get('time_from', ''),
+                            'after_lesson_no': prev_l.get('lesson_no', ''),
+                        }
+                        prev_l['has_break_after'] = True
+                        prev_l['break_after_info'] = break_info
+
+        elif d_str < today_str:
+            for les in day_lessons:
+                is_canc = bool(les.get('is_cancelled'))
+                les['live_status'] = 'cancelled' if is_canc else 'completed'
+                les['is_current'] = False
+                les['is_completed'] = not is_canc
+                les['is_upcoming'] = False
+                les['is_next'] = False
+        else:  # d_str > today_str
+            first_active_seen = False
+            for les in day_lessons:
+                is_canc = bool(les.get('is_cancelled'))
+                les['live_status'] = 'cancelled' if is_canc else 'upcoming'
+                les['is_current'] = False
+                les['is_completed'] = False
+                les['is_upcoming'] = not is_canc
+                if not is_canc and not first_active_seen:
+                    les['is_next'] = True
+                    first_active_seen = True
+                else:
+                    les['is_next'] = False
+
         if d_str == today_str:
             label = f"Dzisiaj ({w_name.lower()}, {f_date})"
         elif d_str == tomorrow_str:
@@ -1113,6 +1525,11 @@ def build_schedule_day_context(
             'is_selected': (d_str == selected_date),
             'is_past': (d_str < today_str),
             'is_future': (d_str > today_str),
+            'start_time': start_time,
+            'end_time': end_time,
+            'is_before_lessons': is_before_lessons if (d_str == today_str) else False,
+            'lessons_ongoing': lessons_ongoing if (d_str == today_str) else False,
+            'lessons_finished': lessons_finished if (d_str == today_str) else False,
             'lessons': day_lessons,
             'total_count': len(day_lessons),
             'active_count': len(active_day_lessons),
@@ -1121,6 +1538,11 @@ def build_schedule_day_context(
             'tests_count': tests_count,
             'time_span': time_span,
             'has_any': len(day_lessons) > 0,
+            'is_break_now': is_break_now,
+            'break_info': break_info,
+            'current_lesson': current_lesson,
+            'next_lesson': next_lesson,
+            'completed_count': sum(1 for x in day_lessons if x.get('is_completed')),
         }
         days_data.append(day_dict)
         if d_str == selected_date:
@@ -1140,6 +1562,9 @@ def build_schedule_day_context(
         'is_today': True,
         'is_past': False,
         'is_future': False,
+        'is_before_lessons': False,
+        'lessons_ongoing': False,
+        'lessons_finished': False,
     }
 
     return {
@@ -1148,6 +1573,8 @@ def build_schedule_day_context(
         'today_str': today_str,
         'today_date': today_str,
         'lessons_ongoing': lessons_ongoing,
+        'is_before_lessons': is_before_lessons,
+        'lessons_finished': lessons_finished,
         'default_target_date': default_target_date,
         'target_reason': target_reason,
         'selected_date': selected_date,
@@ -1408,7 +1835,16 @@ def get_student_dashboard_bundle(
     # Analityka ocen
     excluded_subjects = storage.get_excluded_certificate_subjects(login) if hasattr(storage, 'get_excluded_certificate_subjects') else []
     all_subjects = storage.get_subjects(login) if hasattr(storage, 'get_subjects') else []
-    subj_averages = calculate_subject_averages(grades, excluded_subjects=excluded_subjects, all_subjects=all_subjects)
+    sem_split_cfg = config.get('semester_split_date')
+    annual_algo_cfg = config.get('annual_grade_algorithm', 'all_year_weighted')
+    subj_averages = calculate_subject_averages(
+        grades,
+        excluded_subjects=excluded_subjects,
+        all_subjects=all_subjects,
+        semester_split_date=sem_split_cfg,
+        annual_grade_algorithm=annual_algo_cfg,
+        ref_date=ref_now,
+    )
     overall_avg = calculate_overall_average(subj_averages)
     certificate_summary = calculate_certificate_summary(subj_averages, excluded_subjects=excluded_subjects)
 
@@ -2158,6 +2594,7 @@ def compute_opportunity_matrix(
     at_risk = []
     safe = []
     intervention = []
+    completed = []
 
     # Progi ocen w polskim systemie szkolnym
     grade_thresholds = [
@@ -2179,6 +2616,24 @@ def compute_opportunity_matrix(
         total_entries = sdata.get('count', cnt)
         weights = max(0.1, float(sdata.get('sum_weights') or sdata.get('total_weight') or 1.0))
         weighted = float(sdata.get('sum_weighted') or (avg * weights))
+        is_official = bool(sdata.get('is_official_proposal'))
+        official_prop = sdata.get('official_proposed_grade')
+
+        # Przedmioty zakończone w semestrze 1 nie podlegają bieżącej interwencji ani szansom w semestrze 2
+        if sdata.get('is_completed'):
+            completed.append({
+                "subject": sname,
+                "average": avg,
+                "count": cnt,
+                "total_entries": total_entries,
+                "proposed_grade_num": sdata.get('proposed_grade_num'),
+                "proposed_grade_word": sdata.get('proposed_grade_word') or GRADE_WORDS.get(sdata.get('proposed_grade_num'), ''),
+                "is_completed": True,
+                "is_official_proposal": is_official,
+                "official_proposed_grade": official_prop,
+                "note": "Przedmiot zrealizowany w I semestrze – oceny zamknięte.",
+            })
+            continue
 
         # 1. Sprawdzenie czy wymaga interwencji (bardzo niska średnia)
         if avg < 2.50:
@@ -2329,6 +2784,7 @@ def compute_opportunity_matrix(
     quick_wins.sort(key=lambda x: x['gap'])
     at_risk.sort(key=lambda x: x['buffer'])
     safe.sort(key=lambda x: x['average'], reverse=True)
+    completed.sort(key=lambda x: x['subject'])
 
     return {
         "quick_wins": quick_wins,
@@ -2336,12 +2792,14 @@ def compute_opportunity_matrix(
         "drop_risks": at_risk,
         "safe": safe,
         "intervention": intervention,
+        "completed": completed,
         "matrix_items": quick_wins + at_risk + safe + intervention,
         "counts": {
             "quick_wins": len(quick_wins),
             "at_risk": len(at_risk),
             "safe": len(safe),
             "intervention": len(intervention),
+            "completed": len(completed),
         },
     }
 

@@ -7,6 +7,7 @@ import hmac
 import importlib.metadata
 import logging
 import os
+import re
 import secrets
 import shutil
 import subprocess
@@ -21,6 +22,7 @@ from flask import (
     Flask,
     Response,
     abort,
+    current_app,
     flash,
     jsonify,
     redirect,
@@ -153,6 +155,8 @@ def get_or_create_persistent_secret_key(storage_dir: str | Path) -> str:
 
 def generate_csrf_token() -> str:
     """Generuje i przechowuje token CSRF w bieżącej sesji użytkownika."""
+    if current_app and current_app.config.get('STATIC_CSRF_TOKEN'):
+        return str(current_app.config['STATIC_CSRF_TOKEN'])
     token = session.get('_csrf_token')
     if not token:
         token = secrets.token_hex(32)
@@ -179,6 +183,20 @@ def inject_common_context():
     now = getattr(request, 'app_actual_date', None) or datetime.now()
     csrf_val = generate_csrf_token()
 
+    raw_storage = getattr(current_app, 'config', {}).get('STORAGE') if current_app else None
+    if not raw_storage and hasattr(storage, 'parent_storage'):
+        raw_storage = storage.parent_storage
+    elif not raw_storage:
+        raw_storage = storage
+
+    archived_years = (
+        raw_storage.list_archived_years(active_login)
+        if (raw_storage and active_login and hasattr(raw_storage, 'list_archived_years'))
+        else []
+    )
+    is_archive_mode = bool(getattr(request, 'is_archive_mode', False))
+    active_school_year = getattr(request, 'app_active_school_year', None)
+
     return {
         'all_students': students,
         'active_student': active_student,
@@ -189,6 +207,9 @@ def inject_common_context():
         'app_version': get_app_version(),
         'csrf_token': csrf_val,
         'get_csrf_token': generate_csrf_token,
+        'is_archive_mode': is_archive_mode,
+        'active_school_year': active_school_year,
+        'archived_years': archived_years,
     }
 
 
@@ -201,6 +222,86 @@ def switch_student(login: str):
     flash(f"Przełączono aktywny profil ucznia na konto {login}.", "info")
     next_url = request.args.get('next') or url_for('web.dashboard')
     return redirect(next_url)
+
+
+@web_bp.route('/school-year/switch')
+@login_required
+def switch_school_year():
+    """Przełącza aktywny rok szkolny (bieżący vs zarchiwizowany)."""
+    year = request.args.get('year', '').strip()
+    if not year or year.lower() in ('current', 'biezacy', 'bieżący'):
+        session.pop('active_school_year', None)
+        flash("Powrócono do bieżącego roku szkolnego.", "info")
+    else:
+        session['active_school_year'] = year
+        flash(f"Przełączono widok na zarchiwizowany rok szkolny: {year} (tryb tylko do odczytu).", "warning")
+    next_url = request.args.get('next') or url_for('web.dashboard')
+    return redirect(next_url)
+
+
+@web_bp.route('/actions/archive-year', methods=['POST'])
+@login_required
+def action_archive_year():
+    """Archiwizuje bieżący rok szkolny dla aktywnego profilu ucznia (lub wszystkich dzieci)."""
+    if getattr(request, 'is_archive_mode', False):
+        flash("Nie można archiwizować z poziomu widoku archiwalnego.", "error")
+        return redirect(url_for('web.settings_view'))
+
+    config = request.app_config
+    raw_storage = current_app.config['STORAGE']
+    active_login = get_active_student_login(config, raw_storage, session_login=session.get('active_student_login'))
+    if not active_login:
+        flash("Brak aktywnego profilu ucznia do zarchiwizowania.", "error")
+        return redirect(url_for('web.settings_view'))
+
+    year_label = request.form.get('school_year_label', '').strip()
+    if not year_label:
+        now = getattr(request, 'app_actual_date', None) or datetime.now()
+        year_label = f"{now.year - 1}/{now.year}"
+
+    all_students = list_students(config, raw_storage)
+    archive_all = bool(request.form.get('archive_all_students')) and len(all_students) > 1
+
+    targets = all_students if archive_all else [s for s in all_students if s['login'] == active_login]
+    if not targets:
+        targets = [{'login': active_login, 'name': active_login}]
+
+    archived_names = []
+    try:
+        for st in targets:
+            s_login = st['login']
+            s_name = st.get('name') or s_login
+            raw_storage.archive_school_year(s_login, year_label)
+            archived_names.append(s_name)
+
+        if archive_all and len(targets) > 1:
+            names_str = ", ".join(f"'{name}'" for name in archived_names)
+            flash(
+                f"Pomyślnie zarchiwizowano rok szkolny {year_label} jednocześnie dla wszystkich dzieci: {names_str}. "
+                f"Rozpoczęto czysty nowy rok szkolny.",
+                "success",
+            )
+        else:
+            active_name = archived_names[0] if archived_names else active_login
+            other_students = [s for s in all_students if s['login'] != active_login]
+            if other_students:
+                other_names = ", ".join(f"'{s['name']}'" for s in other_students)
+                flash(
+                    f"Pomyślnie zarchiwizowano rok szkolny {year_label} dla ucznia '{active_name}'. "
+                    f"Pamiętaj: operacja dotyczyła wyłącznie tego profilu. Przełącz ucznia w menu i powtórz archiwizację dla pozostałych dzieci ({other_names}) "
+                    f"lub zaznacz opcję archiwizacji dla wszystkich dzieci.",
+                    "success",
+                )
+            else:
+                flash(
+                    f"Pomyślnie zarchiwizowano rok szkolny {year_label} dla ucznia '{active_name}'. Rozpoczęto czysty nowy rok szkolny.",
+                    "success",
+                )
+    except Exception as e:
+        logger.error(f"Błąd archiwizacji roku szkolnego dla {active_login}: {e}", exc_info=True)
+        flash(f"Błąd podczas archiwizacji: {e}", "error")
+
+    return redirect(url_for('web.settings_view'))
 
 
 @web_bp.route('/')
@@ -263,6 +364,8 @@ def schedule_view():
         default_target_date=sched_ctx['default_target_date'],
         today_date=sched_ctx['today_date'],
         lessons_ongoing=sched_ctx['lessons_ongoing'],
+        is_before_lessons=sched_ctx['is_before_lessons'],
+        lessons_finished=sched_ctx['lessons_finished'],
         target_reason=sched_ctx['target_reason'],
         prev_date=sched_ctx['prev_date'],
         next_date=sched_ctx['next_date'],
@@ -283,8 +386,27 @@ def grades_view():
     excluded_subjects = storage.get_excluded_certificate_subjects(active_login) if hasattr(storage, 'get_excluded_certificate_subjects') else []
     all_subjects = storage.get_subjects(active_login) if hasattr(storage, 'get_subjects') else []
     data = get_student_dashboard_bundle(storage, active_login, config, now=request.app_actual_date)
+    raw_sem = (request.args.get('semester') or request.args.get('semestr') or 'all').strip().lower()
+    if raw_sem in ('sem1', '1', 'i'):
+        active_semester = 'sem1'
+    elif raw_sem in ('sem2', '2', 'ii'):
+        active_semester = 'sem2'
+    else:
+        active_semester = 'all'
+
+    sem_split_cfg = config.get('semester_split_date')
+    annual_algo_cfg = config.get('annual_grade_algorithm', 'all_year_weighted')
+
     grades = storage.get_grades_history(active_login) if hasattr(storage, 'get_grades_history') else []
-    subject_averages = calculate_subject_averages(grades, excluded_subjects=excluded_subjects, all_subjects=all_subjects)
+    subject_averages = calculate_subject_averages(
+        grades,
+        excluded_subjects=excluded_subjects,
+        all_subjects=all_subjects,
+        semester=active_semester,
+        semester_split_date=sem_split_cfg,
+        ref_date=request.app_actual_date,
+        annual_grade_algorithm=annual_algo_cfg,
+    )
     certificate_summary = calculate_certificate_summary(subject_averages, excluded_subjects=excluded_subjects)
 
     raw_tab = (request.args.get('tab') or '').strip().lower()
@@ -313,6 +435,9 @@ def grades_view():
         subject_averages=subject_averages,
         certificate_summary=certificate_summary,
         active_tab=active_tab,
+        active_semester=active_semester,
+        semester_split_date=sem_split_cfg,
+        annual_grade_algorithm=annual_algo_cfg,
         excluded_subjects=excluded_subjects,
         goal_optimizer=goal_optimizer,
     )
@@ -331,7 +456,13 @@ def subject_detail_view(subject_name: str):
     grades = storage.get_grades_history(active_login) if hasattr(storage, 'get_grades_history') else []
     data = get_student_dashboard_bundle(storage, active_login, config, now=request.app_actual_date)
 
-    analytics = get_subject_detailed_analytics(grades, subject_name, excluded_subjects=excluded_subjects)
+    analytics = get_subject_detailed_analytics(
+        grades,
+        subject_name,
+        excluded_subjects=excluded_subjects,
+        semester_split_date=config.get('semester_split_date'),
+        ref_date=request.app_actual_date,
+    )
 
     return render_template(
         'web/subject_detail.html',
@@ -413,7 +544,14 @@ def reports_view(report_type: str = 'podsumowanie'):
         excluded_subjects = storage.get_excluded_certificate_subjects(active_login) if hasattr(storage, 'get_excluded_certificate_subjects') else []
         all_subjects = storage.get_subjects(active_login) if hasattr(storage, 'get_subjects') else []
         grades = storage.get_grades_history(active_login) if hasattr(storage, 'get_grades_history') else []
-        subject_averages = calculate_subject_averages(grades, excluded_subjects=excluded_subjects, all_subjects=all_subjects)
+        subject_averages = calculate_subject_averages(
+            grades,
+            excluded_subjects=excluded_subjects,
+            all_subjects=all_subjects,
+            semester_split_date=config.get('semester_split_date'),
+            annual_grade_algorithm=config.get('annual_grade_algorithm', 'all_year_weighted'),
+            ref_date=request.app_actual_date,
+        )
 
         if report_type == 'szanse':
             opportunities_data = compute_opportunity_matrix(subject_averages)
@@ -1129,7 +1267,24 @@ def settings_view():
         new_config['web']['host'] = form.get('web_host', '').strip() or existing_web.get('host', '127.0.0.1')
         new_config['web']['password'] = effective_web_pwd
 
-        # 5. Kalendarium zdarzeń (dedykowana sekcja 'timeline' w konfiguracji)
+        # 5. Rok szkolny, semestry i algorytm predykcji ocen rocznych
+        sem_split_in = form.get('semester_split_date', '').strip()
+        if sem_split_in and re.match(r'^\d{4}-\d{2}-\d{2}$', sem_split_in):
+            new_config['semester_split_date'] = sem_split_in
+        elif 'semester_split_date' in form:
+            new_config['semester_split_date'] = None
+        elif 'semester_split_date' in config:
+            new_config['semester_split_date'] = config.get('semester_split_date')
+
+        annual_algo_in = form.get('annual_grade_algorithm', '').strip()
+        if annual_algo_in in ('all_year_weighted', 'semesters_average', 'progress_favored'):
+            new_config['annual_grade_algorithm'] = annual_algo_in
+        elif 'annual_grade_algorithm' in config:
+            new_config['annual_grade_algorithm'] = config.get('annual_grade_algorithm', 'all_year_weighted')
+        else:
+            new_config['annual_grade_algorithm'] = 'all_year_weighted'
+
+        # 6. Kalendarium zdarzeń (dedykowana sekcja 'timeline' w konfiguracji)
         existing_timeline = config.get('timeline', {}) if isinstance(config.get('timeline'), (dict, collections.abc.Mapping)) else {}
 
         selected_event_types: list[str] = []
@@ -1289,6 +1444,7 @@ def create_app(
     enable_csrf: bool | None = None,
     behind_proxy: bool | None = None,
     trusted_proxies: set[str] | list[str] | None = None,
+    static_csrf_token: str | None = None,
 ) -> Flask:
     """Fabryka aplikacji webowej Flask dla Librus2mail."""
     templates_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'templates')
@@ -1378,6 +1534,7 @@ def create_app(
     # Ochrona przed atakami CSRF
     eff_csrf = enable_csrf if enable_csrf is not None else web_cfg.get('enable_csrf', True)
     app.config['CSRF_ENABLED'] = bool(eff_csrf)
+    app.config['STATIC_CSRF_TOKEN'] = static_csrf_token
 
     app.config['NO_AUTH'] = no_auth
     app.config['WEB_PASSWORD'] = effective_pwd
@@ -1390,16 +1547,37 @@ def create_app(
     @app.before_request
     def set_request_context():
         request.app_config = app.config['APP_CONFIG']
-        request.app_storage = app.config['STORAGE']
         request.app_config_path = app.config['CONFIG_PATH']
         request.app_storage_dir = app.config['STORAGE_DIR']
         request.app_actual_date = app.config.get('ACTUAL_DATE')
+
+        raw_storage = app.config['STORAGE']
+        active_school_year = session.get('active_school_year')
+        if active_school_year and hasattr(raw_storage, 'get_archived_view'):
+            request.app_active_school_year = str(active_school_year)
+            request.is_archive_mode = True
+            request.app_storage = raw_storage.get_archived_view(request.app_active_school_year)
+        else:
+            request.app_active_school_year = None
+            request.is_archive_mode = False
+            request.app_storage = raw_storage
 
         # Wymuszenie kreatora /setup gdy brak pliku konfiguracji lub brak skonfigurowanych kont
         if not _has_valid_config(request.app_config):
             allowed_prefixes = ('/setup', '/static', '/favicon', '/api/test-librus')
             if not request.path.startswith(allowed_prefixes):
                 return redirect(url_for('web.setup_view'))
+
+    @app.before_request
+    def block_archive_mutations():
+        """Blokuje modyfikacje stanu w trybie archiwalnym (Read-Only)."""
+        if getattr(request, 'is_archive_mode', False) and request.method in ('POST', 'PUT', 'DELETE', 'PATCH'):
+            allowed = ('/school-year/switch', '/student/', '/login', '/logout')
+            if not any(request.path.startswith(p) for p in allowed):
+                if request.is_json or request.path.startswith('/api/'):
+                    return jsonify({'status': 'error', 'message': 'Operacja zablokowana w trybie archiwalnym (tylko do odczytu).'}), 403
+                flash("Operacja niedozwolona w trybie archiwalnym (dane są tylko do odczytu).", "error")
+                return redirect(request.referrer or url_for('web.dashboard'))
 
     @app.before_request
     def verify_csrf_protection():
@@ -1417,7 +1595,11 @@ def create_app(
             if isinstance(json_body, dict):
                 token = json_body.get('csrf_token')
 
-        expected_token = session.get('_csrf_token')
+        expected_token = (
+            current_app.config.get('STATIC_CSRF_TOKEN')
+            if (current_app and current_app.config.get('STATIC_CSRF_TOKEN'))
+            else session.get('_csrf_token')
+        )
         if not expected_token or not token or not hmac.compare_digest(str(token), str(expected_token)):
             logger.warning(
                 f"Odrzucono żądanie {request.method} {request.path} z IP {get_client_ip(request)}: nieprawidłowy token CSRF."

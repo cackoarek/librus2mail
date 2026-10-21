@@ -1,0 +1,2888 @@
+<!DOCTYPE html>
+<html lang="pl" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="static_demo_csrf_token_librus2mail">
+    <title>Raporty i Analizy - Jan Kowalski (8979296) - Librus2mail</title>
+    <!-- Favicon z logo Librus2mail (gradient indigo-sky + 🏫) -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%25%22%20y1%3D%22100%25%22%20x2%3D%22100%25%22%20y2%3D%220%25%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%234f46e5%22/%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%230ea5e9%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2216%22%20fill%3D%22url%28%23g%29%22/%3E%3Ctext%20x%3D%2232%22%20y%3D%2234%22%20font-size%3D%2234%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%F0%9F%8F%AB%3C/text%3E%3C/svg%3E">
+
+    <!-- Pre-render Theme Initializer (zapobiega migotaniu białego tła przed załadowaniem DOM) -->
+    <script>
+        (function() {
+            try {
+                const THEMES = ['light', 'dark', 'midnight', 'forest'];
+                let saved = localStorage.getItem('librus2mail_theme') || 'auto';
+                let effective = saved;
+                if (saved === 'auto') {
+                    effective = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                if (!THEMES.includes(effective)) effective = 'light';
+                document.documentElement.setAttribute('data-theme', effective);
+                if (effective !== 'light') {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+            } catch (e) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        })();
+    </script>
+
+    <!-- TailwindCSS CDN & Config -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        theme: {
+                            body: 'var(--theme-bg-body)',
+                            card: 'var(--theme-bg-card)',
+                            'card-hover': 'var(--theme-bg-card-hover)',
+                            header: 'var(--theme-bg-header)',
+                            border: 'var(--theme-border)',
+                            'text-primary': 'var(--theme-text-primary)',
+                            'text-secondary': 'var(--theme-text-secondary)',
+                            'text-muted': 'var(--theme-text-muted)',
+                            accent: 'var(--theme-accent)',
+                            'accent-hover': 'var(--theme-accent-hover)',
+                            'accent-soft': 'var(--theme-accent-soft)',
+                            'accent-text': 'var(--theme-accent-text)',
+                        }
+                    }
+                }
+            }
+        };
+    </script>
+
+    <!-- HTMX CDN -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script>
+        // Automatyczne dołączanie tokenu CSRF do wszystkich zapytań fetch
+        (function() {
+            const _origFetch = window.fetch;
+            window.fetch = function(url, options) {
+                options = options || {};
+                options.headers = options.headers || {};
+                const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                if (token) {
+                    if (options.headers instanceof Headers) {
+                        if (!options.headers.has('X-CSRFToken')) options.headers.set('X-CSRFToken', token);
+                    } else if (!options.headers['X-CSRFToken'] && !options.headers['x-csrftoken']) {
+                        options.headers['X-CSRFToken'] = token;
+                    }
+                }
+                return _origFetch(url, options);
+            };
+        })();
+    </script>
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* ==========================================================================
+           Librus2mail Multi-Skin Design Tokens
+           ========================================================================== */
+        :root, [data-theme="light"] {
+            --theme-bg-body: #f8fafc;
+            --theme-bg-card: #ffffff;
+            --theme-bg-card-hover: #f1f5f9;
+            --theme-bg-header: rgba(255, 255, 255, 0.95);
+            --theme-bg-subtle: #f1f5f9;
+            --theme-border: #e2e8f0;
+            --theme-border-subtle: #f1f5f9;
+            --theme-text-primary: #0f172a;
+            --theme-text-secondary: #334155;
+            --theme-text-muted: #64748b;
+            --theme-accent: #4f46e5;
+            --theme-accent-hover: #4338ca;
+            --theme-accent-soft: #eef2ff;
+            --theme-accent-text: #4338ca;
+            --theme-input-bg: #ffffff;
+            --theme-input-border: #cbd5e1;
+            --theme-scrollbar-thumb: #cbd5e1;
+        }
+
+        [data-theme="dark"] {
+            --theme-bg-body: #0b1120;
+            --theme-bg-card: #151e32;
+            --theme-bg-card-hover: #1e293b;
+            --theme-bg-header: rgba(15, 23, 42, 0.95);
+            --theme-bg-subtle: #1e293b;
+            --theme-border: #243049;
+            --theme-border-subtle: #1e293b;
+            --theme-text-primary: #f8fafc;
+            --theme-text-secondary: #cbd5e1;
+            --theme-text-muted: #8191a6;
+            --theme-accent: #6366f1;
+            --theme-accent-hover: #818cf8;
+            --theme-accent-soft: rgba(99, 102, 241, 0.18);
+            --theme-accent-text: #a5b4fc;
+            --theme-input-bg: #1e293b;
+            --theme-input-border: #334155;
+            --theme-scrollbar-thumb: #334155;
+        }
+
+        [data-theme="midnight"] {
+            --theme-bg-body: #020617;
+            --theme-bg-card: #090e1a;
+            --theme-bg-card-hover: #111827;
+            --theme-bg-header: rgba(4, 7, 19, 0.96);
+            --theme-bg-subtle: #0f172a;
+            --theme-border: #1e293b;
+            --theme-border-subtle: #0f172a;
+            --theme-text-primary: #ffffff;
+            --theme-text-secondary: #cbd5e1;
+            --theme-text-muted: #64748b;
+            --theme-accent: #0ea5e9;
+            --theme-accent-hover: #38bdf8;
+            --theme-accent-soft: rgba(14, 165, 233, 0.16);
+            --theme-accent-text: #38bdf8;
+            --theme-input-bg: #0f172a;
+            --theme-input-border: #1e293b;
+            --theme-scrollbar-thumb: #1e293b;
+        }
+
+        [data-theme="forest"] {
+            --theme-bg-body: #051610;
+            --theme-bg-card: #0a241b;
+            --theme-bg-card-hover: #103629;
+            --theme-bg-header: rgba(7, 27, 20, 0.96);
+            --theme-bg-subtle: #0d2e23;
+            --theme-border: #144735;
+            --theme-border-subtle: #0d2e23;
+            --theme-text-primary: #ecfdf5;
+            --theme-text-secondary: #a7f3d0;
+            --theme-text-muted: #6ee7b7;
+            --theme-accent: #10b981;
+            --theme-accent-hover: #34d399;
+            --theme-accent-soft: rgba(16, 185, 129, 0.16);
+            --theme-accent-text: #6ee7b7;
+            --theme-input-bg: #0d2e23;
+            --theme-input-border: #144735;
+            --theme-scrollbar-thumb: #144735;
+        }
+
+        html {
+            background-color: var(--theme-bg-body);
+        }
+
+        html.dark {
+            color-scheme: dark;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--theme-bg-body);
+            color: var(--theme-text-primary);
+            transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+        }
+
+        .htmx-indicator { display: none; }
+        .htmx-request .htmx-indicator { display: inline-flex; }
+        .htmx-request.htmx-indicator { display: inline-flex; }
+
+        /* ==========================================================================
+           Automatyczne kaskadowanie motywu dla istniejących komponentów
+           ========================================================================== */
+        html.dark header {
+            background-color: var(--theme-bg-header) !important;
+            border-color: var(--theme-border) !important;
+        }
+        html.dark footer {
+            background-color: var(--theme-bg-card) !important;
+            border-color: var(--theme-border) !important;
+            color: var(--theme-text-muted) !important;
+        }
+
+        /* Karty i kontenery (w tym klasy z modyfikatorem przezroczystości Tailwind np. bg-slate-50/50, bg-slate-200/70) */
+        html.dark .bg-white:not([data-keep-color]),
+        html.dark [class*="bg-white/"]:not([data-keep-color]) {
+            background-color: var(--theme-bg-card) !important;
+        }
+        html.dark .bg-slate-50:not([data-keep-color]),
+        html.dark [class*="bg-slate-50/"]:not([data-keep-color]) {
+            background-color: var(--theme-bg-subtle) !important;
+        }
+        html.dark .bg-slate-100:not([data-keep-color]),
+        html.dark [class*="bg-slate-100/"]:not([data-keep-color]) {
+            background-color: var(--theme-bg-subtle) !important;
+        }
+        html.dark .bg-slate-200:not([data-keep-color]),
+        html.dark [class*="bg-slate-200/"]:not([data-keep-color]) {
+            background-color: var(--theme-bg-subtle) !important;
+        }
+
+        /* Segmented pill tabs & podzakładki (np. Oceny, Raporty, filtry okresów) */
+        html.dark [class*="bg-slate-200"].rounded-xl,
+        html.dark [class*="bg-slate-100"].rounded-xl,
+        html.dark [class*="bg-slate-200"] {
+            background-color: var(--theme-bg-subtle) !important;
+            border-color: var(--theme-border) !important;
+        }
+
+        /* Domyślny stan nieaktywny dla podzakładek w trybach ciemnych */
+        html.dark .subtab-btn:not(.subtab-btn-active):not(.active),
+        html.dark .grades-tab-btn:not(.subtab-btn-active):not(.active),
+        html.dark .reports-tab-btn:not(.subtab-btn-active):not(.active) {
+            color: var(--theme-text-muted) !important;
+            background-color: transparent !important;
+            border-color: transparent !important;
+            box-shadow: none !important;
+        }
+        html.dark .subtab-btn:not(.subtab-btn-active):not(.active):hover,
+        html.dark .grades-tab-btn:not(.subtab-btn-active):not(.active):hover,
+        html.dark .reports-tab-btn:not(.subtab-btn-active):not(.active):hover {
+            color: var(--theme-text-primary) !important;
+            background-color: var(--theme-bg-card-hover) !important;
+        }
+
+        /* Aktywna podzakładka w trybach ciemnych - wyrazisty akcent motywu + biały tekst! */
+        html.dark .subtab-btn.subtab-btn-active,
+        html.dark .subtab-btn.active,
+        html.dark .subtab-btn[data-active="true"],
+        html.dark .grades-tab-btn.active,
+        html.dark .grades-tab-btn.subtab-btn-active,
+        html.dark .grades-tab-btn[data-active="true"],
+        html.dark .reports-tab-btn.active,
+        html.dark .reports-tab-btn.subtab-btn-active,
+        html.dark .reports-tab-btn[data-active="true"],
+        html.dark .subtab-btn.active.bg-white,
+        html.dark .grades-tab-btn.active.bg-white,
+        html.dark .reports-tab-btn.active.bg-white {
+            background-color: var(--theme-accent) !important;
+            color: #ffffff !important;
+            font-weight: 800 !important;
+            border-color: transparent !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 0 1px rgba(255, 255, 255, 0.25) !important;
+        }
+
+        /* Stany najechania (hover) */
+        html.dark .hover\:bg-slate-50:hover,
+        html.dark .hover\:bg-slate-100:hover,
+        html.dark [class*="hover:bg-slate-"]:hover,
+        html.dark .group:hover .group-hover\:bg-slate-100 {
+            background-color: var(--theme-bg-card-hover) !important;
+        }
+        html.dark [class*="hover:bg-white"]:hover {
+            background-color: var(--theme-bg-card-hover) !important;
+        }
+
+        /* Obramowania */
+        html.dark .border-slate-100,
+        html.dark .border-slate-200,
+        html.dark .border-slate-300,
+        html.dark [class*="border-slate-"] {
+            border-color: var(--theme-border) !important;
+        }
+        html.dark .border-t.border-slate-100,
+        html.dark .border-b.border-slate-100,
+        html.dark .border-t.border-slate-200,
+        html.dark .border-b.border-slate-200 {
+            border-color: var(--theme-border) !important;
+        }
+
+        /* Typografia */
+        html.dark .text-slate-900:not([data-keep-color]),
+        html.dark .text-slate-800:not([data-keep-color]) {
+            color: var(--theme-text-primary) !important;
+        }
+        html.dark .text-slate-700:not([data-keep-color]),
+        html.dark .text-slate-600:not([data-keep-color]) {
+            color: var(--theme-text-secondary) !important;
+        }
+        html.dark .text-slate-500:not([data-keep-color]),
+        html.dark .text-slate-400:not([data-keep-color]) {
+            color: var(--theme-text-muted) !important;
+        }
+
+        /* Pola formularzy, dropdowny, select, datepicker */
+        html.dark input[type="text"],
+        html.dark input[type="password"],
+        html.dark input[type="number"],
+        html.dark input[type="email"],
+        html.dark input[type="date"],
+        html.dark input[type="time"],
+        html.dark input[type="datetime-local"],
+        html.dark input[type="search"],
+        html.dark input[type="url"],
+        html.dark select,
+        html.dark textarea {
+            background-color: var(--theme-input-bg) !important;
+            border-color: var(--theme-input-border) !important;
+            color: var(--theme-text-primary) !important;
+            color-scheme: dark;
+        }
+        html.dark select option {
+            background-color: var(--theme-bg-card) !important;
+            color: var(--theme-text-primary) !important;
+        }
+
+        /* Ikona kalendarza dla kontrolek date / time */
+        html.dark input[type="date"]::-webkit-calendar-picker-indicator,
+        html.dark input[type="time"]::-webkit-calendar-picker-indicator,
+        html.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+            filter: invert(0.9) brightness(1.2);
+            cursor: pointer;
+        }
+
+        /* ==========================================================================
+           Akcenty Indigo / motyw bazowy i aktywne elementy
+           ========================================================================== */
+        html.dark .bg-indigo-50,
+        html.dark [class*="bg-indigo-50/"],
+        html.dark .bg-indigo-100,
+        html.dark [class*="bg-indigo-100/"] {
+            background-color: var(--theme-accent-soft) !important;
+        }
+        html.dark .text-indigo-500,
+        html.dark .text-indigo-600,
+        html.dark .text-indigo-700,
+        html.dark .text-indigo-800,
+        html.dark .text-indigo-900,
+        html.dark .text-indigo-950 {
+            color: var(--theme-accent-text) !important;
+        }
+        html.dark .hover\:text-indigo-800:hover,
+        html.dark .hover\:text-indigo-700:hover,
+        html.dark [class*="hover:text-indigo-"]:hover {
+            color: var(--theme-accent-hover) !important;
+        }
+        html.dark .border-indigo-100,
+        html.dark .border-indigo-200,
+        html.dark .border-indigo-300,
+        html.dark [class*="border-indigo-"] {
+            border-color: var(--theme-border) !important;
+        }
+
+        /* Uniwersalna czytelność boksów informacyjnych i wskazówek we wszystkich trybach ciemnych */
+        html.dark [class*="bg-indigo-50"],
+        html.dark [class*="bg-sky-50"] {
+            background-color: var(--theme-accent-soft) !important;
+            border-color: var(--theme-border) !important;
+        }
+        html.dark [class*="bg-indigo-50"] .font-bold,
+        html.dark [class*="bg-indigo-50"] .font-extrabold,
+        html.dark [class*="bg-indigo-50"] strong,
+        html.dark [class*="bg-sky-50"] .font-bold,
+        html.dark [class*="bg-sky-50"] .font-extrabold,
+        html.dark [class*="bg-sky-50"] strong {
+            color: var(--theme-text-primary) !important;
+        }
+        html.dark [class*="bg-indigo-50"] p,
+        html.dark [class*="bg-indigo-50"] .leading-relaxed,
+        html.dark [class*="bg-indigo-50"] .text-indigo-800,
+        html.dark [class*="bg-indigo-50"] .text-indigo-950,
+        html.dark [class*="bg-sky-50"] p,
+        html.dark [class*="bg-sky-50"] .leading-relaxed,
+        html.dark [class*="bg-sky-50"] .text-sky-800,
+        html.dark [class*="bg-sky-50"] .text-sky-900 {
+            color: var(--theme-text-secondary) !important;
+        }
+        html.dark [class*="bg-indigo-50"] em,
+        html.dark [class*="bg-sky-50"] em {
+            color: var(--theme-accent-text) !important;
+        }
+
+        /* Pigułki i etykiety statusowe w trybie ciemnym */
+        html.dark .bg-emerald-50, html.dark [class*="bg-emerald-50/"] { background-color: rgba(16, 185, 129, 0.15) !important; }
+        html.dark .bg-emerald-100, html.dark [class*="bg-emerald-100/"] { background-color: rgba(16, 185, 129, 0.22) !important; }
+        html.dark .text-emerald-700, html.dark .text-emerald-800, html.dark .text-emerald-900, html.dark .text-emerald-950 { color: #6ee7b7 !important; }
+        html.dark .border-emerald-200, html.dark .border-emerald-100, html.dark .border-emerald-300, html.dark [class*="border-emerald-"] { border-color: rgba(16, 185, 129, 0.35) !important; }
+        html.dark [class*="bg-emerald-50"] .font-bold,
+        html.dark [class*="bg-emerald-50"] .font-extrabold,
+        html.dark [class*="bg-emerald-50"] strong {
+            color: #ecfdf5 !important;
+        }
+
+        html.dark .bg-rose-50, html.dark [class*="bg-rose-50/"] { background-color: rgba(244, 63, 94, 0.15) !important; }
+        html.dark .bg-rose-100, html.dark [class*="bg-rose-100/"] { background-color: rgba(244, 63, 94, 0.22) !important; }
+        html.dark .text-rose-700, html.dark .text-rose-800, html.dark .text-rose-900, html.dark .text-rose-950 { color: #fda4af !important; }
+        html.dark .border-rose-200, html.dark .border-rose-100, html.dark .border-rose-300, html.dark [class*="border-rose-"] { border-color: rgba(244, 63, 94, 0.35) !important; }
+        html.dark [class*="bg-rose-50"] .font-bold,
+        html.dark [class*="bg-rose-50"] .font-extrabold,
+        html.dark [class*="bg-rose-50"] strong {
+            color: #ffe4e6 !important;
+        }
+
+        html.dark .bg-amber-50, html.dark [class*="bg-amber-50/"] { background-color: rgba(245, 158, 11, 0.15) !important; }
+        html.dark .bg-amber-100, html.dark [class*="bg-amber-100/"] { background-color: rgba(245, 158, 11, 0.22) !important; }
+        html.dark .text-amber-700, html.dark .text-amber-800, html.dark .text-amber-900, html.dark .text-amber-950 { color: #fcd34d !important; }
+        html.dark .border-amber-200, html.dark .border-amber-100, html.dark .border-amber-300, html.dark [class*="border-amber-"] { border-color: rgba(245, 158, 11, 0.35) !important; }
+        html.dark [class*="bg-amber-50"] .font-bold,
+        html.dark [class*="bg-amber-50"] .font-extrabold,
+        html.dark [class*="bg-amber-50"] strong {
+            color: #fef08a !important;
+        }
+        html.dark [class*="bg-amber-50"] p,
+        html.dark [class*="bg-amber-50"] .leading-relaxed {
+            color: #fde68a !important;
+        }
+
+        html.dark .bg-sky-50, html.dark [class*="bg-sky-50/"] { background-color: rgba(14, 165, 233, 0.15) !important; }
+        html.dark .bg-sky-100, html.dark [class*="bg-sky-100/"] { background-color: rgba(14, 165, 233, 0.22) !important; }
+        html.dark .text-sky-700, html.dark .text-sky-800, html.dark .text-sky-900, html.dark .text-sky-950 { color: #7dd3fc !important; }
+        html.dark .border-sky-200, html.dark .border-sky-100, html.dark .border-sky-300, html.dark [class*="border-sky-"] { border-color: rgba(14, 165, 233, 0.35) !important; }
+
+        html.dark .bg-blue-50, html.dark [class*="bg-blue-50/"] { background-color: rgba(59, 130, 246, 0.15) !important; }
+        html.dark .bg-blue-100, html.dark [class*="bg-blue-100/"] { background-color: rgba(59, 130, 246, 0.22) !important; }
+        html.dark .text-blue-700, html.dark .text-blue-800, html.dark .text-blue-900, html.dark .text-blue-950 { color: #93c5fd !important; }
+        html.dark .border-blue-200, html.dark .border-blue-100, html.dark .border-blue-300, html.dark [class*="border-blue-"] { border-color: rgba(59, 130, 246, 0.35) !important; }
+
+        html.dark .bg-purple-50, html.dark [class*="bg-purple-50/"] { background-color: rgba(168, 85, 247, 0.15) !important; }
+        html.dark .bg-purple-100, html.dark [class*="bg-purple-100/"] { background-color: rgba(168, 85, 247, 0.22) !important; }
+        html.dark .text-purple-700, html.dark .text-purple-800, html.dark .text-purple-900, html.dark .text-purple-950 { color: #d8b4fe !important; }
+        html.dark .border-purple-200, html.dark .border-purple-100, html.dark .border-purple-300, html.dark [class*="border-purple-"] { border-color: rgba(168, 85, 247, 0.35) !important; }
+
+        /* Tabele w trybie ciemnym */
+        html.dark thead { background-color: var(--theme-bg-subtle) !important; }
+        html.dark th { color: var(--theme-text-muted) !important; }
+        html.dark tbody tr:hover { background-color: var(--theme-bg-card-hover) !important; }
+
+        /* Tła okien modalnych */
+        html.dark .fixed.inset-0.bg-slate-900\/50,
+        html.dark .fixed.inset-0.bg-black\/50,
+        html.dark .fixed.inset-0.bg-slate-900\/60 {
+            background-color: rgba(0, 0, 0, 0.75) !important;
+        }
+
+        /* Pasek skrótów mobilnych */
+        html.dark .md\:hidden.bg-slate-50 {
+            background-color: var(--theme-bg-card) !important;
+            border-color: var(--theme-border) !important;
+        }
+        html.dark .md\:hidden a.bg-white {
+            background-color: var(--theme-bg-subtle) !important;
+            border-color: var(--theme-border) !important;
+            color: var(--theme-text-secondary) !important;
+        }
+
+        /* Paski przewijania */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb {
+            background-color: var(--theme-scrollbar-thumb);
+            border-radius: 9999px;
+        }
+
+        /* Płynne otwieranie mobilnego panelu drawer */
+        #mobile-drawer {
+            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+    </style>
+    
+<style>
+    @media print {
+        header, footer, nav, .no-print { display: none !important; }
+        body { background: white !important; }
+        main { padding: 0 !important; max-width: 100% !important; margin: 0 !important; }
+        .report-container { box-shadow: none !important; border: none !important; padding: 0 !important; }
+    }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+</head>
+<body class="h-full flex flex-col antialiased selection:bg-indigo-500 selection:text-white" hx-headers='{"X-CSRFToken": "static_demo_csrf_token_librus2mail"}'>
+
+    <!-- Pasek nawigacyjny -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
+        <div class="max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16 gap-2">
+                <!-- Lewa strona: Logo + Nawigacja Desktop -->
+                <div class="flex items-center gap-2 xl:gap-3 2xl:gap-6 flex-shrink-0">
+                    <a href="web_dashboard.html" class="flex items-center gap-2.5 sm:gap-3 group flex-shrink-0">
+                        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-sky-500 flex items-center justify-center text-white text-lg sm:text-xl shadow-md shadow-indigo-100 group-hover:scale-105 transition-transform flex-shrink-0">
+                            🏫
+                        </div>
+                        <div class="min-w-0">
+                            <span class="font-extrabold text-base sm:text-lg text-slate-900 tracking-tight flex items-center gap-1">
+                                Librus<span class="text-indigo-600">2mail</span>
+                            </span>
+                            <span class="hidden sm:block text-[9px] sm:text-[10px] uppercase font-bold text-slate-400 tracking-wider truncate">Web Dashboard</span>
+                        </div>
+                    </a>
+
+                    <!-- Nawigacja Desktop (widoczna na dużych ekranach od xl >= 1280px) -->
+                    
+                    <nav class="hidden xl:flex items-center gap-1 2xl:gap-1.5 flex-shrink-0">
+                        <a href="web_dashboard.html"
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📊 Pulpit
+                        </a>
+                        <a href="web_plan.html"
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📅 Plan<span class="hidden 2xl:inline"> lekcji</span>
+                        </a>
+                        <a href="web_oceny.html"
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📝 Oceny
+                        </a>
+                        <a href="web_terminarz.html"
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            🔔 Terminarz
+                        </a>
+                        <a href="web_wiadomosci.html"
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            ✉️ Wiadomości
+                        </a>
+                        <a href="web_raporty_podsumowanie.html"
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors bg-indigo-50 text-indigo-700">
+                            📈 Raporty
+                        </a>
+                        <a href="web_ustawienia.html"
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            ⚙️ Ustawienia
+                        </a>
+                    </nav>
+                    
+                </div>
+
+                <!-- Prawa strona: Przełącznik motywu + Uczeń + Rok + Auth + Hamburger -->
+                <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                    <!-- Selektor motywu / skórki (kompaktowy przycisk 36x36px) -->
+                    <div class="relative inline-block text-left" id="theme-menu-container">
+                        <button type="button"
+                                id="theme-menu-button"
+                                onclick="toggleThemeDropdown()"
+                                class="flex items-center justify-center gap-1 w-9 h-9 sm:w-auto sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-bold border border-slate-200 hover:border-slate-300 transition-colors cursor-pointer shadow-2xs"
+                                style="background-color: var(--theme-bg-card); color: var(--theme-text-primary);"
+                                title="Wybierz motyw panelu"
+                                aria-expanded="false"
+                                aria-haspopup="true">
+                            <span id="theme-active-icon" class="text-sm">☀️</span>
+                            <span class="text-[9px] opacity-60">▾</span>
+                        </button>
+                        <div id="theme-dropdown"
+                             class="hidden absolute right-0 mt-2 w-48 rounded-xl shadow-xl border border-slate-200 z-50 py-1.5 focus:outline-none"
+                             style="background-color: var(--theme-bg-card);"
+                             role="menu">
+                            <div class="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 mb-1">
+                                Motyw panelu
+                            </div>
+                            <button type="button" onclick="setTheme('light')" class="w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer" style="color: var(--theme-text-primary);">
+                                <span class="flex items-center gap-2"><span>☀️</span> Jasny (Domyślny)</span>
+                                <span class="theme-check text-indigo-600 hidden font-bold" data-theme-check="light">✓</span>
+                            </button>
+                            <button type="button" onclick="setTheme('dark')" class="w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer" style="color: var(--theme-text-primary);">
+                                <span class="flex items-center gap-2"><span>🌙</span> Ciemny (Grafit)</span>
+                                <span class="theme-check text-indigo-600 hidden font-bold" data-theme-check="dark">✓</span>
+                            </button>
+                            <button type="button" onclick="setTheme('midnight')" class="w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer" style="color: var(--theme-text-primary);">
+                                <span class="flex items-center gap-2"><span>🌌</span> Północ (OLED)</span>
+                                <span class="theme-check text-indigo-600 hidden font-bold" data-theme-check="midnight">✓</span>
+                            </button>
+                            <button type="button" onclick="setTheme('forest')" class="w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer" style="color: var(--theme-text-primary);">
+                                <span class="flex items-center gap-2"><span>🌲</span> Szmaragd (Leśny)</span>
+                                <span class="theme-check text-indigo-600 hidden font-bold" data-theme-check="forest">✓</span>
+                            </button>
+                            <div class="border-t border-slate-100 my-1"></div>
+                            <button type="button" onclick="setTheme('auto')" class="w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer" style="color: var(--theme-text-primary);">
+                                <span class="flex items-center gap-2"><span>💻</span> Auto (Systemowy)</span>
+                                <span class="theme-check text-indigo-600 hidden font-bold" data-theme-check="auto">✓</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    
+                        <!-- Selektor ucznia (Desktop: od sm) -->
+                        
+                        <div class="hidden sm:inline-block relative text-left">
+                            <select onchange="window.location.href='/student/' + this.value + '?next=' + encodeURIComponent(window.location.pathname + window.location.search)"
+                                    class="bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold rounded-xl px-2.5 py-1.5 pr-6 max-w-[125px] xl:max-w-[145px] 2xl:max-w-[190px] truncate focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
+                                
+                                <option value="8912345" >
+                                    👤 Jan Kowalski (klasa 5A) (8912345)
+                                </option>
+                                
+                                <option value="8976543" >
+                                    👤 Anna Kowalska (Liceum 2A) (8976543)
+                                </option>
+                                
+                                <option value="8979296" selected>
+                                    👤 Jan Kowalski (8979296)
+                                </option>
+                                
+                            </select>
+                        </div>
+                        
+
+                        <!-- Selektor roku szkolnego (Desktop: od sm) -->
+                        
+
+                        <!-- Wskaźnik ucznia na małych ekranach mobilnych (< sm) otwierający Drawer -->
+                        
+                        <button type="button"
+                                onclick="openMobileMenu()"
+                                class="sm:hidden flex items-center gap-1 px-2 py-1 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 transition-colors"
+                                title="Profil: Jan Kowalski (8979296)">
+                            <span>👤</span>
+                            <span class="max-w-[70px] truncate text-[11px]">Jan</span>
+                            
+                        </button>
+                        
+
+                        <!-- Wyloguj -->
+                        
+                        <a href="web_login.html"
+                           class="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors"
+                           title="Wyloguj rodzica">
+                            <span>🔒</span>
+                            <span class="hidden 2xl:inline">Wyloguj</span>
+                        </a>
+                        
+                    
+
+                    
+
+                    <!-- Przycisk Mobile Menu (Hamburger ☰ - widoczny poniżej xl) -->
+                    
+                    <button type="button"
+                            id="mobile-menu-toggle-btn"
+                            onclick="toggleMobileMenu()"
+                            class="xl:hidden flex items-center justify-center w-9 h-9 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shadow-2xs"
+                            style="background-color: var(--theme-bg-card); color: var(--theme-text-primary);"
+                            aria-label="Otwórz menu nawigacji">
+                        <span class="text-lg leading-none">☰</span>
+                    </button>
+                    
+                </div>
+            </div>
+        </div>
+
+        <!-- Pasek nawigacyjny na średnich i małych ekranach (< xl) -->
+        
+        <div class="xl:hidden border-t border-slate-100 bg-slate-50 px-3 py-1.5 overflow-x-auto flex items-center gap-1.5 scrollbar-none">
+            <a href="web_dashboard.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📊 Pulpit</a>
+            <a href="web_plan.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📅 Plan lekcji</a>
+            <a href="web_oceny.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📝 Oceny</a>
+            <a href="web_terminarz.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">🔔 Terminarz</a>
+            <a href="web_wiadomosci.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">✉️ Wiadomości</a>
+            <a href="web_raporty_podsumowanie.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap bg-indigo-600 text-white">📈 Raporty</a>
+            <a href="web_ustawienia.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">⚙️ Ustawienia</a>
+        </div>
+        
+    </header>
+
+    <!-- Mobilny Drawer (Menu boczne z wysuwanym panelem) -->
+    
+    <div id="mobile-drawer-backdrop"
+         onclick="closeMobileMenu()"
+         class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 transition-opacity xl:hidden">
+    </div>
+
+    <aside id="mobile-drawer"
+           class="fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] z-50 shadow-2xl flex flex-col transform translate-x-full xl:hidden border-l border-slate-200"
+           style="background-color: var(--theme-bg-card); color: var(--theme-text-primary);"
+           aria-label="Menu mobilne">
+        <!-- Nagłówek Drawer -->
+        <div class="p-4 border-b border-slate-100 flex items-center justify-between" style="border-color: var(--theme-border);">
+            <div class="flex items-center gap-2">
+                <span class="text-xl">🏫</span>
+                <span class="font-extrabold text-sm tracking-tight">Menu nawigacji</span>
+            </div>
+            <button type="button"
+                    onclick="closeMobileMenu()"
+                    class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                    style="color: var(--theme-text-muted);"
+                    aria-label="Zamknij menu">
+                ✕
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-4 space-y-5">
+            <!-- Sekcja 1: Profil ucznia -->
+            
+            <div>
+                <label class="block text-[11px] font-extrabold uppercase tracking-wider mb-2" style="color: var(--theme-text-muted);">
+                    👤 Wybierz profil ucznia:
+                </label>
+                <div class="space-y-1.5">
+                    
+                    <a href="/student/8912345?next=/raporty/postepy"
+                       class="flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold transition-all
+                       
+                       border-slate-200 hover:bg-slate-50 text-slate-700
+                       ">
+                        <span class="flex items-center gap-2">
+                            <span>👤</span>
+                            <span>Jan Kowalski (klasa 5A) (8912345)</span>
+                        </span>
+                        
+                    </a>
+                    
+                    <a href="/student/8976543?next=/raporty/postepy"
+                       class="flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold transition-all
+                       
+                       border-slate-200 hover:bg-slate-50 text-slate-700
+                       ">
+                        <span class="flex items-center gap-2">
+                            <span>👤</span>
+                            <span>Anna Kowalska (Liceum 2A) (8976543)</span>
+                        </span>
+                        
+                    </a>
+                    
+                    <a href="/student/8979296?next=/raporty/postepy"
+                       class="flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold transition-all
+                       
+                       border-indigo-500 bg-indigo-50/70 text-indigo-700
+                       ">
+                        <span class="flex items-center gap-2">
+                            <span>👤</span>
+                            <span>Jan Kowalski (8979296)</span>
+                        </span>
+                        
+                        <span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-indigo-600 text-white">Aktywny</span>
+                        
+                    </a>
+                    
+                </div>
+            </div>
+            
+
+            <!-- Sekcja 2: Rok szkolny (bieżący vs archiwa) -->
+            
+
+            <!-- Sekcja 3: Nawigacja po modułach -->
+            <div>
+                <label class="block text-[11px] font-extrabold uppercase tracking-wider mb-2" style="color: var(--theme-text-muted);">
+                    🧭 Moduły:
+                </label>
+                <div class="space-y-1">
+                    <a href="web_dashboard.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
+                        <span class="text-base">📊</span> <span>Pulpit główny</span>
+                    </a>
+                    <a href="web_plan.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
+                        <span class="text-base">📅</span> <span>Plan lekcji</span>
+                    </a>
+                    <a href="web_oceny.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
+                        <span class="text-base">📝</span> <span>Oceny i średnie</span>
+                    </a>
+                    <a href="web_terminarz.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
+                        <span class="text-base">🔔</span> <span>Terminarz i sprawdziany</span>
+                    </a>
+                    <a href="web_wiadomosci.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
+                        <span class="text-base">✉️</span> <span>Wiadomości i ogłoszenia</span>
+                    </a>
+                    <a href="web_raporty_podsumowanie.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors bg-indigo-600 text-white">
+                        <span class="text-base">📈</span> <span>Raporty i analizy</span>
+                    </a>
+                    <a href="web_ustawienia.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
+                        <span class="text-base">⚙️</span> <span>Ustawienia systemu</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Sekcja 4: Motyw w Drawerze -->
+            <div>
+                <label class="block text-[11px] font-extrabold uppercase tracking-wider mb-2" style="color: var(--theme-text-muted);">
+                    🎨 Motyw wyglądu:
+                </label>
+                <div class="grid grid-cols-2 gap-1.5">
+                    <button type="button" onclick="setTheme('light')" class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 text-xs font-bold cursor-pointer hover:border-indigo-400">
+                        <span>☀️</span> Jasny
+                    </button>
+                    <button type="button" onclick="setTheme('dark')" class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 text-xs font-bold cursor-pointer hover:border-indigo-400">
+                        <span>🌙</span> Grafit
+                    </button>
+                    <button type="button" onclick="setTheme('midnight')" class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 text-xs font-bold cursor-pointer hover:border-indigo-400">
+                        <span>🌌</span> OLED
+                    </button>
+                    <button type="button" onclick="setTheme('forest')" class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 text-xs font-bold cursor-pointer hover:border-indigo-400">
+                        <span>🌲</span> Szmaragd
+                    </button>
+                    <button type="button" onclick="setTheme('auto')" class="col-span-2 flex items-center justify-center gap-2 p-2 rounded-lg border border-slate-200 text-xs font-bold cursor-pointer hover:border-indigo-400">
+                        <span>💻</span> Auto (Systemowy)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sekcja 5: Wyloguj / Tryb otwarty -->
+            <div class="pt-2 border-t border-slate-100" style="border-color: var(--theme-border);">
+                
+                <a href="web_login.html"
+                   class="flex items-center justify-center gap-2 w-full p-2.5 rounded-xl text-xs font-bold text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 transition">
+                    🔒 Wyloguj rodzica
+                </a>
+                
+            </div>
+        </div>
+    </aside>
+    
+
+    <!-- Baner trybu archiwalnego (Read-Only) -->
+    
+
+    <!-- Komunikaty Flash -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 w-full">
+        
+            
+        
+    </div>
+
+    <!-- Główna zawartość -->
+    <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
+        
+<!-- Nagłówek strony -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-200 no-print">
+    <div>
+        <div class="flex items-center gap-2">
+            <a href="web_dashboard.html" class="text-xs font-bold text-indigo-600 hover:text-indigo-800">
+                ← Powrót do pulpitu
+            </a>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1 flex items-center gap-3">
+            <span>📈 Raporty i Analizy: Jan Kowalski (8979296)</span>
+            
+        </h1>
+        <p class="text-xs text-slate-500 mt-1">
+            Zintegrowane centrum analityczne: raporty okresowe, motywacyjna karta ucznia, profil obszarów oraz analiza szans i ryzyk.
+        </p>
+    </div>
+
+    <!-- Przyciski akcji -->
+    <div class="flex items-center gap-2">
+        <button onclick="window.print()"
+                class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 shadow-sm transition-all cursor-pointer"
+                title="Wydrukuj raport lub zapisz jako plik PDF">
+            <span>🖨️</span>
+            <span>Drukuj / PDF</span>
+        </button>
+        <a href="web_akcje.html"
+           class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 shadow-sm transition-all"
+           title="Wymuś synchronizację lub wyślij raport na e-mail">
+            <span>⚡ Akcje CLI</span>
+        </a>
+    </div>
+</div>
+
+<!-- Pasek podzakładek (6 modułów analitycznych) -->
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mt-6 pb-2 no-print">
+    <div class="flex items-center gap-1.5 p-1 bg-slate-200/70 dark:bg-slate-800/90 rounded-xl overflow-x-auto scrollbar-none w-full lg:w-auto border border-transparent dark:border-slate-700/60">
+        <a href="web_raporty_podsumowanie.html"
+           
+           class="subtab-btn reports-tab-btn px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-700/50">
+            📬 Podsumowanie dzienne
+        </a>
+        <a href="web_raporty_postepy.html"
+           data-active=&#34;true&#34;
+           class="subtab-btn reports-tab-btn px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap subtab-btn-active active bg-white text-indigo-700 shadow-sm border border-transparent">
+            📈 Postępy
+        </a>
+        <a href="web_raporty_uczen_teens.html"
+           
+           class="subtab-btn reports-tab-btn px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-700/50">
+            🌟 Raport ucznia
+        </a>
+        <a href="web_raporty_szanse.html"
+           
+           class="subtab-btn reports-tab-btn px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-700/50">
+            🎯 Matryca Szans i Ryzyk
+        </a>
+        <a href="web_raporty_profil.html"
+           
+           class="subtab-btn reports-tab-btn px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-700/50">
+            🧭 Profil i Balans
+        </a>
+        <a href="web_raporty_stabilnosc.html"
+           
+           class="subtab-btn reports-tab-btn px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-700/50">
+            📊 Porównanie i Stabilność
+        </a>
+    </div>
+
+    <!-- Filtry specyficzne dla raportów tradycyjnych -->
+    
+    <div class="flex flex-wrap items-center gap-2">
+        <!-- Selektor okresu (3, 7, 14, 30 dni) -->
+        <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/60 p-1 rounded-xl shadow-xs">
+            <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider px-2 flex items-center gap-1">
+                <span>⏱️</span> Okres:
+            </span>
+            
+            <a href="web_raporty_postepy.html"
+               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700/50"
+               title="Analiza z ostatnich 3 dni">
+                3 dni
+            </a>
+            
+            <a href="web_raporty_postepy.html"
+               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap bg-indigo-600 text-white shadow-sm"
+               title="Analiza z ostatnich 7 dni (domyślnie)">
+                7 dni
+            </a>
+            
+            <a href="web_raporty_postepy.html"
+               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700/50"
+               title="Analiza z ostatnich 14 dni">
+                14 dni
+            </a>
+            
+            <a href="web_raporty_postepy.html"
+               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700/50"
+               title="Analiza z ostatnich 30 dni">
+                30 dni
+            </a>
+            
+        </div>
+
+        <!-- Przełącznik stylów raportu ucznia (Kids / Teens / Youth) -->
+        
+    </div>
+    
+</div>
+
+<!-- ============================================================== -->
+<!-- WIDOK: 🎯 MATRYCA SZANS I RYZYK (QUICK WINS)                     -->
+<!-- ============================================================== -->
+
+<div class="my-6 flex justify-center">
+    <div class="report-container w-full max-w-4xl bg-white rounded-2xl border border-slate-200 shadow-sm p-3 sm:p-6 overflow-x-auto">
+        <div style="width: 100%; max-width: 650px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1f2937; line-height: 1.5; background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; box-sizing: border-box; overflow: hidden;">
+    <!-- Nagłówek -->
+    <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color: #ffffff; padding: 16px;">
+        <h1 style="margin: 0; font-size: 19px; font-weight: 700; color: #ffffff;">📊 Raport postępów ucznia</h1>
+        <p style="margin: 4px 0 0 0; font-size: 14px; opacity: 0.95; color: #ffffff;">
+            <strong>Jan Kowalski (8979296)</strong> (konto Librus: <code>8979296</code>)
+        </p>
+        <div style="margin-top: 6px; font-size: 12px; opacity: 0.9; color: #ffffff;">
+            🗓️ Okres: <strong>11.09.2026</strong> – <strong>18.09.2026</strong>
+        </div>
+    </div>
+
+    <div style="padding: 14px; box-sizing: border-box;">
+        <!-- Kafelki KPI (Tabela 2x2 z szerokościami 50%) -->
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; margin-bottom: 16px; border-collapse: separate; border-spacing: 6px;">
+            <tr>
+                <td width="50%" valign="top" style="width: 50%; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 6px; text-align: center;">
+                    <div style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Średnia ogólna</div>
+                    <div style="font-size: 24px; font-weight: bold; color: #1e3a8a; margin: 3px 0;">
+                        4.54
+                    </div>
+                    
+                </td>
+                <td width="50%" valign="top" style="width: 50%; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 6px; text-align: center;">
+                    <div style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Średnia w okresie</div>
+                    <div style="font-size: 24px; font-weight: bold; color: #059669; margin: 3px 0;">
+                        4.72
+                    </div>
+                    <div style="font-size: 10px; color: #64748b;">11.09.2026 – 18.09.2026</div>
+                </td>
+            </tr>
+            <tr>
+                <td width="50%" valign="top" style="width: 50%; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 6px; text-align: center;">
+                    <div style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Oceny w okresie</div>
+                    <div style="font-size: 24px; font-weight: bold; color: #2563eb; margin: 3px 0;">24</div>
+                    <div style="font-size: 10px; color: #64748b;">z 45 zarejestrowanych</div>
+                </td>
+                <td width="50%" valign="top" style="width: 50%; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 6px; text-align: center;">
+                    <div style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Aktywność / Uwagi</div>
+                    <div style="font-size: 17px; font-weight: bold; color: #334155; margin: 4px 0;">
+                        +1 / -3
+                    </div>
+                    <div style="font-size: 11px; color: #ef4444; font-weight: bold;">np/bz: 2</div>
+                </td>
+            </tr>
+        </table>
+
+        <!-- Karta Porównania z Poprzednim Okresem (Dynamika i Forma Ucznia) -->
+        
+        
+        <div style="background-color: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px 16px; margin-bottom: 16px; width: 100%; box-sizing: border-box; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; margin-bottom: 8px;">
+                <tr>
+                    <td align="left" valign="middle">
+                        <div style="font-size: 14px; font-weight: bold; color: #1e293b;">
+                            📈 Dynamika i forma ucznia (porównanie z poprzednim okresem)
+                        </div>
+                        <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
+                            Bieżący okres: <strong>11.09.2026 – 18.09.2026</strong> vs Poprzedni: <strong>04.09.2026 – 11.09.2026</strong>
+                        </div>
+                    </td>
+                    <td align="right" valign="middle">
+                        
+                        <span style="background-color: #dcfce7; color: #15803d; border: 1px solid #86efac; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; white-space: nowrap;">
+                            🚀 +0.69 PROGRES
+                        </span>
+                        
+                    </td>
+                </tr>
+            </table>
+
+            <div style="background-color: #f8fafc; border-left: 3px solid #3b82f6; padding: 8px 12px; font-size: 13px; color: #334155; margin-bottom: 12px; border-radius: 0 4px 4px 0;">
+                Znakomity okres! Uczeń wyraźnie poprawił wyniki względem poprzedniego okresu (średnia ocen wzrosła z 4.03 do 4.72). Widać większe zaangażowanie i efekty pracy.
+            </div>
+
+            
+            <!-- Tabela porównawcza wskaźników -->
+            <table border="0" cellpadding="6" cellspacing="0" width="100%" style="width: 100%; font-size: 12px; border-collapse: collapse; margin-bottom: 8px;">
+                <tr style="background-color: #f1f5f9; color: #475569; font-weight: 600; text-align: center;">
+                    <th align="left" style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">Wskaźnik</th>
+                    <th style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; width: 22%;">Poprzednio</th>
+                    <th style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; width: 22%;">Obecnie</th>
+                    <th style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; width: 22%;">Zmiana</th>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9; text-align: center;">
+                    <td align="left" style="padding: 6px 8px; font-weight: 500;">Średnia ocen w okresie</td>
+                    <td style="color: #64748b;">4.03</td>
+                    <td style="font-weight: bold; color: #0f172a;">4.72</td>
+                    <td style="font-weight: bold;">
+                        
+                            
+                            <span style="color: #16a34a;">+0.69 ↗</span>
+                            
+                        
+                    </td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9; text-align: center;">
+                    <td align="left" style="padding: 6px 8px; font-weight: 500;">Liczba wystawionych ocen</td>
+                    <td style="color: #64748b;">18</td>
+                    <td style="font-weight: bold; color: #0f172a;">24</td>
+                    <td style="font-weight: bold;">
+                        +6
+                    </td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9; text-align: center;">
+                    <td align="left" style="padding: 6px 8px; font-weight: 500;">Oceny bdb i celujące (5–6)</td>
+                    <td style="color: #64748b;">8</td>
+                    <td style="font-weight: bold; color: #16a34a;">15</td>
+                    <td style="font-weight: bold; color: #16a34a;">
+                        +7
+                    </td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9; text-align: center;">
+                    <td align="left" style="padding: 6px 8px; font-weight: 500;">Oceny słabe (1–2)</td>
+                    <td style="color: #64748b;">2</td>
+                    <td style="font-weight: bold; color: #16a34a;">0</td>
+                    <td style="font-weight: bold; color: #16a34a;">
+                        -2 👏
+                    </td>
+                </tr>
+                
+                <tr style="text-align: center; background-color: #faf5ff;">
+                    <td align="left" style="padding: 6px 8px; font-weight: 600; color: #6b21a8;">Średnia ogólna ucznia</td>
+                    <td style="color: #7e22ce;">4.31</td>
+                    <td style="font-weight: bold; color: #6b21a8;">4.54</td>
+                    <td style="font-weight: bold; color: #16a34a;">
+                        +0.23 ↗
+                    </td>
+                </tr>
+                
+            </table>
+            
+
+            
+            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e2e8f0;">
+                <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: #475569; line-height: 1.6;">
+                    
+                    <li>Średnia ocen w okresie: <strong>4.72</strong> (poprzednio: 4.03, zmiana: <strong>+0.69 pkt</strong>).</li>
+                    
+                    <li>Więcej ocen bardzo dobrych i celujących (5 i 6): <strong>15</strong> (poprzednio: 8, wzrost o 7).</li>
+                    
+                    <li>👏 Mniej potknięć i słabych ocen (1 i 2): <strong>0</strong> (poprzednio: 2, spadek o 2).</li>
+                    
+                    <li>Uwaga na nieprzygotowania do lekcji: pojawiły się 2 braki zadań/np (wcześniej: 0).</li>
+                    
+                    <li>Wpływ na średnią roczną ucznia: <strong>podciągnięcie w górę ↗</strong> o 0.23 pkt (4.31 ➔ <strong>4.54</strong>).</li>
+                    
+                    <li>🚀 Wyraźny skok wyników z przedmiotów: <strong>Historia</strong> (+2.75), <strong>Geografia</strong> (+1.75), <strong>Język polski</strong> (+1.33).</li>
+                    
+                    <li>🔻 Spadek średniej z przedmiotów: <strong>Informatyka</strong> (-2.00), <strong>Fizyka</strong> (-0.33).</li>
+                    
+                </ul>
+            </div>
+            
+        </div>
+        
+
+        <!-- Rekomendacje i wnioski: Sukcesy -->
+        
+        <div style="background-color: #ecfdf5; border-left: 4px solid #10b981; border-radius: 6px; padding: 14px 18px; margin-bottom: 18px;">
+            <h4 style="margin: 0 0 8px 0; color: #065f46; font-size: 15px;">🌟 Sukcesy i mocne strony</h4>
+            <ul style="margin: 0; padding-left: 20px; color: #047857; font-size: 14px;">
+                
+                <li style="margin-bottom: 6px;">Wysoka średnia z przedmiotów: <strong>Biologia</strong> (5.00), <strong>Wychowanie fizyczne</strong> (5.00), <strong>Chemia</strong> (5.00), <strong>Muzyka</strong> (6.00).</li>
+                
+                <li style="margin-bottom: 6px;">Bardzo dobre oceny ze sprawdzianów w tym okresie: Matematyka: 5 (waga 3), Język polski: 5 (waga 2), Język angielski: 5 (waga 2).</li>
+                
+                <li style="margin-bottom: 6px;">🎯 <strong>Szansa na wyższą ocenę</strong> z przedmiotu <strong>Matematyka</strong>: Średnia 4.60 (brakuje tylko 0.15 do 5 (bardzo dobry)). Na sprawdzianie (waga 2): ocena 6 (celujący); na kartkówce (waga 1): wymaga kilku wysokich ocen.</li>
+                
+                <li style="margin-bottom: 6px;">🎯 <strong>Szansa na wyższą ocenę</strong> z przedmiotu <strong>Język angielski</strong>: Średnia 4.57 (brakuje tylko 0.18 do 5 (bardzo dobry)). Na sprawdzianie (waga 2): ocena 6 (celujący); na kartkówce (waga 1): ocena 6 (celujący).</li>
+                
+                <li style="margin-bottom: 6px;">Stabilne, pewne wyniki bez wahań z przedmiotów: Język angielski, Fizyka.</li>
+                
+            </ul>
+        </div>
+        
+
+        <!-- Rekomendacje i wnioski: Ostrzeżenia -->
+        
+        <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 6px; padding: 14px 18px; margin-bottom: 18px;">
+            <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 15px;">⚠️ Uwagi i obszary do poprawy</h4>
+            <ul style="margin: 0; padding-left: 20px; color: #b45309; font-size: 14px;">
+                
+                <li style="margin-bottom: 6px;">Niska średnia (< 3.0) z przedmiotów: <strong>Historia</strong> (2.78).</li>
+                
+                <li style="margin-bottom: 6px;">⚖️ <strong>Ryzyko spadku oceny</strong> z przedmiotu <strong>Fizyka</strong>: Średnia 3.80 (margines bezpieczeństwa tylko 0.05 nad progiem). Jedna słaba ocena ze sprawdzianu zepchnie prognozę do: 3 (dostateczny).</li>
+                
+                <li style="margin-bottom: 6px;">⚖️ <strong>Ryzyko spadku oceny</strong> z przedmiotu <strong>Historia</strong>: Średnia 2.78 (margines bezpieczeństwa tylko 0.03 nad progiem). Jedna słaba ocena ze sprawdzianu zepchnie prognozę do: 2 (dopuszczający).</li>
+                
+                <li style="margin-bottom: 6px;">🔍 <strong>Styl nauki</strong>: Średnia ze sprawdzianów (4.08) jest niższa niż z bieżącej pracy (4.54). Uczeń dobrze radzi sobie z bieżącym materiałem z lekcji na lekcję, lecz warto pomóc mu w powtórkach i syntezie większych partii wiedzy przed sprawdzianami.</li>
+                
+                <li style="margin-bottom: 6px;">🎢 <strong>Nierównomierne oceny (sinusoida)</strong> z przedmiotów: Historia (rozrzut: 1.0–6.0), Język polski (rozrzut: 1.0–5.0). Warto sprawdzić przyczyny pojedynczych potknięć.</li>
+                
+                <li style="margin-bottom: 6px;">⏱️ <strong>Brak ocen od ponad miesiąca</strong> z przedmiotów: Plastyka (39 dni temu), Muzyka (37 dni temu). Uwaga na możliwą kumulację testów pod koniec semestru.</li>
+                
+                <li style="margin-bottom: 6px;">Odnotowano 2 nieprzygotowań / braków zadania domowego (np/bz) z: <strong>Biologia</strong>, <strong>Wychowanie fizyczne</strong>.</li>
+                
+            </ul>
+        </div>
+        
+
+        <!-- Karta Symulatora Czerwonego Paska -->
+        
+        
+            
+            
+            <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px 16px; margin-bottom: 16px; width: 100%; box-sizing: border-box;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                    <tr>
+                        <td valign="top">
+                            <h4 style="margin: 0; color: #166534; font-size: 15px;">🎯 Droga do świadectwa z wyróżnieniem (Czerwony Pasek)</h4>
+                            <p style="margin: 4px 0 0 0; color: #15803d; font-size: 13px;">
+                                Aktualna średnia ze świadectwa: <strong>4.42</strong> | Cel: <strong>4.75</strong> (brakuje <strong>0.33</strong> pkt)
+                            </p>
+                        </td>
+                        <td align="right" valign="top" style="text-align: right; white-space: nowrap; padding-left: 8px;">
+                            <span style="font-size: 13px; font-weight: bold; color: #166534; background-color: #dcfce7; padding: 3px 8px; border-radius: 6px;">91% celu</span>
+                        </td>
+                    </tr>
+                </table>
+                <div style="background-color: #dcfce7; border-radius: 10px; height: 10px; width: 100%; margin-top: 10px; overflow: hidden;">
+                    <div style="background-color: #16a34a; width: 91%; height: 100%; border-radius: 10px;"></div>
+                </div>
+                
+                <div style="margin-top: 10px; font-size: 12px; color: #1e3a8a; border-top: 1px dashed #bbf7d0; padding-top: 8px;">
+                    <strong>Najszybsza droga do paska (kluczowe przedmioty o najmniejszej stracie):</strong>
+                    <ul style="margin: 4px 0 0 0; padding-left: 20px;">
+                        
+                        <li><strong>Matematyka</strong>: aktualnie 4.60 (brakuje 0.15 do oceny 5)</li>
+                        
+                        <li><strong>Język angielski</strong>: aktualnie 4.57 (brakuje 0.18 do oceny 5)</li>
+                        
+                        <li><strong>Język polski</strong>: aktualnie 4.33 (brakuje 0.42 do oceny 5)</li>
+                        
+                    </ul>
+                </div>
+                
+            </div>
+            
+        
+
+        <!-- Karta Na granicy oceny (Szanse i Zagrożenia) -->
+        
+        <div style="margin-bottom: 16px;">
+            <h3 style="color: #1f2937; margin: 0 0 10px 0; font-size: 15px; border-bottom: 2px solid #6366f1; padding-bottom: 5px;">
+                🎯 Analiza progów ocen (Kalkulator szans i zagrożeń)
+            </h3>
+            
+            <div style="background-color: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px; width: 100%; box-sizing: border-box;">
+                <h4 style="margin: 0 0 6px 0; color: #15803d; font-size: 13px;">🎯 Szanse na wyższą ocenę (na wyciągnięcie ręki)</h4>
+                <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: #166534; line-height: 1.45;">
+                    
+                    <li style="margin-bottom: 6px;"><strong>Matematyka</strong>: Średnia 4.60 (brakuje tylko 0.15 do 5 (bardzo dobry)). Na sprawdzianie (waga 2): ocena 6 (celujący); na kartkówce (waga 1): wymaga kilku wysokich ocen.</li>
+                    
+                    <li style="margin-bottom: 6px;"><strong>Język angielski</strong>: Średnia 4.57 (brakuje tylko 0.18 do 5 (bardzo dobry)). Na sprawdzianie (waga 2): ocena 6 (celujący); na kartkówce (waga 1): ocena 6 (celujący).</li>
+                    
+                    <li style="margin-bottom: 6px;"><strong>Godzina wychowawcza</strong>: Średnia 4.50 (brakuje tylko 0.25 do 5 (bardzo dobry)). Na sprawdzianie (waga 2): min. 5 (bardzo dobry); na kartkówce (waga 1): ocena 6 (celujący).</li>
+                    
+                </ul>
+            </div>
+            
+            
+            <div style="background-color: #fff7ed; border: 1px solid #fdba74; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px; width: 100%; box-sizing: border-box;">
+                <h4 style="margin: 0 0 6px 0; color: #c2410c; font-size: 13px;">⚖️ Ryzyko obniżenia oceny (mały margines bezpieczeństwa)</h4>
+                <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: #9a3412; line-height: 1.45;">
+                    
+                    <li style="margin-bottom: 6px;"><strong>Fizyka</strong>: Średnia 3.80 (margines bezpieczeństwa tylko 0.05 nad progiem). Jedna słaba ocena ze sprawdzianu zepchnie prognozę do: 3 (dostateczny).</li>
+                    
+                    <li style="margin-bottom: 6px;"><strong>Historia</strong>: Średnia 2.78 (margines bezpieczeństwa tylko 0.03 nad progiem). Jedna słaba ocena ze sprawdzianu zepchnie prognozę do: 2 (dopuszczający).</li>
+                    
+                </ul>
+            </div>
+            
+        </div>
+        
+
+        <!-- Karta Styl nauki i wpływ wag -->
+        
+        
+        
+        <div style="margin-bottom: 16px;">
+            <h3 style="color: #1f2937; margin: 0 0 10px 0; font-size: 15px; border-bottom: 2px solid #8b5cf6; padding-bottom: 5px;">
+                🔍 Styl nauki i wpływ wag ocen
+            </h3>
+            <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px; width: 100%; box-sizing: border-box;">
+                <h4 style="margin: 0 0 8px 0; color: #334155; font-size: 13px;">Sprawdziany vs Bieżąca praca</h4>
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; text-align: center; margin-bottom: 8px;">
+                    <tr>
+                        <td width="50%" style="width: 50%; border-right: 1px solid #e2e8f0; padding-right: 6px;">
+                            <div style="font-size: 11px; color: #64748b;">SPRAWDZIANY (waga &ge; 2)</div>
+                            <div style="font-size: 20px; font-weight: bold; color: #1e3a8a;">
+                                4.08
+                            </div>
+                            <div style="font-size: 10px; color: #64748b;">17 ocen</div>
+                        </td>
+                        <td width="50%" style="width: 50%; padding-left: 6px;">
+                            <div style="font-size: 11px; color: #64748b;">PRACA BIEŻĄCA (waga 1)</div>
+                            <div style="font-size: 20px; font-weight: bold; color: #059669;">
+                                4.54
+                            </div>
+                            <div style="font-size: 10px; color: #64748b;">22 ocen</div>
+                        </td>
+                    </tr>
+                </table>
+                <div style="font-size: 12px; color: #475569; line-height: 1.4; border-top: 1px solid #e2e8f0; padding-top: 8px;">
+                    Średnia ze sprawdzianów (4.08) jest niższa niż z bieżącej pracy (4.54). Uczeń dobrze radzi sobie z bieżącym materiałem z lekcji na lekcję, lecz warto pomóc mu w powtórkach i syntezie większych partii wiedzy przed sprawdzianami.
+                </div>
+            </div>
+            <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px 14px; width: 100%; box-sizing: border-box;">
+                <h4 style="margin: 0 0 6px 0; color: #334155; font-size: 13px;">Wpływ wag i stabilność wyników</h4>
+                <div style="font-size: 12px; color: #475569; line-height: 1.4;">
+                    <div><strong>Efekt wagowy:</strong> Neutralny (-0.19): wyniki ze sprawdzianów i drobniejszych prac są proporcjonalne.</div>
+                    
+                    <div style="margin-top: 6px;">
+                        <strong>Stabilne oceny:</strong>
+                        Język angielski, Fizyka
+                    </div>
+                    
+                    
+                    <div style="margin-top: 6px; color: #b45309;">
+                        <strong>Duże wahania (sinusoida):</strong>
+                        Historia (1.0–6.0), Język polski (1.0–5.0)
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+        
+
+        <!-- Karta Ciche przedmioty -->
+        
+        <div style="background-color: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; width: 100%; box-sizing: border-box;">
+            <h4 style="margin: 0 0 6px 0; color: #854d0e; font-size: 13px;">⏱️ Ciche przedmioty (brak ocen od ponad 30 dni)</h4>
+            <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: #713f12;">
+                
+                <li><strong>Plastyka</strong>: ostatnia ocena 10.08.2026 (39 dni temu)</li>
+                
+                <li><strong>Muzyka</strong>: ostatnia ocena 12.08.2026 (37 dni temu)</li>
+                
+            </ul>
+        </div>
+        
+
+        <!-- Nadchodzące sprawdziany i terminarz (Perspektywa tygodnia) -->
+        
+        <div style="margin-top: 22px; margin-bottom: 22px;">
+            <div style="border-bottom: 2px solid #6366f1; padding-bottom: 8px; margin-bottom: 14px;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                    <tr>
+                        <td align="left" valign="middle">
+                            <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #1e293b;">
+                                📅 Perspektywa: Nadchodzący tydzień w szkole (sprawdziany i kartkówki)
+                            </h3>
+                        </td>
+                        <td align="right" valign="middle">
+                            <span style="background-color: #ede9fe; color: #6d28d9; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; text-transform: uppercase;">
+                                Terminarz
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Boks 1: Najbliższy dzień nauki -->
+            <div style="background: #fff1f2; border: 1px solid #fecdd3; border-left: 4px solid #e11d48; border-radius: 8px; padding: 14px 16px; margin-bottom: 12px;">
+                <div style="display: table; width: 100%;">
+                    <div style="display: table-cell; vertical-align: middle;">
+                        <span style="font-size: 13px; font-weight: 800; color: #9f1239; text-transform: uppercase; letter-spacing: 0.04em;">
+                            ⚠️ Najbliższy dzień nauki (poniedziałek, 21.09)
+                        </span>
+                    </div>
+                    
+                    <div style="display: table-cell; vertical-align: middle; text-align: right;">
+                        <span style="background: #e11d48; color: #ffffff; padding: 2px 8px; border-radius: 10px; font-weight: 800; font-size: 11px;">
+                            1 zapowiedziany
+                        </span>
+                    </div>
+                    
+                </div>
+
+                
+                <div style="margin-top: 8px;">
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    <div style="background: #ffffff; border: 1px solid #fed7aa; border-left: 4px solid #f97316; border-radius: 6px; padding: 9px 12px; margin-top: 6px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);">
+                        <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                            <tr>
+                                <td valign="top" style="font-weight: 700; color: #1e293b; font-size: 13px;">
+                                    <span style="background-color: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 800; margin-right: 6px; display: inline-block;">
+                                        📙 Kartkówka
+                                    </span>
+                                    Geografia
+                                    
+                                    <span style="color: #64748b; font-size: 11px; font-weight: normal; margin-left: 4px;">(Lekcja 3)</span>
+                                    
+                                </td>
+                                <td align="right" valign="top" style="font-size: 11px; color: #64748b; white-space: nowrap;">
+                                    Dorota Opolska
+                                </td>
+                            </tr>
+                        </table>
+                        
+                        <div style="font-size: 12px; color: #475569; margin-top: 5px; font-style: italic; line-height: 1.4;">
+                            Zakres: Stolice i kraje Europy
+                        </div>
+                        
+                    </div>
+                    
+                </div>
+                
+
+                
+                <div style="margin-top: 10px;">
+                    
+                    <div style="font-size: 12px; color: #1e40af; margin-top: 4px;">
+                        ℹ️ <strong>Nieobecność nauczyciela:</strong> Janina Doszko (cały dzień)
+                    </div>
+                    
+                    <div style="font-size: 12px; color: #1e40af; margin-top: 4px;">
+                        ℹ️ <strong>Nieobecność nauczyciela:</strong> Renata Skurka (godziny: 08:30 do 09:15)
+                    </div>
+                    
+                </div>
+                
+            </div>
+
+            <!-- Boks 2: W kolejnych dniach tygodnia -->
+            
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
+                <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 8px;">
+                    🗓️ W kolejnych dniach (ten tydzień)
+                </div>
+                
+                <div style="margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px dashed #f1f5f9;">
+                    <div style="font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px;">
+                        📌 Środa, 23.09.2026
+                    </div>
+                    
+                    
+                    
+                    
+                    
+                    
+                    <div style="margin-left: 12px; margin-bottom: 5px; font-size: 12px; color: #1e293b;">
+                        <span style="background-color: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 800; margin-right: 4px; display: inline-block;">
+                            📕 Sprawdzian
+                        </span>
+                        <strong>Język niemiecki</strong>
+                        
+                        <span style="color: #64748b; font-size: 11px;">(Lekcja 1)</span>
+                        
+                        
+                        — <span style="color: #475569; font-style: italic;">Kapitel 3</span>
+                        
+                        
+                        <span style="color: #94a3b8; font-size: 11px;">[Artur Węgiel]</span>
+                        
+                    </div>
+                    
+                    
+                    
+                    
+                    
+                    
+                    <div style="margin-left: 12px; margin-bottom: 5px; font-size: 12px; color: #1e293b;">
+                        <span style="background-color: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 800; margin-right: 4px; display: inline-block;">
+                            📙 Kartkówka
+                        </span>
+                        <strong>Język angielski</strong>
+                        
+                        <span style="color: #64748b; font-size: 11px;">(Lekcja 5)</span>
+                        
+                        
+                        — <span style="color: #475569; font-style: italic;">słownictwo part - słówka z zeszytu</span>
+                        
+                        
+                        <span style="color: #94a3b8; font-size: 11px;">[Magdalena Kiljańczyk]</span>
+                        
+                    </div>
+                    
+                    
+                    
+                    
+                    
+                    
+                    <div style="margin-left: 12px; margin-bottom: 5px; font-size: 12px; color: #1e293b;">
+                        <span style="background-color: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 800; margin-right: 4px; display: inline-block;">
+                            📙 Kartkówka
+                        </span>
+                        <strong>Język angielski</strong>
+                        
+                        <span style="color: #64748b; font-size: 11px;">(Lekcja 7)</span>
+                        
+                        
+                        — <span style="color: #475569; font-style: italic;">słownictwo part - słówka z zeszytu</span>
+                        
+                        
+                        <span style="color: #94a3b8; font-size: 11px;">[Magdalena Kiljańczyk]</span>
+                        
+                    </div>
+                    
+                    
+                    <div style="margin-left: 12px; margin-bottom: 3px; font-size: 11px; color: #64748b;">
+                        ℹ️ Nieobecność: Janina Doszko (Cały dzień)
+                    </div>
+                    
+                </div>
+                
+                <div style="margin-bottom: 10px; padding-bottom: 8px; border-bottom: none;">
+                    <div style="font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px;">
+                        📌 Piątek, 25.09.2026
+                    </div>
+                    
+                    
+                    
+                    
+                    
+                    
+                    <div style="margin-left: 12px; margin-bottom: 5px; font-size: 12px; color: #1e293b;">
+                        <span style="background-color: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 800; margin-right: 4px; display: inline-block;">
+                            📕 Sprawdzian
+                        </span>
+                        <strong>Matematyka</strong>
+                        
+                        <span style="color: #64748b; font-size: 11px;">(Lekcja 3)</span>
+                        
+                        
+                        — <span style="color: #475569; font-style: italic;">Figury płaskie i wielokąty</span>
+                        
+                        
+                        <span style="color: #94a3b8; font-size: 11px;">[Michał Maliszewski]</span>
+                        
+                    </div>
+                    
+                    
+                    
+                    
+                    
+                    
+                    <div style="margin-left: 12px; margin-bottom: 5px; font-size: 12px; color: #1e293b;">
+                        <span style="background-color: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 800; margin-right: 4px; display: inline-block;">
+                            📙 Kartkówka
+                        </span>
+                        <strong>Język francuski</strong>
+                        
+                        <span style="color: #64748b; font-size: 11px;">(Lekcja 7)</span>
+                        
+                        
+                        — <span style="color: #475569; font-style: italic;">Odmiana czasowników être i avoir</span>
+                        
+                        
+                        <span style="color: #94a3b8; font-size: 11px;">[Renata Skurka]</span>
+                        
+                    </div>
+                    
+                    
+                </div>
+                
+            </div>
+            
+        </div>
+        
+
+        <!-- Karty ocen wg przedmiotów -->
+        <div style="margin-top: 20px;">
+            <h3 style="color: #1f2937; margin: 0 0 10px 0; font-size: 16px; border-bottom: 2px solid #1e3a8a; padding-bottom: 6px;">
+                📚 Zestawienie ocen według przedmiotów
+            </h3>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 10px; background-color: #ffffff; width: 100%; box-sizing: border-box; overflow: hidden;">
+                <div style="background-color: #f8fafc; padding: 10px 12px; border-bottom: 1px solid #e2e8f0;">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                        <tr>
+                            <td valign="top" style="padding-bottom: 4px;">
+                                <span style="font-size: 15px; font-weight: bold; color: #1e293b;">Matematyka</span>
+                                <span style="display: inline-block; font-size: 11px; background-color: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 4px;">Prognoza: 4 (dobry)</span>
+                                
+                                <span style="display: inline-block; font-size: 11px; background-color: #dcfce7; color: #15803d; border: 1px solid #86efac; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 4px;">🎯 +0.15 do wyższej</span>
+                                
+                            </td>
+                        </tr>
+                        <tr>
+                            <td valign="top" style="font-size: 13px; color: #334155;">
+                                Śr. ogólna: <strong style="font-size: 15px; color: #1e3a8a;">4.60</strong>
+                                <span style="color: #4b5563; font-weight: bold; margin-left: 3px;">➡ (stabilnie)</span>
+                                <span style="color: #64748b; font-size: 12px; margin-left: 6px;">(okres: <strong>4.62</strong>, poprz.: 4.57)</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="padding: 10px 12px; font-size: 13px;">
+                    <div style="margin-bottom: 6px;">
+                        <span style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Oceny w okresie:</span>
+                        <div style="margin-top: 3px;">
+                            
+                                <span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span><span style="display: inline-block; background-color: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">+</span><span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span><span style="display: inline-block; background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">3+</span><span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span>
+                            
+                        </div>
+                    </div>
+                    <div>
+                        <span style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Wszystkie oceny:</span>
+                        <div style="margin-top: 3px;">
+                            
+                                <span style="display: inline-block; background-color: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">4</span><span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span><span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span><span style="display: inline-block; background-color: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">+</span><span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span><span style="display: inline-block; background-color: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">4+</span><span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">6</span><span style="display: inline-block; background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">3+</span><span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span>
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 10px; background-color: #ffffff; width: 100%; box-sizing: border-box; overflow: hidden;">
+                <div style="background-color: #f8fafc; padding: 10px 12px; border-bottom: 1px solid #e2e8f0;">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                        <tr>
+                            <td valign="top" style="padding-bottom: 4px;">
+                                <span style="font-size: 15px; font-weight: bold; color: #1e293b;">Fizyka</span>
+                                <span style="display: inline-block; font-size: 11px; background-color: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 4px;">Prognoza: 4 (dobry)</span>
+                                
+                                <span style="display: inline-block; font-size: 11px; background-color: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 4px;">⚠️ margines 0.05</span>
+                                
+                            </td>
+                        </tr>
+                        <tr>
+                            <td valign="top" style="font-size: 13px; color: #334155;">
+                                Śr. ogólna: <strong style="font-size: 15px; color: #1e3a8a;">3.80</strong>
+                                <span style="color: #dc2626; font-weight: bold; margin-left: 3px;">↘ (-0.33)</span>
+                                <span style="color: #64748b; font-size: 12px; margin-left: 6px;">(okres: <strong>3.67</strong>, poprz.: 4.00)</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="padding: 10px 12px; font-size: 13px;">
+                    <div style="margin-bottom: 6px;">
+                        <span style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Oceny w okresie:</span>
+                        <div style="margin-top: 3px;">
+                            
+                                <span style="display: inline-block; background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">3</span><span style="display: inline-block; background-color: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">4</span><span style="display: inline-block; background-color: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">-</span>
+                            
+                        </div>
+                    </div>
+                    <div>
+                        <span style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Wszystkie oceny:</span>
+                        <div style="margin-top: 3px;">
+                            
+                                <span style="display: inline-block; background-color: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">4</span><span style="display: inline-block; background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">3</span><span style="display: inline-block; background-color: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">4</span><span style="display: inline-block; background-color: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">-</span>
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 10px; background-color: #ffffff; width: 100%; box-sizing: border-box; overflow: hidden;">
+                <div style="background-color: #f8fafc; padding: 10px 12px; border-bottom: 1px solid #e2e8f0;">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                        <tr>
+                            <td valign="top" style="padding-bottom: 4px;">
+                                <span style="font-size: 15px; font-weight: bold; color: #1e293b;">Język angielski</span>
+                                <span style="display: inline-block; font-size: 11px; background-color: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 4px;">Prognoza: 4 (dobry)</span>
+                                
+                                <span style="display: inline-block; font-size: 11px; background-color: #dcfce7; color: #15803d; border: 1px solid #86efac; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 4px;">🎯 +0.18 do wyższej</span>
+                                
+                            </td>
+                        </tr>
+                        <tr>
+                            <td valign="top" style="font-size: 13px; color: #334155;">
+                                Śr. ogólna: <strong style="font-size: 15px; color: #1e3a8a;">4.57</strong>
+                                <span style="color: #059669; font-weight: bold; margin-left: 3px;">↗ (+0.75)</span>
+                                <span style="color: #64748b; font-size: 12px; margin-left: 6px;">(okres: <strong>5.00</strong>, poprz.: 4.25)</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="padding: 10px 12px; font-size: 13px;">
+                    <div style="margin-bottom: 6px;">
+                        <span style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Oceny w okresie:</span>
+                        <div style="margin-top: 3px;">
+                            
+                                <span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span><span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span><span style="display: inline-block; background-color: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">-</span>
+                            
+                        </div>
+                    </div>
+                    <div>
+                        <span style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Wszystkie oceny:</span>
+                        <div style="margin-top: 3px;">
+                            
+                                <span style="display: inline-block; background-color: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">4</span><span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span><span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span><span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span><span style="display: inline-block; background-color: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">-</span>
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 10px; background-color: #ffffff; width: 100%; box-sizing: border-box; overflow: hidden;">
+                <div style="background-color: #f8fafc; padding: 10px 12px; border-bottom: 1px solid #e2e8f0;">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                        <tr>
+                            <td valign="top" style="padding-bottom: 4px;">
+                                <span style="font-size: 15px; font-weight: bold; color: #1e293b;">Biologia</span>
+                                <span style="display: inline-block; font-size: 11px; background-color: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 4px;">Prognoza: 5 (bardzo dobry)</span>
+                                
+                            </td>
+                        </tr>
+                        <tr>
+                            <td valign="top" style="font-size: 13px; color: #334155;">
+                                Śr. ogólna: <strong style="font-size: 15px; color: #1e3a8a;">5.00</strong>
+                                <span style="color: #4b5563; font-weight: bold; margin-left: 3px;">➡ (stabilnie)</span>
+                                <span style="color: #64748b; font-size: 12px; margin-left: 6px;">(okres: <strong>5.00</strong>, poprz.: 5.00)</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="padding: 10px 12px; font-size: 13px;">
+                    <div style="margin-bottom: 6px;">
+                        <span style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Oceny w okresie:</span>
+                        <div style="margin-top: 3px;">
+                            
+                                <span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span><span style="display: inline-block; background-color: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">np</span>
+                            
+                        </div>
+                    </div>
+                    <div>
+                        <span style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Wszystkie oceny:</span>
+                        <div style="margin-top: 3px;">
+                            
+                                <span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span><span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span><span style="display: inline-block; background-color: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">np</span>
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 10px; background-color: #ffffff; width: 100%; box-sizing: border-box; overflow: hidden;">
+                <div style="background-color: #f8fafc; padding: 10px 12px; border-bottom: 1px solid #e2e8f0;">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                        <tr>
+                            <td valign="top" style="padding-bottom: 4px;">
+                                <span style="font-size: 15px; font-weight: bold; color: #1e293b;">Geografia</span>
+                                <span style="display: inline-block; font-size: 11px; background-color: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 4px;">Prognoza: 4 (dobry)</span>
+                                
+                            </td>
+                        </tr>
+                        <tr>
+                            <td valign="top" style="font-size: 13px; color: #334155;">
+                                Śr. ogólna: <strong style="font-size: 15px; color: #1e3a8a;">4.12</strong>
+                                <span style="color: #059669; font-weight: bold; margin-left: 3px;">↗ (+1.75)</span>
+                                <span style="color: #64748b; font-size: 12px; margin-left: 6px;">(okres: <strong>5.00</strong>, poprz.: 3.25)</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="padding: 10px 12px; font-size: 13px;">
+                    <div style="margin-bottom: 6px;">
+                        <span style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Oceny w okresie:</span>
+                        <div style="margin-top: 3px;">
+                            
+                                <span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span><span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span>
+                            
+                        </div>
+                    </div>
+                    <div>
+                        <span style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Wszystkie oceny:</span>
+                        <div style="margin-top: 3px;">
+                            
+                                <span style="display: inline-block; background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">3</span><span style="display: inline-block; background-color: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">4</span><span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span><span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span>
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 10px; background-color: #ffffff; width: 100%; box-sizing: border-box; overflow: hidden;">
+                <div style="background-color: #f8fafc; padding: 10px 12px; border-bottom: 1px solid #e2e8f0;">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                        <tr>
+                            <td valign="top" style="padding-bottom: 4px;">
+                                <span style="font-size: 15px; font-weight: bold; color: #1e293b;">Historia</span>
+                                <span style="display: inline-block; font-size: 11px; background-color: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 4px;">Prognoza: 3 (dostateczny)</span>
+                                
+                                <span style="display: inline-block; font-size: 11px; background-color: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 4px;">⚠️ margines 0.03</span>
+                                
+                            </td>
+                        </tr>
+                        <tr>
+                            <td valign="top" style="font-size: 13px; color: #334155;">
+                                Śr. ogólna: <strong style="font-size: 15px; color: #1e3a8a;">2.78</strong>
+                                <span style="color: #059669; font-weight: bold; margin-left: 3px;">↗ (+3.50)</span>
+                                <span style="color: #64748b; font-size: 12px; margin-left: 6px;">(okres: <strong>5.50</strong>, poprz.: 2.75)</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="padding: 10px 12px; font-size: 13px;">
+                    <div style="margin-bottom: 6px;">
+                        <span style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Oceny w okresie:</span>
+                        <div style="margin-top: 3px;">
+                            
+                                <span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span><span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">6</span>
+                            
+                        </div>
+                    </div>
+                    <div>
+                        <span style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Wszystkie oceny:</span>
+                        <div style="margin-top: 3px;">
+                            
+                                <span style="display: inline-block; background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">1</span><span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span><span style="display: inline-block; background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">2</span><span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span><span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">6</span>
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 10px; background-color: #ffffff; width: 100%; box-sizing: border-box; overflow: hidden;">
+                <div style="background-color: #f8fafc; padding: 10px 12px; border-bottom: 1px solid #e2e8f0;">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                        <tr>
+                            <td valign="top" style="padding-bottom: 4px;">
+                                <span style="font-size: 15px; font-weight: bold; color: #1e293b;">Język polski</span>
+                                <span style="display: inline-block; font-size: 11px; background-color: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 4px;">Prognoza: 4 (dobry)</span>
+                                
+                            </td>
+                        </tr>
+                        <tr>
+                            <td valign="top" style="font-size: 13px; color: #334155;">
+                                Śr. ogólna: <strong style="font-size: 15px; color: #1e3a8a;">4.33</strong>
+                                <span style="color: #059669; font-weight: bold; margin-left: 3px;">↗ (+1.33)</span>
+                                <span style="color: #64748b; font-size: 12px; margin-left: 6px;">(okres: <strong>5.00</strong>, poprz.: 3.67)</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="padding: 10px 12px; font-size: 13px;">
+                    <div style="margin-bottom: 6px;">
+                        <span style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Oceny w okresie:</span>
+                        <div style="margin-top: 3px;">
+                            
+                                <span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span><span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span>
+                            
+                        </div>
+                    </div>
+                    <div>
+                        <span style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Wszystkie oceny:</span>
+                        <div style="margin-top: 3px;">
+                            
+                                <span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span><span style="display: inline-block; background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">1</span><span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span><span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span>
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 10px; background-color: #ffffff; width: 100%; box-sizing: border-box; overflow: hidden;">
+                <div style="background-color: #f8fafc; padding: 10px 12px; border-bottom: 1px solid #e2e8f0;">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                        <tr>
+                            <td valign="top" style="padding-bottom: 4px;">
+                                <span style="font-size: 15px; font-weight: bold; color: #1e293b;">Wychowanie fizyczne</span>
+                                <span style="display: inline-block; font-size: 11px; background-color: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 4px;">Prognoza: 5 (bardzo dobry)</span>
+                                
+                            </td>
+                        </tr>
+                        <tr>
+                            <td valign="top" style="font-size: 13px; color: #334155;">
+                                Śr. ogólna: <strong style="font-size: 15px; color: #1e3a8a;">5.00</strong>
+                                <span style="color: #4b5563; font-weight: bold; margin-left: 3px;">➡ (stabilnie)</span>
+                                <span style="color: #64748b; font-size: 12px; margin-left: 6px;">(okres: <strong>5.00</strong>, poprz.: 5.00)</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="padding: 10px 12px; font-size: 13px;">
+                    <div style="margin-bottom: 6px;">
+                        <span style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Oceny w okresie:</span>
+                        <div style="margin-top: 3px;">
+                            
+                                <span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span><span style="display: inline-block; background-color: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">np</span>
+                            
+                        </div>
+                    </div>
+                    <div>
+                        <span style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Wszystkie oceny:</span>
+                        <div style="margin-top: 3px;">
+                            
+                                <span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span><span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span><span style="display: inline-block; background-color: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">np</span>
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 10px; background-color: #ffffff; width: 100%; box-sizing: border-box; overflow: hidden;">
+                <div style="background-color: #f8fafc; padding: 10px 12px; border-bottom: 1px solid #e2e8f0;">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                        <tr>
+                            <td valign="top" style="padding-bottom: 4px;">
+                                <span style="font-size: 15px; font-weight: bold; color: #1e293b;">Chemia</span>
+                                <span style="display: inline-block; font-size: 11px; background-color: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 4px;">Prognoza: 5 (bardzo dobry)</span>
+                                
+                            </td>
+                        </tr>
+                        <tr>
+                            <td valign="top" style="font-size: 13px; color: #334155;">
+                                Śr. ogólna: <strong style="font-size: 15px; color: #1e3a8a;">5.00</strong>
+                                <span style="color: #4b5563; font-weight: bold; margin-left: 3px;">✨ (nowy wpis)</span>
+                                <span style="color: #64748b; font-size: 12px; margin-left: 6px;">(okres: <strong>5.00</strong>)</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="padding: 10px 12px; font-size: 13px;">
+                    <div style="margin-bottom: 6px;">
+                        <span style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Oceny w okresie:</span>
+                        <div style="margin-top: 3px;">
+                            
+                                <span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span>
+                            
+                        </div>
+                    </div>
+                    <div>
+                        <span style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Wszystkie oceny:</span>
+                        <div style="margin-top: 3px;">
+                            
+                                <span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span>
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 10px; background-color: #ffffff; width: 100%; box-sizing: border-box; overflow: hidden;">
+                <div style="background-color: #f8fafc; padding: 10px 12px; border-bottom: 1px solid #e2e8f0;">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                        <tr>
+                            <td valign="top" style="padding-bottom: 4px;">
+                                <span style="font-size: 15px; font-weight: bold; color: #1e293b;">Godzina wychowawcza</span>
+                                <span style="display: inline-block; font-size: 11px; background-color: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 4px;">Prognoza: 4 (dobry)</span>
+                                
+                                <span style="display: inline-block; font-size: 11px; background-color: #dcfce7; color: #15803d; border: 1px solid #86efac; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 4px;">🎯 +0.25 do wyższej</span>
+                                
+                            </td>
+                        </tr>
+                        <tr>
+                            <td valign="top" style="font-size: 13px; color: #334155;">
+                                Śr. ogólna: <strong style="font-size: 15px; color: #1e3a8a;">4.50</strong>
+                                <span style="color: #059669; font-weight: bold; margin-left: 3px;">↗ (+1.00)</span>
+                                <span style="color: #64748b; font-size: 12px; margin-left: 6px;">(okres: <strong>5.00</strong>, poprz.: 4.00)</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="padding: 10px 12px; font-size: 13px;">
+                    <div style="margin-bottom: 6px;">
+                        <span style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Oceny w okresie:</span>
+                        <div style="margin-top: 3px;">
+                            
+                                <span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span>
+                            
+                        </div>
+                    </div>
+                    <div>
+                        <span style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Wszystkie oceny:</span>
+                        <div style="margin-top: 3px;">
+                            
+                                <span style="display: inline-block; background-color: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">4</span><span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span>
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 10px; background-color: #ffffff; width: 100%; box-sizing: border-box; overflow: hidden;">
+                <div style="background-color: #f8fafc; padding: 10px 12px; border-bottom: 1px solid #e2e8f0;">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                        <tr>
+                            <td valign="top" style="padding-bottom: 4px;">
+                                <span style="font-size: 15px; font-weight: bold; color: #1e293b;">Informatyka</span>
+                                <span style="display: inline-block; font-size: 11px; background-color: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 4px;">Prognoza: 4 (dobry)</span>
+                                
+                            </td>
+                        </tr>
+                        <tr>
+                            <td valign="top" style="font-size: 13px; color: #334155;">
+                                Śr. ogólna: <strong style="font-size: 15px; color: #1e3a8a;">4.33</strong>
+                                <span style="color: #dc2626; font-weight: bold; margin-left: 3px;">↘ (-2.00)</span>
+                                <span style="color: #64748b; font-size: 12px; margin-left: 6px;">(okres: <strong>3.00</strong>, poprz.: 5.00)</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="padding: 10px 12px; font-size: 13px;">
+                    <div style="margin-bottom: 6px;">
+                        <span style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Oceny w okresie:</span>
+                        <div style="margin-top: 3px;">
+                            
+                                <span style="display: inline-block; background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">3</span>
+                            
+                        </div>
+                    </div>
+                    <div>
+                        <span style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Wszystkie oceny:</span>
+                        <div style="margin-top: 3px;">
+                            
+                                <span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span><span style="display: inline-block; background-color: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">-</span><span style="display: inline-block; background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">3</span>
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 10px; background-color: #ffffff; width: 100%; box-sizing: border-box; overflow: hidden;">
+                <div style="background-color: #f8fafc; padding: 10px 12px; border-bottom: 1px solid #e2e8f0;">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                        <tr>
+                            <td valign="top" style="padding-bottom: 4px;">
+                                <span style="font-size: 15px; font-weight: bold; color: #1e293b;">Muzyka</span>
+                                <span style="display: inline-block; font-size: 11px; background-color: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 4px;">Prognoza: 6 (celujący)</span>
+                                
+                            </td>
+                        </tr>
+                        <tr>
+                            <td valign="top" style="font-size: 13px; color: #334155;">
+                                Śr. ogólna: <strong style="font-size: 15px; color: #1e3a8a;">6.00</strong>
+                                <span style="color: #4b5563; font-weight: bold; margin-left: 3px;">—</span>
+                                <span style="color: #64748b; font-size: 12px; margin-left: 6px;">(okres: <strong>—</strong>)</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="padding: 10px 12px; font-size: 13px;">
+                    <div style="margin-bottom: 6px;">
+                        <span style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Oceny w okresie:</span>
+                        <div style="margin-top: 3px;">
+                            
+                                <span style="color: #9ca3af; font-size: 12px;">brak</span>
+                            
+                        </div>
+                    </div>
+                    <div>
+                        <span style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Wszystkie oceny:</span>
+                        <div style="margin-top: 3px;">
+                            
+                                <span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">6</span>
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 10px; background-color: #ffffff; width: 100%; box-sizing: border-box; overflow: hidden;">
+                <div style="background-color: #f8fafc; padding: 10px 12px; border-bottom: 1px solid #e2e8f0;">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                        <tr>
+                            <td valign="top" style="padding-bottom: 4px;">
+                                <span style="font-size: 15px; font-weight: bold; color: #1e293b;">Plastyka</span>
+                                <span style="display: inline-block; font-size: 11px; background-color: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 4px;">Prognoza: 5 (bardzo dobry)</span>
+                                
+                            </td>
+                        </tr>
+                        <tr>
+                            <td valign="top" style="font-size: 13px; color: #334155;">
+                                Śr. ogólna: <strong style="font-size: 15px; color: #1e3a8a;">5.00</strong>
+                                <span style="color: #4b5563; font-weight: bold; margin-left: 3px;">—</span>
+                                <span style="color: #64748b; font-size: 12px; margin-left: 6px;">(okres: <strong>—</strong>)</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="padding: 10px 12px; font-size: 13px;">
+                    <div style="margin-bottom: 6px;">
+                        <span style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Oceny w okresie:</span>
+                        <div style="margin-top: 3px;">
+                            
+                                <span style="color: #9ca3af; font-size: 12px;">brak</span>
+                            
+                        </div>
+                    </div>
+                    <div>
+                        <span style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Wszystkie oceny:</span>
+                        <div style="margin-top: 3px;">
+                            
+                                <span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span>
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+
+        <!-- Szczegóły nowych ocen w okresie -->
+        
+        <div style="margin-top: 20px;">
+            <h3 style="color: #1f2937; margin: 0 0 10px 0; font-size: 16px; border-bottom: 2px solid #3b82f6; padding-bottom: 6px;">
+                📝 Oceny zarejestrowane w analizowanym okresie (24)
+            </h3>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background-color: #ffffff; width: 100%; box-sizing: border-box;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                    <tr>
+                        <td valign="top" style="padding-bottom: 2px;">
+                            <span style="font-weight: bold; font-size: 14px; color: #1e293b;">Matematyka</span>
+                            <span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span>
+                            <span style="display: inline-block; font-size: 11px; background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 3px;">waga 3</span>
+                            <span style="font-size: 12px; color: #475569; margin-left: 4px;">• Sprawdzian</span>
+                        </td>
+                        <td align="right" valign="top" style="text-align: right; font-size: 12px; color: #64748b; white-space: nowrap; padding-left: 8px;">
+                            🗓️ 2026-09-15 (wt.)
+                        </td>
+                    </tr>
+                </table>
+                
+                <div style="font-size: 12px; color: #64748b; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #f1f5f9;">
+                    <span>👤 <strong>Nauczyciel:</strong> Renata Matyk</span>
+                    
+                    
+                </div>
+                
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background-color: #ffffff; width: 100%; box-sizing: border-box;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                    <tr>
+                        <td valign="top" style="padding-bottom: 2px;">
+                            <span style="font-weight: bold; font-size: 14px; color: #1e293b;">Matematyka</span>
+                            <span style="display: inline-block; background-color: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">+</span>
+                            <span style="display: inline-block; font-size: 11px; background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 3px;">waga -</span>
+                            <span style="font-size: 12px; color: #475569; margin-left: 4px;">• Odpowiedź</span>
+                        </td>
+                        <td align="right" valign="top" style="text-align: right; font-size: 12px; color: #64748b; white-space: nowrap; padding-left: 8px;">
+                            🗓️ 2026-09-16 (śr.)
+                        </td>
+                    </tr>
+                </table>
+                
+                <div style="font-size: 12px; color: #64748b; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #f1f5f9;">
+                    <span>👤 <strong>Nauczyciel:</strong> Renata Matyk</span>
+                     &nbsp;|&nbsp; 
+                    <span>💬 <strong>Komentarz:</strong> aktywność przy tablicy</span>
+                </div>
+                
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background-color: #ffffff; width: 100%; box-sizing: border-box;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                    <tr>
+                        <td valign="top" style="padding-bottom: 2px;">
+                            <span style="font-weight: bold; font-size: 14px; color: #1e293b;">Matematyka</span>
+                            <span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span>
+                            <span style="display: inline-block; font-size: 11px; background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 3px;">waga 1</span>
+                            <span style="font-size: 12px; color: #475569; margin-left: 4px;">• Zadanie domowe</span>
+                        </td>
+                        <td align="right" valign="top" style="text-align: right; font-size: 12px; color: #64748b; white-space: nowrap; padding-left: 8px;">
+                            🗓️ 2026-09-17 (czw.)
+                        </td>
+                    </tr>
+                </table>
+                
+                <div style="font-size: 12px; color: #64748b; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #f1f5f9;">
+                    <span>👤 <strong>Nauczyciel:</strong> Renata Matyk</span>
+                     &nbsp;|&nbsp; 
+                    <span>💬 <strong>Komentarz:</strong> zadanie z gwiazdką wykonane bezbłędnie</span>
+                </div>
+                
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background-color: #ffffff; width: 100%; box-sizing: border-box;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                    <tr>
+                        <td valign="top" style="padding-bottom: 2px;">
+                            <span style="font-weight: bold; font-size: 14px; color: #1e293b;">Język polski</span>
+                            <span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span>
+                            <span style="display: inline-block; font-size: 11px; background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 3px;">waga 2</span>
+                            <span style="font-size: 12px; color: #475569; margin-left: 4px;">• Sprawdzian</span>
+                        </td>
+                        <td align="right" valign="top" style="text-align: right; font-size: 12px; color: #64748b; white-space: nowrap; padding-left: 8px;">
+                            🗓️ 2026-09-14 (pon.)
+                        </td>
+                    </tr>
+                </table>
+                
+                <div style="font-size: 12px; color: #64748b; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #f1f5f9;">
+                    <span>👤 <strong>Nauczyciel:</strong> Karolina Kurdej</span>
+                    
+                    
+                </div>
+                
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background-color: #ffffff; width: 100%; box-sizing: border-box;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                    <tr>
+                        <td valign="top" style="padding-bottom: 2px;">
+                            <span style="font-weight: bold; font-size: 14px; color: #1e293b;">Język polski</span>
+                            <span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span>
+                            <span style="display: inline-block; font-size: 11px; background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 3px;">waga 1</span>
+                            <span style="font-size: 12px; color: #475569; margin-left: 4px;">• Odpowiedź</span>
+                        </td>
+                        <td align="right" valign="top" style="text-align: right; font-size: 12px; color: #64748b; white-space: nowrap; padding-left: 8px;">
+                            🗓️ 2026-09-17 (czw.)
+                        </td>
+                    </tr>
+                </table>
+                
+                <div style="font-size: 12px; color: #64748b; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #f1f5f9;">
+                    <span>👤 <strong>Nauczyciel:</strong> Karolina Kurdej</span>
+                    
+                    
+                </div>
+                
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background-color: #ffffff; width: 100%; box-sizing: border-box;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                    <tr>
+                        <td valign="top" style="padding-bottom: 2px;">
+                            <span style="font-weight: bold; font-size: 14px; color: #1e293b;">Język angielski</span>
+                            <span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span>
+                            <span style="display: inline-block; font-size: 11px; background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 3px;">waga 2</span>
+                            <span style="font-size: 12px; color: #475569; margin-left: 4px;">• Sprawdzian</span>
+                        </td>
+                        <td align="right" valign="top" style="text-align: right; font-size: 12px; color: #64748b; white-space: nowrap; padding-left: 8px;">
+                            🗓️ 2026-09-16 (śr.)
+                        </td>
+                    </tr>
+                </table>
+                
+                <div style="font-size: 12px; color: #64748b; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #f1f5f9;">
+                    <span>👤 <strong>Nauczyciel:</strong> Magdalena Wiaderko</span>
+                    
+                    
+                </div>
+                
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background-color: #ffffff; width: 100%; box-sizing: border-box;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                    <tr>
+                        <td valign="top" style="padding-bottom: 2px;">
+                            <span style="font-weight: bold; font-size: 14px; color: #1e293b;">Język angielski</span>
+                            <span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span>
+                            <span style="display: inline-block; font-size: 11px; background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 3px;">waga 1</span>
+                            <span style="font-size: 12px; color: #475569; margin-left: 4px;">• Zadanie domowe</span>
+                        </td>
+                        <td align="right" valign="top" style="text-align: right; font-size: 12px; color: #64748b; white-space: nowrap; padding-left: 8px;">
+                            🗓️ 2026-09-18 (pt.)
+                        </td>
+                    </tr>
+                </table>
+                
+                <div style="font-size: 12px; color: #64748b; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #f1f5f9;">
+                    <span>👤 <strong>Nauczyciel:</strong> Magdalena Wiaderko</span>
+                    
+                    
+                </div>
+                
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background-color: #ffffff; width: 100%; box-sizing: border-box;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                    <tr>
+                        <td valign="top" style="padding-bottom: 2px;">
+                            <span style="font-weight: bold; font-size: 14px; color: #1e293b;">Język angielski</span>
+                            <span style="display: inline-block; background-color: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">-</span>
+                            <span style="display: inline-block; font-size: 11px; background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 3px;">waga -</span>
+                            <span style="font-size: 12px; color: #475569; margin-left: 4px;">• inna</span>
+                        </td>
+                        <td align="right" valign="top" style="text-align: right; font-size: 12px; color: #64748b; white-space: nowrap; padding-left: 8px;">
+                            🗓️ 2026-09-15 (wt.)
+                        </td>
+                    </tr>
+                </table>
+                
+                <div style="font-size: 12px; color: #64748b; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #f1f5f9;">
+                    <span>👤 <strong>Nauczyciel:</strong> Magdalena Wiaderko</span>
+                     &nbsp;|&nbsp; 
+                    <span>💬 <strong>Komentarz:</strong> praca na lekcji (mówi nieproszony, przeszkadza na lekcji)</span>
+                </div>
+                
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background-color: #ffffff; width: 100%; box-sizing: border-box;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                    <tr>
+                        <td valign="top" style="padding-bottom: 2px;">
+                            <span style="font-weight: bold; font-size: 14px; color: #1e293b;">Fizyka</span>
+                            <span style="display: inline-block; background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">3</span>
+                            <span style="display: inline-block; font-size: 11px; background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 3px;">waga 1</span>
+                            <span style="font-size: 12px; color: #475569; margin-left: 4px;">• Kartkówka</span>
+                        </td>
+                        <td align="right" valign="top" style="text-align: right; font-size: 12px; color: #64748b; white-space: nowrap; padding-left: 8px;">
+                            🗓️ 2026-09-14 (pon.)
+                        </td>
+                    </tr>
+                </table>
+                
+                <div style="font-size: 12px; color: #64748b; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #f1f5f9;">
+                    <span>👤 <strong>Nauczyciel:</strong> Marek Jarecki</span>
+                    
+                    
+                </div>
+                
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background-color: #ffffff; width: 100%; box-sizing: border-box;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                    <tr>
+                        <td valign="top" style="padding-bottom: 2px;">
+                            <span style="font-weight: bold; font-size: 14px; color: #1e293b;">Fizyka</span>
+                            <span style="display: inline-block; background-color: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">4</span>
+                            <span style="display: inline-block; font-size: 11px; background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 3px;">waga 2</span>
+                            <span style="font-size: 12px; color: #475569; margin-left: 4px;">• Sprawdzian</span>
+                        </td>
+                        <td align="right" valign="top" style="text-align: right; font-size: 12px; color: #64748b; white-space: nowrap; padding-left: 8px;">
+                            🗓️ 2026-09-17 (czw.)
+                        </td>
+                    </tr>
+                </table>
+                
+                <div style="font-size: 12px; color: #64748b; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #f1f5f9;">
+                    <span>👤 <strong>Nauczyciel:</strong> Marek Jarecki</span>
+                    
+                    
+                </div>
+                
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background-color: #ffffff; width: 100%; box-sizing: border-box;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                    <tr>
+                        <td valign="top" style="padding-bottom: 2px;">
+                            <span style="font-weight: bold; font-size: 14px; color: #1e293b;">Fizyka</span>
+                            <span style="display: inline-block; background-color: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">-</span>
+                            <span style="display: inline-block; font-size: 11px; background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 3px;">waga -</span>
+                            <span style="font-size: 12px; color: #475569; margin-left: 4px;">• Aktywność</span>
+                        </td>
+                        <td align="right" valign="top" style="text-align: right; font-size: 12px; color: #64748b; white-space: nowrap; padding-left: 8px;">
+                            🗓️ 2026-09-15 (wt.)
+                        </td>
+                    </tr>
+                </table>
+                
+                <div style="font-size: 12px; color: #64748b; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #f1f5f9;">
+                    <span>👤 <strong>Nauczyciel:</strong> Marek Jarecki</span>
+                     &nbsp;|&nbsp; 
+                    <span>💬 <strong>Komentarz:</strong> brak zeszytu i linijki</span>
+                </div>
+                
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background-color: #ffffff; width: 100%; box-sizing: border-box;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                    <tr>
+                        <td valign="top" style="padding-bottom: 2px;">
+                            <span style="font-weight: bold; font-size: 14px; color: #1e293b;">Historia</span>
+                            <span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span>
+                            <span style="display: inline-block; font-size: 11px; background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 3px;">waga 1</span>
+                            <span style="font-size: 12px; color: #475569; margin-left: 4px;">• Odpowiedź</span>
+                        </td>
+                        <td align="right" valign="top" style="text-align: right; font-size: 12px; color: #64748b; white-space: nowrap; padding-left: 8px;">
+                            🗓️ 2026-09-14 (pon.)
+                        </td>
+                    </tr>
+                </table>
+                
+                <div style="font-size: 12px; color: #64748b; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #f1f5f9;">
+                    <span>👤 <strong>Nauczyciel:</strong> Małgorzata Potopińska</span>
+                    
+                    
+                </div>
+                
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background-color: #ffffff; width: 100%; box-sizing: border-box;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                    <tr>
+                        <td valign="top" style="padding-bottom: 2px;">
+                            <span style="font-weight: bold; font-size: 14px; color: #1e293b;">Historia</span>
+                            <span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">6</span>
+                            <span style="display: inline-block; font-size: 11px; background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 3px;">waga 1</span>
+                            <span style="font-size: 12px; color: #475569; margin-left: 4px;">• Kartkówka</span>
+                        </td>
+                        <td align="right" valign="top" style="text-align: right; font-size: 12px; color: #64748b; white-space: nowrap; padding-left: 8px;">
+                            🗓️ 2026-09-17 (czw.)
+                        </td>
+                    </tr>
+                </table>
+                
+                <div style="font-size: 12px; color: #64748b; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #f1f5f9;">
+                    <span>👤 <strong>Nauczyciel:</strong> Małgorzata Potopińska</span>
+                    
+                    
+                </div>
+                
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background-color: #ffffff; width: 100%; box-sizing: border-box;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                    <tr>
+                        <td valign="top" style="padding-bottom: 2px;">
+                            <span style="font-weight: bold; font-size: 14px; color: #1e293b;">Biologia</span>
+                            <span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span>
+                            <span style="display: inline-block; font-size: 11px; background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 3px;">waga 1</span>
+                            <span style="font-size: 12px; color: #475569; margin-left: 4px;">• Kartkówka</span>
+                        </td>
+                        <td align="right" valign="top" style="text-align: right; font-size: 12px; color: #64748b; white-space: nowrap; padding-left: 8px;">
+                            🗓️ 2026-09-15 (wt.)
+                        </td>
+                    </tr>
+                </table>
+                
+                <div style="font-size: 12px; color: #64748b; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #f1f5f9;">
+                    <span>👤 <strong>Nauczyciel:</strong> Joanna Tymonczuk</span>
+                    
+                    
+                </div>
+                
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background-color: #ffffff; width: 100%; box-sizing: border-box;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                    <tr>
+                        <td valign="top" style="padding-bottom: 2px;">
+                            <span style="font-weight: bold; font-size: 14px; color: #1e293b;">Biologia</span>
+                            <span style="display: inline-block; background-color: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">np</span>
+                            <span style="display: inline-block; font-size: 11px; background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 3px;">waga -</span>
+                            <span style="font-size: 12px; color: #475569; margin-left: 4px;">• Praca domowa</span>
+                        </td>
+                        <td align="right" valign="top" style="text-align: right; font-size: 12px; color: #64748b; white-space: nowrap; padding-left: 8px;">
+                            🗓️ 2026-09-16 (śr.)
+                        </td>
+                    </tr>
+                </table>
+                
+                <div style="font-size: 12px; color: #64748b; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #f1f5f9;">
+                    <span>👤 <strong>Nauczyciel:</strong> Joanna Tymonczuk</span>
+                     &nbsp;|&nbsp; 
+                    <span>💬 <strong>Komentarz:</strong> brak zadania domowego</span>
+                </div>
+                
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background-color: #ffffff; width: 100%; box-sizing: border-box;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                    <tr>
+                        <td valign="top" style="padding-bottom: 2px;">
+                            <span style="font-weight: bold; font-size: 14px; color: #1e293b;">Geografia</span>
+                            <span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span>
+                            <span style="display: inline-block; font-size: 11px; background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 3px;">waga 3</span>
+                            <span style="font-size: 12px; color: #475569; margin-left: 4px;">• Sprawdzian</span>
+                        </td>
+                        <td align="right" valign="top" style="text-align: right; font-size: 12px; color: #64748b; white-space: nowrap; padding-left: 8px;">
+                            🗓️ 2026-09-15 (wt.)
+                        </td>
+                    </tr>
+                </table>
+                
+                <div style="font-size: 12px; color: #64748b; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #f1f5f9;">
+                    <span>👤 <strong>Nauczyciel:</strong> Piotr Werner</span>
+                    
+                    
+                </div>
+                
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background-color: #ffffff; width: 100%; box-sizing: border-box;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                    <tr>
+                        <td valign="top" style="padding-bottom: 2px;">
+                            <span style="font-weight: bold; font-size: 14px; color: #1e293b;">Geografia</span>
+                            <span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span>
+                            <span style="display: inline-block; font-size: 11px; background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 3px;">waga 1</span>
+                            <span style="font-size: 12px; color: #475569; margin-left: 4px;">• Zadanie domowe</span>
+                        </td>
+                        <td align="right" valign="top" style="text-align: right; font-size: 12px; color: #64748b; white-space: nowrap; padding-left: 8px;">
+                            🗓️ 2026-09-17 (czw.)
+                        </td>
+                    </tr>
+                </table>
+                
+                <div style="font-size: 12px; color: #64748b; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #f1f5f9;">
+                    <span>👤 <strong>Nauczyciel:</strong> Piotr Werner</span>
+                    
+                    
+                </div>
+                
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background-color: #ffffff; width: 100%; box-sizing: border-box;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                    <tr>
+                        <td valign="top" style="padding-bottom: 2px;">
+                            <span style="font-weight: bold; font-size: 14px; color: #1e293b;">Informatyka</span>
+                            <span style="display: inline-block; background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">3</span>
+                            <span style="display: inline-block; font-size: 11px; background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 3px;">waga 1</span>
+                            <span style="font-size: 12px; color: #475569; margin-left: 4px;">• Kartkówka</span>
+                        </td>
+                        <td align="right" valign="top" style="text-align: right; font-size: 12px; color: #64748b; white-space: nowrap; padding-left: 8px;">
+                            🗓️ 2026-09-14 (pon.)
+                        </td>
+                    </tr>
+                </table>
+                
+                <div style="font-size: 12px; color: #64748b; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #f1f5f9;">
+                    <span>👤 <strong>Nauczyciel:</strong> Janina Dydiel</span>
+                    
+                    
+                </div>
+                
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background-color: #ffffff; width: 100%; box-sizing: border-box;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                    <tr>
+                        <td valign="top" style="padding-bottom: 2px;">
+                            <span style="font-weight: bold; font-size: 14px; color: #1e293b;">Chemia</span>
+                            <span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span>
+                            <span style="display: inline-block; font-size: 11px; background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 3px;">waga 2</span>
+                            <span style="font-size: 12px; color: #475569; margin-left: 4px;">• Sprawdzian</span>
+                        </td>
+                        <td align="right" valign="top" style="text-align: right; font-size: 12px; color: #64748b; white-space: nowrap; padding-left: 8px;">
+                            🗓️ 2026-09-16 (śr.)
+                        </td>
+                    </tr>
+                </table>
+                
+                <div style="font-size: 12px; color: #64748b; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #f1f5f9;">
+                    <span>👤 <strong>Nauczyciel:</strong> Krystyna Nowak</span>
+                    
+                    
+                </div>
+                
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background-color: #ffffff; width: 100%; box-sizing: border-box;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                    <tr>
+                        <td valign="top" style="padding-bottom: 2px;">
+                            <span style="font-weight: bold; font-size: 14px; color: #1e293b;">Wychowanie fizyczne</span>
+                            <span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span>
+                            <span style="display: inline-block; font-size: 11px; background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 3px;">waga 1</span>
+                            <span style="font-size: 12px; color: #475569; margin-left: 4px;">• Sprawdzian</span>
+                        </td>
+                        <td align="right" valign="top" style="text-align: right; font-size: 12px; color: #64748b; white-space: nowrap; padding-left: 8px;">
+                            🗓️ 2026-09-15 (wt.)
+                        </td>
+                    </tr>
+                </table>
+                
+                <div style="font-size: 12px; color: #64748b; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #f1f5f9;">
+                    <span>👤 <strong>Nauczyciel:</strong> Michał Feryc</span>
+                    
+                    
+                </div>
+                
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background-color: #ffffff; width: 100%; box-sizing: border-box;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                    <tr>
+                        <td valign="top" style="padding-bottom: 2px;">
+                            <span style="font-weight: bold; font-size: 14px; color: #1e293b;">Wychowanie fizyczne</span>
+                            <span style="display: inline-block; background-color: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">np</span>
+                            <span style="display: inline-block; font-size: 11px; background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 3px;">waga -</span>
+                            <span style="font-size: 12px; color: #475569; margin-left: 4px;">• Aktywność</span>
+                        </td>
+                        <td align="right" valign="top" style="text-align: right; font-size: 12px; color: #64748b; white-space: nowrap; padding-left: 8px;">
+                            🗓️ 2026-09-17 (czw.)
+                        </td>
+                    </tr>
+                </table>
+                
+                <div style="font-size: 12px; color: #64748b; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #f1f5f9;">
+                    <span>👤 <strong>Nauczyciel:</strong> Michał Feryc</span>
+                     &nbsp;|&nbsp; 
+                    <span>💬 <strong>Komentarz:</strong> brak stroju sportowego</span>
+                </div>
+                
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background-color: #ffffff; width: 100%; box-sizing: border-box;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                    <tr>
+                        <td valign="top" style="padding-bottom: 2px;">
+                            <span style="font-weight: bold; font-size: 14px; color: #1e293b;">Matematyka</span>
+                            <span style="display: inline-block; background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">3+</span>
+                            <span style="display: inline-block; font-size: 11px; background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 3px;">waga 2</span>
+                            <span style="font-size: 12px; color: #475569; margin-left: 4px;">• Kartkówka</span>
+                        </td>
+                        <td align="right" valign="top" style="text-align: right; font-size: 12px; color: #64748b; white-space: nowrap; padding-left: 8px;">
+                            🗓️ 2026-09-11 (pt.)
+                        </td>
+                    </tr>
+                </table>
+                
+                <div style="font-size: 12px; color: #64748b; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #f1f5f9;">
+                    <span>👤 <strong>Nauczyciel:</strong> Renata Matyk</span>
+                     &nbsp;|&nbsp; 
+                    <span>💬 <strong>Komentarz:</strong> kolejność działań i nawiasy kwadratowe</span>
+                </div>
+                
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background-color: #ffffff; width: 100%; box-sizing: border-box;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                    <tr>
+                        <td valign="top" style="padding-bottom: 2px;">
+                            <span style="font-weight: bold; font-size: 14px; color: #1e293b;">Matematyka</span>
+                            <span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span>
+                            <span style="display: inline-block; font-size: 11px; background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 3px;">waga 2</span>
+                            <span style="font-size: 12px; color: #475569; margin-left: 4px;">• Projekt</span>
+                        </td>
+                        <td align="right" valign="top" style="text-align: right; font-size: 12px; color: #64748b; white-space: nowrap; padding-left: 8px;">
+                            🗓️ 2026-09-18 (pt.)
+                        </td>
+                    </tr>
+                </table>
+                
+                <div style="font-size: 12px; color: #64748b; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #f1f5f9;">
+                    <span>👤 <strong>Nauczyciel:</strong> Renata Matyk</span>
+                     &nbsp;|&nbsp; 
+                    <span>💬 <strong>Komentarz:</strong> plakat: geometria i symetria w architekturze</span>
+                </div>
+                
+            </div>
+            
+            <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background-color: #ffffff; width: 100%; box-sizing: border-box;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+                    <tr>
+                        <td valign="top" style="padding-bottom: 2px;">
+                            <span style="font-weight: bold; font-size: 14px; color: #1e293b;">Godzina wychowawcza</span>
+                            <span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span>
+                            <span style="display: inline-block; font-size: 11px; background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 3px;">waga 1</span>
+                            <span style="font-size: 12px; color: #475569; margin-left: 4px;">• Zaangażowanie</span>
+                        </td>
+                        <td align="right" valign="top" style="text-align: right; font-size: 12px; color: #64748b; white-space: nowrap; padding-left: 8px;">
+                            🗓️ 2026-09-14 (pn.)
+                        </td>
+                    </tr>
+                </table>
+                
+                <div style="font-size: 12px; color: #64748b; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #f1f5f9;">
+                    <span>👤 <strong>Nauczyciel:</strong> Renata Matyk</span>
+                     &nbsp;|&nbsp; 
+                    <span>💬 <strong>Komentarz:</strong> Wzorowa postawa i pomoc w sprawach organizacyjnych klasy</span>
+                </div>
+                
+            </div>
+            
+        </div>
+        
+
+        <!-- Rozkład ocen (Histogram) -->
+        <div style="margin-top: 20px;">
+            <h3 style="color: #1f2937; margin: 0 0 10px 0; font-size: 16px; border-bottom: 2px solid #64748b; padding-bottom: 6px;">
+                📈 Rozkład ocen (cały okres vs ostatni raport)
+            </h3>
+            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; border-collapse: separate; border-spacing: 3px;">
+                <tr>
+                    
+                    
+                    
+                    <td width="16%" align="center" valign="top" style="width: 16.6%; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 6px 2px; text-align: center;">
+                        <div style="margin-bottom: 2px;"><span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">6</span></div>
+                        <div style="font-size: 16px; font-weight: bold; color: #1f2937;">3</div>
+                        <div style="font-size: 10px; color: #6b7280; line-height: 1.1;">
+                            +1 w okresie
+                        </div>
+                    </td>
+                    
+                    
+                    
+                    <td width="16%" align="center" valign="top" style="width: 16.6%; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 6px 2px; text-align: center;">
+                        <div style="margin-bottom: 2px;"><span style="display: inline-block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">5</span></div>
+                        <div style="font-size: 16px; font-weight: bold; color: #1f2937;">22</div>
+                        <div style="font-size: 10px; color: #6b7280; line-height: 1.1;">
+                            +14 w okresie
+                        </div>
+                    </td>
+                    
+                    
+                    
+                    <td width="16%" align="center" valign="top" style="width: 16.6%; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 6px 2px; text-align: center;">
+                        <div style="margin-bottom: 2px;"><span style="display: inline-block; background-color: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">4</span></div>
+                        <div style="font-size: 16px; font-weight: bold; color: #1f2937;">8</div>
+                        <div style="font-size: 10px; color: #6b7280; line-height: 1.1;">
+                            +2 w okresie
+                        </div>
+                    </td>
+                    
+                    
+                    
+                    <td width="16%" align="center" valign="top" style="width: 16.6%; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 6px 2px; text-align: center;">
+                        <div style="margin-bottom: 2px;"><span style="display: inline-block; background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">3</span></div>
+                        <div style="font-size: 16px; font-weight: bold; color: #1f2937;">3</div>
+                        <div style="font-size: 10px; color: #6b7280; line-height: 1.1;">
+                            +2 w okresie
+                        </div>
+                    </td>
+                    
+                    
+                    
+                    <td width="16%" align="center" valign="top" style="width: 16.6%; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 6px 2px; text-align: center;">
+                        <div style="margin-bottom: 2px;"><span style="display: inline-block; background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">2</span></div>
+                        <div style="font-size: 16px; font-weight: bold; color: #1f2937;">1</div>
+                        <div style="font-size: 10px; color: #6b7280; line-height: 1.1;">
+                            0 w okresie
+                        </div>
+                    </td>
+                    
+                    
+                    
+                    <td width="16%" align="center" valign="top" style="width: 16.6%; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 6px 2px; text-align: center;">
+                        <div style="margin-bottom: 2px;"><span style="display: inline-block; background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">1</span></div>
+                        <div style="font-size: 16px; font-weight: bold; color: #1f2937;">2</div>
+                        <div style="font-size: 10px; color: #6b7280; line-height: 1.1;">
+                            0 w okresie
+                        </div>
+                    </td>
+                    
+                </tr>
+            </table>
+        </div>
+
+        <!-- Przewodnik rodzica (Legenda) - 2 porady na wiersz -->
+        
+        
+        <div style="margin-top: 25px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; box-sizing: border-box; width: 100%;">
+            <h3 style="margin: 0 0 10px 0; color: #1e3a8a; font-size: 15px;">
+                📖 Przewodnik rodzica: Jak rozumieć wskaźniki w raporcie?
+            </h3>
+            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; border-collapse: separate; border-spacing: 6px;">
+                <tr>
+                    <td width="50%" valign="top" style="width: 50%; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; font-size: 12px; color: #475569; line-height: 1.45;">
+                        <strong style="color: #1e293b;">🎯 Skala i progi ocen:</strong><br>
+                        Progi ocen: 6 (od 5.51), 5 (od 4.75), 4 (od 3.75), 3 (od 2.75), 2 (od 1.75), 1 (poniżej 1.75).
+                    </td>
+                    <td width="50%" valign="top" style="width: 50%; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; font-size: 12px; color: #475569; line-height: 1.45;">
+                        <strong style="color: #1e293b;">📈 Wskaźniki trendu (↗, ↘, ➡, ✨):</strong><br>
+                        Wskaźnik trendu: ↗ oznacza wzrost średniej z okresu o min. +0.20 względem historii; ↘ spadek o min. -0.20; ➡ stabilny poziom; ✨ pierwszy wpis z przedmiotu.
+                    </td>
+                </tr>
+                <tr>
+                    <td width="50%" valign="top" style="width: 50%; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; font-size: 12px; color: #475569; line-height: 1.45;">
+                        <strong style="color: #1e293b;">⚖️ Średnia ważona a wagi ocen:</strong><br>
+                        Wpływ wag: średnia ważona kładzie nacisk na sprawdziany. Efekt ujemny oznacza, że testy wypadają gorzej niż drobne zadania, zaniżając ogólny wynik.
+                    </td>
+                    <td width="50%" valign="top" style="width: 50%; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; font-size: 12px; color: #475569; line-height: 1.45;">
+                        <strong style="color: #1e293b;">🎯 Analiza na granicy ocen:</strong><br>
+                        Analiza na krawędzi ocen wskazuje, gdzie uczeń ma minimalną stratę (np. &lt;= 0.25) do wyższego stopnia i wylicza ocenę potrzebną z kolejnej pracy, by go zdobyć.
+                    </td>
+                </tr>
+                <tr>
+                    <td width="50%" valign="top" style="width: 50%; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; font-size: 12px; color: #475569; line-height: 1.45;">
+                        <strong style="color: #1e293b;">🔍 Styl nauki (sprawdziany / kartkówki):</strong><br>
+                        Porównanie sprawdzianów (wagi 2-3) z bieżącą pracą (kartkówki, odpowiedzi, waga 1). Pokazuje, czy dziecko ma trudności z powtórkami dużego materiału, czy z systematycznością.
+                    </td>
+                    <td width="50%" valign="top" style="width: 50%; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; font-size: 12px; color: #475569; line-height: 1.45;">
+                        <strong style="color: #1e293b;">🎢 Stabilność ocen vs Sinusoida:</strong><br>
+                        Wskaźnik stabilności: niska zmienność oznacza pewne, stałe oceny; wysoka (sinusoida) wskazuje na przeplatankę 1 i 5, czyli nierówne przygotowanie do lekcji.
+                    </td>
+                </tr>
+            </table>
+        </div>
+        
+
+        <!-- Stopka -->
+        <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; text-align: center;">
+            Raport postępów wygenerowany automatycznie przez <strong>Librus2mail</strong>. Wartości średnich obliczone na podstawie wag przypisanych w Librus Synergia.
+        </div>
+    </div>
+</div>
+    </div>
+</div>
+
+
+
+    </main>
+
+    <!-- Stopka -->
+    <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex items-center gap-2 font-medium">
+                <span>🏫 Librus2mail v2.7.0</span>
+                <span>•</span>
+                <span>Prywatny Dashboard Rodzica</span>
+            </div>
+            <div class="text-slate-400 text-[11px]">
+                Bezpieczny odczyt z lokalnej pamięci <code>storage/</code> • Stan na: 18.09.2026 00:00
+            </div>
+        </div>
+    </footer>
+
+    <!-- Theme Manager Script -->
+    <script>
+        const THEME_DATA = {
+            light: { name: 'Jasny', icon: '☀️' },
+            dark: { name: 'Ciemny', icon: '🌙' },
+            midnight: { name: 'Północ', icon: '🌌' },
+            forest: { name: 'Szmaragd', icon: '🌲' },
+            auto: { name: 'Auto', icon: '💻' }
+        };
+
+        function getEffectiveTheme(theme) {
+            if (theme === 'auto') {
+                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            return theme;
+        }
+
+        function applyTheme(theme) {
+            const effective = getEffectiveTheme(theme);
+            document.documentElement.setAttribute('data-theme', effective);
+            if (effective !== 'light') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+
+            // Aktualizacja ikony i nazwy w pasku nawigacyjnym
+            const activeIcon = document.getElementById('theme-active-icon');
+            const activeName = document.getElementById('theme-active-name');
+            if (activeIcon) activeIcon.textContent = THEME_DATA[theme]?.icon || '☀️';
+            if (activeName) activeName.textContent = THEME_DATA[theme]?.name || 'Jasny';
+
+            // Zaznaczenie w menu dropdown
+            document.querySelectorAll('[data-theme-check]').forEach(el => {
+                const isCurrent = el.getAttribute('data-theme-check') === theme;
+                el.classList.toggle('hidden', !isCurrent);
+            });
+
+            // Aktualizacja kafelków w zakładce Ustawienia (jeśli obecne)
+            document.querySelectorAll('.theme-card-selector').forEach(card => {
+                const cTheme = card.getAttribute('data-theme-card');
+                const isSelected = cTheme === theme;
+                card.classList.toggle('ring-2', isSelected);
+                card.classList.toggle('ring-indigo-500', isSelected);
+                card.classList.toggle('border-indigo-500', isSelected);
+                const checkEl = card.querySelector('.theme-card-selected-badge');
+                if (checkEl) checkEl.classList.toggle('hidden', !isSelected);
+            });
+
+            // Emitowanie zdarzenia dla innych komponentów (np. wykresów Chart.js)
+            window.dispatchEvent(new CustomEvent('themechange', { detail: { theme, effective } }));
+        }
+
+        function setTheme(theme) {
+            try {
+                localStorage.setItem('librus2mail_theme', theme);
+            } catch (e) {}
+            applyTheme(theme);
+            closeThemeDropdown();
+        }
+
+        function toggleThemeDropdown() {
+            const dropdown = document.getElementById('theme-dropdown');
+            if (!dropdown) return;
+            dropdown.classList.toggle('hidden');
+        }
+
+        function closeThemeDropdown() {
+            const dropdown = document.getElementById('theme-dropdown');
+            if (dropdown) dropdown.classList.add('hidden');
+        }
+
+        // Zamknięcie menu po kliknięciu poza obszar
+        document.addEventListener('click', function(e) {
+            const container = document.getElementById('theme-menu-container');
+            if (container && !container.contains(e.target)) {
+                closeThemeDropdown();
+            }
+        });
+
+        // Reakcja na zmianę preferencji systemowych
+        try {
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+                if ((localStorage.getItem('librus2mail_theme') || 'auto') === 'auto') {
+                    applyTheme('auto');
+                }
+            });
+        } catch (e) {}
+
+        // Inicjalizacja stanu kontrolek po załadowaniu DOM
+        document.addEventListener('DOMContentLoaded', function() {
+            const saved = localStorage.getItem('librus2mail_theme') || 'auto';
+            applyTheme(saved);
+        });
+
+        // ==========================================================================
+        // Mobile Drawer Controller
+        // ==========================================================================
+        function openMobileMenu() {
+            const backdrop = document.getElementById('mobile-drawer-backdrop');
+            const drawer = document.getElementById('mobile-drawer');
+            if (backdrop && drawer) {
+                backdrop.classList.remove('hidden');
+                drawer.classList.remove('translate-x-full');
+                document.body.classList.add('overflow-hidden');
+            }
+        }
+
+        function closeMobileMenu() {
+            const backdrop = document.getElementById('mobile-drawer-backdrop');
+            const drawer = document.getElementById('mobile-drawer');
+            if (backdrop && drawer) {
+                backdrop.classList.add('hidden');
+                drawer.classList.add('translate-x-full');
+                document.body.classList.remove('overflow-hidden');
+            }
+        }
+
+        function toggleMobileMenu() {
+            const drawer = document.getElementById('mobile-drawer');
+            if (drawer && drawer.classList.contains('translate-x-full')) {
+                openMobileMenu();
+            } else {
+                closeMobileMenu();
+            }
+        }
+
+        // Klawisz Escape zamyka otwarte menu i panel mobilny
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeMobileMenu();
+                closeThemeDropdown();
+            }
+        });
+    </script>
+
+    
+</body>
+</html>

@@ -1,14 +1,64 @@
 <!DOCTYPE html>
-<html lang="pl" class="h-full bg-slate-50">
+<html lang="pl" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="cf3dfcfbdf81e680dc9f49d86448a38922c2b30d825d48b9c61c83332012f0ef">
+    <meta name="csrf-token" content="static_demo_csrf_token_librus2mail">
     <title>Raporty i Analizy - Jan Kowalski (8979296) - Librus2mail</title>
     <!-- Favicon z logo Librus2mail (gradient indigo-sky + 🏫) -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%25%22%20y1%3D%22100%25%22%20x2%3D%22100%25%22%20y2%3D%220%25%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%234f46e5%22/%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%230ea5e9%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2216%22%20fill%3D%22url%28%23g%29%22/%3E%3Ctext%20x%3D%2232%22%20y%3D%2234%22%20font-size%3D%2234%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%F0%9F%8F%AB%3C/text%3E%3C/svg%3E">
-    <!-- TailwindCSS CDN -->
+
+    <!-- Pre-render Theme Initializer (zapobiega migotaniu białego tła przed załadowaniem DOM) -->
+    <script>
+        (function() {
+            try {
+                const THEMES = ['light', 'dark', 'midnight', 'forest'];
+                let saved = localStorage.getItem('librus2mail_theme') || 'auto';
+                let effective = saved;
+                if (saved === 'auto') {
+                    effective = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                if (!THEMES.includes(effective)) effective = 'light';
+                document.documentElement.setAttribute('data-theme', effective);
+                if (effective !== 'light') {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+            } catch (e) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        })();
+    </script>
+
+    <!-- TailwindCSS CDN & Config -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        theme: {
+                            body: 'var(--theme-bg-body)',
+                            card: 'var(--theme-bg-card)',
+                            'card-hover': 'var(--theme-bg-card-hover)',
+                            header: 'var(--theme-bg-header)',
+                            border: 'var(--theme-border)',
+                            'text-primary': 'var(--theme-text-primary)',
+                            'text-secondary': 'var(--theme-text-secondary)',
+                            'text-muted': 'var(--theme-text-muted)',
+                            accent: 'var(--theme-accent)',
+                            'accent-hover': 'var(--theme-accent-hover)',
+                            'accent-soft': 'var(--theme-accent-soft)',
+                            'accent-text': 'var(--theme-accent-text)',
+                        }
+                    }
+                }
+            }
+        };
+    </script>
+
     <!-- HTMX CDN -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script>
@@ -35,10 +85,395 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+        /* ==========================================================================
+           Librus2mail Multi-Skin Design Tokens
+           ========================================================================== */
+        :root, [data-theme="light"] {
+            --theme-bg-body: #f8fafc;
+            --theme-bg-card: #ffffff;
+            --theme-bg-card-hover: #f1f5f9;
+            --theme-bg-header: rgba(255, 255, 255, 0.95);
+            --theme-bg-subtle: #f1f5f9;
+            --theme-border: #e2e8f0;
+            --theme-border-subtle: #f1f5f9;
+            --theme-text-primary: #0f172a;
+            --theme-text-secondary: #334155;
+            --theme-text-muted: #64748b;
+            --theme-accent: #4f46e5;
+            --theme-accent-hover: #4338ca;
+            --theme-accent-soft: #eef2ff;
+            --theme-accent-text: #4338ca;
+            --theme-input-bg: #ffffff;
+            --theme-input-border: #cbd5e1;
+            --theme-scrollbar-thumb: #cbd5e1;
+        }
+
+        [data-theme="dark"] {
+            --theme-bg-body: #0b1120;
+            --theme-bg-card: #151e32;
+            --theme-bg-card-hover: #1e293b;
+            --theme-bg-header: rgba(15, 23, 42, 0.95);
+            --theme-bg-subtle: #1e293b;
+            --theme-border: #243049;
+            --theme-border-subtle: #1e293b;
+            --theme-text-primary: #f8fafc;
+            --theme-text-secondary: #cbd5e1;
+            --theme-text-muted: #8191a6;
+            --theme-accent: #6366f1;
+            --theme-accent-hover: #818cf8;
+            --theme-accent-soft: rgba(99, 102, 241, 0.18);
+            --theme-accent-text: #a5b4fc;
+            --theme-input-bg: #1e293b;
+            --theme-input-border: #334155;
+            --theme-scrollbar-thumb: #334155;
+        }
+
+        [data-theme="midnight"] {
+            --theme-bg-body: #020617;
+            --theme-bg-card: #090e1a;
+            --theme-bg-card-hover: #111827;
+            --theme-bg-header: rgba(4, 7, 19, 0.96);
+            --theme-bg-subtle: #0f172a;
+            --theme-border: #1e293b;
+            --theme-border-subtle: #0f172a;
+            --theme-text-primary: #ffffff;
+            --theme-text-secondary: #cbd5e1;
+            --theme-text-muted: #64748b;
+            --theme-accent: #0ea5e9;
+            --theme-accent-hover: #38bdf8;
+            --theme-accent-soft: rgba(14, 165, 233, 0.16);
+            --theme-accent-text: #38bdf8;
+            --theme-input-bg: #0f172a;
+            --theme-input-border: #1e293b;
+            --theme-scrollbar-thumb: #1e293b;
+        }
+
+        [data-theme="forest"] {
+            --theme-bg-body: #051610;
+            --theme-bg-card: #0a241b;
+            --theme-bg-card-hover: #103629;
+            --theme-bg-header: rgba(7, 27, 20, 0.96);
+            --theme-bg-subtle: #0d2e23;
+            --theme-border: #144735;
+            --theme-border-subtle: #0d2e23;
+            --theme-text-primary: #ecfdf5;
+            --theme-text-secondary: #a7f3d0;
+            --theme-text-muted: #6ee7b7;
+            --theme-accent: #10b981;
+            --theme-accent-hover: #34d399;
+            --theme-accent-soft: rgba(16, 185, 129, 0.16);
+            --theme-accent-text: #6ee7b7;
+            --theme-input-bg: #0d2e23;
+            --theme-input-border: #144735;
+            --theme-scrollbar-thumb: #144735;
+        }
+
+        html {
+            background-color: var(--theme-bg-body);
+        }
+
+        html.dark {
+            color-scheme: dark;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--theme-bg-body);
+            color: var(--theme-text-primary);
+            transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+        }
+
         .htmx-indicator { display: none; }
         .htmx-request .htmx-indicator { display: inline-flex; }
         .htmx-request.htmx-indicator { display: inline-flex; }
+
+        /* ==========================================================================
+           Automatyczne kaskadowanie motywu dla istniejących komponentów
+           ========================================================================== */
+        html.dark header {
+            background-color: var(--theme-bg-header) !important;
+            border-color: var(--theme-border) !important;
+        }
+        html.dark footer {
+            background-color: var(--theme-bg-card) !important;
+            border-color: var(--theme-border) !important;
+            color: var(--theme-text-muted) !important;
+        }
+
+        /* Karty i kontenery (w tym klasy z modyfikatorem przezroczystości Tailwind np. bg-slate-50/50, bg-slate-200/70) */
+        html.dark .bg-white:not([data-keep-color]),
+        html.dark [class*="bg-white/"]:not([data-keep-color]) {
+            background-color: var(--theme-bg-card) !important;
+        }
+        html.dark .bg-slate-50:not([data-keep-color]),
+        html.dark [class*="bg-slate-50/"]:not([data-keep-color]) {
+            background-color: var(--theme-bg-subtle) !important;
+        }
+        html.dark .bg-slate-100:not([data-keep-color]),
+        html.dark [class*="bg-slate-100/"]:not([data-keep-color]) {
+            background-color: var(--theme-bg-subtle) !important;
+        }
+        html.dark .bg-slate-200:not([data-keep-color]),
+        html.dark [class*="bg-slate-200/"]:not([data-keep-color]) {
+            background-color: var(--theme-bg-subtle) !important;
+        }
+
+        /* Segmented pill tabs & podzakładki (np. Oceny, Raporty, filtry okresów) */
+        html.dark [class*="bg-slate-200"].rounded-xl,
+        html.dark [class*="bg-slate-100"].rounded-xl,
+        html.dark [class*="bg-slate-200"] {
+            background-color: var(--theme-bg-subtle) !important;
+            border-color: var(--theme-border) !important;
+        }
+
+        /* Domyślny stan nieaktywny dla podzakładek w trybach ciemnych */
+        html.dark .subtab-btn:not(.subtab-btn-active):not(.active),
+        html.dark .grades-tab-btn:not(.subtab-btn-active):not(.active),
+        html.dark .reports-tab-btn:not(.subtab-btn-active):not(.active) {
+            color: var(--theme-text-muted) !important;
+            background-color: transparent !important;
+            border-color: transparent !important;
+            box-shadow: none !important;
+        }
+        html.dark .subtab-btn:not(.subtab-btn-active):not(.active):hover,
+        html.dark .grades-tab-btn:not(.subtab-btn-active):not(.active):hover,
+        html.dark .reports-tab-btn:not(.subtab-btn-active):not(.active):hover {
+            color: var(--theme-text-primary) !important;
+            background-color: var(--theme-bg-card-hover) !important;
+        }
+
+        /* Aktywna podzakładka w trybach ciemnych - wyrazisty akcent motywu + biały tekst! */
+        html.dark .subtab-btn.subtab-btn-active,
+        html.dark .subtab-btn.active,
+        html.dark .subtab-btn[data-active="true"],
+        html.dark .grades-tab-btn.active,
+        html.dark .grades-tab-btn.subtab-btn-active,
+        html.dark .grades-tab-btn[data-active="true"],
+        html.dark .reports-tab-btn.active,
+        html.dark .reports-tab-btn.subtab-btn-active,
+        html.dark .reports-tab-btn[data-active="true"],
+        html.dark .subtab-btn.active.bg-white,
+        html.dark .grades-tab-btn.active.bg-white,
+        html.dark .reports-tab-btn.active.bg-white {
+            background-color: var(--theme-accent) !important;
+            color: #ffffff !important;
+            font-weight: 800 !important;
+            border-color: transparent !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 0 1px rgba(255, 255, 255, 0.25) !important;
+        }
+
+        /* Stany najechania (hover) */
+        html.dark .hover\:bg-slate-50:hover,
+        html.dark .hover\:bg-slate-100:hover,
+        html.dark [class*="hover:bg-slate-"]:hover,
+        html.dark .group:hover .group-hover\:bg-slate-100 {
+            background-color: var(--theme-bg-card-hover) !important;
+        }
+        html.dark [class*="hover:bg-white"]:hover {
+            background-color: var(--theme-bg-card-hover) !important;
+        }
+
+        /* Obramowania */
+        html.dark .border-slate-100,
+        html.dark .border-slate-200,
+        html.dark .border-slate-300,
+        html.dark [class*="border-slate-"] {
+            border-color: var(--theme-border) !important;
+        }
+        html.dark .border-t.border-slate-100,
+        html.dark .border-b.border-slate-100,
+        html.dark .border-t.border-slate-200,
+        html.dark .border-b.border-slate-200 {
+            border-color: var(--theme-border) !important;
+        }
+
+        /* Typografia */
+        html.dark .text-slate-900:not([data-keep-color]),
+        html.dark .text-slate-800:not([data-keep-color]) {
+            color: var(--theme-text-primary) !important;
+        }
+        html.dark .text-slate-700:not([data-keep-color]),
+        html.dark .text-slate-600:not([data-keep-color]) {
+            color: var(--theme-text-secondary) !important;
+        }
+        html.dark .text-slate-500:not([data-keep-color]),
+        html.dark .text-slate-400:not([data-keep-color]) {
+            color: var(--theme-text-muted) !important;
+        }
+
+        /* Pola formularzy, dropdowny, select, datepicker */
+        html.dark input[type="text"],
+        html.dark input[type="password"],
+        html.dark input[type="number"],
+        html.dark input[type="email"],
+        html.dark input[type="date"],
+        html.dark input[type="time"],
+        html.dark input[type="datetime-local"],
+        html.dark input[type="search"],
+        html.dark input[type="url"],
+        html.dark select,
+        html.dark textarea {
+            background-color: var(--theme-input-bg) !important;
+            border-color: var(--theme-input-border) !important;
+            color: var(--theme-text-primary) !important;
+            color-scheme: dark;
+        }
+        html.dark select option {
+            background-color: var(--theme-bg-card) !important;
+            color: var(--theme-text-primary) !important;
+        }
+
+        /* Ikona kalendarza dla kontrolek date / time */
+        html.dark input[type="date"]::-webkit-calendar-picker-indicator,
+        html.dark input[type="time"]::-webkit-calendar-picker-indicator,
+        html.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+            filter: invert(0.9) brightness(1.2);
+            cursor: pointer;
+        }
+
+        /* ==========================================================================
+           Akcenty Indigo / motyw bazowy i aktywne elementy
+           ========================================================================== */
+        html.dark .bg-indigo-50,
+        html.dark [class*="bg-indigo-50/"],
+        html.dark .bg-indigo-100,
+        html.dark [class*="bg-indigo-100/"] {
+            background-color: var(--theme-accent-soft) !important;
+        }
+        html.dark .text-indigo-500,
+        html.dark .text-indigo-600,
+        html.dark .text-indigo-700,
+        html.dark .text-indigo-800,
+        html.dark .text-indigo-900,
+        html.dark .text-indigo-950 {
+            color: var(--theme-accent-text) !important;
+        }
+        html.dark .hover\:text-indigo-800:hover,
+        html.dark .hover\:text-indigo-700:hover,
+        html.dark [class*="hover:text-indigo-"]:hover {
+            color: var(--theme-accent-hover) !important;
+        }
+        html.dark .border-indigo-100,
+        html.dark .border-indigo-200,
+        html.dark .border-indigo-300,
+        html.dark [class*="border-indigo-"] {
+            border-color: var(--theme-border) !important;
+        }
+
+        /* Uniwersalna czytelność boksów informacyjnych i wskazówek we wszystkich trybach ciemnych */
+        html.dark [class*="bg-indigo-50"],
+        html.dark [class*="bg-sky-50"] {
+            background-color: var(--theme-accent-soft) !important;
+            border-color: var(--theme-border) !important;
+        }
+        html.dark [class*="bg-indigo-50"] .font-bold,
+        html.dark [class*="bg-indigo-50"] .font-extrabold,
+        html.dark [class*="bg-indigo-50"] strong,
+        html.dark [class*="bg-sky-50"] .font-bold,
+        html.dark [class*="bg-sky-50"] .font-extrabold,
+        html.dark [class*="bg-sky-50"] strong {
+            color: var(--theme-text-primary) !important;
+        }
+        html.dark [class*="bg-indigo-50"] p,
+        html.dark [class*="bg-indigo-50"] .leading-relaxed,
+        html.dark [class*="bg-indigo-50"] .text-indigo-800,
+        html.dark [class*="bg-indigo-50"] .text-indigo-950,
+        html.dark [class*="bg-sky-50"] p,
+        html.dark [class*="bg-sky-50"] .leading-relaxed,
+        html.dark [class*="bg-sky-50"] .text-sky-800,
+        html.dark [class*="bg-sky-50"] .text-sky-900 {
+            color: var(--theme-text-secondary) !important;
+        }
+        html.dark [class*="bg-indigo-50"] em,
+        html.dark [class*="bg-sky-50"] em {
+            color: var(--theme-accent-text) !important;
+        }
+
+        /* Pigułki i etykiety statusowe w trybie ciemnym */
+        html.dark .bg-emerald-50, html.dark [class*="bg-emerald-50/"] { background-color: rgba(16, 185, 129, 0.15) !important; }
+        html.dark .bg-emerald-100, html.dark [class*="bg-emerald-100/"] { background-color: rgba(16, 185, 129, 0.22) !important; }
+        html.dark .text-emerald-700, html.dark .text-emerald-800, html.dark .text-emerald-900, html.dark .text-emerald-950 { color: #6ee7b7 !important; }
+        html.dark .border-emerald-200, html.dark .border-emerald-100, html.dark .border-emerald-300, html.dark [class*="border-emerald-"] { border-color: rgba(16, 185, 129, 0.35) !important; }
+        html.dark [class*="bg-emerald-50"] .font-bold,
+        html.dark [class*="bg-emerald-50"] .font-extrabold,
+        html.dark [class*="bg-emerald-50"] strong {
+            color: #ecfdf5 !important;
+        }
+
+        html.dark .bg-rose-50, html.dark [class*="bg-rose-50/"] { background-color: rgba(244, 63, 94, 0.15) !important; }
+        html.dark .bg-rose-100, html.dark [class*="bg-rose-100/"] { background-color: rgba(244, 63, 94, 0.22) !important; }
+        html.dark .text-rose-700, html.dark .text-rose-800, html.dark .text-rose-900, html.dark .text-rose-950 { color: #fda4af !important; }
+        html.dark .border-rose-200, html.dark .border-rose-100, html.dark .border-rose-300, html.dark [class*="border-rose-"] { border-color: rgba(244, 63, 94, 0.35) !important; }
+        html.dark [class*="bg-rose-50"] .font-bold,
+        html.dark [class*="bg-rose-50"] .font-extrabold,
+        html.dark [class*="bg-rose-50"] strong {
+            color: #ffe4e6 !important;
+        }
+
+        html.dark .bg-amber-50, html.dark [class*="bg-amber-50/"] { background-color: rgba(245, 158, 11, 0.15) !important; }
+        html.dark .bg-amber-100, html.dark [class*="bg-amber-100/"] { background-color: rgba(245, 158, 11, 0.22) !important; }
+        html.dark .text-amber-700, html.dark .text-amber-800, html.dark .text-amber-900, html.dark .text-amber-950 { color: #fcd34d !important; }
+        html.dark .border-amber-200, html.dark .border-amber-100, html.dark .border-amber-300, html.dark [class*="border-amber-"] { border-color: rgba(245, 158, 11, 0.35) !important; }
+        html.dark [class*="bg-amber-50"] .font-bold,
+        html.dark [class*="bg-amber-50"] .font-extrabold,
+        html.dark [class*="bg-amber-50"] strong {
+            color: #fef08a !important;
+        }
+        html.dark [class*="bg-amber-50"] p,
+        html.dark [class*="bg-amber-50"] .leading-relaxed {
+            color: #fde68a !important;
+        }
+
+        html.dark .bg-sky-50, html.dark [class*="bg-sky-50/"] { background-color: rgba(14, 165, 233, 0.15) !important; }
+        html.dark .bg-sky-100, html.dark [class*="bg-sky-100/"] { background-color: rgba(14, 165, 233, 0.22) !important; }
+        html.dark .text-sky-700, html.dark .text-sky-800, html.dark .text-sky-900, html.dark .text-sky-950 { color: #7dd3fc !important; }
+        html.dark .border-sky-200, html.dark .border-sky-100, html.dark .border-sky-300, html.dark [class*="border-sky-"] { border-color: rgba(14, 165, 233, 0.35) !important; }
+
+        html.dark .bg-blue-50, html.dark [class*="bg-blue-50/"] { background-color: rgba(59, 130, 246, 0.15) !important; }
+        html.dark .bg-blue-100, html.dark [class*="bg-blue-100/"] { background-color: rgba(59, 130, 246, 0.22) !important; }
+        html.dark .text-blue-700, html.dark .text-blue-800, html.dark .text-blue-900, html.dark .text-blue-950 { color: #93c5fd !important; }
+        html.dark .border-blue-200, html.dark .border-blue-100, html.dark .border-blue-300, html.dark [class*="border-blue-"] { border-color: rgba(59, 130, 246, 0.35) !important; }
+
+        html.dark .bg-purple-50, html.dark [class*="bg-purple-50/"] { background-color: rgba(168, 85, 247, 0.15) !important; }
+        html.dark .bg-purple-100, html.dark [class*="bg-purple-100/"] { background-color: rgba(168, 85, 247, 0.22) !important; }
+        html.dark .text-purple-700, html.dark .text-purple-800, html.dark .text-purple-900, html.dark .text-purple-950 { color: #d8b4fe !important; }
+        html.dark .border-purple-200, html.dark .border-purple-100, html.dark .border-purple-300, html.dark [class*="border-purple-"] { border-color: rgba(168, 85, 247, 0.35) !important; }
+
+        /* Tabele w trybie ciemnym */
+        html.dark thead { background-color: var(--theme-bg-subtle) !important; }
+        html.dark th { color: var(--theme-text-muted) !important; }
+        html.dark tbody tr:hover { background-color: var(--theme-bg-card-hover) !important; }
+
+        /* Tła okien modalnych */
+        html.dark .fixed.inset-0.bg-slate-900\/50,
+        html.dark .fixed.inset-0.bg-black\/50,
+        html.dark .fixed.inset-0.bg-slate-900\/60 {
+            background-color: rgba(0, 0, 0, 0.75) !important;
+        }
+
+        /* Pasek skrótów mobilnych */
+        html.dark .md\:hidden.bg-slate-50 {
+            background-color: var(--theme-bg-card) !important;
+            border-color: var(--theme-border) !important;
+        }
+        html.dark .md\:hidden a.bg-white {
+            background-color: var(--theme-bg-subtle) !important;
+            border-color: var(--theme-border) !important;
+            color: var(--theme-text-secondary) !important;
+        }
+
+        /* Paski przewijania */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb {
+            background-color: var(--theme-scrollbar-thumb);
+            border-radius: 9999px;
+        }
+
+        /* Płynne otwieranie mobilnego panelu drawer */
+        #mobile-drawer {
+            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
     </style>
     
 <style>
@@ -52,72 +487,113 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
 </head>
-<body class="h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white" hx-headers='{"X-CSRFToken": "cf3dfcfbdf81e680dc9f49d86448a38922c2b30d825d48b9c61c83332012f0ef"}'>
+<body class="h-full flex flex-col antialiased selection:bg-indigo-500 selection:text-white" hx-headers='{"X-CSRFToken": "static_demo_csrf_token_librus2mail"}'>
 
     <!-- Pasek nawigacyjny -->
     <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <!-- Lewa strona: Logo + Menu -->
-                <div class="flex items-center gap-8">
-                    <a href="web_dashboard.html" class="flex items-center gap-3 group">
-                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-sky-500 flex items-center justify-center text-white text-xl shadow-md shadow-indigo-100 group-hover:scale-105 transition-transform">
+        <div class="max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16 gap-2">
+                <!-- Lewa strona: Logo + Nawigacja Desktop -->
+                <div class="flex items-center gap-2 xl:gap-3 2xl:gap-6 flex-shrink-0">
+                    <a href="web_dashboard.html" class="flex items-center gap-2.5 sm:gap-3 group flex-shrink-0">
+                        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-sky-500 flex items-center justify-center text-white text-lg sm:text-xl shadow-md shadow-indigo-100 group-hover:scale-105 transition-transform flex-shrink-0">
                             🏫
                         </div>
-                        <div>
-                            <span class="font-extrabold text-lg text-slate-900 tracking-tight flex items-center gap-1.5">
+                        <div class="min-w-0">
+                            <span class="font-extrabold text-base sm:text-lg text-slate-900 tracking-tight flex items-center gap-1">
                                 Librus<span class="text-indigo-600">2mail</span>
                             </span>
-                            <span class="block text-[10px] uppercase font-bold text-slate-400 tracking-wider">Web Dashboard</span>
+                            <span class="hidden sm:block text-[9px] sm:text-[10px] uppercase font-bold text-slate-400 tracking-wider truncate">Web Dashboard</span>
                         </div>
                     </a>
 
-                    <!-- Nawigacja Desktop -->
+                    <!-- Nawigacja Desktop (widoczna na dużych ekranach od xl >= 1280px) -->
                     
-                    <nav class="hidden md:flex items-center gap-1">
+                    <nav class="hidden xl:flex items-center gap-1 2xl:gap-1.5 flex-shrink-0">
                         <a href="web_dashboard.html"
-                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
                             📊 Pulpit
                         </a>
                         <a href="web_plan.html"
-                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
-                            📅 Plan lekcji
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📅 Plan<span class="hidden 2xl:inline"> lekcji</span>
                         </a>
                         <a href="web_oceny.html"
-                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
                             📝 Oceny
                         </a>
                         <a href="web_terminarz.html"
-                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
                             🔔 Terminarz
                         </a>
                         <a href="web_wiadomosci.html"
-                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
                             ✉️ Wiadomości
                         </a>
                         <a href="web_raporty_podsumowanie.html"
-                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors bg-indigo-50 text-indigo-700">
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors bg-indigo-50 text-indigo-700">
                             📈 Raporty
                         </a>
-                        <a href="web_akcje.html"
-                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
-                            ⚡ Akcje CLI
-                        </a>
                         <a href="web_ustawienia.html"
-                           class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
                             ⚙️ Ustawienia
                         </a>
                     </nav>
                     
                 </div>
 
-                <!-- Prawa strona: Przełącznik ucznia + Auth -->
-                <div class="flex items-center gap-3">
+                <!-- Prawa strona: Przełącznik motywu + Uczeń + Rok + Auth + Hamburger -->
+                <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                    <!-- Selektor motywu / skórki (kompaktowy przycisk 36x36px) -->
+                    <div class="relative inline-block text-left" id="theme-menu-container">
+                        <button type="button"
+                                id="theme-menu-button"
+                                onclick="toggleThemeDropdown()"
+                                class="flex items-center justify-center gap-1 w-9 h-9 sm:w-auto sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-bold border border-slate-200 hover:border-slate-300 transition-colors cursor-pointer shadow-2xs"
+                                style="background-color: var(--theme-bg-card); color: var(--theme-text-primary);"
+                                title="Wybierz motyw panelu"
+                                aria-expanded="false"
+                                aria-haspopup="true">
+                            <span id="theme-active-icon" class="text-sm">☀️</span>
+                            <span class="text-[9px] opacity-60">▾</span>
+                        </button>
+                        <div id="theme-dropdown"
+                             class="hidden absolute right-0 mt-2 w-48 rounded-xl shadow-xl border border-slate-200 z-50 py-1.5 focus:outline-none"
+                             style="background-color: var(--theme-bg-card);"
+                             role="menu">
+                            <div class="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 mb-1">
+                                Motyw panelu
+                            </div>
+                            <button type="button" onclick="setTheme('light')" class="w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer" style="color: var(--theme-text-primary);">
+                                <span class="flex items-center gap-2"><span>☀️</span> Jasny (Domyślny)</span>
+                                <span class="theme-check text-indigo-600 hidden font-bold" data-theme-check="light">✓</span>
+                            </button>
+                            <button type="button" onclick="setTheme('dark')" class="w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer" style="color: var(--theme-text-primary);">
+                                <span class="flex items-center gap-2"><span>🌙</span> Ciemny (Grafit)</span>
+                                <span class="theme-check text-indigo-600 hidden font-bold" data-theme-check="dark">✓</span>
+                            </button>
+                            <button type="button" onclick="setTheme('midnight')" class="w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer" style="color: var(--theme-text-primary);">
+                                <span class="flex items-center gap-2"><span>🌌</span> Północ (OLED)</span>
+                                <span class="theme-check text-indigo-600 hidden font-bold" data-theme-check="midnight">✓</span>
+                            </button>
+                            <button type="button" onclick="setTheme('forest')" class="w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer" style="color: var(--theme-text-primary);">
+                                <span class="flex items-center gap-2"><span>🌲</span> Szmaragd (Leśny)</span>
+                                <span class="theme-check text-indigo-600 hidden font-bold" data-theme-check="forest">✓</span>
+                            </button>
+                            <div class="border-t border-slate-100 my-1"></div>
+                            <button type="button" onclick="setTheme('auto')" class="w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer" style="color: var(--theme-text-primary);">
+                                <span class="flex items-center gap-2"><span>💻</span> Auto (Systemowy)</span>
+                                <span class="theme-check text-indigo-600 hidden font-bold" data-theme-check="auto">✓</span>
+                            </button>
+                        </div>
+                    </div>
+
                     
+                        <!-- Selektor ucznia (Desktop: od sm) -->
                         
-                        <div class="relative inline-block text-left">
+                        <div class="hidden sm:inline-block relative text-left">
                             <select onchange="window.location.href='/student/' + this.value + '?next=' + encodeURIComponent(window.location.pathname + window.location.search)"
-                                    class="bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold rounded-lg px-3 py-2 pr-8 focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
+                                    class="bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold rounded-xl px-2.5 py-1.5 pr-6 max-w-[125px] xl:max-w-[145px] 2xl:max-w-[190px] truncate focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
                                 
                                 <option value="8912345" >
                                     👤 Jan Kowalski (klasa 5A) (8912345)
@@ -135,34 +611,219 @@
                         </div>
                         
 
+                        <!-- Selektor roku szkolnego (Desktop: od sm) -->
+                        
+
+                        <!-- Wskaźnik ucznia na małych ekranach mobilnych (< sm) otwierający Drawer -->
+                        
+                        <button type="button"
+                                onclick="openMobileMenu()"
+                                class="sm:hidden flex items-center gap-1 px-2 py-1 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 transition-colors"
+                                title="Profil: Jan Kowalski (8979296)">
+                            <span>👤</span>
+                            <span class="max-w-[70px] truncate text-[11px]">Jan</span>
+                            
+                        </button>
+                        
+
+                        <!-- Wyloguj -->
                         
                         <a href="web_login.html"
-                           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors"
+                           class="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors"
                            title="Wyloguj rodzica">
-                            🔒 Wyloguj
+                            <span>🔒</span>
+                            <span class="hidden 2xl:inline">Wyloguj</span>
                         </a>
                         
                     
 
                     
+
+                    <!-- Przycisk Mobile Menu (Hamburger ☰ - widoczny poniżej xl) -->
+                    
+                    <button type="button"
+                            id="mobile-menu-toggle-btn"
+                            onclick="toggleMobileMenu()"
+                            class="xl:hidden flex items-center justify-center w-9 h-9 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shadow-2xs"
+                            style="background-color: var(--theme-bg-card); color: var(--theme-text-primary);"
+                            aria-label="Otwórz menu nawigacji">
+                        <span class="text-lg leading-none">☰</span>
+                    </button>
+                    
                 </div>
             </div>
         </div>
 
-        <!-- Mobilny pasek skrótów -->
+        <!-- Pasek nawigacyjny na średnich i małych ekranach (< xl) -->
         
-        <div class="md:hidden border-t border-slate-100 bg-slate-50 px-2 py-1.5 overflow-x-auto flex gap-1 scrollbar-none">
-            <a href="web_dashboard.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📊 Pulpit</a>
-            <a href="web_plan.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📅 Plan</a>
-            <a href="web_oceny.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📝 Oceny</a>
-            <a href="web_terminarz.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">🔔 Terminarz</a>
-            <a href="web_wiadomosci.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">✉️ Wiadomości</a>
-            <a href="web_raporty_podsumowanie.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap bg-indigo-600 text-white">📈 Raporty</a>
-            <a href="web_akcje.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">⚡ Akcje</a>
-            <a href="web_ustawienia.html" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">⚙️ Ustawienia</a>
+        <div class="xl:hidden border-t border-slate-100 bg-slate-50 px-3 py-1.5 overflow-x-auto flex items-center gap-1.5 scrollbar-none">
+            <a href="web_dashboard.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📊 Pulpit</a>
+            <a href="web_plan.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📅 Plan lekcji</a>
+            <a href="web_oceny.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📝 Oceny</a>
+            <a href="web_terminarz.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">🔔 Terminarz</a>
+            <a href="web_wiadomosci.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">✉️ Wiadomości</a>
+            <a href="web_raporty_podsumowanie.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap bg-indigo-600 text-white">📈 Raporty</a>
+            <a href="web_ustawienia.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">⚙️ Ustawienia</a>
         </div>
         
     </header>
+
+    <!-- Mobilny Drawer (Menu boczne z wysuwanym panelem) -->
+    
+    <div id="mobile-drawer-backdrop"
+         onclick="closeMobileMenu()"
+         class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 transition-opacity xl:hidden">
+    </div>
+
+    <aside id="mobile-drawer"
+           class="fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] z-50 shadow-2xl flex flex-col transform translate-x-full xl:hidden border-l border-slate-200"
+           style="background-color: var(--theme-bg-card); color: var(--theme-text-primary);"
+           aria-label="Menu mobilne">
+        <!-- Nagłówek Drawer -->
+        <div class="p-4 border-b border-slate-100 flex items-center justify-between" style="border-color: var(--theme-border);">
+            <div class="flex items-center gap-2">
+                <span class="text-xl">🏫</span>
+                <span class="font-extrabold text-sm tracking-tight">Menu nawigacji</span>
+            </div>
+            <button type="button"
+                    onclick="closeMobileMenu()"
+                    class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                    style="color: var(--theme-text-muted);"
+                    aria-label="Zamknij menu">
+                ✕
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-4 space-y-5">
+            <!-- Sekcja 1: Profil ucznia -->
+            
+            <div>
+                <label class="block text-[11px] font-extrabold uppercase tracking-wider mb-2" style="color: var(--theme-text-muted);">
+                    👤 Wybierz profil ucznia:
+                </label>
+                <div class="space-y-1.5">
+                    
+                    <a href="/student/8912345?next=/raporty/uczen"
+                       class="flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold transition-all
+                       
+                       border-slate-200 hover:bg-slate-50 text-slate-700
+                       ">
+                        <span class="flex items-center gap-2">
+                            <span>👤</span>
+                            <span>Jan Kowalski (klasa 5A) (8912345)</span>
+                        </span>
+                        
+                    </a>
+                    
+                    <a href="/student/8976543?next=/raporty/uczen"
+                       class="flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold transition-all
+                       
+                       border-slate-200 hover:bg-slate-50 text-slate-700
+                       ">
+                        <span class="flex items-center gap-2">
+                            <span>👤</span>
+                            <span>Anna Kowalska (Liceum 2A) (8976543)</span>
+                        </span>
+                        
+                    </a>
+                    
+                    <a href="/student/8979296?next=/raporty/uczen"
+                       class="flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold transition-all
+                       
+                       border-indigo-500 bg-indigo-50/70 text-indigo-700
+                       ">
+                        <span class="flex items-center gap-2">
+                            <span>👤</span>
+                            <span>Jan Kowalski (8979296)</span>
+                        </span>
+                        
+                        <span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-indigo-600 text-white">Aktywny</span>
+                        
+                    </a>
+                    
+                </div>
+            </div>
+            
+
+            <!-- Sekcja 2: Rok szkolny (bieżący vs archiwa) -->
+            
+
+            <!-- Sekcja 3: Nawigacja po modułach -->
+            <div>
+                <label class="block text-[11px] font-extrabold uppercase tracking-wider mb-2" style="color: var(--theme-text-muted);">
+                    🧭 Moduły:
+                </label>
+                <div class="space-y-1">
+                    <a href="web_dashboard.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
+                        <span class="text-base">📊</span> <span>Pulpit główny</span>
+                    </a>
+                    <a href="web_plan.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
+                        <span class="text-base">📅</span> <span>Plan lekcji</span>
+                    </a>
+                    <a href="web_oceny.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
+                        <span class="text-base">📝</span> <span>Oceny i średnie</span>
+                    </a>
+                    <a href="web_terminarz.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
+                        <span class="text-base">🔔</span> <span>Terminarz i sprawdziany</span>
+                    </a>
+                    <a href="web_wiadomosci.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
+                        <span class="text-base">✉️</span> <span>Wiadomości i ogłoszenia</span>
+                    </a>
+                    <a href="web_raporty_podsumowanie.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors bg-indigo-600 text-white">
+                        <span class="text-base">📈</span> <span>Raporty i analizy</span>
+                    </a>
+                    <a href="web_ustawienia.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
+                        <span class="text-base">⚙️</span> <span>Ustawienia systemu</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Sekcja 4: Motyw w Drawerze -->
+            <div>
+                <label class="block text-[11px] font-extrabold uppercase tracking-wider mb-2" style="color: var(--theme-text-muted);">
+                    🎨 Motyw wyglądu:
+                </label>
+                <div class="grid grid-cols-2 gap-1.5">
+                    <button type="button" onclick="setTheme('light')" class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 text-xs font-bold cursor-pointer hover:border-indigo-400">
+                        <span>☀️</span> Jasny
+                    </button>
+                    <button type="button" onclick="setTheme('dark')" class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 text-xs font-bold cursor-pointer hover:border-indigo-400">
+                        <span>🌙</span> Grafit
+                    </button>
+                    <button type="button" onclick="setTheme('midnight')" class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 text-xs font-bold cursor-pointer hover:border-indigo-400">
+                        <span>🌌</span> OLED
+                    </button>
+                    <button type="button" onclick="setTheme('forest')" class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 text-xs font-bold cursor-pointer hover:border-indigo-400">
+                        <span>🌲</span> Szmaragd
+                    </button>
+                    <button type="button" onclick="setTheme('auto')" class="col-span-2 flex items-center justify-center gap-2 p-2 rounded-lg border border-slate-200 text-xs font-bold cursor-pointer hover:border-indigo-400">
+                        <span>💻</span> Auto (Systemowy)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sekcja 5: Wyloguj / Tryb otwarty -->
+            <div class="pt-2 border-t border-slate-100" style="border-color: var(--theme-border);">
+                
+                <a href="web_login.html"
+                   class="flex items-center justify-center gap-2 w-full p-2.5 rounded-xl text-xs font-bold text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 transition">
+                    🔒 Wyloguj rodzica
+                </a>
+                
+            </div>
+        </div>
+    </aside>
+    
+
+    <!-- Baner trybu archiwalnego (Read-Only) -->
+    
 
     <!-- Komunikaty Flash -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 w-full">
@@ -209,29 +870,35 @@
 
 <!-- Pasek podzakładek (6 modułów analitycznych) -->
 <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mt-6 pb-2 no-print">
-    <div class="flex items-center gap-1.5 p-1 bg-slate-200/70 rounded-xl overflow-x-auto scrollbar-none w-full lg:w-auto">
+    <div class="flex items-center gap-1.5 p-1 bg-slate-200/70 dark:bg-slate-800/90 rounded-xl overflow-x-auto scrollbar-none w-full lg:w-auto border border-transparent dark:border-slate-700/60">
         <a href="web_raporty_podsumowanie.html"
-           class="px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-slate-600 hover:text-slate-900 hover:bg-white/50">
+           
+           class="subtab-btn reports-tab-btn px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-700/50">
             📬 Podsumowanie dzienne
         </a>
         <a href="web_raporty_postepy.html"
-           class="px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-slate-600 hover:text-slate-900 hover:bg-white/50">
+           
+           class="subtab-btn reports-tab-btn px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-700/50">
             📈 Postępy
         </a>
         <a href="web_raporty_uczen_teens.html"
-           class="px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap bg-white text-indigo-700 shadow-sm">
+           data-active=&#34;true&#34;
+           class="subtab-btn reports-tab-btn px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap subtab-btn-active active bg-white text-indigo-700 shadow-sm border border-transparent">
             🌟 Raport ucznia
         </a>
         <a href="web_raporty_szanse.html"
-           class="px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-slate-600 hover:text-slate-900 hover:bg-white/50">
+           
+           class="subtab-btn reports-tab-btn px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-700/50">
             🎯 Matryca Szans i Ryzyk
         </a>
         <a href="web_raporty_profil.html"
-           class="px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-slate-600 hover:text-slate-900 hover:bg-white/50">
+           
+           class="subtab-btn reports-tab-btn px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-700/50">
             🧭 Profil i Balans
         </a>
         <a href="web_raporty_stabilnosc.html"
-           class="px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-slate-600 hover:text-slate-900 hover:bg-white/50">
+           
+           class="subtab-btn reports-tab-btn px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-700/50">
             📊 Porównanie i Stabilność
         </a>
     </div>
@@ -240,13 +907,13 @@
     
     <div class="flex flex-wrap items-center gap-2">
         <!-- Selektor okresu (3, 7, 14, 30 dni) -->
-        <div class="flex items-center gap-1 bg-slate-100 border border-slate-200 p-1 rounded-xl shadow-xs">
-            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-2 flex items-center gap-1">
+        <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/60 p-1 rounded-xl shadow-xs">
+            <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider px-2 flex items-center gap-1">
                 <span>⏱️</span> Okres:
             </span>
             
             <a href="web_raporty_uczen_teens.html"
-               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-slate-600 hover:text-slate-900 hover:bg-white"
+               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700/50"
                title="Analiza z ostatnich 3 dni">
                 3 dni
             </a>
@@ -258,13 +925,13 @@
             </a>
             
             <a href="web_raporty_uczen_teens.html"
-               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-slate-600 hover:text-slate-900 hover:bg-white"
+               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700/50"
                title="Analiza z ostatnich 14 dni">
                 14 dni
             </a>
             
             <a href="web_raporty_uczen_teens.html"
-               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-slate-600 hover:text-slate-900 hover:bg-white"
+               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700/50"
                title="Analiza z ostatnich 30 dni">
                 30 dni
             </a>
@@ -273,10 +940,10 @@
 
         <!-- Przełącznik stylów raportu ucznia (Kids / Teens / Youth) -->
         
-        <div class="flex items-center gap-1 bg-indigo-50/80 border border-indigo-200/80 p-1 rounded-xl shadow-xs">
-            <span class="text-[11px] font-bold text-indigo-900 uppercase tracking-wider px-2">Styl:</span>
+        <div class="flex items-center gap-1 bg-indigo-50/80 dark:bg-slate-800/90 border border-indigo-200/80 dark:border-slate-700/60 p-1 rounded-xl shadow-xs">
+            <span class="text-[11px] font-bold text-indigo-900 dark:text-indigo-300 uppercase tracking-wider px-2">Styl:</span>
             <a href="web_raporty_uczen_kids.html"
-               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-indigo-700 hover:bg-indigo-100"
+               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-indigo-700 dark:text-slate-400 hover:bg-indigo-100 dark:hover:bg-slate-700/50 dark:hover:text-white"
                title="Wariant dla klas 4–6 szkoły podstawowej (Karta Mocy)">
                 🎈 Kids
             </a>
@@ -286,7 +953,7 @@
                 🚀 Teens
             </a>
             <a href="web_raporty_uczen_youth.html"
-               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-indigo-700 hover:bg-indigo-100"
+               class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-indigo-700 dark:text-slate-400 hover:bg-indigo-100 dark:hover:bg-slate-700/50 dark:hover:text-white"
                title="Wariant dla liceum i technikum (Student Performance Dashboard)">
                 🎓 Youth
             </a>
@@ -324,7 +991,7 @@
                 <td align="right" valign="middle" style="text-align: right;">
                     <div style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 8px 12px; display: inline-block; text-align: center;">
                         <div style="font-size: 10px; color: #38bdf8; text-transform: uppercase; font-weight: 700;">Średnia ogólna</div>
-                        <div style="font-size: 18px; font-weight: 800; color: #ffffff;">4.24</div>
+                        <div style="font-size: 18px; font-weight: 800; color: #ffffff;">4.25</div>
                     </div>
                 </td>
             </tr>
@@ -353,15 +1020,15 @@
                         
                         <td align="right" valign="middle" style="text-align: right; white-space: nowrap;">
                             <span style="font-size: 13px; font-weight: 800; color: #16a34a;">
-                                +0.68 pkt
+                                +0.69 pkt
                             </span>
-                            <span style="font-size: 11px; color: #64748b; margin-left: 4px;">(4.71 vs 4.03)</span>
+                            <span style="font-size: 11px; color: #64748b; margin-left: 4px;">(4.72 vs 4.03)</span>
                         </td>
                         
                     </tr>
                 </table>
                 <div style="font-size: 12px; color: #334155; margin-top: 6px; line-height: 1.45;">
-                    Pozytywne momentum! Średnia z okresu wzrosła o +0.68 pkt (z 4.03 do 4.71). Liczba wysokich ocen: 14. Trzymaj to tempo! 📈
+                    Pozytywne momentum! Średnia z okresu wzrosła o +0.69 pkt (z 4.03 do 4.72). Liczba wysokich ocen: 15. Trzymaj to tempo! 📈
                 </div>
             </div>
         </div>
@@ -395,7 +1062,7 @@
                 </div>
 
                 <div style="font-size: 12px; color: #475569; line-height: 1.4;">
-                    Twoja obecna średnia to 4.24. Do paska brakuje 0.51 pkt, a Twój najbliższy osiągalny cel to Średnia 4.30 (baza pod pasek) (brakuje tylko 0.06 pkt). Krok po kroku do przodu!
+                    Twoja obecna średnia to 4.25. Do paska brakuje 0.50 pkt, a Twój najbliższy osiągalny cel to Średnia 4.30 (baza pod pasek) (brakuje tylko 0.05 pkt). Krok po kroku do przodu!
                 </div>
 
                 
@@ -412,7 +1079,7 @@
                         </div>
                         
                         <div style="margin-bottom: 2px; color: #334155;">
-                            • <strong>Język polski</strong>: śr. 4.33 → cel: <strong>5.0</strong> (brakuje 0.42 pkt)
+                            • <strong>Godzina wychowawcza</strong>: śr. 4.5 → cel: <strong>5.0</strong> (brakuje 0.25 pkt)
                         </div>
                         
                     </div>
@@ -483,6 +1150,22 @@
         
 
         <!-- Szybkie Punkty (Quick Wins) -->
+        
+        <div style="margin-bottom: 22px;">
+            <div style="font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #16a34a; margin-bottom: 10px;">
+                💡 Szybkie Punkty do Zgarnięcia (Mały wysiłek, duży efekt)
+            </div>
+            
+            <div style="background: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 6px; padding: 12px 14px; margin-bottom: 8px;">
+                <div style="font-weight: 700; color: #15803d; font-size: 13px;">
+                    Godzina wychowawcza • Aktualna średnia: <strong>4.5</strong>
+                </div>
+                <div style="font-size: 12px; color: #166534; margin-top: 3px;">
+                    🎯 Cel na wyższy stopień (5): Brakuje Ci tylko odrobiny do oceny 5! Jedna 5 z odpowiedzi / sprawdzianu (waga 2) podniesie Twoją średnią na 4.75.
+                </div>
+            </div>
+            
+        </div>
         
 
         <!-- Strefa Uwagi -->
@@ -631,7 +1314,7 @@
         <div>
             <div style="font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #475569; margin-bottom: 10px;">
                 
-                📊 Oceny zdobyte w ostatnim okresie (18)
+                📊 Oceny zdobyte w ostatnim okresie (19)
                 
             </div>
             
@@ -994,6 +1677,28 @@
                     </tr>
                     
                     <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 10px; font-weight: 600; color: #0f172a; vertical-align: middle; white-space: nowrap;">Godzina wychowawcza</td>
+                        <td style="padding: 10px 8px; text-align: center; vertical-align: middle; white-space: nowrap;">
+                            <span style="display: inline-block; min-width: 20px; padding: 2px 6px; border-radius: 4px; font-weight: 800; font-size: 12px; color: #ffffff; background: #16a34a;">
+                                5
+                            </span>
+                        </td>
+                        <td style="padding: 10px 10px; color: #334155; vertical-align: middle; white-space: nowrap;">Zaangażowanie</td>
+                        <td style="padding: 10px 10px; font-size: 12px; vertical-align: middle; min-width: 150px;">
+                            
+                            <div style="color: #0369a1; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 4px; padding: 3px 8px; display: inline-block; line-height: 1.35;">
+                                💬 <strong>Komentarz:</strong> Wzorowa postawa i pomoc w sprawach organizacyjnych klasy
+                            </div>
+                            
+                            
+                            <div style="font-size: 11px; color: #94a3b8; margin-top: 3px;">👤 Renata Matyk</div>
+                            
+                        </td>
+                        <td style="padding: 10px 8px; color: #64748b; font-size: 11px; text-align: center; vertical-align: middle; white-space: nowrap;">Waga standardowa</td>
+                        <td style="padding: 10px 10px; text-align: right; color: #94a3b8; vertical-align: middle; white-space: nowrap;">14.09.2026</td>
+                    </tr>
+                    
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
                         <td style="padding: 10px 10px; font-weight: 600; color: #0f172a; vertical-align: middle; white-space: nowrap;">Matematyka</td>
                         <td style="padding: 10px 8px; text-align: center; vertical-align: middle; white-space: nowrap;">
                             <span style="display: inline-block; min-width: 20px; padding: 2px 6px; border-radius: 4px; font-weight: 800; font-size: 12px; color: #ffffff; background: #d97706;">
@@ -1039,7 +1744,7 @@
     <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500">
         <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div class="flex items-center gap-2 font-medium">
-                <span>🏫 Librus2mail v2.6.0</span>
+                <span>🏫 Librus2mail v2.7.0</span>
                 <span>•</span>
                 <span>Prywatny Dashboard Rodzica</span>
             </div>
@@ -1048,6 +1753,142 @@
             </div>
         </div>
     </footer>
+
+    <!-- Theme Manager Script -->
+    <script>
+        const THEME_DATA = {
+            light: { name: 'Jasny', icon: '☀️' },
+            dark: { name: 'Ciemny', icon: '🌙' },
+            midnight: { name: 'Północ', icon: '🌌' },
+            forest: { name: 'Szmaragd', icon: '🌲' },
+            auto: { name: 'Auto', icon: '💻' }
+        };
+
+        function getEffectiveTheme(theme) {
+            if (theme === 'auto') {
+                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            return theme;
+        }
+
+        function applyTheme(theme) {
+            const effective = getEffectiveTheme(theme);
+            document.documentElement.setAttribute('data-theme', effective);
+            if (effective !== 'light') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+
+            // Aktualizacja ikony i nazwy w pasku nawigacyjnym
+            const activeIcon = document.getElementById('theme-active-icon');
+            const activeName = document.getElementById('theme-active-name');
+            if (activeIcon) activeIcon.textContent = THEME_DATA[theme]?.icon || '☀️';
+            if (activeName) activeName.textContent = THEME_DATA[theme]?.name || 'Jasny';
+
+            // Zaznaczenie w menu dropdown
+            document.querySelectorAll('[data-theme-check]').forEach(el => {
+                const isCurrent = el.getAttribute('data-theme-check') === theme;
+                el.classList.toggle('hidden', !isCurrent);
+            });
+
+            // Aktualizacja kafelków w zakładce Ustawienia (jeśli obecne)
+            document.querySelectorAll('.theme-card-selector').forEach(card => {
+                const cTheme = card.getAttribute('data-theme-card');
+                const isSelected = cTheme === theme;
+                card.classList.toggle('ring-2', isSelected);
+                card.classList.toggle('ring-indigo-500', isSelected);
+                card.classList.toggle('border-indigo-500', isSelected);
+                const checkEl = card.querySelector('.theme-card-selected-badge');
+                if (checkEl) checkEl.classList.toggle('hidden', !isSelected);
+            });
+
+            // Emitowanie zdarzenia dla innych komponentów (np. wykresów Chart.js)
+            window.dispatchEvent(new CustomEvent('themechange', { detail: { theme, effective } }));
+        }
+
+        function setTheme(theme) {
+            try {
+                localStorage.setItem('librus2mail_theme', theme);
+            } catch (e) {}
+            applyTheme(theme);
+            closeThemeDropdown();
+        }
+
+        function toggleThemeDropdown() {
+            const dropdown = document.getElementById('theme-dropdown');
+            if (!dropdown) return;
+            dropdown.classList.toggle('hidden');
+        }
+
+        function closeThemeDropdown() {
+            const dropdown = document.getElementById('theme-dropdown');
+            if (dropdown) dropdown.classList.add('hidden');
+        }
+
+        // Zamknięcie menu po kliknięciu poza obszar
+        document.addEventListener('click', function(e) {
+            const container = document.getElementById('theme-menu-container');
+            if (container && !container.contains(e.target)) {
+                closeThemeDropdown();
+            }
+        });
+
+        // Reakcja na zmianę preferencji systemowych
+        try {
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+                if ((localStorage.getItem('librus2mail_theme') || 'auto') === 'auto') {
+                    applyTheme('auto');
+                }
+            });
+        } catch (e) {}
+
+        // Inicjalizacja stanu kontrolek po załadowaniu DOM
+        document.addEventListener('DOMContentLoaded', function() {
+            const saved = localStorage.getItem('librus2mail_theme') || 'auto';
+            applyTheme(saved);
+        });
+
+        // ==========================================================================
+        // Mobile Drawer Controller
+        // ==========================================================================
+        function openMobileMenu() {
+            const backdrop = document.getElementById('mobile-drawer-backdrop');
+            const drawer = document.getElementById('mobile-drawer');
+            if (backdrop && drawer) {
+                backdrop.classList.remove('hidden');
+                drawer.classList.remove('translate-x-full');
+                document.body.classList.add('overflow-hidden');
+            }
+        }
+
+        function closeMobileMenu() {
+            const backdrop = document.getElementById('mobile-drawer-backdrop');
+            const drawer = document.getElementById('mobile-drawer');
+            if (backdrop && drawer) {
+                backdrop.classList.add('hidden');
+                drawer.classList.add('translate-x-full');
+                document.body.classList.remove('overflow-hidden');
+            }
+        }
+
+        function toggleMobileMenu() {
+            const drawer = document.getElementById('mobile-drawer');
+            if (drawer && drawer.classList.contains('translate-x-full')) {
+                openMobileMenu();
+            } else {
+                closeMobileMenu();
+            }
+        }
+
+        // Klawisz Escape zamyka otwarte menu i panel mobilny
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeMobileMenu();
+                closeThemeDropdown();
+            }
+        });
+    </script>
 
     
 </body>

@@ -22,7 +22,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/librus2mail_showcase.gif" alt="Prezentacja możliwości Librus2mail" width="100%" style="border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,0.25);">
+  <img src="https://raw.githubusercontent.com/cackoarek/librus2mail/gh-pages/assets/librus2mail_showcase.webp" alt="Prezentacja możliwości Librus2mail" width="100%" style="border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,0.25);">
 </p>
 
 [🚀 Szybki start](#instalacja) • [⚙️ Konfiguracja](#konfiguracja) • [🌐 Panel WWW & Kreator](#moduł-5-interaktywny-panel-rodzica-i-kreator-konfiguracji-librus_webpy) • [🐳 Docker](#konteneryzacja-docker-i-docker-compose) • [📊 Raport postępów](#moduł-raportu-postępów-dziecka-librus_progress_reportpy) • [❓ FAQ](#najczęstsze-pytania-i-rozwiązywanie-problemów-faq)

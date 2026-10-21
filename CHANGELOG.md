@@ -9,6 +9,10 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ## [Unreleased]
 
+---
+
+## [2.7.0] – 2026-10-21
+
 ### Dodane
 - **Śledzenie lekcji w czasie rzeczywistym w Planie lekcji i na Pulpicie (Live Lesson Tracker)**:
   - Automatyczne wykrywanie lekcji trwającej w danej chwili (`🟢 TRWA TERAZ`) z pulsującym wskaźnikiem, licznikiem czasu do dzwonka (`⏱️ jeszcze X min`) oraz wyeksponowanym numerem sali i nazwiskiem nauczyciela.
@@ -56,7 +60,6 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 - **Kalkulacja średniej ze świadectwa dla przedmiotów bez ocen**: Zabezpieczenie funkcji `calculate_subject_averages` oraz `calculate_certificate_summary` przed traktowaniem braku ocen jako stopnia 0 przy wyliczaniu średniej końcowej — przedmioty bez ocen otrzymują poprawny status „brak ocen” (`unrated_count`) i nie zaniżają średniej ze świadectwa.
 
 ---
-
 ## [2.6.0] – 2026-10-18
 
 ### Dodane
@@ -330,7 +333,8 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ---
 
-[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v2.6.0...HEAD
+[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v2.7.0...HEAD
+[2.7.0]: https://github.com/cackoarek/librus2mail/compare/v2.6.0...v2.7.0
 [2.6.0]: https://github.com/cackoarek/librus2mail/compare/v2.5.0...v2.6.0
 [2.5.0]: https://github.com/cackoarek/librus2mail/compare/v2.4.0...v2.5.0
 [2.4.0]: https://github.com/cackoarek/librus2mail/compare/v2.3.0...v2.4.0

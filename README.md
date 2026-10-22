@@ -122,6 +122,9 @@ Możesz skonfigurować aplikację na dwa sposoby:
   ```
 
 ### Krok 3: Uruchomienie monitoringu
+
+Jeśli używasz nakładki web z kroku 2, to monitoring włączy się automatycznie po skonfigurowaniu. Jeśli nie (bo np. nie chcesz używać interfejsu www, a tylko dostawać maile z raportami), możesz uruchomić monitoring w tradycyjny sposób:
+
 ```bash
 # Uruchomienie ciągłego demona monitorującego:
 python librus_collect_and_notify.py
@@ -189,4 +192,4 @@ Projekt jest udostępniony na licencji **[MIT](LICENSE)**.
 
 Projekt powstał w oparciu o analizę mechanizmu komunikacji z API Librusa zawartą w projekcie [Mati365/librus-api](https://github.com/Mati365/librus-api/).
 
-*Uwaga: Librus2mail jest projektem niezależnym i nieoficjalnym. Nie jest w żaden sposób powiązany z firmą Librus Sp. z o.o. sp. k.*
+> **Nota prawna:** Librus2mail jest niezależnym, niekomercyjnym projektem edukacyjnym o otwartym kodzie źródłowym, niepowiązanym, nienadzorowanym ani nieautoryzowanym przez spółkę Librus Sp. z o.o. Znak towarowy „Librus” został użyty wyłącznie w celach informacyjnych w celu wskazania kompatybilności i interoperacyjności oprogramowania.

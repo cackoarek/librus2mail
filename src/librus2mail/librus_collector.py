@@ -176,22 +176,29 @@ class LibrusCollector:
             new_msgs = librus.get_not_known_messages_and_mark_as_known() if user_config.get('read_messages', True) else []
             new_notifs = librus.get_not_known_notifications_and_mark_as_known()
             new_grades = librus.get_not_known_grades_and_mark_as_known() if user_config.get('read_grades', True) else []
+            new_attendance_raw = (
+                librus.get_not_known_attendance_and_mark_as_known()
+                if (user_config.get('read_attendance', True) and hasattr(librus, 'get_not_known_attendance_and_mark_as_known'))
+                else []
+            )
+            new_attendance = new_attendance_raw if isinstance(new_attendance_raw, (list, tuple)) else []
 
             if hasattr(self.storage, 'clear_last_error'):
                 self.storage.clear_last_error(login)
 
             timetable_count = len(getattr(librus, 'timetable', []))
             schedule_count = len(getattr(librus, 'schedule', []))
-            if new_msgs or new_notifs or new_grades:
+            if new_msgs or new_notifs or new_grades or new_attendance:
                 logger.info(
                     f"{name} ({login}): Zakończono pobieranie danych ze szkoły. Wykryto nowe wpisy w dzienniku: "
-                    f"wiadomości: {len(new_msgs)}, ogłoszenia: {len(new_notifs)}, oceny: {len(new_grades)} "
+                    f"wiadomości: {len(new_msgs)}, ogłoszenia: {len(new_notifs)}, oceny: {len(new_grades)}, "
+                    f"frekwencja: {len(new_attendance)} "
                     f"(wpisy w terminarzu: {timetable_count}, lekcje w planie: {schedule_count})."
                 )
             else:
                 logger.info(
                     f"{name} ({login}): Zakończono pobieranie danych ze szkoły. Brak nowych wpisów w dzienniku "
-                    f"(wiadomości: 0, ogłoszenia: 0, oceny: 0, wpisy w terminarzu: {timetable_count}, lekcje w planie: {schedule_count})."
+                    f"(wiadomości: 0, ogłoszenia: 0, oceny: 0, frekwencja: 0, wpisy w terminarzu: {timetable_count}, lekcje w planie: {schedule_count})."
                 )
 
             return {
@@ -209,6 +216,7 @@ class LibrusCollector:
                 'new_messages': new_msgs,
                 'new_notifications': new_notifs,
                 'new_grades': new_grades,
+                'new_attendance': new_attendance,
             }
         except (LibrusNetworkError, requests.RequestException) as e:
             logger.warning(f"{name} ({login}): Problem sieciowy na etapie '{step}': {e}")
@@ -265,9 +273,11 @@ class LibrusCollector:
             'messages': [],
             'notifications': [],
             'grades': [],
+            'attendance': [],
             'new_messages': [],
             'new_notifications': [],
             'new_grades': [],
+            'new_attendance': [],
         }
 
     def collect_all(self, users: list[dict]) -> dict[str, dict[str, Any]]:
@@ -447,9 +457,11 @@ def execute_collection_cycle(
                     all_messages=c_item.get('messages'),
                     all_notifications=c_item.get('notifications'),
                     all_grades=c_item.get('grades'),
+                    all_attendance=c_item.get('attendance'),
                     new_messages=c_item.get('new_messages'),
                     new_notifications=c_item.get('new_notifications'),
                     new_grades=c_item.get('new_grades'),
+                    new_attendance=c_item.get('new_attendance'),
                     days=days,
                     hours=hours,
                     dry_run=dry_run,

@@ -854,6 +854,122 @@ class TestLibrus(unittest.TestCase):
         self.assertIn("Świadectwo z wyróżnieniem", content)
         self.assertIn("Wysoka średnia ogólna.", content)
 
+    def test_attendance_presentation_in_progress_and_summary_emails(self):
+        from librus2mail.mail_sender import MailSender
+        from librus2mail.progress_report import prepare_attendance_report_summary
+        from librus2mail.updates_notifier import prepare_schedule_summary
+
+        user_cfg = {'librus_login': '8979296', 'librus_login_name': 'Jan Kowalski'}
+        att_entries = [
+            {
+                'id': '5001',
+                'date': '2026-09-18',
+                'lesson_no': 3,
+                'subject': 'Geografia',
+                'symbol': 'u',
+                'type': 'nieobecność uspr.',
+                'teacher': 'Dorota Opolska',
+                'topic': 'Ukształtowanie powierzchni Ziemi',
+                'is_absence': True,
+                'is_justified': True,
+                'is_late': False,
+                'is_exempt': False,
+                'justification_info': 'e-Usprawiedliwienie',
+            },
+            {
+                'id': '5002',
+                'date': '2026-09-10',
+                'lesson_no': 1,
+                'subject': 'Fizyka',
+                'symbol': 'sp',
+                'type': 'spóźnienie',
+                'is_absence': False,
+                'is_justified': False,
+                'is_late': True,
+                'is_exempt': False,
+            }
+        ]
+
+        # 1. Test prepare_attendance_report_summary filtering
+        p_start = datetime(2026, 9, 11)
+        p_end = datetime(2026, 9, 18, 23, 59, 59)
+        att_sum = prepare_attendance_report_summary(att_entries, p_start, p_end)
+        self.assertTrue(att_sum['has_any'])
+        self.assertEqual(len(att_sum['period_entries']), 1)
+        self.assertEqual(att_sum['period_absences_count'], 1)
+        self.assertEqual(att_sum['period_justified_count'], 1)
+        self.assertEqual(att_sum['period_unjustified_count'], 0)
+        self.assertEqual(att_sum['period_lates_count'], 0)
+
+        # 2. Test progress_report.html rendering with attendance
+        analysis = {
+            'period_start_str': '11.09.2026',
+            'period_end_str': '18.09.2026',
+            'overall_avg': 4.54,
+            'period_avg': 4.80,
+            'total_grades_count': 20,
+            'period_grades_count': 5,
+            'activity_pluses': 1,
+            'activity_minuses': 0,
+            'unprepared_count': 0,
+            'insights_strengths': [],
+            'insights_warnings': [],
+            'subjects': [],
+            'period_grades': [],
+            'distribution_overall': {},
+            'distribution_period': {},
+        }
+        progress_html = MailSender.create_mail_content_for_progress_report(
+            user_cfg, analysis, attendance=att_sum
+        )
+        self.assertIn("Frekwencja w okresie", progress_html)
+        self.assertIn("1 nieobecność", progress_html)
+        self.assertIn("1 uspr.", progress_html)
+        self.assertIn("Geografia", progress_html)
+        self.assertIn("Lekcja 3", progress_html)
+        self.assertIn("nieobecność uspr.", progress_html)
+        self.assertIn("e-Usprawiedliwienie", progress_html)
+        self.assertIn("Dorota Opolska", progress_html)
+        self.assertIn("Ukształtowanie powierzchni Ziemi", progress_html)
+
+        # 3. Test summary title with attendance
+        summary_title = MailSender._create_summary_title(
+            user_cfg, attendance=[att_entries[0]]
+        )
+        self.assertIn("frekwencja (1 nieob.)", summary_title)
+
+        # 4. Test schedule table attendance correlation
+        schedule_entries = [
+            {
+                'date': '2026-09-18',
+                'lesson_no': 3,
+                'subject': 'Geografia',
+                'time_from': '09:50',
+                'time_to': '10:35',
+            }
+        ]
+        sched_res = prepare_schedule_summary(
+            schedule_entries=schedule_entries,
+            attendance_entries=att_entries,
+            now=datetime(2026, 9, 18),
+            day_offset=0,
+        )
+        self.assertTrue(sched_res['has_any'])
+        lesson = sched_res['lessons'][0]
+        self.assertIn('attendance', lesson)
+        self.assertEqual(lesson['attendance']['type'], 'nieobecność uspr.')
+
+        # 5. Test summary.html rendering with attendance and schedule badge
+        summary_html = MailSender.create_mail_content_for_summary(
+            user_cfg,
+            schedule=sched_res,
+            attendance=[att_entries[0]],
+        )
+        self.assertIn("Frekwencja", summary_html)
+        self.assertIn("nowe wpisy", summary_html)
+        self.assertIn("nieobecność uspr.", summary_html)
+        self.assertIn("Geografia", summary_html)
+
     def test_send_progress_report_gmail_and_smtp(self):
         from librus2mail.gmail_sender import GmailSender
         from librus2mail.smtp_sender import SmtpSender
@@ -1620,6 +1736,7 @@ class TestLibrus(unittest.TestCase):
             mock_librus.get_not_known_messages_and_mark_as_known.return_value = []
             mock_librus.get_not_known_notifications_and_mark_as_known.return_value = []
             mock_librus.get_not_known_grades_and_mark_as_known.return_value = []
+            mock_librus.get_not_known_attendance_and_mark_as_known.return_value = []
             collector.parsers[login] = mock_librus
 
             with patch('librus2mail.librus_collector.sleep'):

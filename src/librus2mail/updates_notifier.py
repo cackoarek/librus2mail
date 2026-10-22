@@ -124,6 +124,7 @@ def prepare_timetable_summary(
 def prepare_schedule_summary(
     schedule_entries: list[dict[str, Any]],
     timetable_entries: list[dict[str, Any]] | None = None,
+    attendance_entries: list[dict[str, Any]] | None = None,
     now: datetime | None = None,
     day_offset: int = 1,
 ) -> dict[str, Any]:
@@ -135,6 +136,7 @@ def prepare_schedule_summary(
     - Wylicza ramy czasowe pobytu w szkole (od pierwszej do ostatniej aktywnej lekcji).
     - Zlicza zastępstwa i odwołane lekcje.
     - Jeśli przekazano wpisy z terminarza, koreluje sprawdziany/kartkówki z lekcjami danego dnia.
+    - Jeśli przekazano wpisy frekwencji, koreluje nieobecności i spóźnienia z lekcjami danego dnia.
     """
     if not schedule_entries:
         return {'has_any': False, 'lessons': []}
@@ -202,6 +204,19 @@ def prepare_schedule_summary(
                     break
             if matched_test:
                 lesson['test'] = matched_test
+
+    if attendance_entries:
+        att_on_day = [a for a in attendance_entries if a.get('date') == target_date_str]
+        for lesson in day_lessons:
+            l_num = str(lesson.get('lesson_no', '')).strip()
+            matched_att = None
+            for att in att_on_day:
+                a_num = str(att.get('lesson_no', '')).strip()
+                if a_num and a_num == l_num:
+                    matched_att = att
+                    break
+            if matched_att:
+                lesson['attendance'] = matched_att
 
     active_lessons = [entry for entry in day_lessons if not entry.get('is_cancelled')]
     cancelled_lessons = [entry for entry in day_lessons if entry.get('is_cancelled')]
@@ -322,6 +337,7 @@ def print_cli_summary(
     period_desc: str = "",
     timetable: dict | None = None,
     schedule: dict | None = None,
+    attendance: list[dict] | None = None,
 ) -> None:
     """Wyświetla estetyczne podsumowanie wykrytych nowości w terminalu (ASCII/tekst)."""
     header = f"📬 POWIADOMIENIE (LIBRUS NOTIFIER): {student_name} ({login})"
@@ -332,7 +348,7 @@ def print_cli_summary(
 
     has_timetable = bool(timetable and timetable.get('has_any'))
     has_schedule = bool(schedule and schedule.get('has_any'))
-    if not messages and not notifications and not grades and not has_timetable and not has_schedule:
+    if not messages and not notifications and not grades and not attendance and not has_timetable and not has_schedule:
         print("Brak nowych wpisów w wybranym okresie.")
         print(f"\n{sep}\n")
         return
@@ -357,8 +373,11 @@ def print_cli_summary(
             test_info = ""
             if les.get('test'):
                 test_info = f" [📝 {les['test'].get('category')}: {les['test'].get('subject')}]"
+            att_info = ""
+            if les.get('attendance'):
+                att_info = f" [⏱️ {les['attendance'].get('type', les['attendance'].get('symbol', ''))}]"
             sub_info = f" -> {les['substitution_info']}" if les.get('substitution_info') else ""
-            print(f"  #{l_no} {t_from}-{t_to}: {subj}{status}{test_info}{room}{teacher}{sub_info}")
+            print(f"  #{l_no} {t_from}-{t_to}: {subj}{status}{test_info}{att_info}{room}{teacher}{sub_info}")
         print()
 
     if timetable and timetable.get('has_any'):
@@ -422,6 +441,17 @@ def print_cli_summary(
             print(f"  • {subj}: {val} (waga: {weight}, data: {date}, kat: {cat}{comm_str})")
         print()
 
+    if attendance:
+        print(f"⏱️  Nowe wpisy frekwencji ({len(attendance)}):")
+        for a in attendance:
+            subj = a.get('subject', 'Brak')
+            a_type = a.get('type', a.get('symbol', ''))
+            a_date = a.get('date', '-')
+            a_les = f" (Lekcja {a['lesson_no']})" if a.get('lesson_no') else ""
+            a_info = f" [{a['justification_info']}]" if a.get('justification_info') else ""
+            print(f"  • {a_date}{a_les}: {subj} — {a_type}{a_info}")
+        print()
+
     print(f"{sep}\n")
 
 
@@ -468,9 +498,11 @@ class UpdatesNotifier:
         all_messages: list[dict] | None = None,
         all_notifications: list[dict] | None = None,
         all_grades: list[dict] | None = None,
+        all_attendance: list[dict] | None = None,
         new_messages: list[dict] | None = None,
         new_notifications: list[dict] | None = None,
         new_grades: list[dict] | None = None,
+        new_attendance: list[dict] | None = None,
         days: int | None = None,
         hours: int | None = None,
         dry_run: bool = False,
@@ -499,6 +531,13 @@ class UpdatesNotifier:
             all_notifications = all_notifications if all_notifications is not None else stored_notifs
             all_grades = all_grades if all_grades is not None else stored_grades
 
+        if all_attendance is None:
+            all_attendance = (
+                self.storage.get_attendance_history(login)
+                if (hasattr(self.storage, 'get_attendance_history') and user_config.get('read_attendance', True))
+                else []
+            )
+
         # 2. Ustalenie, które wpisy są uznawane za "nowe"
         period_desc = ""
         now = actual_date or datetime.now()
@@ -511,11 +550,18 @@ class UpdatesNotifier:
             filtered_messages = self.filter_by_cutoff(all_messages, cutoff)
             filtered_notifications = self.filter_by_cutoff(all_notifications, cutoff)
             filtered_grades = self.filter_by_cutoff(all_grades, cutoff) if user_config.get('read_grades', True) else []
-        elif new_messages is not None or new_notifications is not None or new_grades is not None:
+            filtered_attendance = self.filter_by_cutoff(all_attendance, cutoff) if user_config.get('read_attendance', True) else []
+        elif (
+            new_messages is not None
+            or new_notifications is not None
+            or new_grades is not None
+            or new_attendance is not None
+        ):
             # Wpisy przekazane bezpośrednio w pamięci (np. z bieżącej pętli LibrusCollector)
             filtered_messages = new_messages if new_messages is not None else []
             filtered_notifications = new_notifications if new_notifications is not None else []
             filtered_grades = new_grades if new_grades is not None else []
+            filtered_attendance = new_attendance if new_attendance is not None else []
         else:
             # Tryb asynchroniczny / nieregularny:
             # Sprawdzamy watermark ostatniego powiadomienia w bazie storage (last_notify_time)
@@ -528,15 +574,16 @@ class UpdatesNotifier:
                     filtered_messages = self.filter_by_cutoff(all_messages, cutoff)
                     filtered_notifications = self.filter_by_cutoff(all_notifications, cutoff)
                     filtered_grades = self.filter_by_cutoff(all_grades, cutoff) if user_config.get('read_grades', True) else []
+                    filtered_attendance = self.filter_by_cutoff(all_attendance, cutoff) if user_config.get('read_attendance', True) else []
                 else:
                     logger.warning(f"Nieprawidłowy format last_notify_time ({last_notify})")
-                    filtered_messages, filtered_notifications, filtered_grades = [], [], []
+                    filtered_messages, filtered_notifications, filtered_grades, filtered_attendance = [], [], [], []
             else:
                 # Pierwsze powiadomienie bez wcześniejszego znacznika
                 if user_config.get('dry-parse', False):
                     period_desc = "pierwsza inicjalizacja (punkt bazowy, brak wysyłki)"
                     logger.info(f"{name} ({login}): Pierwsze uruchomienie – utworzenie bazy stanu, pomijam wysyłkę historycznych danych.")
-                    filtered_messages, filtered_notifications, filtered_grades = [], [], []
+                    filtered_messages, filtered_notifications, filtered_grades, filtered_attendance = [], [], [], []
                 else:
                     cutoff = now - timedelta(days=1)
                     period_desc = "pierwsze powiadomienie (domyślnie ostatnie 24h)"
@@ -544,6 +591,7 @@ class UpdatesNotifier:
                     filtered_messages = self.filter_by_cutoff(all_messages, cutoff)
                     filtered_notifications = self.filter_by_cutoff(all_notifications, cutoff)
                     filtered_grades = self.filter_by_cutoff(all_grades, cutoff) if user_config.get('read_grades', True) else []
+                    filtered_attendance = self.filter_by_cutoff(all_attendance, cutoff) if user_config.get('read_attendance', True) else []
 
         saved_file = None
 
@@ -560,6 +608,7 @@ class UpdatesNotifier:
             prepare_schedule_summary(
                 all_schedule,
                 timetable_entries=all_timetable,
+                attendance_entries=all_attendance,
                 now=now,
                 day_offset=eff_schedule_offset,
             )
@@ -570,8 +619,24 @@ class UpdatesNotifier:
         # 3. Zapis do pliku HTML (jeśli podano -o / --save-html)
         if output_html:
             out_file = resolve_output_path(output_html, login, total_users, default_prefix="powiadomienie")
-            title = MailSender._create_summary_title(user_config, filtered_messages, filtered_notifications, filtered_grades, timetable=timetable_summary, schedule=schedule_summary)
-            body = MailSender.create_mail_content_for_summary(user_config, filtered_messages, filtered_notifications, filtered_grades, timetable=timetable_summary, schedule=schedule_summary)
+            title = MailSender._create_summary_title(
+                user_config,
+                filtered_messages,
+                filtered_notifications,
+                filtered_grades,
+                timetable=timetable_summary,
+                schedule=schedule_summary,
+                attendance=filtered_attendance,
+            )
+            body = MailSender.create_mail_content_for_summary(
+                user_config,
+                filtered_messages,
+                filtered_notifications,
+                filtered_grades,
+                timetable=timetable_summary,
+                schedule=schedule_summary,
+                attendance=filtered_attendance,
+            )
             full_html = render_standalone_html(title, body)
             try:
                 with open(out_file, 'w', encoding='utf-8') as f:
@@ -584,7 +649,7 @@ class UpdatesNotifier:
 
         # 4. Tryb Dry-Run (podgląd w terminalu)
         if dry_run:
-            has_new_items = bool(filtered_messages or filtered_notifications or filtered_grades)
+            has_new_items = bool(filtered_messages or filtered_notifications or filtered_grades or filtered_attendance)
             should_send_timetable, unnotified_tests = should_trigger_timetable_reminder(
                 timetable_summary, now=now, config=self.config
             )
@@ -598,13 +663,23 @@ class UpdatesNotifier:
             else:
                 logger.info(
                     f"{name} ({login}): Tryb symulacji (dry-run) – wykryto nowe pozycje (wiadomości: {len(filtered_messages)}, "
-                    f"ogłoszenia: {len(filtered_notifications)}, oceny: {len(filtered_grades)}). Brak wysyłki e-mail."
+                    f"ogłoszenia: {len(filtered_notifications)}, oceny: {len(filtered_grades)}, frekwencja: {len(filtered_attendance)}). Brak wysyłki e-mail."
                 )
-            print_cli_summary(name, login, filtered_messages, filtered_notifications, filtered_grades, period_desc, timetable=timetable_summary, schedule=schedule_summary)
+            print_cli_summary(
+                name,
+                login,
+                filtered_messages,
+                filtered_notifications,
+                filtered_grades,
+                period_desc,
+                timetable=timetable_summary,
+                schedule=schedule_summary,
+                attendance=filtered_attendance,
+            )
 
         # 5. Rzeczywista wysyłka pocztowa
         if not dry_run and not output_html:
-            has_new_items = bool(filtered_messages or filtered_notifications or filtered_grades)
+            has_new_items = bool(filtered_messages or filtered_notifications or filtered_grades or filtered_attendance)
             should_send_timetable, unnotified_tests = should_trigger_timetable_reminder(
                 timetable_summary, now=now, config=self.config
             )
@@ -641,10 +716,18 @@ class UpdatesNotifier:
                     else:
                         logger.info(
                             f"Nowe wpisy dla {name} (wiadomości: {len(filtered_messages)}, "
-                            f"ogłoszenia: {len(filtered_notifications)}, oceny: {len(filtered_grades)}). "
+                            f"ogłoszenia: {len(filtered_notifications)}, oceny: {len(filtered_grades)}, frekwencja: {len(filtered_attendance)}). "
                             "Wysyłam zbiorcze podsumowanie e-mail."
                         )
-                    sender.send_mail_with_summary(user_config, filtered_messages, filtered_notifications, filtered_grades, timetable=timetable_summary, schedule=schedule_summary)
+                    sender.send_mail_with_summary(
+                        user_config,
+                        filtered_messages,
+                        filtered_notifications,
+                        filtered_grades,
+                        timetable=timetable_summary,
+                        schedule=schedule_summary,
+                        attendance=filtered_attendance,
+                    )
                 else:
                     if filtered_messages:
                         logger.info(f"Wysyłam e-mail z {len(filtered_messages)} nowymi wiadomościami dla {name}")
@@ -670,6 +753,7 @@ class UpdatesNotifier:
             'messages': filtered_messages,
             'notifications': filtered_notifications,
             'grades': filtered_grades,
+            'attendance': filtered_attendance,
             'timetable': timetable_summary,
             'schedule': schedule_summary,
             'output_file': saved_file,
@@ -718,6 +802,7 @@ def run_notifier(
                 default_read_messages = first_user.get('read_messages', config.get('read_messages', True))
                 default_read_timetable = first_user.get('read_timetable', config.get('read_timetable', True))
                 default_read_schedule = first_user.get('read_schedule', config.get('read_schedule', True))
+                default_read_attendance = first_user.get('read_attendance', config.get('read_attendance', True))
                 custom_name = storage.get_student_name(user_filter) if hasattr(storage, 'get_student_name') else None
                 student_name = custom_name or f"Uczeń ({user_filter})"
                 matched = [{
@@ -729,6 +814,7 @@ def run_notifier(
                     'read_messages': default_read_messages,
                     'read_timetable': default_read_timetable,
                     'read_schedule': default_read_schedule,
+                    'read_attendance': default_read_attendance,
                 }]
                 logger.info(f"Załadowano profil ze storage dla '{user_filter}': '{student_name}'.")
             else:
@@ -748,6 +834,7 @@ def run_notifier(
             default_read_messages = first_user.get('read_messages', config.get('read_messages', True))
             default_read_timetable = first_user.get('read_timetable', config.get('read_timetable', True))
             default_read_schedule = first_user.get('read_schedule', config.get('read_schedule', True))
+            default_read_attendance = first_user.get('read_attendance', config.get('read_attendance', True))
             auto_users = []
             for s_login in stored_logins:
                 s_name = storage.get_student_name(s_login) or f"Uczeń ({s_login})"
@@ -760,6 +847,7 @@ def run_notifier(
                     'read_messages': default_read_messages,
                     'read_timetable': default_read_timetable,
                     'read_schedule': default_read_schedule,
+                    'read_attendance': default_read_attendance,
                 })
             logger.info(f"Załadowano profile uczniów odnalezione w '{effective_storage_dir}': {[u['librus_login_name'] for u in auto_users]}")
             users = auto_users
@@ -773,9 +861,11 @@ def run_notifier(
             all_messages=c_item.get('messages'),
             all_notifications=c_item.get('notifications'),
             all_grades=c_item.get('grades'),
+            all_attendance=c_item.get('attendance'),
             new_messages=c_item.get('new_messages'),
             new_notifications=c_item.get('new_notifications'),
             new_grades=c_item.get('new_grades'),
+            new_attendance=c_item.get('new_attendance'),
             days=days,
             hours=hours,
             dry_run=dry_run,

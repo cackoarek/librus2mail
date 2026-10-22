@@ -30,7 +30,18 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
     - Skrótowe przyciski `⏱️ Frekwencja: [symbol]` / `⏱️ [symbol]` z linkami kotwicowymi prowadzącymi do sekcji danego dnia w module frekwencji.
     - Kropki statusu obecności na pigułkach wyboru dni tygodnia w widoku `/plan`.
     - Liczniki obecności w podsumowaniu planu dnia (`🔴 X nieuspr.`, `🟢 Y uspr.`, `🟡 Z spóźnień`).
-  - Wygenerowano statyczny widok demonstracyjny `examples/reports/web_frekwencja.html` i zaktualizowano zestaw raportów w `examples/reports/`.
+  - **Prezentacja frekwencji w powiadomieniach e-mail i raportach okresowych**:
+    - **Raport postępów ucznia (`librus_progress_report.py` / `progress_report.html`)**:
+      - Dodanie kafelka KPI w podsumowaniu okresu prezentującego bilans frekwencji (nieobecności usprawiedliwione/nieusprawiedliwione, spóźnienia).
+      - Dedykowana sekcja „⏱️ Zdarzenia frekwencji w analizowanym okresie” z odznakami symboli (`🟢 nieobecność uspr.`, `🔴 nieobecność`, `🟡 spóźnienie`), numerem lekcji, przedmiotem, statusem e-Usprawiedliwienia, nauczycielem i tematem lekcji.
+      - Aktualizacja funkcji `print_cli_summary` w konsoli o zestawienie zdarzeń frekwencji.
+    - **Bieżące powiadomienia e-mail (`librus_updates_notifier.py` / `summary.html`)**:
+      - Uwzględnienie frekwencji w tytule e-maila (np. `frekwencja (1 nieob.)`).
+      - Czwarty kafelek KPI „Frekwencja” w nagłówku podsumowania.
+      - Wizualne odznaki statusu obecności bezpośrednio przy lekcjach w planie dnia powiadomienia (`🟢 Usprawiedliwiona`, `🔴 Nieobecność nieuspr.`, `🟡 Spóźnienie`).
+      - Dedykowana karta podsumowująca nowe wpisy frekwencji w treści powiadomienia.
+    - Przekazywanie i formatowanie frekwencji w `MailSender`, `GmailSender`, `SmtpSender`, `UpdatesNotifier` oraz `LibrusCollector`.
+  - Wygenerowano statyczny widok demonstracyjny `examples/reports/web_frekwencja.html` i zaktualizowano zestaw raportów w `examples/reports/` (w tym `raport_8979296.html` oraz `powiadomienie_collector.html`).
 - **Śledzenie lekcji w czasie rzeczywistym w Planie lekcji i na Pulpicie (Live Lesson Tracker)**:
   - Automatyczne wykrywanie lekcji trwającej w danej chwili (`🟢 TRWA TERAZ`) z pulsującym wskaźnikiem, licznikiem czasu do dzwonka (`⏱️ jeszcze X min`) oraz wyeksponowanym numerem sali i nazwiskiem nauczyciela.
   - Oznaczanie lekcji, które się już odbyły (`✓ Odbyła się`) ze stonowanym tłem i wyciszonym kontrastem, co ułatwia rodzicowi natychmiastowe zorientowanie się w bieżącym planie dnia.

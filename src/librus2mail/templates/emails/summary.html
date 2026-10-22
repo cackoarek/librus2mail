@@ -17,7 +17,7 @@
                 <td align="right" valign="middle" style="text-align: right;">
                     <div style="background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 8px; padding: 6px 12px; display: inline-block; text-align: center;">
                         <div style="font-size: 10px; text-transform: uppercase; color: #bfdbfe; font-weight: 600;">Status</div>
-                        <div style="font-size: 12px; font-weight: 700; color: #ffffff;">{% if messages or notifications or grades %}Nowe wpisy{% else %}Podsumowanie dnia{% endif %}</div>
+                        <div style="font-size: 12px; font-weight: 700; color: #ffffff;">{% if messages or notifications or grades or attendance %}Nowe wpisy{% else %}Podsumowanie dnia{% endif %}</div>
                     </div>
                 </td>
             </tr>
@@ -26,35 +26,44 @@
 
     <div style="padding: 20px 24px; box-sizing: border-box;">
         <!-- Kafelki podsumowujące -->
-        {% if messages or notifications or grades %}
+        {% if messages or notifications or grades or attendance %}
+        {% set active_tiles = (1 if messages else 0) + (1 if notifications else 0) + (1 if grades else 0) + (1 if attendance else 0) %}
+        {% set tile_width = (100 // active_tiles) if active_tiles > 0 else 25 %}
         <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; margin-bottom: 24px; border-collapse: separate; border-spacing: 8px;">
             <tr>
                 {% if messages %}
-                <td width="33%" valign="top" style="background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 12px 10px; text-align: center;">
+                <td width="{{ tile_width }}%" valign="top" style="background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 12px 10px; text-align: center;">
                     <div style="font-size: 11px; font-weight: 700; color: #0284c7; text-transform: uppercase;">Wiadomości</div>
                     <div style="font-size: 24px; font-weight: 800; color: #0369a1; margin: 3px 0;">{{ messages | length }}</div>
                     <div style="font-size: 11px; color: #0284c7;">nowe w skrzynce</div>
                 </td>
                 {% endif %}
                 {% if notifications %}
-                <td width="33%" valign="top" style="background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 10px; text-align: center;">
+                <td width="{{ tile_width }}%" valign="top" style="background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 10px; text-align: center;">
                     <div style="font-size: 11px; font-weight: 700; color: #d97706; text-transform: uppercase;">Ogłoszenia</div>
                     <div style="font-size: 24px; font-weight: 800; color: #b45309; margin: 3px 0;">{{ notifications | length }}</div>
                     <div style="font-size: 11px; color: #d97706;">nowe ze szkoły</div>
                 </td>
                 {% endif %}
                 {% if grades %}
-                <td width="33%" valign="top" style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 10px; text-align: center;">
+                <td width="{{ tile_width }}%" valign="top" style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 10px; text-align: center;">
                     <div style="font-size: 11px; font-weight: 700; color: #16a34a; text-transform: uppercase;">Oceny</div>
                     <div style="font-size: 24px; font-weight: 800; color: #15803d; margin: 3px 0;">{{ grades | length }}</div>
                     <div style="font-size: 11px; color: #16a34a;">nowe w dzienniku</div>
+                </td>
+                {% endif %}
+                {% if attendance %}
+                <td width="{{ tile_width }}%" valign="top" style="background-color: #fef2f2; border: 1px solid #fecdd3; border-radius: 8px; padding: 12px 10px; text-align: center;">
+                    <div style="font-size: 11px; font-weight: 700; color: #dc2626; text-transform: uppercase;">Frekwencja</div>
+                    <div style="font-size: 24px; font-weight: 800; color: #b91c1c; margin: 3px 0;">{{ attendance | length }}</div>
+                    <div style="font-size: 11px; color: #dc2626;">nowe wpisy</div>
                 </td>
                 {% endif %}
             </tr>
         </table>
         {% else %}
         <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 18px; margin-bottom: 24px; text-align: center; color: #64748b; font-size: 13px;">
-            ✨ W tym dniu nie odnotowano nowych ocen, wiadomości ani ogłoszeń w Librusie.
+            ✨ W tym dniu nie odnotowano nowych ocen, wiadomości, ogłoszeń ani wpisów frekwencji w Librusie.
         </div>
         {% endif %}
 
@@ -122,6 +131,16 @@
                                     {% set is_big = ('sprawdzian' in lesson.test.category | lower or 'klasow' in lesson.test.category | lower or 'klasów' in lesson.test.category | lower or 'egzamin' in lesson.test.category | lower) %}
                                     <span style="background-color: {{ '#fee2e2' if is_big else '#ffedd5' }}; color: {{ '#991b1b' if is_big else '#c2410c' }}; border: 1px solid {{ '#fca5a5' if is_big else '#fed7aa' }}; font-size: 10px; font-weight: 800; padding: 1px 5px; border-radius: 3px; margin-left: 4px; display: inline-block;">
                                         {{ '📕' if is_big else '📙' }} {{ lesson.test.category }}
+                                    </span>
+                                    {% endif %}
+                                    {% if lesson.attendance %}
+                                    {% set att = lesson.attendance %}
+                                    {% set att_bg = '#dcfce7' if att.is_justified else ('#fef9c3' if att.is_late else ('#fee2e2' if att.is_absence else '#f1f5f9')) %}
+                                    {% set att_color = '#15803d' if att.is_justified else ('#854d0e' if att.is_late else ('#991b1b' if att.is_absence else '#475569')) %}
+                                    {% set att_border = '#86efac' if att.is_justified else ('#fef08a' if att.is_late else ('#fca5a5' if att.is_absence else '#cbd5e1')) %}
+                                    {% set att_icon = '🟢' if att.is_justified else ('🟡' if att.is_late else ('🔴' if att.is_absence else '⏱️')) %}
+                                    <span style="background-color: {{ att_bg }}; color: {{ att_color }}; border: 1px solid {{ att_border }}; font-size: 10px; font-weight: 800; padding: 1px 5px; border-radius: 3px; margin-left: 4px; display: inline-block;">
+                                        {{ att_icon }} {{ att.type or att.symbol }}
                                     </span>
                                     {% endif %}
                                 </div>
@@ -274,6 +293,62 @@
                 {% endfor %}
             </div>
             {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Nowe wpisy frekwencji -->
+        {% if attendance %}
+        <div style="margin-bottom: 28px;">
+            <div style="border-bottom: 2px solid #ef4444; padding-bottom: 8px; margin-bottom: 14px;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                    <tr>
+                        <td align="left" valign="middle">
+                            <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #0f172a;">⏱️ Frekwencja ({{ attendance | length }})</h3>
+                        </td>
+                        <td align="right" valign="middle" style="font-size: 12px; color: #ef4444; font-weight: 600;">
+                            {% if (attendance | length) == 1 %}1 nowy wpis{% elif (attendance | length) < 5 %}{{ attendance | length }} nowe wpisy{% else %}{{ attendance | length }} nowych wpisów{% endif %}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            {% for att in attendance %}
+            {% set att_bg = '#dcfce7' if att.is_justified else ('#fef9c3' if att.is_late else ('#fee2e2' if att.is_absence else '#f1f5f9')) %}
+            {% set att_color = '#15803d' if att.is_justified else ('#854d0e' if att.is_late else ('#991b1b' if att.is_absence else '#475569')) %}
+            {% set att_border = '#86efac' if att.is_justified else ('#fef08a' if att.is_late else ('#fca5a5' if att.is_absence else '#cbd5e1')) %}
+            {% set att_strip = '#22c55e' if att.is_justified else ('#eab308' if att.is_late else ('#ef4444' if att.is_absence else '#64748b')) %}
+            {% set att_icon = '🟢' if att.is_justified else ('🟡' if att.is_late else ('🔴' if att.is_absence else '⏱️')) %}
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-left: 4px solid {{ att_strip }}; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td align="left" valign="middle">
+                            <span style="font-size: 15px; font-weight: 700; color: #1e293b;">{{ att.subject or 'Brak przedmiotu' }}</span>
+                            {% if att.lesson_no %}
+                            <span style="color: #64748b; font-size: 12px; margin-left: 4px;">(Lekcja {{ att.lesson_no }})</span>
+                            {% endif %}
+                            <span style="background-color: {{ att_bg }}; color: {{ att_color }}; border: 1px solid {{ att_border }}; font-weight: 800; font-size: 11px; padding: 2px 7px; border-radius: 4px; margin-left: 6px; display: inline-block;">
+                                {{ att_icon }} {{ att.type or att.symbol }}
+                            </span>
+                            {% if att.justification_info %}
+                            <span style="background-color: #f1f5f9; color: #475569; font-size: 11px; padding: 2px 6px; border-radius: 4px; margin-left: 4px; display: inline-block;">
+                                {{ att.justification_info }}
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td align="right" valign="middle" style="text-align: right; font-size: 12px; color: #64748b; white-space: nowrap; padding-left: 8px;">
+                            📅 {{ att.date or '-' }}
+                        </td>
+                    </tr>
+                </table>
+                {% if att.teacher or att.topic %}
+                <div style="font-size: 12px; color: #64748b; margin-top: 6px;">
+                    {% if att.teacher %}👤 {{ att.teacher }}{% endif %}
+                    {% if att.teacher and att.topic %} • {% endif %}
+                    {% if att.topic %}Temat: <em>{{ att.topic }}</em>{% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
         </div>
         {% endif %}
 

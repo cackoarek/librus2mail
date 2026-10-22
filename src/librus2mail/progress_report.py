@@ -10,7 +10,7 @@ import requests
 
 from .base_logger import setup_logging
 from .config import get_reports_schedules, read_config
-from .date_utils import parse_datetime_safe
+from .date_utils import parse_date_safe, parse_datetime_safe
 from .librus import Librus, NotLogged
 from .librus_collector import configure_mail_provider
 from .mail_sender import (
@@ -24,6 +24,64 @@ from .updates_notifier import prepare_timetable_summary
 
 logger = logging.getLogger(__name__)
 
+
+
+def prepare_attendance_report_summary(
+    attendance_history: list[dict],
+    period_start: datetime | None,
+    period_end: datetime | None,
+    attendance_summary: list[dict] | dict | None = None,
+) -> dict:
+    """
+    Przygotowuje zestawienie frekwencji (nieobecności, spóźnienia) dla okresu raportu postępów.
+    Filtruje zdarzenia frekwencji z zakresu dat period_start .. period_end.
+    """
+    if not attendance_history:
+        return {'has_any': False, 'period_entries': []}
+
+    start_d = None
+    if period_start:
+        start_d = period_start.date() if isinstance(period_start, datetime) else parse_date_safe(period_start)
+    end_d = None
+    if period_end:
+        end_d = period_end.date() if isinstance(period_end, datetime) else parse_date_safe(period_end)
+
+    period_entries = []
+    for item in attendance_history:
+        d_str = item.get('date') or item.get('datetime') or item.get('added_at')
+        item_d = parse_date_safe(d_str)
+        if not item_d:
+            continue
+        if start_d and item_d < start_d:
+            continue
+        if end_d and item_d > end_d:
+            continue
+        period_entries.append(item)
+
+    period_entries.sort(
+        key=lambda x: (
+            str(x.get('date', '')),
+            int(x.get('lesson_no', 0)) if str(x.get('lesson_no', '')).isdigit() else 0
+        ),
+        reverse=True
+    )
+
+    absences = [e for e in period_entries if e.get('is_absence')]
+    justified = [e for e in absences if e.get('is_justified')]
+    unjustified = [e for e in absences if not e.get('is_justified')]
+    lates = [e for e in period_entries if e.get('is_late')]
+    exempt = [e for e in period_entries if e.get('is_exempt')]
+
+    return {
+        'has_any': bool(period_entries),
+        'period_entries': period_entries,
+        'period_absences_count': len(absences),
+        'period_justified_count': len(justified),
+        'period_unjustified_count': len(unjustified),
+        'period_lates_count': len(lates),
+        'period_exempt_count': len(exempt),
+        'overall_summary': attendance_summary,
+    }
 
 
 def parse_args():
@@ -90,7 +148,13 @@ def parse_args():
     return parser.parse_args()
 
 
-def print_cli_summary(user_name: str, login: str, analysis: dict, timetable: dict | None = None):
+def print_cli_summary(
+    user_name: str,
+    login: str,
+    analysis: dict,
+    timetable: dict | None = None,
+    attendance: dict | None = None,
+):
     print("\n" + "=" * 75)
     print(f"📊 RAPORT POSTĘPÓW: {user_name} (Konto: {login})")
     print(f"🗓️  Okres analizy: {analysis['period_start_str']} – {analysis['period_end_str']}")
@@ -102,6 +166,18 @@ def print_cli_summary(user_name: str, login: str, analysis: dict, timetable: dic
     print(f"⏱️  Średnia w okresie: {period}")
     print(f"📝 Ocen w okresie: {analysis['period_grades_count']} (łącznie zarejestrowanych: {analysis['total_grades_count']})")
     print(f"⭐ Aktywność: +{analysis['activity_pluses']} / -{analysis['activity_minuses']} | Nieprzygotowania: {analysis['unprepared_count']}")
+
+    if attendance and attendance.get('has_any'):
+        entries = attendance.get('period_entries', [])
+        print(
+            f"⏱️  Frekwencja w okresie: {attendance.get('period_absences_count', 0)} nieobecności "
+            f"({attendance.get('period_justified_count', 0)} uspr., {attendance.get('period_unjustified_count', 0)} nieuspr.), "
+            f"{attendance.get('period_lates_count', 0)} spóźnień"
+        )
+        for a in entries:
+            t_str = f" [Lekcja {a.get('lesson_no')}]" if a.get('lesson_no') else ""
+            top = f" — {a.get('topic')}" if a.get('topic') else ""
+            print(f"    • {a.get('date')}{t_str}: {a.get('subject', 'Brak')} — {a.get('type', a.get('symbol', ''))}{top}")
 
     # Porównanie z poprzednim okresem (Dynamika i Forma)
     pc = analysis.get('period_comparison')
@@ -436,6 +512,18 @@ def run_progress_reports(
             raw_timetable = storage.get_timetable_history(login)
             timetable_summary = prepare_timetable_summary(raw_timetable, reference_date=now.date())
 
+        # 4.6 Przygotowanie zestawienia frekwencji
+        attendance_summary_data = None
+        if user_config.get('read_attendance', True) and hasattr(storage, 'get_attendance_history'):
+            att_hist = storage.get_attendance_history(login)
+            att_sum = storage.get_attendance_summary(login) if hasattr(storage, 'get_attendance_summary') else None
+            attendance_summary_data = prepare_attendance_report_summary(
+                attendance_history=att_hist,
+                period_start=period_start,
+                period_end=now,
+                attendance_summary=att_sum,
+            )
+
         # 5. Weryfikacja czy są nowe oceny do zaraportowania
         if analysis['period_grades_count'] == 0 and not force and not dry_run and not save_html:
             logger.info(
@@ -447,7 +535,12 @@ def run_progress_reports(
         # 6. Zapis do pliku HTML (jeśli podano --save-html / -o)
         if save_html:
             out_file = resolve_output_path(save_html, login, len(users))
-            body_html = MailSender.create_mail_content_for_progress_report(user_config, analysis, timetable=timetable_summary)
+            body_html = MailSender.create_mail_content_for_progress_report(
+                user_config,
+                analysis,
+                timetable=timetable_summary,
+                attendance=attendance_summary_data,
+            )
             title = MailSender._create_progress_report_title(user_config, analysis)
             full_html = render_standalone_html(title, body_html)
             try:
@@ -461,10 +554,21 @@ def run_progress_reports(
         # 7. Tryb Dry-Run lub wysyłka pocztowa
         if dry_run:
             logger.info("Tryb DRY-RUN: prezentacja wyników analizy w terminalu (bez wysyłki maila):")
-            print_cli_summary(name, login, analysis, timetable=timetable_summary)
+            print_cli_summary(
+                name,
+                login,
+                analysis,
+                timetable=timetable_summary,
+                attendance=attendance_summary_data,
+            )
         elif not save_html:
             logger.info(f"Wysyłam raport postępów dla ucznia {name} ({login})...")
-            sent = mail_sender.send_progress_report(user_config, analysis, timetable=timetable_summary)
+            sent = mail_sender.send_progress_report(
+                user_config,
+                analysis,
+                timetable=timetable_summary,
+                attendance=attendance_summary_data,
+            )
             if sent:
                 storage.save_last_progress_report_date(login, now.isoformat(), report_key=report_key)
                 logger.info(f"Raport postępów dla {name} ({login}) został pomyślnie wysłany!")

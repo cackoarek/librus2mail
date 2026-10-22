@@ -4,9 +4,9 @@ Niniejszy dokument zawiera kompletne zestawienie architektury, wszystkich skrypt
 
 ---
 
-## 🏛️ Architektura 4 modułów i orkiestratora
+## 🏛️ Architektura 5 modułów i orkiestratora
 
-Aplikacja zbudowana jest z **4 niezależnych, wyspecjalizowanych modułów** spiętych przez orkiestrator `librus_collect_and_notify.py`:
+Aplikacja zbudowana jest z **5 niezależnych, wyspecjalizowanych modułów** spiętych przez orkiestrator `librus_collect_and_notify.py`:
 
 ```mermaid
 flowchart TD
@@ -40,24 +40,32 @@ flowchart TD
         SR_MAIL[E-mail Ucznia kids/teens/youth]
     end
 
+    subgraph Moduł 5: Web Dashboard
+        W[librus_web.py / Flask App]
+        W_UI[Interaktywny Panel WWW Rodzica]
+    end
+
     L -->|Pobranie OAuth + Scraping| C
     C -->|Zapis historii i stanu| S
     S -->|Odczyt stanu i diffing| N
     S -->|Odczyt historii ocen| PR
     S -->|Odczyt bazy ocen| SR
+    S -->|Wizualizacja stanu na żywo| W
     N --> N_HTML
     N --> N_MAIL
     PR --> PR_HTML
     PR --> PR_MAIL
     SR --> SR_HTML
     SR --> SR_MAIL
+    W --> W_UI
 ```
 
 1. **Moduł 1: Collector (`librus_collector.py`)** – odpowiada wyłącznie za autoryzację w portalu Librus Synergia, bezpieczne pobieranie surowych danych (z opóźnieniami rate-limiting) i synchronizację ich z bazą `storage/`.
 2. **Moduł 2: Updates Notifier (`librus_updates_notifier.py`)** – odpowiada za weryfikację nowości (nowe wiadomości, ogłoszenia, oceny), formatowanie szablonów e-mail/HTML oraz wysyłkę do rodziców. Działa w 100% offline na bazie `storage/`.
 3. **Moduł 3: Progress Report (`librus_progress_report.py`)** – długoterminowy analityczny raport postępów ucznia dla rodziców (średnie ważone, wskaźniki formy PoP, szanse na czerwony pasek, styl uczenia się, ciche przedmioty).
 4. **Moduł 4: Student Report (`librus_student_report.py`)** – motywacyjny raport postępów przygotowany bezpośrednio dla ucznia (Supermoce, szybkie szanse na awans, odznaki, 3 warianty szablonów: kids/teens/youth). Działa w 100% offline.
-5. **Orkiestrator (`librus_collect_and_notify.py`)** – fasada CLI łącząca moduły w potok automatyczny (np. demon w tle) lub umożliwiająca wywołanie wybranego modułu w odosobnieniu (`--collect-only`, `--notify-only`, `--report`, `--student-report`).
+5. **Moduł 5: Web Panel (`librus_web.py`)** – lekki, interaktywny pulpit WWW dla rodzica z ochroną hasłem (Parent Gate), panelem ocen, symulatorem "Co jeśli?", widokiem frekwencji, planem lekcji na żywo oraz graficznym centrum akcji CLI.
+6. **Orkiestrator (`librus_collect_and_notify.py`)** – fasada CLI łącząca moduły w potok automatyczny (np. demon w tle) lub umożliwiająca wywołanie wybranego modułu w odosobnieniu (`--collect-only`, `--notify-only`, `--report`, `--student-report`).
 
 ---
 
@@ -394,17 +402,20 @@ venv/bin/python librus_student_report.py -s examples/storage --actual-date 2026-
 ### 🎯 Cel działania
 Dostarcza nowoczesny, lekki i interaktywny pulpit rodzica w przeglądarce WWW (oparty o **Flask + TailwindCSS + HTMX** bez ciężkich narzędzi Node.js):
 - **Ochrona hasłem rodzica (Parent Gate)**: Zabezpiecza oceny i dane ucznia przed niepowołanym dostępem w sieci lokalnej lub internecie.
-- **Pulpit główny (Dashboard)**: Błyskawiczny podgląd kluczowych wskaźników KPI (średnia ogólna, liczba ocen, plan na najbliższy dzień, zapowiedziane sprawdziany).
-- **Plan lekcji (Schedule)**: Pełny widok tygodniowy z wyróżnieniem zastępstw, odwołanych lekcji i zapowiedzianych sprawdzianów.
+- **Pulpit główny (Dashboard)**: Błyskawiczny podgląd kluczowych wskaźników KPI (średnia ogólna, liczba ocen, plan na najbliższy dzień z podświetleniem trwającej lekcji, kalendarium zapowiedzianych sprawdzianów i frekwencji).
+- **Plan lekcji (Schedule)**: Pełny widok tygodniowy z wyróżnieniem zastępstw, odwołanych lekcji, zapowiedzianych sprawdzianów oraz wskaźnikiem aktualnie trwającej lekcji na żywo.
+- **Frekwencja**: Przejrzysta analiza obecności z wykresem heatmapy rocznej oraz kalendarzem miesięcznym z selektorem miesięcy.
 - **Zestawienie ocen & Symulator "Co jeśli?"**: Oceny z wagami per przedmiot oraz dynamiczny kalkulator prognozujący wpływ nowej oceny na średnią ważoną (HTMX). Dodatkowo przełącznik „Wliczany do średniej” umożliwia wykluczenie wybranych przedmiotów (np. Godzina wychowawcza) ze średniej i świadectwa z wyróżnieniem.
 - **Terminarz (Timetable)**: Chronologiczny kalendarz nadchodzących sprawdzianów i nieobecności nauczycieli.
 - **Wiadomości & Ogłoszenia**: Przeglądarka korespondencji z nauczycielami i oficjalnych komunikatów dyrekcji.
 - **Centrum Akcji CLI**: Graficzny panel wyzwalania operacji (pobranie z Librusa, wysyłka maila, generowanie raportów) z bezpośrednim podglądem logów w konsoli przeglądarki.
+- **Silnik motywów (Multi-Theme Engine)**: 4 dopracowane warianty kolorystyczne (Jasny, Ciemny, Północ / Nord, Szmaragd / Emerald) zapamiętywane w ciasteczku/konfiguracji.
+- **Kreator pierwszej konfiguracji (Setup Wizard)**: Przy braku pliku `config.yaml` aplikacja wita rodzica intuicyjnym formularzem konfiguracyjnym w przeglądarce pod adresem `/setup`.
 - **Bezpieczeństwo i zaufane proxy**: Ochrona hasłem rodzica (Parent Gate), blokada brute-force, weryfikacja zaufanych proxy (`trusted_proxies` odrzucająca sfałszowane nagłówki `X-Forwarded-For`) oraz flagi bezpieczeństwa ciasteczek sesyjnych (`cookie_secure`, `session_cookie_samesite`).
 
 ### 💻 Składnia polecenia
 ```bash
-python librus_web.py [-h] [-c CONFIG] [-s STORAGE_DIR] [-u USER] [-p PORT] [-b HOST] [--password PASSWORD] [--no-auth] [--max-attempts MAX_ATTEMPTS] [--lockout-duration SECONDS] [--actual-date ACTUAL_DATE] [--export-html DIR] [--debug]
+python librus_web.py [-h] [-c CONFIG] [-s STORAGE_DIR] [-u USER] [-p PORT] [-b HOST] [--password PASSWORD] [--no-auth] [--max-attempts MAX_ATTEMPTS] [--lockout-duration SECONDS] [--actual-date ACTUAL_DATE] [--export-html DIR] [--no-collector] [--debug]
 ```
 
 ### ⚙️ Dostępne parametry
@@ -420,7 +431,8 @@ python librus_web.py [-h] [-c CONFIG] [-s STORAGE_DIR] [-u USER] [-p PORT] [-b H
 | `--max-attempts` | Liczba całkowita | `5` (z configu) | Maksymalna liczba nieudanych prób logowania przed blokadą adresu IP (ochrona brute-force) |
 | `--lockout-duration` | Liczba sekund | `900` (z configu) | Czas trwania blokady adresu IP w sekundach (domyślnie 900s = 15 min) |
 | `--actual-date` | Data (`RRRR-MM-DD`) | `None` (bieżąca data) | Referencyjna data analizy i planu lekcji (do testów i powtarzalnych raportów) |
-| `--export-html` | Ścieżka do katalogu | `None` | Eksportuje pełny komplet statycznych widoków HTML (strona logowania przed zalogowaniem, pulpit po zalogowaniu, plan, oceny, terminarz, wiadomości, akcje) do wskazanego katalogu i kończy działanie |
+| `--export-html` | Ścieżka do katalogu | `None` | Eksportuje pełny komplet statycznych widoków HTML (strona logowania przed zalogowaniem, pulpit po zalogowaniu, plan, oceny, frekwencja, terminarz, wiadomości, akcje, kreator) do wskazanego katalogu i kończy działanie |
+| `--no-collector` | Flaga (brak wartości)| `False` | Wyłącza automatyczny wątek harmonogramu/kolektora w tle (przydatne np. gdy kolektor działa w osobnym kontenerze) |
 | `--debug` | Flaga (brak wartości)| `False` | Uruchamia serwer w trybie deweloperskim Flask |
 
 ### 🚀 Przykłady wywołań

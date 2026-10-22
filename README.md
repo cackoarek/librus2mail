@@ -7,1042 +7,186 @@
 [![CI Status](https://img.shields.io/github/actions/workflow/status/cackoarek/librus2mail/ci.yml?branch=main&label=CI&style=flat-square&logo=githubactions&logoColor=white)](https://github.com/cackoarek/librus2mail/actions/workflows/ci.yml)
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-3776AB.svg?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![Code Style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg?style=flat-square&logo=ruff&logoColor=white)](https://github.com/astral-sh/ruff)
-[![Tests: pytest](https://img.shields.io/badge/tests-pytest%20(245%20passed)-success.svg?style=flat-square&logo=pytest&logoColor=white)](tests/)
-[![CI - Code Quality & Tests](https://github.com/cackoarek/librus2mail/actions/workflows/ci.yml/badge.svg)](https://github.com/cackoarek/librus2mail/actions/workflows/ci.yml)
+[![Tests: pytest](https://img.shields.io/badge/tests-pytest%20(248%20passed)-success.svg?style=flat-square&logo=pytest&logoColor=white)](tests/)
 [![Packaging: PEP 517/518](https://img.shields.io/badge/packaging-PEP%20517%2F518-00599C.svg?style=flat-square)](pyproject.toml)
 [![Web UI: Flask + Tailwind](https://img.shields.io/badge/web%20ui-Flask%20%2B%20Tailwind-4B8BBE.svg?style=flat-square&logo=flask&logoColor=white)](src/librus2mail/web/)
-[![Docker Ready](https://img.shields.io/badge/docker-ready-2496ED.svg?style=flat-square&logo=docker&logoColor=white)](docker/docker-installation.md)
-[![systemd Supported](https://img.shields.io/badge/systemd-supported-lightgrey.svg?style=flat-square&logo=linux&logoColor=white)](deploy/systemd/)
+[![Docker Ready](https://img.shields.io/badge/docker-ready-2496ED.svg?style=flat-square&logo=docker&logoColor=white)](docs/deployment.md#1-konteneryzacja-docker--docker-compose)
+[![systemd Supported](https://img.shields.io/badge/systemd-supported-lightgrey.svg?style=flat-square&logo=linux&logoColor=white)](docs/deployment.md#2-usługi-systemowe-systemd-linux--raspberry-pi)
 [![Templates: Jinja2](https://img.shields.io/badge/templates-Jinja2-B41717.svg?style=flat-square&logo=jinja&logoColor=white)](src/librus2mail/templates/emails/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg?style=flat-square)](LICENSE)
 [![GitHub Pages](https://img.shields.io/badge/demo-GitHub%20Pages-0969da.svg?style=flat-square&logo=github&logoColor=white)](https://cackoarek.github.io/librus2mail/)
 
 <p align="center">
-  Automatyczne powiadomienia e-mail o nowych ocenach, wiadomościach, ogłoszeniach, najbliższych terminach sprawdzianów<br>
-  oraz zaawansowany silnik analizy trendów, wag ocen i symulator świadectwa z wyróżnieniem.
+  Automatyczne powiadomienia e-mail o ocenach, wiadomościach i ogłoszeniach szkolnych<br>
+  oraz interaktywny pulpit WWW z planem lekcji na żywo, frekwencją, symulatorem ocen i raportami motywacyjnymi.
 </p>
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/cackoarek/librus2mail/gh-pages/assets/librus2mail_showcase.webp" alt="Prezentacja możliwości Librus2mail" width="100%" style="border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,0.25);">
 </p>
 
-[🚀 Szybki start](#instalacja) • [⚙️ Konfiguracja](#konfiguracja) • [🌐 Panel WWW & Kreator](#moduł-5-interaktywny-panel-rodzica-i-kreator-konfiguracji-librus_webpy) • [🐳 Docker](#konteneryzacja-docker-i-docker-compose) • [📊 Raport postępów](#moduł-raportu-postępów-dziecka-librus_progress_reportpy) • [❓ FAQ](#najczęstsze-pytania-i-rozwiązywanie-problemów-faq)
+[🚀 Szybki start](#-szybki-start-w-3-krokach) • [🌐 Przeglądaj Demo](#-przykładowe-raporty-i-widoki-www-na-żywo) • [🏛️ Moduły](#-architektura-i-5-modułów-systemu) • [📚 Kompletna dokumentacja](#-kompletna-dokumentacja)
 
 </div>
 
 ---
 
-### O projekcie
+## 💡 Dlaczego Librus2mail?
 
-**Librus2mail** to zautomatyzowana usługa działająca jako demon systemowy (lub kontener Docker), która loguje się na konto rodzica w portalu **Librus Synergia**, cyklicznie monitoruje skrzynkę wiadomości (`/wiadomosci`), tablicę ogłoszeń szkolnych (`/ogloszenia`) oraz oceny ucznia (`/przegladaj_oceny/uczen`), a po wykryciu nowych wpisów natychmiast wysyła przejrzyste i estetyczne powiadomienia HTML (oparte na Jinja2) na wskazane adresy e-mail (Gmail lub własny serwer SMTP).
+Oficjalny portal e-dziennika Librus bywa niewygodny, wymaga ciągłego ręcznego logowania, a powiadomienia mobilne bywają ograniczone płatnymi subskrypcjami. **Librus2mail** rozwiązuje te problemy w elegancki sposób:
 
-Dla maksymalnej wygody projekt zawiera również **nowoczesny, opcjonalny moduł webowy (`librus_web.py` / `librus-web`)**, który stanowi interaktywną nakładkę na cały system: oferuje 4-krokowy kreator pierwszego uruchomienia w przeglądarce (`/setup`), graficzny konfigurator ustawień (`/ustawienia`), pulpit rodzica z planem lekcji i terminarzem sprawdzianów, symulator ocen "Co jeśli...?" oraz centrum wyzwalania akcji z podglądem logów na żywo.
-
-#### 🌟 Kluczowe wyróżniki:
-* 🔔 **Bieżące powiadomienia bez opóźnień**: Otrzymuj informacje o nowych wpisach ze szkoły bezpośrednio na swój telefon w skrzynce e-mail, bez konieczności ciągłego ręcznego odświeżania portalu czy korzystania z płatnych aplikacji mobilnych.
-* 🌐 **Nowoczesny Panel WWW & Kreator Pierwszego Uruchomienia (GUI)**: Opcjonalna, interaktywna nakładka webowa (Flask + TailwindCSS + HTMX) integrująca wszystkie moduły: 4-etapowy onboarding w przeglądarce (`/setup`) z testem połączenia, panel ustawień (`/ustawienia`), plan lekcji ze zmianami, terminarz sprawdzianów, symulator ocen "Co jeśli...?", podgląd wiadomości oraz Centrum Akcji do wyzwalania operacji CLI wprost z przeglądarki.
-* 👨‍👩‍👧‍👦 **Obsługa wielu dzieci (Multi-account)**: Monitorowanie wielu kont w jednej instancji z możliwością przypisania różnych odbiorców e-mail dla każdego dziecka (np. mama, tata, dziadkowie).
-* 📊 **Analityka i Symulator Czerwonego Paska (100% offline)**: Niezależny moduł analityczny przeliczający średnie ważone, wskaźniki trendu (↗, ↘, ➡), kalkulator szans/zagrożeń na granicy oceny, weryfikację warunków świadectwa z wyróżnieniem i pedagogiczną diagnozę stylu nauki (sprawdziany vs praca bieżąca).
-* 🐳 **Proste wdrożenie DevOps**: Gotowy obraz Docker, konfiguracja Docker Compose oraz produkcyjne jednostki `systemd` (usługa + timer) dla serwerów Linux, Raspberry Pi lub domowych serwerów NAS.
-* 🛡️ **Prywatność i bezpieczeństwo**: Żadne dane uwierzytelniające ani oceny dzieci nie trafiają do zewnętrznych chmur – całość działa lokalnie na Twojej własnej maszynie, a panel WWW chroniony jest hasłem rodzica i blokadą brute-force.
+* 🔔 **Bieżące powiadomienia e-mail bez opóźnień**: Otrzymuj estetyczne podsumowania nowych ocen, ogłoszeń i wiadomości bezpośrednio na swój telefon w skrzynce Gmail lub dowolnej skrzynce IMAP/SMTP.
+* 🌐 **Interaktywny Panel WWW Rodzica**: Lekki dashboard (Flask + TailwindCSS + HTMX) działający w domowej sieci: plan lekcji z zastępstwami i trwającą lekcją na żywo, analiza frekwencji (heatmapa i kalendarz z selektorem), terminarz sprawdzianów i 4 motywy wizualne (Nord, Emerald, Dark, Classic).
+* 🎯 **Symulator ocen "Co jeśli...?" i prognoza czerwonego paska**: Przeliczanie średnich ważonych, wskaźniki formy PoP, badanie progu świadectwa z wyróżnieniem i dynamiczna prognoza wpływu nowej oceny na średnią.
+* 🎮 **Motywacyjne raporty dla ucznia**: 3 warianty wiekowe (Kids dla klas 4–6 z odznakami i Supermocami, Teens dla klas 7–8 z celem E8, Youth dla szkół średnich z KPI).
+* 👨‍👩‍👧‍👦 **Wsparcie dla wielu dzieci (Multi-account)**: Monitorowanie wielu profili uczniów w jednej instancji z osobnymi regułami powiadomień.
+* 🛡️ **100% Prywatności i bezpieczeństwa**: Żadne dane uczniów, loginy ani oceny nie opuszczają Twojego komputera ani nie trafiają do obcych chmur. Całość działa lokalnie (`Local-First`), a panel WWW zabezpiecza bramka Parent Gate i ochrona przed atakami brute-force.
 
 ---
 
-### 📄 Przykładowe raporty i widoki WWW (na żywo)
-	
-<div align="center">
-Poniżej możesz zobaczyć jak wyglądają e-maile i ekrany modułu webowego generowane przez projekt — bez instalacji czegokolwiek:
+## 📄 Przykładowe raporty i widoki WWW (na żywo)
 
-| Typ | Widok / Raport | Opis | Link |
+Możesz przetestować wygenerowane raporty i widoki aplikacji bezpośrednio w przeglądarce bez instalacji:
+
+| Kategoria | Widok / Raport | Opis funkcjonalności | Link demo |
 |:---|:---|:---|:---|
-| 🌐 **Panel WWW** | **Pulpit rodzica (Dashboard)** | Interaktywny pulpit z KPI, planem na dziś, ocenami i alertami | [→ Otwórz](https://cackoarek.github.io/librus2mail/latest/web_dashboard.html) |
-| 🧙 **Panel WWW** | **Kreator konfiguracji (/setup)** | 4-krokowy kreator pierwszego uruchomienia w przeglądarce | [→ Otwórz](https://cackoarek.github.io/librus2mail/latest/web_setup.html) |
-| ⚙️ **Panel WWW** | **Konfigurator WWW (/ustawienia)** | Graficzna edycja parametrów uczniów, powiadomień i raportów | [→ Otwórz](https://cackoarek.github.io/librus2mail/latest/web_ustawienia.html) |
-| 📅 **Panel WWW** | **Plan lekcji ze zmianami** | Tygodniowy rozkład zajęć, zastępstwa, sale i odwołane lekcje | [→ Otwórz](https://cackoarek.github.io/librus2mail/latest/web_plan.html) |
-| 🎯 **Panel WWW** | **Symulator ocen "Co jeśli...?"** | Zestawienie ocen z wagami i prognoza wpływu nowej oceny | [→ Otwórz](https://cackoarek.github.io/librus2mail/latest/web_oceny.html) |
-| 📬 **E-mail** | **Powiadomienie bieżące** | Zbiorczy e-mail z ocenami, wiadomościami i ogłoszeniami | [→ Otwórz](https://cackoarek.github.io/librus2mail/latest/powiadomienie_collector.html) |
-| 📊 **E-mail** | **Raport postępów (dla rodziców)** | Analiza trendów, średnie ważone, symulator czerwonego paska | [→ Otwórz](https://cackoarek.github.io/librus2mail/latest/raport_8979296.html) |
-| 🎮 **E-mail** | **Raport ucznia: Kids (klasy 4–6)** | Grywalizacja, odznaki, Supermoce, język dostosowany do dzieci | [→ Otwórz](https://cackoarek.github.io/librus2mail/latest/raport_kids.html) |
-| 🚀 **E-mail** | **Raport ucznia: Teens (klasy 7–8)** | Egzamin 8-klasisty, Quick Wins, bilans energii i postępów | [→ Otwórz](https://cackoarek.github.io/librus2mail/latest/raport_teens.html) |
-| 🎯 **E-mail** | **Raport ucznia: Youth (szkoła średnia)** | Strategiczny dashboard, KPI, średnie semestralne i cele | [→ Otwórz](https://cackoarek.github.io/librus2mail/latest/raport_youth.html) |
-| 📁 **Archiwum** | **Wszystkie wersje** | Archiwum raportów i widoków dla każdej wydanej wersji | [→ Przeglądaj](https://cackoarek.github.io/librus2mail/) |
-
-> Raporty i ekrany są automatycznie generowane i publikowane przy każdym wydaniu nowej wersji.
-
-</div>
+| 🌐 **Pulpit WWW** | **Pulpit rodzica (Dashboard)** | Główne KPI, trwająca lekcja, kalendarium i alerty | [→ Zobacz](https://cackoarek.github.io/librus2mail/latest/web_dashboard.html) |
+| 📅 **Pulpit WWW** | **Plan lekcji na żywo** | Tygodniowy rozkład zajęć, zastępstwa, sale i aktualna lekcja | [→ Zobacz](https://cackoarek.github.io/librus2mail/latest/web_plan.html) |
+| 📊 **Pulpit WWW** | **Frekwencja** | Heatmapa roczna, kalendarz miesięczny z selektorem i statystyki | [→ Zobacz](https://cackoarek.github.io/librus2mail/latest/web_frekwencja.html) |
+| 🎯 **Pulpit WWW** | **Oceny i Symulator "Co jeśli?"** | Wagi ocen, wykluczanie przedmiotów ze średniej, kalkulator | [→ Zobacz](https://cackoarek.github.io/librus2mail/latest/web_oceny.html) |
+| 🧙 **Pulpit WWW** | **Kreator instalacji (/setup)** | 4-krokowy onboarding w przeglądarce z testem połączenia | [→ Zobacz](https://cackoarek.github.io/librus2mail/latest/web_setup.html) |
+| 📬 **E-mail** | **Powiadomienie bieżące** | Zbiorczy e-mail o nowych ocenach, ogłoszeniach i wiadomościach | [→ Zobacz](https://cackoarek.github.io/librus2mail/latest/powiadomienie_collector.html) |
+| 📈 **E-mail** | **Raport postępów rodzica** | Średnie ważone, wskaźniki formy PoP, diagnoza stylu nauki | [→ Zobacz](https://cackoarek.github.io/librus2mail/latest/raport_8979296.html) |
+| 🎮 **E-mail** | **Raport ucznia: Kids (klasy 4–6)** | Grywalizacja, Supermoce, odznaki i motywujący język | [→ Zobacz](https://cackoarek.github.io/librus2mail/latest/raport_kids.html) |
+| 🚀 **E-mail** | **Raport ucznia: Teens (klasy 7–8)** | Egzamin 8-klasisty, bilans postępów, szybkie szanse na awans | [→ Zobacz](https://cackoarek.github.io/librus2mail/latest/raport_teens.html) |
+| 🎯 **E-mail** | **Raport ucznia: Youth (liceum/technikum)**| Strategiczny dashboard KPI, średnie semestralne i cele | [→ Zobacz](https://cackoarek.github.io/librus2mail/latest/raport_youth.html) |
 
 ---
 
-## Spis treści
-1. [Główne możliwości](#główne-możliwości)
-2. [Wymagania](#wymagania)
-3. [Instalacja](#instalacja)
-4. [Konfiguracja](#konfiguracja)
-   - [Wariant A (Zalecany): Kreator w przeglądarce (/setup)](#wariant-a-zalecany-kreator-pierwszego-uruchomienia-w-przeglądarce-setup)
-   - [Wariant B: Tradycyjna edycja pliku config.yaml](#wariant-b-tradycyjna-edycja-pliku-configyaml)
-   - [Struktura pliku config.yaml](#struktura-pliku-configyaml)
-   - [Konfiguracja kont Librus (librus_users)](#konfiguracja-kont-librus-librus_users)
-   - [Konfiguracja wysyłki e-mail (mail)](#konfiguracja-wysyłki-e-mail-mail)
-   - [Konfiguracja panelu webowego (web)](#konfiguracja-panelu-webowego-web)
-5. [Architektura modułów i interaktywna nakładka WWW](#architektura-modułów-i-interaktywna-nakładka-www)
-6. [Usługa monitoringu i orkiestrator (librus_collect_and_notify.py / librus_collector.py)](#usługa-monitoringu-i-zbierania-danych-librus_collect_and_notifypy)
-   - [Uruchomienie standardowe (pełny cykl demona)](#uruchomienie-standardowe-pełny-cykl-demona)
-   - [Elastyczne tryby modułowe (przełączniki orkiestratora)](#elastyczne-tryby-modułowe-przełączniki-orkiestratora)
-   - [Tryb symulacji i podglądu powiadomień](#tryb-symulacji-i-podglądu-powiadomień-bez-wysyłania-e-mail)
-   - [Uruchomienie w tle (nohup / cron)](#uruchomienie-w-tle-nohup--cron)
-7. [Moduł bieżących powiadomień (librus_updates_notifier.py)](#moduł-bieżących-powiadomień-librus_updates_notifierpy)
-   - [Mechanizm znaczników czasu (watermarks) i uruchomień nieregularnych](#mechanizm-znaczników-czasu-watermarks-i-uruchomień-nieregularnych)
-   - [Parametry CLI i przykłady użycia](#parametry-cli-i-przykłady-użycia)
-8. [Moduł raportu postępów dziecka dla rodziców (librus_progress_report.py)](#moduł-raportu-postępów-dziecka-librus_progress_reportpy)
-   - [Możliwości analizy](#możliwości-analizy)
-   - [Sposób użycia i parametry CLI](#sposób-użycia-i-parametry-cli)
-9. [Moduł raportu motywacyjnego dla ucznia (librus_student_report.py)](#moduł-raportu-motywacyjnego-dla-ucznia-librus_student_reportpy)
-   - [Idea i warianty wiekowe szablonów (kids, teens, youth)](#idea-i-warianty-wiekowe-szablonów)
-   - [Sposób użycia i parametry CLI](#sposób-użycia-i-parametry-cli-ucznia)
-10. [Moduł Web: Interaktywny Panel Rodzica i Kreator Konfiguracji (librus_web.py)](#moduł-5-interaktywny-panel-rodzica-i-kreator-konfiguracji-librus_webpy)
-    - [Główne możliwości panelu WWW](#główne-możliwości-panelu-www)
-    - [Kreator pierwszego uruchomienia (/setup)](#kreator-pierwszego-uruchomienia-setup)
-    - [Graficzny konfigurator ustawień (/ustawienia)](#graficzny-konfigurator-ustawień-ustawienia)
-    - [Bezpieczeństwo i ochrona Parent Gate](#bezpieczeństwo-i-ochrona-parent-gate)
-    - [Parametry CLI i przykłady użycia](#parametry-cli-i-przykłady-użycia-modułu-web)
-11. [Wdrożenie produkcyjne i konteneryzacja (Docker & systemd)](#wdrożenie-produkcyjne-i-konteneryzacja-docker--systemd)
-    - [Konteneryzacja Docker i Docker Compose](#konteneryzacja-docker-i-docker-compose)
-    - [Wdrożenie systemd (Linux / Raspberry Pi / VPS)](#wdrożenie-systemd-linux--raspberry-pi--vps)
-12. [Szablony wiadomości e-mail (Jinja2)](#szablony-wiadomości-e-mail-jinja2)
-13. [Architektura projektu](#architektura-projektu)
-14. [Testy i jakość kodu](#testy-i-jakość-kodu)
-15. [Najczęstsze pytania i rozwiązywanie problemów (FAQ)](#najczęstsze-pytania-i-rozwiązywanie-problemów-faq)
-16. [Bezpieczeństwo](#bezpieczeństwo)
-17. [Podziękowania](#podziękowania)
-18. [Licencja](#licencja)
+## 🏛️ Architektura i 5 modułów systemu
+
+Projekt zaprojektowano modułowo wg filozofii **UNIX (jeden moduł = jedno zadanie)**. Moduły mogą być uruchamiane niezależnie lub w zintegrowanym potoku:
+
+```mermaid
+flowchart LR
+    L[Portal Librus] -->|OAuth & Scraping| M1[1. Collector]
+    M1 -->|Zapis JSON| S[(Baza storage/)]
+    S -->|Offline diff| M2[2. Updates Notifier]
+    S -->|Analityka rodzica| M3[3. Progress Report]
+    S -->|Motywacja ucznia| M4[4. Student Report]
+    S -->|Pulpit WWW na żywo| M5[5. Web Dashboard]
+    M2 --> E1[E-mail / HTML]
+    M3 --> E2[E-mail / HTML]
+    M4 --> E3[E-mail / HTML]
+    M5 --> W[Przeglądarka WWW]
+```
+
+1. **Moduł 1: Collector (`librus_collector.py`)** – bezpieczna autoryzacja OAuth, pobieranie surowych danych z portalu Librus Synergia (z opóźnieniami rate-limiting i rotacją User-Agent) oraz aktualizacja lokalnej bazy `storage/`.
+2. **Moduł 2: Updates Notifier (`librus_updates_notifier.py`)** – 100% offline; porównuje bieżący stan bazy ze znacznikami czasu i wysyła przejrzyste powiadomienia e-mail (HTML) o nowościach.
+3. **Moduł 3: Progress Report (`librus_progress_report.py`)** – analityczny raport okresowy dla rodziców: średnie ważone, wskaźniki PoP, badanie warunków czerwonego paska i diagnoza stylu uczenia się.
+4. **Moduł 4: Student Report (`librus_student_report.py`)** – motywacyjny raport dla ucznia z odznakami, celami i językiem dostosowanym do wieku (Kids, Teens, Youth).
+5. **Moduł 5: Web Dashboard (`librus_web.py`)** – interaktywny pulpit WWW (Flask + TailwindCSS) z planem lekcji na żywo, frekwencją, symulatorem ocen, terminarzem, centrum akcji CLI i kreatorem `/setup`.
+6. **Orkiestrator (`librus_collect_and_notify.py`)** – centralna fasada CLI łącząca moduły w automatyczny potok demona w tle (`Collector -> Notifier -> Sleep`) lub wywołująca wybrane moduły w odosobnieniu.
+
+> 📖 **Szczegółowy opis działania każdego modułu znajdziesz w dokumencie [docs/modules.md](docs/modules.md)**.
 
 ---
 
-## Główne możliwości
+## 🚀 Szybki start w 3 krokach
 
-* **Wsparcie dla wielu kont**: Możliwość jednoczesnego monitorowania kont dla kilkorga dzieci (każde konto może mieć przypisanych innych odbiorców powiadomień).
-* **Interaktywny Panel WWW i Konfigurator (`librus_web.py` / `librus-web`)**: Nowoczesna, opcjonalna nakładka graficzna (Flask + TailwindCSS + HTMX) integrująca wszystkie moduły: 4-krokowy kreator `/setup`, edytor `/ustawienia`, plan lekcji ze zmianami, terminarz, symulator ocen "Co jeśli...?" oraz panel wyzwalania akcji CLI.
-* **Obsługa wiadomości, ogłoszeń i ocen**: Monitorowanie wiadomości prywatnych od nauczycieli, ogólnych ogłoszeń szkolnych oraz nowo wystawionych ocen (cząstkowych, semestralnych i rocznych).
-* **Plan lekcji ze zmianami i terminarz szkolny**: Pobieranie rozkładu zajęć na bieżący i kolejny dzień z informacjami o godzinach pobytu w szkole (np. `08:00 – 13:35`), salach lekcyjnych, nauczycielach, zastępstwach i odwołanych lekcjach, a także monitorowanie terminarza sprawdzianów i kartkówek powiązanych z lekcjami.
-* **Elastyczna wysyłka e-mail**:
-  * **Gmail**: zoptymalizowana obsługa przez bibliotekę `yagmail` (wymagane hasło aplikacji Google).
-  * **SMTP**: standardowy protokół SMTP z szyfrowaniem STARTTLS (działa z dowolnym serwerem pocztowym: hostingodawcy, OVH, Cyberfolks, WP, Onet itp.).
-* **Automatyczny punkt bazowy przy pierwszym starcie**: Przy pierwszym uruchomieniu skrypt automatycznie indeksuje aktualne wiadomości, ogłoszenia i oceny jako bazę i nie wysyła powiadomień ze wszystkimi historycznymi wpisami – kolejne uruchomienia wysyłają powiadomienia wyłącznie o nowych wpisach.
-* **Nowoczesne szablony Jinja2**: Wszystkie e-maile generowane są z responsywnych szablonów HTML (`src/librus2mail/templates/emails/`), łatwych w dostosowywaniu stylów i kolorów.
-* **Automatyczne alerty o awariach i błędach**: W razie braku połączenia do Librusa, problemów z sesją/autoryzacją lub błędu parsowania danych (np. po zmianie wyglądu dziennika), skrypt natychmiast wysyła e-mail z diagnozą i zalecanymi działaniami. Wbudowany mechanizm throttling / cooldown zapobiega zalewaniu skrzynki powtarzającymi się wiadomościami.
-* **Dedykowany moduł analizy postępów dziecka (`librus_progress_report.py`)**: Niezależny skrypt analityczny dla rodzica przeliczający średnie ważone przedmiotowe i ogólne, wskaźniki trendu (↗, ↘, ➡), sugerowane oceny roczne, rozkład ocen (histogram) oraz automatyczne wnioski rodzicielskie (sukcesy, zagrożenia, nieprzygotowania).
-* **Motywacyjny raport postępów dla ucznia (`librus_student_report.py`)**: Skierowany bezpośrednio do dziecka (lub rodzica prezentującego podsumowanie dziecku), stawiający na motywację, wskazujący Supermoce, szybkie szanse na awans (Quick Wins), odznaki grywalizacyjne oraz 3 szablony wiekowe: `kids` (klasy 4–6), `teens` (klasy 7–8) i `youth` (szkoła średnia). Działa w 100% offline.
-
----
-
-## Wymagania
-
-* **Python 3.10+** (projekt wykorzystuje unie typów `X | Y` oraz walrus operator `:=`).
-* Dostęp do internetu umożliwiający połączenie z `api.librus.pl` oraz `synergia.librus.pl`.
-* Skrzynka pocztowa (Gmail lub dowolny serwer SMTP) do wysyłania powiadomień.
-
----
-
-## Instalacja
-
-Zaleca się instalację w dedykowanym wirtualnym środowisku (`venv`):
-
+### Krok 1: Klonowanie i przygotowanie środowiska
 ```bash
-# 1. Klonowanie repozytorium (jeśli jeszcze nie sklonowano)
-git clone <URL_REPOZYTORIUM>
+git clone https://github.com/cackoarek/librus2mail.git
 cd librus2mail
 
-# 2. Utworzenie środowiska wirtualnego
 python3 -m venv venv
-
-# 3. Aktywacja środowiska
 source venv/bin/activate
-
-# 4. Aktualizacja menedżera pip
-pip install --upgrade pip
-
-# 5. Instalacja projektu:
-# Wariant A (zalecany): Nowoczesna instalacja standardem pyproject.toml (PEP 517/518):
-pip install -e .
-
-# Opcjonalnie: instalacja narzędzi deweloperskich (pytest, ruff):
-pip install -e ".[dev]"
-
-# Wariant B: Tradycyjna instalacja z pliku requirements.txt:
 pip install -r requirements.txt
 ```
 
----
+### Krok 2: Konfiguracja (w przeglądarce lub pliku YAML)
+Możesz skonfigurować aplikację na dwa sposoby:
 
-## Konfiguracja
+* **Wariant A (Najprostszy – Kreator WWW)**:
+  Uruchom panel webowy:
+  ```bash
+  python librus_web.py
+  ```
+  Otwórz w przeglądarce adres `http://localhost:5000` — aplikacja automatycznie uruchomi 4-krokowy kreator konfiguracji (`/setup`), sprawdzi połączenie z kontem Librus i zapisze plik `config.yaml`.
 
-Aplikacja **Librus2mail** oferuje dwa wygodne sposoby konfiguracji: nowoczesny graficzny kreator w przeglądarce WWW lub tradycyjną edycję pliku YAML.
+* **Wariant B (Tradycyjny – Plik YAML)**:
+  Skopiuj gotowy szablon i uzupełnij swoje dane:
+  ```bash
+  cp config-example.yaml config.yaml
+  nano config.yaml  # wpisz login/hasło do Librusa i dane serwera poczty
+  ```
 
-### Wariant A (Zalecany): Kreator pierwszego uruchomienia w przeglądarce (`/setup`)
-
-Najprostszym i najszybszym sposobem na rozpoczęcie pracy jest uruchomienie modułu webowego:
-
+### Krok 3: Uruchomienie monitoringu
 ```bash
-librus-web
-# lub:
-python librus_web.py
-```
-
-Gdy plik `config.yaml` jeszcze nie istnieje (lub nie ma skonfigurowanych kont), serwer automatycznie przekieruje Cię do 4-krokowego kreatora pod adresem:
-👉 **`http://localhost:5000/setup`**
-
-Kreator przeprowadzi Cię przez cały proces:
-1. **Konta Librus**: Wprowadzenie loginu i hasła z przyciskiem **Testuj logowanie**, który na żywo weryfikuje połączenie z portalem Synergia.
-2. **Poczta e-mail**: Wybór Gmail / SMTP, konfiguracja danych nadawcy i odbiorców oraz przycisk **Wyślij e-mail testowy**.
-3. **Harmonogram i raporty**: Wybór częstotliwości sprawdzania dziennika oraz włączenie raportów postępów dla rodzica i ucznia.
-4. **Zapis i start**: Automatyczne utworzenie zwalidowanego pliku `config.yaml` i natychmiastowe przejście do pulpitu rodzica.
-
-> [!TIP]
-> W dowolnym momencie po wstępnej konfiguracji możesz ponownie dostosować parametry w przeglądarce wchodząc w zakładkę **Ustawienia** (`http://localhost:5000/ustawienia`).
-
----
-
-### Wariant B: Tradycyjna edycja pliku `config.yaml`
-
-Jeśli wolisz pracę w terminalu lub automatyzację headless (np. w skryptach CI/CD), skopiuj jeden z przygotowanych szablonów:
-
-```bash
-# Wariant minimalistyczny (tylko wymagane pola, reszta domyślna):
-cp config-minimal.yaml config.yaml
-
-# Wariant pełny (wszystkie zaawansowane parametry i wyjaśnienia):
-cp config-example.yaml config.yaml
-```
-
-Następnie otwórz `config.yaml` w edytorze i uzupełnij swoje dane.
-
-### Struktura pliku `config.yaml`
-
-```yaml
-librus_users:
-  - librus_login_name: "Konto Jasia"
-    librus_login: "1234567"
-    librus_password: "twoje_haslo_librus"
-    read_messages: true
-    read_grades: true
-    one_summary_message: false
-    notification_receivers:
-      - "mama@example.com"
-      - "tata@example.com"
-
-wait_time_s: 3600
-work_in_loop: true  # true: pętla z oczekiwaniem wait_time_s (domyślnie), false: pojedynczy przebieg (np. pod crona)
-storage_dir: "storage"  # (opcjonalnie) katalog zapisu plików stanu JSON (domyślnie: storage)
-
-mail:
-  login: "twoj_email_powiadomien@gmail.com"
-  password: "twoje_haslo_aplikacji"
-  use_gmail: true
-  non_gmail_settings:
-    port: 587
-    smtp_host: "smtp.twoj-hosting.pl"
-
-# Opcjonalna konfiguracja interaktywnego panelu webowego (librus_web.py):
-web:
-  enabled: true
-  host: "127.0.0.1"
-  port: 5000
-  password: "twoje_haslo_rodzica"  # Hasło zabezpieczające panel przed niepowołanym dostępem
-  max_login_attempts: 5           # Blokada brute-force po 5 nieudanych próbach
-  lockout_duration_s: 900         # Czas blokady adresu IP (15 minut)
-```
-
-### Konfiguracja kont Librus (`librus_users`)
-
-Każdy element listy `librus_users` reprezentuje jedno konto w e-dzienniku:
-
-| Parametr | Typ | Opis |
-| :--- | :--- | :--- |
-| `librus_login_name` | `string` | Przyjazna nazwa (np. imię dziecka). Ułatwia identyfikację konta w tytułach i treści e-maili. |
-| `librus_login` | `string` | Login rodzica w Librus Synergia (zazwyczaj ciąg cyfr). |
-| `librus_password` | `string` | Hasło do konta rodzica w Librus Synergia. |
-| `read_messages` | `bool` | Czy skrypt ma wchodzić w szczegóły wiadomości i pobierać jej treść (`true`/`false`). **Domyślnie `true`**.<br>**UWAGA:** Wejście w wiadomość oznacza ją w portalu Librus jako przeczytaną przez rodzica. Jeśli wolisz otrzymywać powiadomienie wyłącznie o tytule i nadawcy (bez oznaczania na portalu), ustaw `false`. |
-| `read_grades` | `bool` | Czy włączyć sprawdzanie i zbieranie ocen dla tego konta (`true`/`false`). **Domyślnie `true`**. |
-| `one_summary_message` | `bool` | Jeśli `true`, zamiast wysyłać osobne maile dla wiadomości, ogłoszeń i ocen, wyśle **jeden zbiorczy e-mail** podsumowujący wszystkie nowości z danego cyklu. Domyślnie `false`. |
-| `send_error_notifications` | `bool` | Opcjonalne włączenie/wyłączenie wysyłania maili o błędach dla danego konta (domyślnie: `true`). |
-| `notification_receivers` | `list` | Lista adresów e-mail odbiorców, którzy mają otrzymać powiadomienie dla tego konta. |
-
-### Parametry globalne
-
-* `delay_between_users_s` (`int` / `float`): Czas oczekiwania w sekundach pomiędzy pobieraniem danych dla kolejnych kont dzieci (domyślnie: `10` sekund). Odstęp 10–15s chroni przed blokadami anty-botowymi i wymuszaniem 2FA na serwerach Librusa przy odpytywaniu wielu kont z tego samego adresu IP.
-* `login_retries` (`int`): Liczba automatycznych prób logowania do portalu Librus w przypadku chwilowych problemów z sesją lub 2FA (domyślnie: `2`).
-* `login_retry_delay_s` (`int` / `float`): Czas oczekiwania w sekundach przed ponowną próbą logowania (domyślnie: `5` sekund).
-* `wait_time_s` (`int`): Czas oczekiwania w sekundach pomiędzy kolejnymi cyklami sprawdzania e-dziennika (zalecane: minimum `3600`–`7200` sekund (1-2h), aby nie obciążać serwera i uniknąć blokad anty-botowych). Wykorzystywane, gdy `work_in_loop: true`.
-* `work_in_loop` (`bool`): Tryb pracy:
-  * `true` (domyślnie) – skrypt działa nieprzerwanie w pętli i po sprawdzeniu kont odczekuje `wait_time_s` sekund.
-  * `false` – skrypt wykonuje dokładnie jeden pełny przebieg (sprawdza konta, wysyła e-maile, zapisuje stan do pliku) i natychmiast kończy pracę. Idealne do uruchamiania przez systemowy harmonogram zadań `cron`.
-* `storage_dir` (`string`): Ścieżka do katalogu, w którym automatycznie zapisywany jest trwały stan aplikacji oraz pełna historia ocen w formacie JSON (np. `storage/8979295.json`). Domyślnie: `"storage"`.
-* `send_error_notifications` (`bool`): Czy wysyłać e-mail z alertem o problemach (brak połączenia internetowego, awaria Librusa, wygaśnięcie sesji / wymóg zalogowania przez www, błąd parsowania HTML). Domyślnie `true`.
-* `error_cooldown_s` (`int`): Minimalny czas w sekundach pomiędzy kolejnymi powiadomieniami o tym samym błędzie (domyślnie: `3600` sekund = 1h). Zapobiega zalewaniu skrzynki podczas trwającej awarii serwera. Po ustąpieniu problemu licznik resetuje się automatycznie.
-
-### Konfiguracja wysyłki e-mail (`mail`)
-
-* `login` (`string`): Adres e-mail nadawcy, z którego wysyłane będą powiadomienia.
-* `password` (`string`): Hasło do konta pocztowego lub dedykowane hasło aplikacji.
-* `use_gmail` (`bool`):
-  * `true` – użycie biblioteki `yagmail` dedykowanej dla Google Mail.
-  * `false` – użycie standardowego serwera SMTP określonego w `non_gmail_settings`.
-* `non_gmail_settings`:
-  * `smtp_host` (`string`): Adres serwera SMTP (np. `smtp.ct8.pl`, `poczta.o2.pl`, `smtp.mailgun.org`).
-  * `port` (`int`): Port serwera pocztowego (standardowo `587` dla połączenia STARTTLS).
-
-> [!TIP]
-> **Wskazówka dla Gmaila:** Google wymaga włączenia weryfikacji dwuetapowej (2FA) i wygenerowania dedykowanego **hasła aplikacji** (App Password) w ustawieniach konta Google (`Konto Google -> Bezpieczeństwo -> Hasła do aplikacji`). Nie podawaj swojego głównego hasła do konta Google!
-
-### Konfiguracja panelu webowego (`web`)
-
-* `enabled` (`bool`): Czy włączyć obsługę panelu WWW (domyślnie: `true`).
-* `host` (`string`): Adres nasłuchu serwera HTTP (domyślnie: `"127.0.0.1"` dla dostępu lokalnego; ustaw `"0.0.0.0"`, aby udostępnić panel w domowej sieci Wi-Fi/LAN).
-* `port` (`int`): Port HTTP serwera aplikacji (domyślnie: `5000`).
-* `password` (`string`): Hasło rodzica chroniące dostęp do panelu w przeglądarce (Parent Gate). Jeśli pozostanie puste, panel uruchomi się bez logowania (dopuszczalne tylko w zaufanej sieci lokalnej).
-* `max_login_attempts` (`int`): Maksymalna liczba nieudanych prób logowania z danego adresu IP przed nałożeniem blokady (domyślnie: `5`).
-* `lockout_duration_s` (`int`): Czas blokady adresu IP po przekroczeniu limitu błędnych haseł w sekundach (domyślnie: `900` = 15 minut).
-* `cookie_secure` (`bool`): Wymuszenie flagi `Secure` na ciasteczkach sesyjnych (wymaga HTTPS, domyślnie `false` dla lokalnego HTTP; można też włączyć przez zmienną środowiskową `LIBRUS_WEB_COOKIE_SECURE=true`).
-* `session_cookie_samesite` (`string`): Polityka SameSite ciasteczka sesyjnego (`"Lax"` domyślnie, lub `"Strict"`).
-* `trusted_proxies` (`list[string]`): Lista zaufanych adresów IP serwerów reverse proxy (domyślnie: `["127.0.0.1", "::1", "localhost"]`), z których nagłówek `X-Forwarded-For` jest akceptowany. Zapobiega spoofingowi adresu IP i omijaniu blokady brute-force przy pracy za Nginx, Traefik lub Caddy.
-
----
-
-## Architektura modułów i interaktywna nakładka WWW
-
-System **Librus2mail** został zaprojektowany w architekturze modułowej. Składa się z 4 niezależnych modułów CLI, centralnego orkiestratora oraz **nowoczesnej nakładki graficznej WWW (Moduł 5)**, która spina wszystkie elementy w jeden interaktywny pulpit rodzica:
-
-1. **Moduł 1: Collector (`librus_collector.py` / `librus-collector`)**:
-   * Odpowiada wyłącznie za autoryzację OAuth w portalu Librus Synergia oraz pobieranie wiadomości, ogłoszeń i ocen z zachowaniem opóźnień anty-botowych.
-   * Zapisuje stan i historię w lokalnej bazie JSON (`storage/`).
-2. **Moduł 2: Updates Notifier (`librus_updates_notifier.py` / `librus-notifier`)**:
-   * Odpowiada za detekcję nowych wpisów (według stanu lub zadanego okna czasowego `--days`/`--hours`).
-   * Generuje szablony HTML i wysyła powiadomienia e-mail (Gmail/SMTP) lub eksportuje do samodzielnego pliku HTML (`-o`). Działa w 100% offline.
-3. **Moduł 3: Progress Report dla rodziców (`librus_progress_report.py` / `librus-report`)**:
-   * Niezależny silnik analityczny generujący okresowe podsumowania postępów dla rodzica (średnie ważone, wskaźniki PoP, szanse na czerwony pasek, styl uczenia się). Działa w 100% offline.
-4. **Moduł 4: Student Report dla ucznia (`librus_student_report.py` / `librus-student-report`)**:
-   * Raport motywacyjno-edukacyjny przygotowany specjalnie dla ucznia: Supermoce, szybkie szanse na awans ocen (Quick Wins), odznaki grywalizacyjne i 3 szablony wiekowe (`kids`, `teens`, `youth`). Działa w 100% offline.
-5. **Główny orkiestrator CLI (`librus_collect_and_notify.py` / `librus-collect-and-notify`)**:
-   * Spina pełny cykl demona (`Collector -> Notifier -> sleep`) lub pozwala wywołać wybrany moduł poleceniami: `--collect-only`, `--notify-only`, `--report`, `--student-report`.
-6. **Moduł 5: Interaktywny Panel Rodzica & Konfigurator WWW (`librus_web.py` / `librus-web`)**:
-   * Kompleksowa nakładka graficzna na cały system: 4-etapowy kreator pierwszego uruchomienia (`/setup`), graficzny edytor parametrów (`/ustawienia`), pulpit KPI, tygodniowy plan lekcji ze zmianami, terminarz sprawdzianów, symulator ocen "Co jeśli...?" oraz panel wyzwalania akcji CLI z podglądem logów.
-
----
-
-## Usługa monitoringu i zbierania danych (librus_collect_and_notify.py)
-
-### Uruchomienie standardowe (pełny cykl demona)
-
-Upewnij się, że wirtualne środowisko jest aktywne:
-
-```bash
-source venv/bin/activate
-
-# Wariant 1: Zintegrowany potok (pełny cykl Collector -> Notifier w pętli):
+# Uruchomienie ciągłego demona monitorującego:
 python librus_collect_and_notify.py
-# lub polecenia konsolowe:
-librus-collect-and-notify
-# lub:
-librus2mail
 
-# Wariant 2: Dedykowane polecenie modułu kolektora (tylko pobieranie):
-python librus_collector.py
-# lub:
-librus-collector
-
-# Wariant 3: Samodzielny moduł bieżących powiadomień (100% offline):
-python librus_updates_notifier.py
-# lub:
-librus-notifier
-```
-
-### Elastyczne tryby modułowe (przełączniki orkiestratora)
-
-```bash
-# 1. Tylko pobranie świeżych danych ze szkoły do storage (bez wysyłki maili):
-python librus_collect_and_notify.py --collect-only
-
-# 2. Tylko wygenerowanie bieżących powiadomień z bazy (100% offline):
-python librus_collect_and_notify.py --notify-only --days 7 --dry-run
-
-# 3. Uruchomienie modułu raportu postępów dla rodziców (Moduł 3):
-python librus_collect_and_notify.py --report -o raport.html
-
-# 4. Uruchomienie modułu raportu motywacyjnego dla ucznia (Moduł 4):
-python librus_collect_and_notify.py --student-report --days 7 --dry-run
-```
-
-### Tryb symulacji i podglądu powiadomień (bez wysyłania e-mail)
-
-Kolektor wspiera tryb symulacji i filtrowania po okresie czasowym, umożliwiający sprawdzenie wpisów za wybrany czas (dni/godziny), weryfikację w konsoli lub wyeksportowanie powiadomienia e-mail do pliku HTML bez wysyłania maili i bez modyfikacji bazy `storage/`:
-
-```bash
-# 1. Podgląd w konsoli wpisów z ostatnich 7 dni (--dry-run):
-librus-collector --days 7 --dry-run
-
-# 2. Zapisanie powiadomienia e-mail jako samodzielny plik HTML do weryfikacji wyglądu (-o / --save-html):
-librus-collector --days 3 -o podglad_powiadomienia.html
-
-# 3. Symulacja w trybie offline ze wskazanego katalogu bazy (np. przykładowe dane testowe):
-librus-collector --offline -s examples/storage --days 14 -o examples/reports/powiadomienie_collector.html
-
-# 4. Zawężenie sprawdzania do konkretnego konta dziecka:
-librus-collector -u 8979296 --days 7 --dry-run
-```
-
-| Parametr | Krótka flaga | Opis |
-| :--- | :--- | :--- |
-| `--config <plik>` | `-c` | Ścieżka do pliku konfiguracyjnego YAML (domyślnie: `config.yaml`). |
-| `--storage-dir <kat>` | `-s` | Ścieżka do katalogu pamięci stanu (nadpisuje konfigurację). |
-| `--user <login/nazwa>` | `-u` | Filtruje wykonanie tylko do wskazanego konta ucznia. |
-| `--days <N>` | `-d` | Uznaje wpisy z ostatnich `N` dni za nowe (automatycznie wyłącza pętlę demona). |
-| `--hours <N>` | | Uznaje wpisy z ostatnich `N` godzin za nowe (np. `--hours 12`). |
-| `--dry-run` | | Wyświetla podsumowanie wpisów w terminalu; nie wysyła maili ani nie modyfikuje `storage/`. |
-| `--save-html <ścieżka>` | `-o` | Zapisuje powiadomienie jako samodzielny plik HTML do podglądu w przeglądarce. |
-| `--offline` | | Odczytuje dane wyłącznie z lokalnego katalogu `storage/` bez łączenia z Librusem. |
-| `--once`, `--no-loop` | | Wymusza pojedyncze wykonanie i natychmiastowe zakończenie (nadpisuje `work_in_loop: true`). |
-| `--loop` | | Wymusza działanie w nieskończonej pętli z interwałem `wait_time_s` (nadpisuje `work_in_loop: false`). |
-
-### Uruchomienie w tle (nohup / cron)
-
-#### Wariant A: `nohup` (proste uruchomienie w tle)
-```bash
-nohup librus-collector >/dev/null 2>&1 &
-```
-
-> [!TIP]
-> Do stałego wdrożenia produkcyjnego na serwerach Linux (VPS, Raspberry Pi, serwery domowe) zaleca się skorzystanie ze środowiska **Docker / Docker Compose** lub gotowych usług **systemd** z automatycznym wznawianiem po awarii. Szczegółowe instrukcje znajdziesz w sekcji [Wdrożenie produkcyjne i konteneryzacja (Docker & systemd)](#wdrożenie-produkcyjne-i-konteneryzacja-docker--systemd).
-
-#### Wariant B: Harmonogram zadań `cron` (z `work_in_loop: false` lub `--once`)
-
-Jeśli wolisz, aby skrypt nie działał jako ciągły proces w tle, lecz był wywoływany cyklicznie przez systemowego crona:
-1. W pliku `config.yaml` ustaw:
-   ```yaml
-   work_in_loop: false
-   ```
-2. Dodaj wpis do tabeli zadań użytkownika poleceniem `crontab -e`:
-
-   * **Uruchamianie co 15 minut:**
-     ```cron
-     */15 * * * * cd /sciezka/do/librus2mail && venv/bin/python librus_collector.py >> librus.log 2>&1
-     ```
-
-   * **Uruchamianie raz dziennie o 16:30 (codziennie):**
-     ```cron
-     30 16 * * * cd /sciezka/do/librus2mail && venv/bin/python librus_collector.py >> librus.log 2>&1
-     ```
-
-   * **Uruchamianie o 16:30 tylko w dni robocze/szkolne (od poniedziałku do piątku):**
-     ```cron
-     30 16 * * 1-5 cd /sciezka/do/librus2mail && venv/bin/python librus_collector.py >> librus.log 2>&1
-     ```
-
-> [!TIP]
-> Po każdym cyklu skrypt automatycznie zapisuje stan i historię ocen do katalogu `storage/`, dzięki czemu kolejne uruchomienie wyśle powiadomienia tylko o faktycznie nowych wpisach.
-
----
-
-## Moduł bieżących powiadomień (librus_updates_notifier.py)
-
-Dedykowany moduł powiadomień **`librus_updates_notifier.py`** (`librus-notifier`) odpowiada za offline'ową analizę danych zebranych w `storage/` i wysyłkę wiadomości e-mail do rodziców lub eksport do pliku HTML / podgląd w terminalu.
-
-### Mechanizm znaczników czasu (watermarks) i uruchomień nieregularnych
-
-W pliku pamięci stanu ucznia (`storage/<login>.json`) utrzymywane są dwa kluczowe znaczniki czasowe:
-* **`last_collect_time`**: data ostatniej pomyślnej synchronizacji z portalem Librus (zapisywana przez `librus_collector.py`).
-* **`last_notify_time`**: data ostatniego faktycznie dostarczonego powiadomienia e-mail do rodzica (zapisywana przez `librus_updates_notifier.py`).
-
-Dzięki temu przy nieregularnym wywoływaniu powiadomień (np. z crona raz dziennie, podczas gdy kolektor zbiera dane co 30 minut):
-1. **Tryb automatyczny (bez parametrów `--days` i `--hours`)**: Skrypt pobiera `last_notify_time` ze storage i filtruje wpisy dodane lub opublikowane po tej dacie. Rodzic zawsze otrzymuje dokładnie to, co pojawiło się od poprzedniego e-maila, bez dubli i bez pomijania wpisów.
-2. **Ochrona podglądu**: Uruchomienie z `--dry-run` lub `-o / --save-html` **nie przesuwa znacznika** `last_notify_time`. Możesz weryfikować wygląd maila dowolną liczbę razy bez obawy o pominięcie powiadomień.
-3. **Tryb jawny (`--days N` lub `--hours N`)**: Użytkownik wymusza sztywne okno czasowe (np. ostatnie 3 dni).
-
-### Parametry CLI i przykłady użycia
-
-```bash
-# 1. Nieregularne powiadomienie e-mail (od ostatniego powiadomienia zapisanego w storage):
-librus-notifier
-# lub:
-venv/bin/python librus_updates_notifier.py
-
-# 2. Podgląd w konsoli nowości z ostatnich 7 dni (--dry-run):
-librus-notifier --days 7 --dry-run
-
-# 3. Zapisanie powiadomienia jako plik HTML do weryfikacji wyglądu (-o / --save-html):
-librus-notifier --days 3 -o podglad_powiadomienia.html
-
-# 4. Sprawdzenie powiadomień ze wskazanego katalogu testowego:
-librus-notifier -s examples/storage --days 14 -o examples/reports/powiadomienie.html
-```
-
-| Parametr | Krótka flaga | Opis |
-| :--- | :--- | :--- |
-| `--config <plik>` | `-c` | Ścieżka do pliku konfiguracyjnego YAML (domyślnie: `config.yaml`). |
-| `--storage-dir <kat>` | `-s` | Ścieżka do katalogu pamięci stanu (nadpisuje konfigurację). |
-| `--user <login/nazwa>` | `-u` | Filtruje wykonanie tylko do wskazanego konta ucznia. |
-| `--days <N>` | `-d` | Uznaje wpisy z ostatnich `N` dni za nowe (nadpisuje znacznik `last_notify_time`). |
-| `--hours <N>` | | Uznaje wpisy z ostatnich `N` godzin za nowe (np. `--hours 12`). |
-| `--dry-run` | | Podgląd w konsoli bez wysyłania maili i bez aktualizacji `last_notify_time`. |
-| `--save-html <ścieżka>` | `-o` | Zapisuje powiadomienie jako samodzielny plik HTML do podglądu w przeglądarce. |
-
----
-
-## Moduł raportu postępów dziecka (librus_progress_report.py)
-
-Dedykowany moduł analityczny **`librus_progress_report.py`** działa w **100% offline** na podstawie danych zebranych wcześniej przez `librus_collector.py` i zapisanych w katalogu `storage/`.
-
-Dzięki takiemu podziałowi:
-* ⚡ **Błyskawiczne działanie**: Raport generuje się w ułamku sekundy (brak konieczności łączenia się z siecią, logowania i czekania na opóźnienia anty-botowe).
-* 🛡️ **Bezpieczeństwo konta**: Brak zbędnych sesji i odpytywania Librusa przy każdym wygenerowaniu raportu.
-* 📶 **Dostępność**: Raport można wygenerować nawet wtedy, gdy portal Librusa ma chwilową przerwę techniczną.
-
-### Możliwości analizy:
-* **Średnie ważone**: Wyliczanie precyzyjnej średniej ważonej dla każdego przedmiotu oraz średniej ogólnej ucznia w oparciu o oficjalne wagi ocen z Librusa (uwzględniając modyfikatory `+` jako +0.5, `-` jako -0.25).
-* **📈 Analiza wsteczna i porównanie z poprzednim okresem (Wskaźnik formy ucznia)**:
-  * Automatyczne zestawienie bieżącego okresu (np. ostatnie 7 dni lub od ostatniego raportu) z **identycznym wcześniejszym oknem czasowym** (np. wcześniejsze 7 dni).
-  * Wyliczanie dynamiki ocen: zmiana średniej okresowej ($\Delta$), przyrost ocen bdb/celujących (5–6), spadek lub wzrost ocen słabych (1–2), wpływ na średnią roczną ucznia oraz bilans nieprzygotowań.
-  * Natychmiastowa diagnoza formy dla rodzica: **Wyraźny progres 🚀**, **Lekka poprawa ↗️**, **Stabilnie ➡️** lub **Ostrzeżenie o spadku wyników ⚠️** wraz ze wskazaniem przedmiotów o największym skoku i spadku.
-* **Wskaźnik trendu wyników**: Analiza kierunku zmian średniej z danego przedmiotu w porównaniu z poprzednimi okresami:
-  * ↗ *(np. +0.40)* – widoczna poprawa wyników,
-  * ↘ *(np. -0.35)* – spadek średniej,
-  * ➡ *(stabilnie)* – równe, powtarzalne oceny,
-  * ✨ *(nowy wpis)* – pierwsza ocena z danego przedmiotu.
-* **🏅 Symulator Czerwonego Paska (Świadectwo z wyróżnieniem)**:
-  * Weryfikacja warunku średniej końcowej $\ge 4.75$ i braku ocen niedostatecznych.
-  * Wyliczanie brakującego dystansu punktowego oraz wskazywanie kluczowych przedmiotów o najkrótszej drodze do podniesienia oceny.
-* **🎯 Analiza „Na granicy oceny” (Kalkulator szans i zagrożeń)**:
-  * **Szanse na wyższą ocenę**: Wykrywa przedmioty, gdzie uczeń traci $\le 0.25$ pkt do wyższego stopnia i wylicza, jaka ocena ze sprawdzianu (waga 2) lub kartkówki (waga 1) wystarczy, by przeskoczyć próg!
-  * **Zagrożenia spadkiem**: Wskazuje przedmioty z małym marginesem bezpieczeństwa ($\le 0.12$ nad progiem), gdzie pojedyncza ocena niedostateczna grozi obniżeniem prognozy.
-* **🔍 Styl nauki: Sprawdziany vs Bieżąca praca**:
-  * Zestawienie średniej ze sprawdzianów i prac klasowych (wagi 2–3) ze średnią z kartkówek, odpowiedzi i zadań domowych (waga 1).
-  * Diagnoza pedagogiczna: pozwala rodzicowi ocenić, czy uczeń ma trudności z powtórkami dużych partii materiału przed testami, czy z bieżącą dyscypliną i systematycznością.
-* **⚖️ Wpływ wag ocen & Stabilność wyników (Sinusoida)**:
-  * **Efekt wagowy**: Porównanie średniej ważonej z arytmetyczną (czy sprawdziany o dużej wadze ciągną wynik w górę, czy zaniżają średnią).
-  * **Stabilność ocen**: Wykrywanie przedmiotów o stałych, powtarzalnych ocenach oraz przedmiotów o wysokich wahaniach (np. przeplatanka ocen 1 i 5).
-* **⏱️ Analiza „Cichych przedmiotów”**:
-  * Wczesne ostrzeżenie o przedmiotach, z których uczeń nie otrzymał żadnej oceny od ponad 30 dni (ryzyko kumulacji sprawdzianów przed końcem semestru).
-* **Inteligentne alerty i wnioski rodzicielskie**:
-  * 🌟 **Sukcesy**: Przedmioty ze średnią wyróżniającą, bardzo dobre oceny ze sprawdzianów o wysokich wagach, szanse na wyższe stopnie.
-  * ⚠️ **Obszary do poprawy**: Ostrzeżenia o zagrożeniu oceną niedostateczną (< 2.0), niskie średnie (< 3.0), słabe oceny ze sprawdzianów o dużej wadze z sugestią poprawy, sumaryczna liczba nieprzygotowań i braków zadań domowych (`np`, `bz`).
-* **Rozkład ocen (histogram)**: Wizualne zestawienie liczby poszczególnych stopni (1–6) w minionym okresie oraz w całym roku szkolnym.
-* **📖 Przewodnik rodzica (Jak rozumieć wskaźniki)**: Zrozumiała legenda wyjaśniająca progi ocen, trendy, wagi oraz interpretację poszczególnych metryk dołączona bezpośrednio do każdego raportu (w e-mailu i w konsoli).
-* **Nowoczesny dashboard e-mail**: Estetyczny, responsywny szablon HTML z kafelkami KPI, kolorowymi plakietkami ocen (badges), paskiem postępu do czerwonego paska, tabelami i szczegółami nowo wystawionych ocen.
-
-### Sposób użycia i parametry CLI:
-
-```bash
-# 1. Wygenerowanie i wysłanie raportu postępów (okres od ostatniego raportu lub domyślne 7 dni)
-librus-report
-# lub:
-venv/bin/python librus_progress_report.py
-
-# 2. Tryb symulacji (--dry-run) - pełna analiza i wydruk tabeli w terminalu bez wysyłania e-maila
-librus-report --dry-run
-# lub:
-venv/bin/python librus_progress_report.py --dry-run
-
-# 3. Zapisanie raportu jako plik HTML do podglądu w przeglądarce (--save-html / -o)
-librus-report --save-html raport.html
-# lub dla konkretnego dziecka:
-venv/bin/python librus_progress_report.py -u 1234567 -o podglad.html
-
-# 4. Wymuszenie analizy za określony czas, np. ostatnie 14 lub 30 dni (--days N)
-librus-report --days 14
-
-# 5. Zawężenie do konkretnego konta dziecka (--user)
-librus-report --user 1234567
-# albo po nazwie:
-librus-report --user "Jan Kowalski"
-
-# 6. Wymuszenie wysyłki raportu nawet przy braku nowych ocen (--force / -f)
-librus-report --force
-
-# 7. Jednorazowe odpytanie Librusa przed generowaniem raportu (--fetch)
-librus-report --fetch
-```
-
-| Parametr | Krótka flaga | Opis |
-| :--- | :--- | :--- |
-| `--config <plik>` | `-c` | Ścieżka do pliku konfiguracyjnego (domyślnie: `config.yaml`). |
-| `--storage-dir <kat>` | `-s` | Ścieżka do katalogu bazy danych `storage` (nadpisuje ustawienie z `config.yaml`). |
-| `--user <login/nazwa>` | `-u` | Filtruje wykonanie raportu tylko do wskazanego konta dziecka. |
-| `--days <N>` | `-d` | Analizuje ostatnie `N` dni wstecz (zamiast daty poprzedniego raportu). |
-| `--dry-run` | | Generuje analizę i wyświetla raport w terminalu; nie wysyła maila ani nie aktualizuje daty. |
-| `--save-html <plik/katalog>` | `-o` | Zapisuje raport jako samodzielny plik HTML do podglądu w przeglądarce (pomija wysyłkę e-mail i nie aktualizuje daty raportu). |
-| `--fetch` | | Opcjonalnie łączy się z Librusem i pobiera oceny przez sieć (domyślnie działa w 100% offline ze `storage/`). |
-| `--force` | `-f` | Wysyła raport nawet jeśli w minionym okresie uczeń nie otrzymał żadnych nowych ocen. |
-
-> [!TIP]
-> Pełny podręcznik wszystkich możliwych wywołań, zaawansowanych kombinacji flag oraz przykładów dla każdego ze skryptów znajdziesz w dedykowanym dokumencie: **[useful-scripts.md](useful-scripts.md)**.
-
-### Konfiguracja:
-Skrypt `librus_progress_report.py` korzysta z głównego pliku `config.yaml` (wykorzystuje zdefiniowane w nim konta dzieci, listę odbiorców oraz ustawienia skrzynki pocztowej `mail`), dzięki czemu nie wymaga żadnej osobnej konfiguracji. Okres analizy przy pierwszym uruchomieniu to domyślnie 7 dni (lub wartość przekazana parametrem `--days`).
-
-### Harmonogram cron dla raportów:
-
-Dzięki wydzieleniu skryptu do osobnego pliku, możesz w prosty i elastyczny sposób skonfigurować w cronie (`crontab -e`) wysyłkę raportu w dowolnym, dogodnym dla Ciebie momencie:
-
-* **Raz w tygodniu w każdy piątek o 17:00 (podsumowanie całego tygodnia):**
-  ```cron
-  0 17 * * 5 cd /sciezka/do/librus2mail && venv/bin/python librus_progress_report.py >> librus.log 2>&1
-  ```
-
-* **Raz w tygodniu w niedzielę o 19:00 (przygotowanie do nadchodzącego tygodnia):**
-  ```cron
-  0 19 * * 0 cd /sciezka/do/librus2mail && venv/bin/python librus_progress_report.py >> librus.log 2>&1
-  ```
-
-* **W ostatni dzień każdego miesiąca o 18:00 (podsumowanie miesięczne za ostatnie 30 dni):**
-  ```cron
-  0 18 28-31 * * [ $(date -d tomorrow +\%d) -eq 1 ] && cd /sciezka/do/librus2mail && venv/bin/python librus_progress_report.py --days 30 >> librus.log 2>&1
-  ```
-
----
-
-## Moduł raportu motywacyjnego dla ucznia (librus_student_report.py)
-
-**Moduł 4 (`librus_student_report.py` / `librus-student-report`)** to niezależny moduł raportowy przygotowany ze szczególnym uwzględnieniem perspektywy samego dziecka. Zamiast pedagogiczno-rodzicielskich ostrzeżeń, kładzie nacisk na **pozytywną motywację**, docenienie wysiłku, budowanie dobrych nawyków oraz wskazywanie konkretnych, łatwych do osiągnięcia sukcesów (Quick Wins).
-
-Moduł działa **w 100% lokalnie/offline** na bazie danych zgromadzonych w katalogu `storage/` przez `librus_collector.py`.
-
-### Idea i warianty wiekowe szablonów:
-
-Wszystkie warianty raportu bazują na tych samych, precyzyjnych wyliczeniach silnika analitycznego (`StudentAnalyzer`), jednak treść, układ graficzny i język dopasowują się do wieku ucznia za pomocą jednego z **3 dedykowanych szablonów e-mail**:
-
-1. 🎮 **`kids` (Szkoła podstawowa, klasy 4–6)**:
-   * **Styl**: Barwny, pełen energii, lekki i grywalizacyjny (gamified).
-   * **Elementy**: *Twoja Karta Mocy*, *Supermoce* (przedmioty z najwyższymi wynikami), *Misja Tygodnia: Szybki Awans!*, *Tarcza Ochronna* (łagodne przypomnienie o powtórce przed sprawdzianem) oraz *Odznaki Grywalizacyjne* (np. 🚀 *As Przestworzy*, 👑 *Mistrzowski Poziom*, ⚡ *W Rytmie Nauki*).
-2. ⚡ **`teens` (Starsze klasy podstawówki, klasy 7–8)**:
-   * **Styl**: Nowoczesny, minimalistyczny, w tonacji dark/cyan, bez infantylizmu.
-   * **Elementy**: *Weekly Briefing*, *Mocne Filary*, *Szybkie Punkty do Zgarnięcia* (konkretne kalkulacje co da wyższy stopień ze sprawdzianu/odpowiedzi) oraz strategiczne wskazówki przed egzaminem ósmoklasisty.
-3. 📊 **`youth` (Szkoła średnia / liceum / technikum)**:
-   * **Styl**: Profesjonalny, analityczny, w stylu osobistego dashboardu produktywności.
-   * **Elementy**: *Student Performance Dashboard*, analiza średnich ważonych, *Rekomendacje Celowe* (odległości do progów ocenowych 3.0, 4.0, 5.0) oraz symulacje podnoszenia ocen semestralnych.
-
-### Konfiguracja w `config.yaml`:
-
-Raport ucznia aktywowany jest poprzez dodanie sekcji `student_report` do profilu danego dziecka w `config.yaml`:
-
-```yaml
-librus_users:
-  - librus_login_name: "Jan Kowalski (klasa 5A)"
-    librus_login: "8912345"
-    librus_password: "SuperTajneHaslo!"
-    notification_receivers:
-      - "rodzic@example.com"
-    # Konfiguracja raportu dedykowanego dla ucznia:
-    student_report:
-      enabled: true
-      email: "janek.kowalski@example.com"  # Adres e-mail dziecka (lub rodzica)
-      template: "kids"                     # Wybór szablonu: "kids", "teens" lub "youth"
-```
-
-> [!TIP]
-> **Automatyczna wysyłka w harmonogramie:** Gdy w konfiguracji włączysz zaplanowany cykliczny raport postępów rodziców (`schedule.reports`, np. w każdy piątek o 17:00), demon `librus_collector` w tym samym momencie automatycznie wysyła raport motywacyjny do każdego dziecka, które ma aktywną opcję `student_report.enabled: true`. Raport można także wywołać niezależnie w dowolnej chwili poleceniem CLI lub z poziomu **Centrum Akcji (`/akcje`)** w panelu WWW.
-
-### Sposób użycia i parametry CLI:
-
-```bash
-# 1. Wygenerowanie i wysłanie raportu ucznia dla wszystkich kont z włączonym student_report:
-librus-student-report
-# lub:
-venv/bin/python librus_student_report.py
-
-# 2. Tryb symulacji w terminalu (--dry-run) bez wysyłania e-maila:
-librus-student-report --dry-run
-# lub:
-venv/bin/python librus_student_report.py --dry-run
-
-# 3. Wygenerowanie podglądu HTML do przeglądarki z wymuszeniem szablonu (-o / -t):
-librus-student-report -t kids -o raport_kids.html
-librus-student-report -t teens -o raport_teens.html
-librus-student-report -t youth -o raport_youth.html
-
-# 4. Ograniczenie analizy do ocen z ostatnich N dni (-d / --days):
-librus-student-report --days 14 --dry-run
-
-# 5. Wskazanie alternatywnego katalogu storage (-s / --storage-dir):
-librus-student-report -s examples/storage --dry-run
-
-# 6. Filtrowanie wykonania do konkretnego ucznia (-u / --user):
-librus-student-report -u 8912345 -o raport_janek.html
-```
-
-| Parametr | Krótka flaga | Opis |
-| :--- | :--- | :--- |
-| `--config <plik>` | `-c` | Ścieżka do pliku konfiguracyjnego YAML (domyślnie: `config.yaml`). |
-| `--storage-dir <kat>` | `-s` | Ścieżka do katalogu pamięci stanu `storage` (nadpisuje konfigurację). |
-| `--user <login/nazwa>` | `-u` | Filtruje wykonanie raportu tylko do wskazanego konta ucznia. |
-| `--days <N>` | `-d` | Zawęża analizowane oceny do ostatnich `N` dni. |
-| `--template <typ>` | `-t` | Wymusza wariant szablonu: `kids`, `teens` lub `youth`. |
-| `--output <plik/kat>` | `-o` | Zapisuje raport jako samodzielny plik HTML do podglądu w przeglądarce. |
-| `--dry-run` | | Wyświetla podsumowanie metryk w terminalu; nie wysyła wiadomości e-mail. |
-| `--actual-date <data>` | | Referencyjna data analizy (`YYYY-MM-DD`) dla powtarzalnych testów i symulacji. |
-
----
-
-## Moduł 5: Interaktywny Panel Rodzica i Kreator Konfiguracji (librus_web.py)
-
-**Moduł 5 (`librus_web.py` / `librus-web`)** to nowoczesna, lekka i w pełni opcjonalna nakładka graficzna (GUI) na cały system **Librus2mail**. Oparta na silniku **Flask + TailwindCSS + HTMX** (bez konieczności instalacji ciężkich narzędzi Node.js czy bundlerów frontendowych), pozwala na wygodne zarządzanie aplikacją wprost z okna przeglądarki internetowej – na komputerze, tablecie lub smartfonie w domowej sieci Wi-Fi.
-
-Działa jako spójne centrum kontroli: integruje dane zebrane przez kolektor, prezentuje zaawansowaną analitykę i symulacje, umożliwia graficzną edycję ustawień oraz pozwala wyzwalać zadania CLI za pomocą jednego kliknięcia.
-
-### Główne możliwości panelu WWW
-
-* 🧙 **Kreator pierwszego uruchomienia (`/setup`)**: Automatyczny onboarding w przeglądarce przy braku pliku konfiguracyjnego.
-* ⚙️ **Graficzny konfigurator (`/ustawienia`)**: Pełna edycja parametrów kont, powiadomień, harmonogramów i poczty bez konieczności dotykania plików YAML.
-* 📊 **Pulpit rodzica (Dashboard)**: Błyskawiczny podgląd kluczowych KPI (średnia ogólna, liczba ocen, plan na dziś i jutro, zapowiedziane sprawdziany, ostatnie wiadomości).
-* 📅 **Plan lekcji (Schedule)**: Przejrzysty tygodniowy rozkład zajęć z czytelnym wyróżnieniem zastępstw, sal, odwołanych lekcji oraz powiązanych sprawdzianów.
-* 🎯 **Zestawienie ocen & Symulator „Co jeśli...?”**: Przegląd ocen cząstkowych i semestralnych z wagami, interaktywny kalkulator HTMX przeliczający wpływ nowej oceny oraz przełącznik „Wliczany do średniej” umożliwiający wyłączenie przedmiotów takich jak Godzina wychowawcza ze średniej i symulatora świadectwa z wyróżnieniem.
-* 📈 **Dedykowany widok szczegółowy przedmiotu (`/oceny/<przedmiot>`)**: Kliknięcie na dowolny przedmiot otwiera pełną analizę:
-  * **Interaktywny wykres trajektorii ocen (Chart.js)**: Wielkość i kolor punktu odzwierciedla wagę i stopień pracy, a fioletowa linia rysuje dynamiczną średnią kroczącą (CMA).
-  * **Mini-histogram rozkładu ocen**: Udział procentowy i liczba wystawionych poszczególnych stopni (1–6).
-  * **Analiza szansy na wyższą ocenę**: Precyzyjny dystans punktowy do wyższego stopnia oraz gotowe scenariusze (np. 1x sprawdzian o wadze 3 na ocenę 5).
-  * **Analiza ryzyka i margines bezpieczeństwa**: Bufor punktowy nad dolnym prokiem bieżącej oceny oraz symulacje negatywnych zdarzeń (np. spadek po 1 ze sprawdzianu).
-  * **Interaktywny symulator ocen na żywo**: Natychmiastowe przeliczanie nowej średniej i stopnia w przeglądarce.
-* 🗓️ **Terminarz szkolny (Timetable)**: Chronologiczny kalendarz nadchodzących sprawdzianów, kartkówek i prac klasowych.
-* 📬 **Wiadomości i ogłoszenia**: Wygodna przeglądarka korespondencji od nauczycieli oraz oficjalnych komunikatów szkoły.
-* ⚡ **Centrum Akcji CLI (`/akcje`)**: Graficzny pulpit wyzwalania operacji (pobranie danych, wysyłka e-maila, generowanie raportów) z bezpośrednim podglądem logów w oknie terminala webowego.
-* 🛡️ **Parent Gate & Bezpieczeństwo**: Ochrona hasłem rodzica, zabezpieczenie przed atakami brute-force (blokada IP) oraz tryb otwarty dla zaufanych sieci lokalnych.
-
----
-
-### Kreator pierwszego uruchomienia (/setup)
-
-Gdy uruchomisz moduł webowy poleceniem `librus-web` (lub `python librus_web.py`), a plik `config.yaml` jeszcze nie istnieje (lub nie zawiera żadnych kont), serwer automatycznie przekieruje Cię na adres:
-👉 **`http://localhost:5000/setup`**
-
-Kreator przeprowadzi Cię przez proces konfiguracji w 4 prostych krokach:
-
-1. **Krok 1: Konta Librus Synergia**:
-   * Podanie przyjaznej nazwy ucznia oraz loginu i hasła do portalu Librus.
-   * Przycisk **Testuj logowanie**: weryfikuje poprawność poświadczeń w czasie rzeczywistym i potwierdza pobranie profilu ucznia.
-   * Możliwość zdefiniowania wielu kont (dla rodzeństwa) z osobnymi adresami powiadomień.
-2. **Krok 2: Konfiguracja wysyłki e-mail**:
-   * Wybór konta pocztowego: Gmail (z hasłem aplikacji) lub własny serwer SMTP (STARTTLS).
-   * Wprowadzenie adresu nadawcy, hasła oraz domyślnych adresów e-mail rodziców.
-   * Przycisk **Wyślij e-mail testowy**: natychmiastowa weryfikacja poprawności połączenia ze skrzynką.
-3. **Krok 3: Harmonogram i raporty**:
-   * Określenie częstotliwości sprawdzania e-dziennika (np. co godzinę).
-   * Opcjonalne włączenie cotygodniowych raportów postępów dla rodzica oraz motywacyjnych raportów ucznia (`kids`, `teens`, `youth`).
-4. **Krok 4: Podsumowanie i start**:
-   * Weryfikacja parametrów i zapis do pliku `config.yaml`.
-   * Natychmiastowe przejście do pulpitu rodzica (`/dashboard`).
-
----
-
-### Graficzny konfigurator ustawień (/ustawienia)
-
-W dowolnym momencie możesz zmienić parametry pracy systemu bezpośrednio z poziomu przeglądarki pod adresem **`http://localhost:5000/ustawienia`**:
-* **Zarządzanie kontami uczniów**: dodawanie nowych dzieci, zmiana haseł Librus, włączanie/wyłączanie czytania treści wiadomości i ocen.
-* **Odbiorcy powiadomień**: szybka edycja listy adresów e-mail rodziców i opiekunów.
-* **Konfiguracja poczty**: zmiana serwera SMTP, portu lub hasła aplikacji pocztowej.
-* **Harmonogramy powiadomień**: dostosowanie czasu uśpienia demona (`wait_time_s`) oraz trybów pracy.
-* **Hasło panelu WWW**: zmiana hasła rodzica chroniącego dostęp do panelu webowego.
-
----
-
-### Bezpieczeństwo i ochrona Parent Gate
-
-Aby oceny, wiadomości oraz poufne dane szkolne dzieci nie były widoczne dla osób postronnych w sieci domowej:
-1. **Ochrona hasłem (Parent Gate)**: Przed wejściem do panelu rodzic proszony jest o podanie hasła zdefiniowanego w sekcji `web.password` pliku `config.yaml` (lub przekazanego flagą `--password`).
-2. **Ochrona przed atakami brute-force**: Wbudowany mechanizm śledzi liczbę nieudanych prób logowania per adres IP. Po przekroczeniu limitu (`max_login_attempts: 5`) dany adres IP zostaje zablokowany na konfigurowalny czas (`lockout_duration_s: 900` = 15 minut).
-3. **Tryb zaufany (`--no-auth`)**: Jeśli uruchamiasz panel wyłącznie na lokalnym komputerze i nie potrzebujesz ekranu logowania, możesz uruchomić serwer z flagą `--no-auth`.
-
----
-
-### Parametry CLI i przykłady użycia modułu Web
-
-```bash
-# Uruchomienie za pomocą zainstalowanego polecenia konsolowego:
-librus-web [opcje]
-
-# Lub bezpośrednio przez interpreter Pythona:
-venv/bin/python librus_web.py [opcje]
-```
-
-#### Dostępne parametry CLI:
-
-| Parametr | Krótka flaga | Wartość domyślna | Opis |
-| :--- | :---: | :--- | :--- |
-| `--config <plik>` | `-c` | `config.yaml` | Ścieżka do pliku konfiguracyjnego YAML. |
-| `--storage-dir <kat>` | `-s` | z configu (`storage`) | Ścieżka do katalogu pamięci stanu `storage/`. |
-| `--user <login/nazwa>` | `-u` | Pierwszy uczeń | Domyślny aktywny profil dziecka po otwarciu panelu. |
-| `--port <port>` | `-p` | `5000` | Port serwera HTTP. |
-| `--bind <host>` / `--host` | `-b` | `127.0.0.1` | Adres nasłuchu (`127.0.0.1` dla localhost, `0.0.0.0` dla sieci domowej/LAN). |
-| `--password <hasło>` | | z configu / env | Hasło rodzica wymagane do odblokowania panelu. |
-| `--no-auth` | | `False` | Wyłącza ekran logowania (dostęp otwarty – zalecany tylko lokalnie). |
-| `--max-attempts <N>` | | `5` | Maksymalna liczba błędnych haseł przed blokadą adresu IP. |
-| `--lockout-duration <S>`| | `900` | Czas trwania blokady adresu IP w sekundach (15 min). |
-| `--actual-date <data>` | | Bieżąca data | Referencyjna data (`YYYY-MM-DD`) dla symulacji i testów planu lekcji. |
-| `--export-html <kat>` | | `None` | Eksportuje pełny zestaw statycznych widoków HTML do wskazanego katalogu i kończy działanie. |
-| `--debug` | | `False` | Uruchamia serwer w trybie deweloperskim Flask z automatycznym przeładowaniem. |
-
-#### Praktyczne przykłady użycia:
-
-```bash
-# 1. Standardowe uruchomienie lokalne (hasło z config.yaml):
-librus-web
-
-# 2. Udostępnienie w domowej sieci Wi-Fi (dostęp z telefonu/tabletu pod adresem http://IP_SERWERA:5000):
-librus-web -b 0.0.0.0 -p 5000
-
-# 3. Uruchomienie z hasłem podanym bezpośrednio w linii poleceń:
-librus-web --password "MojeTajneHaslo123"
-
-# 4. Szybki podgląd lokalny bez hasła (tryb zaufany):
-librus-web --no-auth
-
-# 5. Podgląd danych testowych ze wskazanego katalogu storage:
-librus-web -s examples/storage --no-auth
-
-# 6. Wygenerowanie statycznych podglądów HTML do weryfikacji offline:
-librus-web -s examples/storage --actual-date 2026-09-18 --export-html podglad_web/
+# Lub jednorazowe sprawdzenie (np. pod harmonogram cron):
+python librus_collect_and_notify.py --once
 ```
 
 ---
 
-## Wdrożenie produkcyjne i konteneryzacja (Docker & systemd)
+## 📚 Kompletna dokumentacja
 
-Dla środowisk produkcyjnych (serwer VPS, Raspberry Pi, serwer domowy / NAS) zaleca się uruchomienie usługi w kontenerze Docker lub jako demona `systemd` z automatycznym restartem po awarii.
+Szczegółowe podręczniki, specyfikacje i instrukcje wdrożeniowe zostały podzielone tematycznie w katalogu `docs/`:
 
-### Konteneryzacja Docker i Docker Compose
+| Przewodnik | Zawartość i tematyka |
+|:---|:---|
+| 🏛️ **[docs/modules.md](docs/modules.md)** | Szczegółowa specyfikacja wszystkich 5 modułów, architektura, przepływ danych i flagi CLI. |
+| ⚙️ **[docs/configuration.md](docs/configuration.md)** | Pełny opis pliku `config.yaml`, zmienne środowiskowe, konfiguracja Gmail (App Password), SMTP, frekwencja i bezpieczeństwo. |
+| 🛠️ **[docs/useful-scripts.md](docs/useful-scripts.md)** | Podręcznik CLI: wszystkie przełączniki, symulacje offline, generowanie raportów HTML i testy w terminalu. |
+| 🐳 **[docs/deployment.md](docs/deployment.md)** | Wdrożenie produkcyjne: Docker & Docker Compose, usługi `systemd` (Linux/Raspberry Pi), reguły `cron` i reverse proxy Nginx. |
+| 📐 **[docs/architecture.md](docs/architecture.md)** | Architektura systemu, zasada Local-First, format bazy danych `storage/`, modele Pydantic i bezpieczeństwo sesji. |
+| 💻 **[docs/development.md](docs/development.md)** | Przewodnik dla programistów: środowisko testowe `pytest`, linter `ruff`, generowanie raportów demo i procedura wydawania wersji. |
+| ❓ **[docs/faq-and-troubleshooting.md](docs/faq-and-troubleshooting.md)** | Najczęstsze pytania, diagnoza błędów (`NotLogged`, błędy SMTP), polityka oznaczania wiadomości jako przeczytane i bezpieczeństwo konta. |
 
-Aplikacja **Librus2mail** jest w pełni przygotowana do wdrożenia kontenerowego za pomocą **Docker** oraz **Docker Compose**:
-* 🛡️ **Bezpieczny kontener Non-Root**: Aplikacja uruchamia się z prawami dedykowanego użytkownika `librus` (UID 1000).
-* ⚙️ **Konfiguracja YAML lub 100% ENV**: Możesz zamontować plik `config.yaml` lub skonfigurować aplikację wyłącznie za pomocą zmiennych środowiskowych (plik `.env` lub flagi `-e`), bez konieczności tworzenia pliku YAML.
-* 🕒 **Polska strefa czasowa**: Wstępnie skonfigurowane `TZ=Europe/Warsaw` dla precyzyjnego planowania powiadomień.
-* 💾 **Trwały zapis stanu**: Wolumen `/app/storage` zachowuje pełną historię ocen i wiadomości.
-* 🌐 **Wsparcie dla Panelu WWW i Raportów**: Gotowe profile usług dla demona (`collector`), interaktywnego panelu WWW (`web`), raportu postępów (`report`) oraz raportu motywacyjnego ucznia (`student-report`).
+---
 
-> 📖 **Kompletny przewodnik wdrożenia, przykłady `docker-compose.yml`, pełna tabela zmiennych środowiskowych (ENV) oraz rozwiązywanie problemów znajdują się w dedykowanym dokumencie:**
->
-> ➡️ **[docker/docker-installation.md](docker/docker-installation.md)** — *Pełna instrukcja instalacji Docker & Docker Compose*
+## 🐳 Wdrożenie Docker i systemd (w pigułce)
 
-#### Szybki start:
+### Kontener Docker
 ```bash
-# 1. Konfiguracja przez zmienne środowiskowe (najprościej):
-cp docker/.env.example .env
-# uzupełnij login, hasło i e-mail w pliku .env
-
-# 2. Uruchomienie demona w tle:
+# Uruchomienie usługi w tle:
 docker compose -f docker/docker-compose.yml up -d --build
 
-# 3. Podgląd logów:
+# Podgląd logów kolektora:
 docker compose -f docker/docker-compose.yml logs -f collector
 ```
 
-Szczegółowe instrukcje, uruchamianie raportów na żądanie oraz panelu WWW znajdziesz w pliku [docker/docker-installation.md](docker/docker-installation.md).
-
----
-
-### Wdrożenie systemd (Linux / Raspberry Pi / VPS)
-
-W katalogu [`deploy/systemd/`](file:///home/acacko/PycharmProjects/librus2mail/deploy/systemd/) przygotowano wzorcowe pliki jednostek dla menedżera usług `systemd`:
-* [`librus2mail.service`](file:///home/acacko/PycharmProjects/librus2mail/deploy/systemd/librus2mail.service): ciągły demon monitorujący z automatycznym restartem po awarii sieci i zaostrzonym profilem bezpieczeństwa (`ProtectSystem=full`, `PrivateTmp=true`, `NoNewPrivileges=true`).
-* [`librus2mail-report.service`](file:///home/acacko/PycharmProjects/librus2mail/deploy/systemd/librus2mail-report.service) & [`librus2mail-report.timer`](file:///home/acacko/PycharmProjects/librus2mail/deploy/systemd/librus2mail-report.timer): natywny zegar systemowy do cotygodniowej wysyłki raportu postępów (domyślnie w każdy piątek o 17:00), eliminujący konieczność konfiguracji crona.
-
-Szczegółowy opis instalacji krok po kroku znajduje się w przewodniku [deploy/systemd/README.md](file:///home/acacko/PycharmProjects/librus2mail/deploy/systemd/README.md).
-
----
-
-## Szablony wiadomości e-mail (Jinja2)
-
-Wszystkie wiadomości i raporty HTML generowane są za pomocą silnika szablonów **Jinja2**. Szablony znajdują się wewnątrz pakietu w katalogu `src/librus2mail/templates/emails/`:
-- `messages.html`: Powiadomienia o nowych wiadomościach od nauczycieli.
-- `notifications.html`: Powiadomienia o nowych ogłoszeniach szkolnych.
-- `grades.html`: Powiadomienia o nowo wystawionych ocenach.
-- `summary.html`: Zbiorcze podsumowanie (gdy włączona jest opcja `one_summary_message: true`).
-- `error_alert.html`: Alerty o błędach autoryzacji / połączenia z zaleceniami diagnostycznymi.
-- `progress_report.html`: Kompleksowy dashboard postępów ucznia dla rodzica (KPI, kalkulator progów, wagi, czerwony pasek, histogram).
-- `student_report_kids.html`: Gamifikacyjny raport z odznakami i Kartą Mocy dla klas 4–6.
-- `student_report_teens.html`: Tygodniowy briefing z mocnymi filarami i kalkulatorem szybkich punktów dla klas 7–8.
-- `student_report_youth.html`: Personalny dashboard statystyczny i strategie progowe dla szkoły średniej.
-
-Dzięki rozdzieleniu logiki Pythona od warstwy prezentacji, możesz łatwo dostosować kolorystykę, czcionki i układ maili do własnych preferencji bez ingerencji w kod źródłowy.
-
----
-
-## Architektura projektu
-
-Projekt korzysta z nowoczesnego układu **`src/` layout** oraz pełnej zgodności ze standardem **PEP 8** (nazewnictwo `snake_case`):
-
-```text
-librus2mail/
-├── .github/                    # Automatyzacja GitHub Actions i Dependabot
-│   ├── workflows/
-│   │   ├── ci.yml              # Pipeline CI (Ruff linter + pytest multi-Python 3.10-3.12)
-│   │   └── docker.yml          # Budowanie, testy dymne i publikacja obrazu GHCR
-│   └── dependabot.yml          # Cotygodniowe aktualizacje zależności i akcji
-├── .agents/                    # Konfiguracja i wytyczne dla asystentów AI (Claude, Gemini, Cursor)
-│   ├── rules/                  # Modułowe reguły (bezpieczeństwo, scraping, styl kodu)
-│   ├── AGENTS.md               # Standard agentyczny
-│   ├── CLAUDE.md               # Konfiguracja Claude Code
-│   └── GEMINI.md               # Konfiguracja Gemini / Antigravity
-├── src/
-│   └── librus2mail/            # Kanoniczny pakiet Pythona (src/ layout, PEP 8)
-│       ├── __init__.py         # Eksporty kluczowych klas i funkcji pakietu
-│       ├── base_logger.py      # Konfiguracja loggera ('librus')
-│       ├── config.py           # Wczytywanie konfiguracji z pliku YAML
-│       ├── config_watcher.py   # Detekcja zmian pliku konfiguracyjnego w locie (ConfigWatcher)
-│       ├── date_utils.py       # Bezpieczne i deterministyczne parsowanie dat i czasu
-│       ├── dom_parser.py       # Defensywne parsowanie HTML/DOM Librusa (wiadomości, ogłoszenia, oceny, plan)
-│       ├── gmail_sender.py     # Obsługa wysyłki przez Gmail (yagmail)
-│       ├── librus.py           # Klient autoryzacji OAuth i sesji portalu Librus Synergia
-│       ├── collect_and_notify.py # Główny orkiestrator CLI i runner potoku
-│       ├── librus_collector.py # Moduł 1: Pobieranie danych i synchronizacja ze storage
-│       ├── mail_sender.py      # Klasa bazowa z obsługą szablonów Jinja2
-│       ├── progress_analyzer.py# Silnik analizy postępów (średnie, wagi, alerty)
-│       ├── progress_report.py  # Moduł 3: Generator raportów postępów dla rodziców
-│       ├── scheduler.py        # Harmonogram pobierania (daily/interval) i raportów (ReportScheduler)
-│       ├── smtp_sender.py      # Obsługa wysyłki SMTP (STARTTLS)
-│       ├── storage.py          # Trwały zapis stanu i historia ocen JSON (FileStorage)
-│       ├── student_analyzer.py # Silnik motywacyjny ucznia (supermoce, odznaki, quick wins)
-│       ├── student_report.py   # Moduł 4: Generator raportów ucznia
-│       ├── updates_notifier.py # Moduł 2: Powiadomienia bieżące offline (e-mail, HTML, CLI)
-│       ├── web/                # Moduł 5: Serwer Flask, widoki, eksport i autoryzacja
-│       │   ├── app.py          # Główna aplikacja Flask i routing
-│       │   ├── auth.py         # Parent Gate i ochrona brute-force
-│       │   ├── export.py       # Generator statycznych podglądów HTML
-│       │   └── services.py     # Logika biznesowa i integracja modułów CLI
-│       └── templates/          # Szablony Jinja2 wewnątrz pakietu
-│           ├── emails/         # Szablony powiadomień i raportów e-mail
-│           │   ├── messages.html
-│           │   ├── notifications.html
-│           │   ├── grades.html
-│           │   ├── summary.html
-│           │   ├── error_alert.html
-│           │   ├── progress_report.html
-│           │   ├── student_report_kids.html
-│           │   ├── student_report_teens.html
-│           │   └── student_report_youth.html
-│           └── web/            # Szablony interaktywnego panelu WWW (Tailwind + HTMX)
-│               ├── base.html
-│               ├── dashboard.html
-│               ├── schedule.html
-│               ├── grades.html
-│               ├── timetable.html
-│               ├── messages.html
-│               ├── reports.html
-│               ├── actions.html
-│               ├── settings.html
-│               ├── setup.html
-│               └── login.html
-├── examples/                   # Przykładowe dane i wygenerowane raporty
-│   ├── storage/                # Przykładowa baza ucznia ze zmyślonymi ocenami
-│   └── reports/                # Przykładowe wygenerowane raporty HTML i widoki WWW
-├── tests/                      # Pakiet testów jednostkowych (190 testów)
-│   ├── fixtures/               # Przykładowe fragmenty HTML do testów offline DOM
-│   ├── test_date_utils.py      # Testy parsera i walidacji dat
-│   ├── test_dom_parser.py      # Testy defensywnego parsera HTML w trybie 100% offline
-│   ├── test_librus.py          # Testy logowania, scrapingu, formatowania, watermarking i analityki
-│   ├── test_package_layout.py  # Testy struktury pakietu i eksportów
-│   ├── test_scheduler_and_watcher.py # Testy harmonogramu i monitora zmian konfiguracji
-│   ├── test_storage_dates.py   # Testy spójności i migracji dat w storage
-│   ├── test_student_report.py  # Testy silnika motywacyjnego i raportów ucznia
-│   ├── test_web.py             # Testy panelu webowego, kreatora i kalkulatora ocen
-│   └── test_web_security.py    # Testy zabezpieczeń proxy, rate limitera i ciasteczek
-├── librus_collect_and_notify.py# Główny punkt wejścia demona i orkiestratora (CLI)
-├── librus_collector.py         # Moduł 1: CLI zbierania danych ze szkoły
-├── librus_updates_notifier.py  # Moduł 2: CLI bieżących powiadomień
-├── librus_progress_report.py   # Moduł 3: CLI generatora raportów postępów
-├── librus_student_report.py    # Moduł 4: CLI raportu motywacyjnego dla ucznia
-├── librus_web.py               # Moduł 5: CLI panelu WWW i kreatora konfiguracji
-├── deploy/                     # Gotowe pliki wdrożeniowe
-│   └── systemd/                # Jednostki systemd dla Linuksa (Raspberry Pi / VPS)
-│       ├── librus2mail.service # Usługa demona zbierającego dane z restartem
-│       ├── librus2mail-report.service # Usługa generowania raportu postępów
-│       ├── librus2mail-report.timer   # Zegar cotygodniowej wysyłki raportu
-│       └── README.md           # Instrukcja instalacji usług systemd
-├── docker/                     # Konfiguracja środowiska kontenerowego OCI
-│   ├── Dockerfile              # Wielowarstwowy obraz kontenera OCI (Python 3.10-slim, non-root)
-│   ├── docker-compose.yml      # Definicja usług (kolektor w tle, raporty, panel web)
-│   ├── .env.example            # Szablon zmiennych środowiskowych dla kontenera
-│   └── docker-installation.md  # Przewodnik wdrożenia Docker & Docker Compose
-├── .dockerignore               # Ochrona poufnych konfiguracji przed kopiowaniem do obrazu
-├── pyproject.toml              # Nowoczesna konfiguracja projektu (PEP 517/518/621)
-├── requirements.txt            # Tradycyjna lista zależności
-├── config-example.yaml         # Pełny wzorcowy szablon ze wszystkimi opcjami i komentarzami
-├── config-minimal.yaml         # Minimalistyczny szablon (tylko wymagane pola)
-├── useful-scripts.md           # Kompletny podręcznik wszystkich skryptów i opcji CLI
-├── CHANGELOG.md                # Historia wydań i zmian (Keep a Changelog)
-├── RELEASING.md                # Procedura wydawania wersji i konfiguracji GitHub Pages
-└── README.md                   # Niniejsza dokumentacja
-```
-
-### Przepływ danych (Data Flow):
-1. **Collector (`librus_collector.py`)**: Loguje się OAuth do portalu Librus Synergia, pobiera wiadomości, ogłoszenia i oceny, deduplikuje je i zapisuje w trwałych plikach `storage/<login>.json` wraz ze znacznikiem `last_collect_time`.
-2. **Updates Notifier (`librus_updates_notifier.py`)**: Weryfikuje nowe pozycje w bazie `storage/` od znacznika `last_notify_time` (lub zadanego okna czasowego `--days` / `--hours`) i wysyła powiadomienia e-mail (bądź generuje podgląd HTML / konsolowy).
-3. **Progress Report (`librus_progress_report.py`)**: Działa w 100% offline, analizuje historię ocen ze `storage/` za pomocą [`ProgressAnalyzer`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/progress_analyzer.py) i tworzy bogaty dashboard postępów ucznia.
-4. **Orkiestrator (`librus_collect_and_notify.py`)**: W domyślnym trybie demona spina Moduł 1 i Moduł 2 w ciągłą pętlę z przerwami `wait_time_s` (gdy `work_in_loop: true`), lub wykonuje pojedynczy przebieg (`work_in_loop: false` / `--once`). Umożliwia też uruchomienie dowolnego modułu w odosobnieniu.
-5. **Panel WWW & Konfigurator (`librus_web.py`)**: Prezentuje zebrane dane w responsywnym interfejsie graficznym, umożliwia interaktywną symulację ocen ("Co jeśli...?"), edycję ustawień oraz wyzwalanie zadań kolektora i raportów z poziomu przeglądarki.
-
----
-
-## Testy i jakość kodu
-
-Projekt wyposażony jest w automatyczne testy jednostkowe oraz konfigurację lintera **Ruff**:
-
+### Usługa systemowa systemd (Linux / Raspberry Pi)
 ```bash
-# Aktywacja środowiska wirtualnego
-source venv/bin/activate
+# Instalacja jednostki i start:
+sudo cp deploy/systemd/librus2mail.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now librus2mail
 
-# 1. Uruchomienie pełnego zestawu testów jednostkowych (pytest):
-pytest
-
-# 2. Uruchomienie testów z raportem pokrycia kodu (coverage):
-pytest --cov=librus2mail
-
-# 3. Sprawdzenie poprawności stylu kodu (Ruff):
-ruff check
-
-# 4. Automatyczna korekta drobnych niezgodności formatowania:
-ruff check --fix
+# Podgląd statusu i logów:
+sudo systemctl status librus2mail
+sudo journalctl -u librus2mail -f
 ```
-
-Bieżące zdarzenia i diagnostykę działania usługi można śledzić w pliku `librus.log`:
-
-```bash
-tail -f librus.log
-```
+> Więcej opcji wdrożenia znajdziesz w **[docs/deployment.md](docs/deployment.md)**.
 
 ---
 
-## Najczęstsze pytania i rozwiązywanie problemów (FAQ)
+## 🛡️ Bezpieczeństwo i prywatność
 
-### 1. W logach pojawia się błąd „Brak dostępu” (`NotLogged`)
-* Sprawdź, czy dane logowania do konta Librus (`librus_login`, `librus_password`) w pliku konfiguracyjnym są poprawne.
-* Zaloguj się na konto rodzica przez zwykłą przeglądarkę internetową. Librus może wymagać zaakceptowania nowego regulaminu, zmiany hasła lub wyświetlać obowiązkowy komunikat od szkoły. Po zaakceptowaniu w przeglądarce skrypt wznowi normalną pracę.
-
-### 2. Wiadomości w portalu Librus oznaczają się jako przeczytane
-* Flaga `read_messages` jest domyślnie włączona (`true`), co pozwala skryptowi pobrać pełną treść nowej wiadomości i umieścić ją w e-mailu. Zgodnie z działaniem portalu Librus Synergia, otwarcie szczegółów wiadomości powoduje oznaczenie jej jako przeczytanej przez rodzica na stronie WWW. Jeśli wolisz otrzymywać powiadomienia e-mail wyłącznie o tytule i nadawcy nowej wiadomości (bez oznaczania jej jako przeczytanej w e-dzienniku), ustaw w konfiguracji: `read_messages: false`.
-
-### 3. Błąd uwierzytelnienia Gmaila (`SMTPAuthenticationError`)
-* Jeśli korzystasz z konta Google, upewnij się, że nie wpisujesz zwykłego hasła do konta, lecz wygenerowane w Google **hasło do aplikacji** (16-znakowy ciąg).
-
-### 4. Czy moje konto w Librusie może zostać zablokowane?
-* Zbyt częste odpytywanie serwerów Librusa może skutkować tymczasową blokadą adresu IP lub wymuszeniem weryfikacji CAPTCHA. Dlatego parametr `wait_time_s` nie powinien być mniejszy niż 3600–7200 sekund (1-2h), a wbudowane opóźnienia `sleep(5)` pomiędzy kolejnymi zapytaniami powinny pozostać nienaruszone.
+1. **Przetwarzanie lokalne**: Dane ze szkoły są pobierane bezpośrednio z serwerów Librusa i zapisywane wyłącznie na dysku lokalnym Twojej maszyny w katalogu `storage/`.
+2. **Ochrona haseł**: Hasła do kont Librus oraz serwera e-mail znajdują się w pliku `config.yaml` (zabezpieczonym w `.gitignore`) lub zmiennych środowiskowych.
+3. **Parent Gate i ochrona przed atakami**: Panel webowy zabezpieczony jest hasłem rodzica, odporny na ataki brute-force (automatyczna blokada IP) oraz wyposażony w bezpieczne ciasteczka sesyjne (`SameSite=Lax`, ochrona proxy).
+4. **Ochrona przed banem portalu**: Pobieranie danych z portalu Librus zawiera sztuczne opóźnienia (`sleep(5)`) oraz rotację nagłówków `User-Agent`, aby nie obciążać serwerów szkolnych.
 
 ---
 
-## Bezpieczeństwo
+## 📜 Licencja i podziękowania
 
-* Pliki `config.yaml`, `*_config.yaml`, `.env` oraz `*.log` zawierają poufne hasła, dane osobowe i adresy e-mail.
-* **Nigdy nie dodawaj ich do repozytorium gita** (`.gitignore` w projekcie jest skonfigurowany tak, aby je chronić).
-* Wszelkie przykłady i testy opieraj wyłącznie na szablonach `config-example.yaml` lub `config-minimal.yaml`.
-
----
-
-## Podziękowania
+Projekt jest udostępniony na licencji **[MIT](LICENSE)**.
 
 Projekt powstał w oparciu o analizę mechanizmu komunikacji z API Librusa zawartą w projekcie [Mati365/librus-api](https://github.com/Mati365/librus-api/).
 
----
-
-## Licencja
-
-Projekt udostępniany jest na warunkach otwartej licencji **MIT**. Szczegółowe informacje znajdują się w pliku [LICENSE](LICENSE).
-
----
-
-> **Nota prawna**: Librus2mail jest niezależnym projektem edukacyjnym o otwartym kodzie źródłowym, niepowiązanym, nienadzorowanym ani nieautoryzowanym przez spółkę Librus Sp. z o.o. Znak towarowy „Librus” został użyty wyłącznie w celach informacyjnych w celu wskazania kompatybilności i interoperacyjności oprogramowania. 
+*Uwaga: Librus2mail jest projektem niezależnym i nieoficjalnym. Nie jest w żaden sposób powiązany z firmą Librus Sp. z o.o. sp. k.*

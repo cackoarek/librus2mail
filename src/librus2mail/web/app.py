@@ -677,7 +677,7 @@ def reports_view(report_type: str = 'podsumowanie'):
 @web_bp.route('/akcje')
 @login_required
 def actions_view():
-    """Centrum operacyjne - graficzny pulpit dla skryptów z useful-scripts.md."""
+    """Centrum operacyjne - graficzny pulpit dla skryptów z docs/useful-scripts.md."""
     config = request.app_config
     storage = request.app_storage
     active_login = get_active_student_login(config, storage, session_login=session.get('active_student_login'))

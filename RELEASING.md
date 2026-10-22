@@ -66,7 +66,7 @@ Każdy commit powinien zaczynać się od **type(scope): description**:
 ```
 feat(notifier): dodaj parametr --actual-date
 fix(librus): napraw parsowanie ocen z wagą 0
-docs: zaktualizuj useful-scripts.md
+docs: zaktualizuj docs/useful-scripts.md
 chore: bump dependencies
 ci: dodaj workflow release
 refactor(storage): uprość FileStorage

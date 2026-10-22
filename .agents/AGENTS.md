@@ -85,7 +85,15 @@ librus2mail/
 ├── librus_progress_report.py   # Root CLI entrypoint for librus2mail.progress_report
 ├── librus_student_report.py    # Root CLI entrypoint for librus2mail.student_report
 ├── librus_updates_notifier.py  # Root CLI entrypoint for librus2mail.updates_notifier
-├── useful-scripts.md           # CLI reference & useful commands
+├── docs/                       # Comprehensive documentation & guides
+│   ├── modules.md              # All 5 modules & CLI flags
+│   ├── configuration.md        # YAML & ENV configuration reference
+│   ├── deployment.md           # Docker, systemd, crontab, reverse proxy
+│   ├── architecture.md         # System design, data flow, storage format
+│   ├── development.md          # Setup, testing, reports regeneration
+│   ├── faq-and-troubleshooting.md # Common errors & operational tips
+│   └── useful-scripts.md       # CLI reference & useful commands
+├── useful-scripts.md -> docs/useful-scripts.md
 ├── CHANGELOG.md                # Release history (Keep a Changelog)
 ├── RELEASING.md                # Releasing & GitHub Pages guide
 └── README.md                   # Project documentation

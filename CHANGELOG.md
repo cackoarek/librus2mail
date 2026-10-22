@@ -72,7 +72,17 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
   - Dedykowany slajd tytułowy (Intro) oraz slajd podsumowujący (Outro).
   - Indywidualnie konfigurowalny czas trwania każdego slajdu, parametry scrolla oraz opcja procentowego skalowania wielkości czcionki (`font_scale`).
 
-### Zmienione
+### Zmieniono
+- **Kompleksowa reorganizacja i dekompozycja dokumentacji (`README.md` oraz katalog `docs/`)**:
+  - Odchudzenie i przebudowa `README.md` do zwięzłego, nowoczesnego formatu wizytówki projektu (~210 linii) skupionej na kluczowych wyróżnikach, tabeli widoków demonstracyjnych live na GitHub Pages, architekturze 5 modułów i szybkim starcie w 3 krokach.
+  - Utworzenie dedykowanego katalogu `docs/` zawierającego wyczerpujące, tematyczne przewodniki:
+    - `docs/modules.md`: szczegółowa specyfikacja wszystkich 5 modułów i centralnego orkiestratora.
+    - `docs/configuration.md`: kompletny podręcznik pliku konfiguracyjnego `config.yaml`, zmiennych środowiskowych, konfiguracji kont pocztowych (Gmail App Passwords, SMTP) oraz parametrów frekwencji i bezpieczeństwa.
+    - `docs/useful-scripts.md`: przeniesienie `useful-scripts.md` do katalogu `docs/`, rozszerzenie o Moduł 5 (`librus_web.py` z pełną listą flag CLI), aktualizacja architektury do 5 modułów i uaktualnienie odnośników w całym projekcie.
+    - `docs/deployment.md`: kompletny przewodnik wdrożeniowy (Docker, Docker Compose, systemd Linux / Raspberry Pi, harmonogram cron, reverse proxy Nginx).
+    - `docs/architecture.md`: architektura rozwiązania, paradygmat Local-First, format bazy danych `storage/`, modele Pydantic i diagramy przepływu danych.
+    - `docs/development.md`: podręcznik deweloperski (pytest, ruff, generowanie raportów demo, publikacja wersji i aktualizacja changeloga).
+    - `docs/faq-and-troubleshooting.md`: baza wiedzy, najczęstsze błędy (`NotLogged`, timeouty, hasła aplikacji Gmail) i odpowiedzi na pytania użytkowników.
 - **Responsywność i ergonomia paska nawigacyjnego (Navbar)**:
   - Rozszerzenie kontenera nagłówka do `max-w-[1600px]` z płynnym dopasowaniem szerokości, co zapobiega ściskaniu elementów na ekranach laptopów (1280–1400 px).
   - Zastosowanie kompaktowej typografii i paddingów zakładek (`px-2.5 py-1.5`, `text-xs`) na ekranach `xl`, powiększającej się automatycznie do `px-3 py-2` i `text-sm` na dużych monitorach `2xl`.

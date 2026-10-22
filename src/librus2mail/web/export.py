@@ -41,6 +41,7 @@ def make_offline_friendly(html: str) -> str:
     # Linki podstron raportów z parametrami (days, variant, date)
     html = re.sub(r'href="/\?date=[^"]*"', 'href="web_dashboard.html"', html)
     html = re.sub(r'href="/plan\?[^"]*"', 'href="web_plan.html"', html)
+    html = re.sub(r'href="/(?:frekwencja|attendance)\?[^"]*"', 'href="web_frekwencja.html"', html)
     html = re.sub(r'href="/oceny\?[^"]*tab=optymalizator[^"]*"', 'href="web_oceny_optymalizator.html"', html)
     html = re.sub(r'href="/oceny\?[^"]*tab=swiadectwo[^"]*"', 'href="web_oceny_swiadectwo.html"', html)
     html = re.sub(r'href="/raporty/szanse(\?[^"]*)?"', 'href="web_raporty_szanse.html"', html)

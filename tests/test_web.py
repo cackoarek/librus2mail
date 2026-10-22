@@ -2460,6 +2460,55 @@ class TestWebDashboard(unittest.TestCase):
         self.assertIn('nieusprawiedliwione godziny lekcyjne', dash_html)
         self.assertIn('href="/frekwencja"', dash_html)
 
+    def test_attendance_view_modes_and_api(self):
+        """Weryfikuje przełączanie trybów prezentacji frekwencji (heatmap / month) oraz API zapisu do config.yaml."""
+        app = create_app(
+            config_path=self.config_path,
+            storage_dir=self.storage_dir,
+            no_auth=True,
+            secret_key='test-secret',
+        )
+        client = app.test_client()
+
+        # 1. Domyślny widok przy braku wpisu w config.yaml -> heatmap (Opcja 2)
+        res = client.get('/frekwencja')
+        self.assertEqual(res.status_code, 200)
+        html = res.data.decode('utf-8')
+        self.assertIn('id="attendance-view-select"', html)
+        self.assertIn('value="heatmap" selected', html)
+        self.assertIn('id="attendance-view-heatmap"', html)
+        self.assertIn('id="attendance-view-month"', html)
+        self.assertIn('Roczna mapa obecności (styl GitHub)', html)
+
+        # 2. Jawne wymuszenie widoku przez parametr query ?view=month
+        res_month = client.get('/frekwencja?view=month')
+        self.assertEqual(res_month.status_code, 200)
+        html_month = res_month.data.decode('utf-8')
+        self.assertIn('value="month" selected', html_month)
+        self.assertIn('Widok wybranego miesiąca z nawigacją', html_month)
+
+        # 3. Zmiana i trwały zapis do config.yaml przez endpoint API /api/attendance/view-mode
+        api_res = client.post('/api/attendance/view-mode', json={'mode': 'month'})
+        self.assertEqual(api_res.status_code, 200)
+        data = api_res.get_json()
+        self.assertTrue(data.get('success'))
+        self.assertEqual(data.get('mode'), 'month')
+
+        # Weryfikacja zapisu w pliku config.yaml
+        with open(self.config_path, encoding='utf-8') as f:
+            saved_yaml = yaml.safe_load(f)
+        self.assertEqual(saved_yaml.get('attendance_view_mode'), 'month')
+
+        # 4. Kolejne zapytanie do /frekwencja bez parametrów powinno teraz domyślnie zwrócić widok 'month'
+        res_updated = client.get('/frekwencja')
+        self.assertEqual(res_updated.status_code, 200)
+        html_updated = res_updated.data.decode('utf-8')
+        self.assertIn('value="month" selected', html_updated)
+
+        # 5. Błędny tryb w API powinien zwrócić kod 400
+        bad_res = client.post('/api/attendance/view-mode', json={'mode': 'invalid_mode'})
+        self.assertEqual(bad_res.status_code, 400)
+
     def test_attendance_integration_in_schedule_and_dashboard(self):
         """Weryfikuje oznaczanie zdarzeń frekwencji (nb, u, sp, zw) w planie lekcji na pulpicie oraz w widoku /plan."""
         storage = get_storage(self.mock_config, self.storage_dir)

@@ -17,7 +17,10 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
   - **Nowa podstrona w panelu WWW (`/frekwencja` oraz `/attendance`)**:
     - Umieszczenie nowej pozycji w głównym pasku nawigacyjnym pomiędzy *Terminarz* a *Wiadomości*.
     - **Karty metryk KPI**: liczniki nieobecności nieusprawiedliwionych (z alertem o wymaganej reakcji), usprawiedliwionych, spóźnień oraz zwolnień.
-    - **Semestralna mapa obecności / kalendarz**: miniatury miesięcy (wrzesień – czerwiec) z kolorystycznym oznaczeniem statusu każdego dnia i interaktywnym przewijaniem (`scrollToDay`) do osi czasu.
+    - **Dwa tryby wizualizacji kalendarza z rozwijanym menu wyboru (`attendance_view_mode`)**:
+      - **Opcja 2 (domyślna)**: Roczna horyzontalna heatmapa obecności w stylu GitHub (kompaktowy pasek tygodni IX–VI z etykietami miesięcy, statystykami frekwencji i kolorowymi kafelkami statusu dni).
+      - **Opcja 1**: Widok pojedynczego miesiąca z wygodnymi pigułkami wyboru miesięcy (sygnalizatory zdarzeń, wyszarzone miesiące przyszłe) i dedykowaną, czytelną siatką dni wybranego miesiąca.
+      - Rozwijane menu wyboru umieszczone bezpośrednio na karcie Frekwencji z natychmiastowym przełączaniem widoków i trwałym zapisem wyboru w `config.yaml` (`POST /api/attendance/view-mode`).
     - **Interaktywna oś czasu (Timeline)**: pogrupowane chronologicznie zdarzenia z odznakami symboli, szczegółami lekcji i statusami e-Usprawiedliwień.
     - **Zestawienie przedmiotowe i podsumowanie okresów**: agregacja absencji według przedmiotów oraz oficjalne tabele semestralne Librus.
   - **Oznaczanie frekwencji w Planie lekcji (`/plan`) i na Pulpicie (`/`)**:

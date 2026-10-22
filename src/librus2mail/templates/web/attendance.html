@@ -112,83 +112,279 @@
     </div>
 </div>
 
-<!-- Sekcja 1: Semestralny mini-kalendarz miesięcy (Heatmapa obecności) -->
+<!-- Sekcja 1: Kalendarz / Heatmapa obecności -->
 <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm mb-8">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-100">
         <div>
             <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
                 <span>📅 Przegląd obecności w roku szkolnym</span>
             </h2>
-            <p class="text-xs text-slate-500 mt-0.5">
-                Kompaktowa mapa miesięcy. Kolorowe wskaźniki oznaczają dni ze zdarzeniami frekwencyjnymi.
+            <p class="text-xs text-slate-500 mt-0.5" id="attendance-view-subtitle">
+                {% if att.view_mode == 'month' %}
+                    Widok wybranego miesiąca z nawigacją i wskaźnikami obecności.
+                {% else %}
+                    Roczna mapa obecności (styl GitHub). Kliknij na zaznaczony dzień, aby przejść do szczegółów.
+                {% endif %}
             </p>
         </div>
 
-        <!-- Legenda -->
-        <div class="flex flex-wrap items-center gap-3 text-xs text-slate-600">
-            <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Nieusprawiedliwiona</span>
-            <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Usprawiedliwiona</span>
-            <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Spóźnienie</span>
-            <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span> Zwolnienie</span>
-            <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-slate-200"></span> Pełna obecność</span>
+        <div class="flex flex-wrap items-center gap-3">
+            <!-- Rozwijane menu wyboru widoku -->
+            <div class="flex items-center gap-2">
+                <label for="attendance-view-select" class="text-xs font-bold text-slate-600">
+                    Widok:
+                </label>
+                <select id="attendance-view-select"
+                        onchange="onAttendanceViewChange(this.value)"
+                        class="text-xs font-bold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 shadow-xs hover:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition cursor-pointer">
+                    <option value="heatmap" {% if att.view_mode == 'heatmap' %}selected{% endif %}>
+                        🔥 Heatmapa roczna (GitHub)
+                    </option>
+                    <option value="month" {% if att.view_mode == 'month' %}selected{% endif %}>
+                        📅 Miesiąc z nawigacją
+                    </option>
+                </select>
+            </div>
+
+            <!-- Legenda -->
+            <div class="hidden lg:flex flex-wrap items-center gap-2.5 text-[11px] text-slate-600 pl-2 border-l border-slate-200">
+                <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-[3px] bg-rose-500"></span> Nieuspr.</span>
+                <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-[3px] bg-emerald-500"></span> Uspr.</span>
+                <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-[3px] bg-amber-400"></span> Spóźn.</span>
+                <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-[3px] bg-sky-400"></span> Zwoln.</span>
+                <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-[3px] bg-slate-200"></span> Obecny</span>
+            </div>
         </div>
     </div>
 
-    <!-- Siatka miesięcy -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 pt-4">
-        {% for m in att.heatmap_months %}
-        <div class="border rounded-xl p-3 {{ 'border-indigo-200 bg-indigo-50/20' if m.has_events else 'border-slate-100 bg-slate-50/40' }}">
-            <div class="flex items-center justify-between mb-2">
-                <span class="text-xs font-bold text-slate-800">{{ m.short_name }} {{ m.year }}</span>
-                {% if m.has_events %}
-                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
-                    {{ m.events_count }} zdarz.
-                </span>
+    <!-- Widok 2 (Opcja 2): Horyzontalna Heatmapa roczna (styl GitHub) -->
+    <div id="attendance-view-heatmap" class="{% if att.view_mode != 'heatmap' %}hidden{% endif %} pt-4">
+        <div class="overflow-x-auto pb-2 scrollbar-thin">
+            <div class="inline-block min-w-[760px]">
+                <!-- Etykiety miesięcy nad kolumnami -->
+                <div class="relative h-5 mb-1 text-[11px] font-bold text-slate-500 select-none">
+                    {% for ml in att.heatmap_strip.month_labels %}
+                    <span class="absolute" style="left: calc({{ ml.col }} * 18px + 28px);" title="{{ ml.full_name }}">
+                        {{ ml.name }}
+                    </span>
+                    {% endfor %}
+                </div>
+
+                <!-- Siatka heatmapy: kolumna z dniami tygodnia + kolumny tygodni -->
+                <div class="flex items-start gap-1">
+                    <!-- Etykiety dni tygodnia (Pn, Śr, Pt) -->
+                    <div class="flex flex-col gap-1 text-[10px] font-semibold text-slate-400 pr-1 select-none text-right w-6 flex-shrink-0 pt-0.5">
+                        <span class="h-3.5 leading-3.5">Pn</span>
+                        <span class="h-3.5 leading-3.5 opacity-0">Wt</span>
+                        <span class="h-3.5 leading-3.5">Śr</span>
+                        <span class="h-3.5 leading-3.5 opacity-0">Cz</span>
+                        <span class="h-3.5 leading-3.5">Pt</span>
+                        <span class="h-3.5 leading-3.5 opacity-0">So</span>
+                        <span class="h-3.5 leading-3.5 opacity-0">Nd</span>
+                    </div>
+
+                    <!-- Tygodnie -->
+                    <div class="flex items-center gap-1">
+                        {% for week in att.heatmap_strip.weeks %}
+                        <div class="flex flex-col gap-1 flex-shrink-0">
+                            {% for day in week %}
+                                {% if day.status == 'out_of_bounds' %}
+                                    <div class="w-3.5 h-3.5 opacity-0"></div>
+                                {% else %}
+                                    {% set is_clickable = day.status in ['unjustified', 'justified', 'late', 'exempt'] %}
+                                    <button type="button"
+                                            {% if is_clickable %}
+                                            onclick="scrollToDay('{{ day.date_iso }}')"
+                                            {% endif %}
+                                            title="{{ day.tooltip }}"
+                                            class="w-3.5 h-3.5 rounded-[3px] transition-all relative
+                                            {{ 'cursor-pointer hover:ring-2 hover:ring-indigo-500 hover:scale-125 z-10 shadow-xs' if is_clickable else 'cursor-default' }}
+                                            {% if day.status == 'unjustified' %}
+                                                bg-rose-500
+                                            {% elif day.status == 'justified' %}
+                                                bg-emerald-500
+                                            {% elif day.status == 'late' %}
+                                                bg-amber-400
+                                            {% elif day.status == 'exempt' %}
+                                                bg-sky-400
+                                            {% elif day.is_today %}
+                                                bg-indigo-600 ring-2 ring-indigo-400
+                                            {% elif day.status == 'future' %}
+                                                bg-slate-100/70 border border-dashed border-slate-200/80
+                                            {% elif day.is_weekend %}
+                                                bg-slate-100/50
+                                            {% else %}
+                                                bg-slate-200/90 hover:bg-slate-300
+                                            {% endif %}">
+                                    </button>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pasek statystyk heatmapy pod spodem -->
+        <div class="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
+            <div class="flex items-center gap-4 flex-wrap">
+                <span>🎯 Frekwencja w roku: <strong class="text-slate-800 font-extrabold">{{ att.heatmap_strip.attendance_rate }}%</strong></span>
+                <span>•</span>
+                <span>🏫 Dni nauki minione: <strong class="text-slate-800 font-bold">{{ att.heatmap_strip.total_school_days_past }}</strong></span>
+                <span>•</span>
+                <span>✅ 100% obecności: <strong class="text-emerald-700 font-bold">{{ att.heatmap_strip.clean_days_past }} dni</strong></span>
+                {% if att.heatmap_strip.event_days_past > 0 %}
+                <span>•</span>
+                <span>⚠️ Dni ze zdarzeniami: <strong class="text-amber-700 font-bold">{{ att.heatmap_strip.event_days_past }}</strong></span>
                 {% endif %}
             </div>
 
-            <!-- Nagłówki dni tygodnia -->
-            <div class="grid grid-cols-7 gap-1 text-[9px] font-semibold text-slate-400 text-center mb-1">
-                <span>P</span><span>W</span><span>Ś</span><span>C</span><span>P</span><span class="text-slate-300">S</span><span class="text-slate-300">N</span>
+            <div class="flex items-center gap-2 text-[11px] text-slate-400">
+                <span>Mniej</span>
+                <div class="flex items-center gap-1">
+                    <span class="w-2.5 h-2.5 rounded-[2px] bg-slate-200"></span>
+                    <span class="w-2.5 h-2.5 rounded-[2px] bg-sky-400"></span>
+                    <span class="w-2.5 h-2.5 rounded-[2px] bg-amber-400"></span>
+                    <span class="w-2.5 h-2.5 rounded-[2px] bg-emerald-500"></span>
+                    <span class="w-2.5 h-2.5 rounded-[2px] bg-rose-500"></span>
+                </div>
+                <span>Więcej</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Widok 1 (Opcja 1): Miesiąc z nawigacją -->
+    <div id="attendance-view-month" class="{% if att.view_mode != 'month' %}hidden{% endif %} pt-4">
+        <!-- Pigułki wyboru miesięcy (Tabs) -->
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-3 mb-4 border-b border-slate-100 scrollbar-none">
+            {% for m in att.heatmap_months %}
+            <button type="button"
+                    onclick="selectAttendanceMonth('{{ m.key }}')"
+                    id="month-pill-{{ m.key }}"
+                    class="month-nav-pill inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer
+                    {% if m.key == att.active_month_key %}
+                        bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-500
+                    {% elif m.is_future %}
+                        bg-slate-50 text-slate-400 hover:bg-slate-100 border border-slate-100
+                    {% else %}
+                        bg-white border border-slate-200 text-slate-700 hover:border-indigo-400 hover:text-indigo-600
+                    {% endif %}">
+                <span>{{ m.short_name }}</span>
+                {% if m.is_current %}
+                <span class="text-[9px] uppercase px-1 py-0.2 rounded {% if m.key == att.active_month_key %}bg-white/20 text-white{% else %}bg-emerald-100 text-emerald-800{% endif %} font-black">Teraz</span>
+                {% endif %}
+                {% if m.unjustified_count > 0 %}
+                <span class="w-2 h-2 rounded-full bg-rose-500" title="{{ m.unjustified_count }} nieuspr."></span>
+                {% elif m.justified_count > 0 %}
+                <span class="w-2 h-2 rounded-full bg-emerald-500" title="{{ m.justified_count }} uspr."></span>
+                {% elif m.lates_count > 0 %}
+                <span class="w-2 h-2 rounded-full bg-amber-400" title="{{ m.lates_count }} spóźn."></span>
+                {% endif %}
+            </button>
+            {% endfor %}
+        </div>
+
+        <!-- Poszczególne panele miesięcy (tylko jeden widoczny naraz) -->
+        {% for m in att.heatmap_months %}
+        <div id="month-panel-{{ m.key }}" class="month-panel-card {% if m.key != att.active_month_key %}hidden{% endif %}">
+            <!-- Pasek nawigacji wybranego miesiąca -->
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                <div class="flex items-center gap-2">
+                    <span class="text-base font-extrabold text-slate-900">{{ m.month_name }}</span>
+                    {% if m.is_current %}
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                        Bieżący miesiąc
+                    </span>
+                    {% elif m.is_future %}
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-600">
+                        Miesiąc nadchodzący
+                    </span>
+                    {% endif %}
+                </div>
+
+                <!-- Podsumowanie zdarzeń w danym miesiącu -->
+                <div class="flex items-center gap-2 text-xs flex-wrap">
+                    {% if m.events_count == 0 %}
+                        <span class="text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                            ✅ 100% frekwencja (brak uwag)
+                        </span>
+                    {% else %}
+                        {% if m.unjustified_count > 0 %}
+                        <span class="px-2 py-0.5 rounded-lg bg-rose-100 text-rose-800 font-bold">
+                            🔴 {{ m.unjustified_count }} nieuspr.
+                        </span>
+                        {% endif %}
+                        {% if m.justified_count > 0 %}
+                        <span class="px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-800 font-bold">
+                            🟢 {{ m.justified_count }} uspr.
+                        </span>
+                        {% endif %}
+                        {% if m.lates_count > 0 %}
+                        <span class="px-2 py-0.5 rounded-lg bg-amber-100 text-amber-800 font-bold">
+                            🟡 {{ m.lates_count }} spóźn.
+                        </span>
+                        {% endif %}
+                    {% endif %}
+                </div>
             </div>
 
-            <!-- Dni miesiąca -->
-            <div class="grid grid-cols-7 gap-1 text-center">
-                {% for week in m.weeks %}
-                    {% for day in week %}
-                        {% if day.day_num is none %}
-                            <div class="h-6"></div>
-                        {% else %}
-                            {% set is_active = day.status != 'clean' %}
-                            <button type="button"
-                                    {% if is_active %}
-                                    onclick="scrollToDay('{{ day.date_iso }}')"
-                                    title="{{ day.tooltip }}"
-                                    {% else %}
-                                    title="{{ day.day_num }} {{ m.short_name }}: 100% obecności"
-                                    {% endif %}
-                                    class="h-6 w-full rounded flex items-center justify-center text-[10px] font-medium transition-all relative
-                                    {{ 'cursor-pointer hover:ring-2 hover:ring-indigo-400' if is_active else 'cursor-default' }}
+            <!-- Kalendarz siatka 7 kolumn -->
+            <div class="max-w-2xl mx-auto border border-slate-200 rounded-xl p-4 bg-white shadow-xs">
+                <!-- Nagłówki dni tygodnia -->
+                <div class="grid grid-cols-7 gap-2 text-xs font-bold text-slate-400 text-center mb-2 pb-2 border-b border-slate-100">
+                    <span>Pon</span><span>Wt</span><span>Śr</span><span>Czw</span><span>Pt</span><span class="text-slate-300">Sob</span><span class="text-slate-300">Nie</span>
+                </div>
+
+                <!-- Dni miesiąca -->
+                <div class="grid grid-cols-7 gap-2 text-center">
+                    {% for week in m.weeks %}
+                        {% for day in week %}
+                            {% if day.day_num is none %}
+                                <div class="h-10"></div>
+                            {% else %}
+                                {% set is_active = day.status in ['unjustified', 'justified', 'late', 'exempt'] %}
+                                <button type="button"
+                                        {% if is_active %}
+                                        onclick="scrollToDay('{{ day.date_iso }}')"
+                                        title="{{ day.tooltip }}"
+                                        {% else %}
+                                        title="{{ day.day_num }} {{ m.short_name }}: {{ day.tooltip }}"
+                                        {% endif %}
+                                        class="h-10 w-full rounded-xl flex flex-col items-center justify-center text-xs font-bold transition-all relative
+                                        {{ 'cursor-pointer hover:ring-2 hover:ring-indigo-400 shadow-xs' if is_active else 'cursor-default' }}
+                                        {% if day.status == 'unjustified' %}
+                                            bg-rose-500 text-white
+                                        {% elif day.status == 'justified' %}
+                                            bg-emerald-500 text-white
+                                        {% elif day.status == 'late' %}
+                                            bg-amber-400 text-slate-900
+                                        {% elif day.status == 'exempt' %}
+                                            bg-sky-400 text-white
+                                        {% elif day.is_today %}
+                                            border-2 border-indigo-600 text-indigo-700 font-extrabold bg-indigo-50/50
+                                        {% elif day.is_future %}
+                                            text-slate-300 bg-slate-50/40
+                                        {% elif day.is_weekend %}
+                                            text-slate-300 bg-slate-50/70
+                                        {% else %}
+                                            text-slate-700 bg-slate-100/70 hover:bg-slate-200/60
+                                        {% endif %}">
+                                    <span>{{ day.day_num }}</span>
                                     {% if day.status == 'unjustified' %}
-                                        bg-rose-500 text-white font-bold shadow-xs
+                                        <span class="text-[9px] font-black leading-none">nb</span>
                                     {% elif day.status == 'justified' %}
-                                        bg-emerald-500 text-white font-bold shadow-xs
+                                        <span class="text-[9px] font-black leading-none">u</span>
                                     {% elif day.status == 'late' %}
-                                        bg-amber-400 text-slate-900 font-bold shadow-xs
+                                        <span class="text-[9px] font-black leading-none">sp</span>
                                     {% elif day.status == 'exempt' %}
-                                        bg-sky-400 text-white font-bold shadow-xs
-                                    {% elif day.is_today %}
-                                        border border-indigo-500 text-indigo-700 font-bold bg-white
-                                    {% elif day.is_weekend %}
-                                        text-slate-300
-                                    {% else %}
-                                        text-slate-600 hover:bg-slate-200/50
-                                    {% endif %}">
-                                {{ day.day_num }}
-                            </button>
-                        {% endif %}
+                                        <span class="text-[9px] font-black leading-none">zw</span>
+                                    {% endif %}
+                                </button>
+                            {% endif %}
+                        {% endfor %}
                     {% endfor %}
-                {% endfor %}
+                </div>
             </div>
         </div>
         {% endfor %}
@@ -478,6 +674,64 @@
 </div>
 
 <script>
+function onAttendanceViewChange(mode) {
+    const heatmapEl = document.getElementById('attendance-view-heatmap');
+    const monthEl = document.getElementById('attendance-view-month');
+    const subtitleEl = document.getElementById('attendance-view-subtitle');
+
+    if (heatmapEl && monthEl) {
+        heatmapEl.classList.toggle('hidden', mode !== 'heatmap');
+        monthEl.classList.toggle('hidden', mode !== 'month');
+    }
+
+    if (subtitleEl) {
+        if (mode === 'heatmap') {
+            subtitleEl.textContent = 'Roczna mapa obecności (styl GitHub). Kliknij na zaznaczony dzień, aby przejść do szczegółów.';
+        } else {
+            subtitleEl.textContent = 'Widok wybranego miesiąca z nawigacją i wskaźnikami obecności.';
+        }
+    }
+
+    // Aktualizacja URL bez przeładowania
+    try {
+        const url = new URL(window.location);
+        url.searchParams.set('view', mode);
+        window.history.replaceState({}, '', url);
+    } catch (e) {}
+
+    // Zapis w tle w pliku config.yaml
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    fetch('{{ url_for("web.api_attendance_view_mode") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken || '',
+        },
+        body: JSON.stringify({ mode: mode }),
+    }).catch(err => console.debug('Błąd zapisu trybu widoku frekwencji:', err));
+}
+
+function selectAttendanceMonth(monthKey) {
+    document.querySelectorAll('.month-panel-card').forEach(panel => {
+        panel.classList.toggle('hidden', panel.id !== 'month-panel-' + monthKey);
+    });
+
+    document.querySelectorAll('.month-nav-pill').forEach(pill => {
+        const isCurrent = (pill.id === 'month-pill-' + monthKey);
+        if (isCurrent) {
+            pill.className = 'month-nav-pill inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-500';
+        } else {
+            pill.className = 'month-nav-pill inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer bg-white border border-slate-200 text-slate-700 hover:border-indigo-400 hover:text-indigo-600';
+        }
+    });
+
+    try {
+        const url = new URL(window.location);
+        url.searchParams.set('month', monthKey);
+        window.history.replaceState({}, '', url);
+    } catch (e) {}
+}
+
 function scrollToDay(dateIso) {
     const el = document.getElementById('day-' + dateIso);
     if (el) {

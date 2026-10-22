@@ -39,6 +39,11 @@ librus_users:
     # Pobieranie danych o frekwencji ucznia (nieobecności, spóźnienia, zwolnienia) (domyślnie: true).
     read_attendance: true
 
+    # Domyślny tryb prezentacji kalendarza frekwencji w panelu WWW:
+    # - heatmap: roczna horyzontalna mapa obecności w stylu GitHub (domyślnie).
+    # - month: widok pojedynczego miesiąca z wygodną nawigacją i przełącznikiem miesięcy.
+    attendance_view_mode: heatmap
+
     # Przesunięcie dnia dla planu lekcji w powiadomieniu (w dniach względem daty raportu/uruchomienia):
     # - 1: prezentuje plan na kolejny dzień szkolny (jutro, a w piątek/weekend na najbliższy poniedziałek - domyślnie).
     # - 0: prezentuje plan na bieżący dzień raportu (dzisiaj).

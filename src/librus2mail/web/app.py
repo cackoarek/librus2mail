@@ -496,8 +496,55 @@ def attendance_view():
     storage = request.app_storage
     active_login = get_active_student_login(config, storage, session_login=session.get('active_student_login'))
 
-    data = get_student_dashboard_bundle(storage, active_login, config, now=request.app_actual_date)
+    req_view = request.args.get('view') or request.args.get('mode')
+    cfg_view = (
+        config.get('attendance_view_mode')
+        or (config.get('web') or {}).get('attendance_view_mode')
+        or 'heatmap'
+    )
+    view_mode = req_view if req_view in ('heatmap', 'month') else cfg_view
+    if view_mode not in ('heatmap', 'month'):
+        view_mode = 'heatmap'
+
+    req_month = request.args.get('month')
+
+    data = get_student_dashboard_bundle(
+        storage,
+        active_login,
+        config,
+        now=request.app_actual_date,
+        attendance_view_mode=view_mode,
+        attendance_selected_month=req_month,
+    )
     return render_template('web/attendance.html', data=data)
+
+
+@web_bp.route('/api/attendance/view-mode', methods=['POST'])
+@login_required
+def api_attendance_view_mode():
+    """Zapisuje preferowany tryb widoku kalendarza frekwencji (heatmap / month) w config.yaml."""
+    data = request.get_json(silent=True) or {}
+    mode = (request.form.get('mode') or data.get('mode') or '').strip().lower()
+    if mode not in ('heatmap', 'month'):
+        return jsonify({'success': False, 'message': 'Nieprawidłowy tryb widoku (dozwolone: heatmap, month).'}), 400
+
+    config_path = getattr(request, 'app_config_path', None) or current_app.config.get('CONFIG_PATH') or 'config.yaml'
+    try:
+        raw_config = read_config(config_path).to_dict() if hasattr(read_config(config_path), 'to_dict') else dict(read_config(config_path))
+    except Exception:
+        raw_config = {}
+
+    raw_config['attendance_view_mode'] = mode
+    if 'web' in raw_config and isinstance(raw_config['web'], dict):
+        raw_config['web']['attendance_view_mode'] = mode
+
+    try:
+        save_config_yaml(raw_config, config_path)
+        current_app.config['APP_CONFIG'] = read_config(config_path)
+        return jsonify({'success': True, 'mode': mode, 'message': f'Zapisano tryb widoku: {mode}'})
+    except Exception as e:
+        logger.error(f"Nie udało się zapisać trybu widoku frekwencji do {config_path}: {e}")
+        return jsonify({'success': False, 'message': f'Błąd zapisu konfiguracji: {e}'}), 500
 
 
 @web_bp.route('/wiadomosci')

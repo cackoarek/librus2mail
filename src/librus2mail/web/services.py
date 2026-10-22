@@ -1865,6 +1865,8 @@ def prepare_attendance_view_data(
     attendance_history: list[dict],
     attendance_summary: list[dict] | dict | None = None,
     ref_now: datetime | None = None,
+    view_mode: str = 'heatmap',
+    selected_month: str | None = None,
 ) -> dict[str, Any]:
     """
     Przygotowuje komplet danych dla widoku frekwencji na WWW:
@@ -1875,6 +1877,7 @@ def prepare_attendance_view_data(
     - Podsumowania okresów
     """
     import calendar
+    from datetime import date, timedelta
 
     ref_date = (ref_now or datetime.now()).date()
 
@@ -1987,7 +1990,7 @@ def prepare_attendance_view_data(
             'badge_label': badge_label,
         })
 
-    # 3. Semestralny mini-kalendarz (Heatmapa miesięcy roku szkolnego)
+    # 3. Semestralny mini-kalendarz oraz roczna Heatmapa (styl GitHub)
     if ref_date.month >= 8:
         start_year = ref_date.year
     else:
@@ -1999,13 +2002,34 @@ def prepare_attendance_view_data(
         (end_year, 1), (end_year, 2), (end_year, 3), (end_year, 4), (end_year, 5), (end_year, 6),
     ]
 
+    valid_month_keys = [f"{y:04d}-{m:02d}" for y, m in school_months]
+    current_month_key = f"{ref_date.year:04d}-{ref_date.month:02d}"
+
+    if selected_month and selected_month in valid_month_keys:
+        active_month_key = selected_month
+    elif current_month_key in valid_month_keys:
+        active_month_key = current_month_key
+    else:
+        # Wybierz ostatni miesiąc ze zdarzeniami lub pierwszy miesiąc roku (wrzesień)
+        months_with_ev = [f"{y:04d}-{m:02d}" for y, m in school_months if any(k.startswith(f"{y:04d}-{m:02d}") for k in by_date)]
+        active_month_key = months_with_ev[-1] if months_with_ev else valid_month_keys[0]
+
+    active_idx = valid_month_keys.index(active_month_key) if active_month_key in valid_month_keys else 0
+    prev_month_key = valid_month_keys[active_idx - 1] if active_idx > 0 else None
+    next_month_key = valid_month_keys[active_idx + 1] if active_idx < len(valid_month_keys) - 1 else None
+
     heatmap_months = []
     today_iso = ref_date.strftime('%Y-%m-%d')
 
     for y, m in school_months:
+        m_key = f"{y:04d}-{m:02d}"
         cal = calendar.monthcalendar(y, m)
         weeks = []
         month_events_count = 0
+        m_unjustified = 0
+        m_justified = 0
+        m_lates = 0
+        m_exemptions = 0
 
         for week in cal:
             days = []
@@ -2016,45 +2040,193 @@ def prepare_attendance_view_data(
                     d_iso = f"{y:04d}-{m:02d}-{day_num:02d}"
                     is_weekend = day_idx in (5, 6)
                     is_today = (d_iso == today_iso)
+                    is_future = (date(y, m, day_num) > ref_date)
                     day_events = by_date.get(d_iso, [])
                     month_events_count += len(day_events)
 
                     status = 'clean'
                     tooltip = ""
                     if day_events:
-                        if any(x.get('is_absence') and not x.get('is_justified') for x in day_events):
+                        d_u = sum(1 for x in day_events if x.get('is_absence') and x.get('is_justified'))
+                        d_nu = sum(1 for x in day_events if x.get('is_absence') and not x.get('is_justified'))
+                        d_sp = sum(1 for x in day_events if x.get('is_late'))
+                        d_zw = sum(1 for x in day_events if x.get('is_exempt'))
+
+                        m_unjustified += d_nu
+                        m_justified += d_u
+                        m_lates += d_sp
+                        m_exemptions += d_zw
+
+                        if d_nu > 0:
                             status = 'unjustified'
                             tooltip = f"{day_num:02d}.{m:02d}: Nieobecność nieusprawiedliwiona ({len(day_events)} lekcji)"
-                        elif any(x.get('is_absence') and x.get('is_justified') for x in day_events):
+                        elif d_u > 0:
                             status = 'justified'
                             tooltip = f"{day_num:02d}.{m:02d}: Nieobecność usprawiedliwiona ({len(day_events)} lekcji)"
-                        elif any(x.get('is_late') for x in day_events):
+                        elif d_sp > 0:
                             status = 'late'
                             tooltip = f"{day_num:02d}.{m:02d}: Spóźnienie"
-                        elif any(x.get('is_exempt') for x in day_events):
+                        elif d_zw > 0:
                             status = 'exempt'
                             tooltip = f"{day_num:02d}.{m:02d}: Zwolnienie"
+                    elif is_future:
+                        status = 'future'
+                        tooltip = f"{day_num:02d}.{m:02d}: Planowany dzień nauki" if not is_weekend else f"{day_num:02d}.{m:02d}: Weekend"
+                    elif is_weekend:
+                        status = 'weekend'
+                        tooltip = f"{day_num:02d}.{m:02d}: Weekend"
+                    else:
+                        status = 'clean'
+                        tooltip = f"{day_num:02d}.{m:02d}: 100% obecności"
 
                     days.append({
                         'day_num': day_num,
                         'date_iso': d_iso,
                         'is_weekend': is_weekend,
                         'is_today': is_today,
+                        'is_future': is_future,
                         'status': status,
                         'events_count': len(day_events),
                         'tooltip': tooltip,
                     })
             weeks.append(days)
 
+        is_current_m = (y == ref_date.year and m == ref_date.month)
+        is_future_m = ((y, m) > (ref_date.year, ref_date.month))
+        is_past_m = ((y, m) < (ref_date.year, ref_date.month))
+
+        if m_unjustified > 0:
+            indicator_color = 'rose'
+        elif m_justified > 0:
+            indicator_color = 'emerald'
+        elif m_lates > 0:
+            indicator_color = 'amber'
+        elif m_exemptions > 0:
+            indicator_color = 'sky'
+        else:
+            indicator_color = 'clean'
+
         heatmap_months.append({
+            'key': m_key,
             'year': y,
             'month': m,
             'month_name': f"{POLISH_MONTH_NAMES[m]} {y}",
             'short_name': POLISH_MONTH_NAMES[m],
+            'pill_label': POLISH_MONTH_NAMES[m][:3].capitalize(),
             'has_events': month_events_count > 0,
             'events_count': month_events_count,
+            'unjustified_count': m_unjustified,
+            'justified_count': m_justified,
+            'lates_count': m_lates,
+            'exemptions_count': m_exemptions,
+            'indicator_color': indicator_color,
+            'is_current': is_current_m,
+            'is_future': is_future_m,
+            'is_past': is_past_m,
+            'is_selected': (m_key == active_month_key),
             'weeks': weeks,
         })
+
+    # 3b. Horyzontalna Heatmapa roczna (styl GitHub)
+    start_sy_date = date(start_year, 9, 1)
+    end_sy_date = date(end_year, 6, 30)
+    first_monday = start_sy_date - timedelta(days=start_sy_date.weekday())
+    last_sunday = end_sy_date + timedelta(days=6 - end_sy_date.weekday())
+
+    strip_weeks = []
+    month_labels = []
+    seen_months_cols = set()
+
+    col_idx = 0
+    curr_d = first_monday
+    total_school_days_past = 0
+    clean_days_past = 0
+    event_days_past = 0
+
+    while curr_d <= last_sunday:
+        days_in_week = []
+        for wd in range(7):
+            day_date = curr_d + timedelta(days=wd)
+            is_in_sy = (start_sy_date <= day_date <= end_sy_date)
+            d_iso = day_date.strftime('%Y-%m-%d')
+            is_weekend = (wd in (5, 6))
+            is_today = (d_iso == today_iso)
+            is_future = (day_date > ref_date)
+            day_events = by_date.get(d_iso, [])
+
+            if is_in_sy and day_date.month not in seen_months_cols:
+                seen_months_cols.add(day_date.month)
+                month_labels.append({
+                    'col': col_idx,
+                    'name': POLISH_MONTH_NAMES.get(day_date.month, '')[:3].capitalize(),
+                    'full_name': f"{POLISH_MONTH_NAMES.get(day_date.month, '')} {day_date.year}",
+                    'month': day_date.month,
+                    'year': day_date.year,
+                })
+
+            if not is_in_sy:
+                status = 'out_of_bounds'
+                tooltip = ''
+            elif is_future:
+                status = 'future'
+                tooltip = f"{day_date.day:02d}.{day_date.month:02d}: Planowany dzień nauki" if not is_weekend else f"{day_date.day:02d}.{day_date.month:02d}: Weekend"
+            elif day_events:
+                if not is_weekend:
+                    total_school_days_past += 1
+                    event_days_past += 1
+                if any(x.get('is_absence') and not x.get('is_justified') for x in day_events):
+                    status = 'unjustified'
+                    tooltip = f"{day_date.day:02d}.{day_date.month:02d}: Nieobecność nieusprawiedliwiona ({len(day_events)} lekcji)"
+                elif any(x.get('is_absence') and x.get('is_justified') for x in day_events):
+                    status = 'justified'
+                    tooltip = f"{day_date.day:02d}.{day_date.month:02d}: Nieobecność usprawiedliwiona ({len(day_events)} lekcji)"
+                elif any(x.get('is_late') for x in day_events):
+                    status = 'late'
+                    tooltip = f"{day_date.day:02d}.{day_date.month:02d}: Spóźnienie"
+                elif any(x.get('is_exempt') for x in day_events):
+                    status = 'exempt'
+                    tooltip = f"{day_date.day:02d}.{day_date.month:02d}: Zwolnienie"
+                else:
+                    status = 'clean'
+                    tooltip = f"{day_date.day:02d}.{day_date.month:02d}: 100% obecności"
+            elif is_weekend:
+                status = 'weekend'
+                tooltip = f"{day_date.day:02d}.{day_date.month:02d}: Weekend"
+            else:
+                total_school_days_past += 1
+                clean_days_past += 1
+                status = 'clean'
+                tooltip = f"{day_date.day:02d}.{day_date.month:02d}: 100% obecności"
+
+            days_in_week.append({
+                'date_iso': d_iso,
+                'day_num': day_date.day,
+                'month': day_date.month,
+                'year': day_date.year,
+                'weekday': wd,
+                'is_weekend': is_weekend,
+                'is_today': is_today,
+                'is_future': is_future,
+                'is_in_school_year': is_in_sy,
+                'status': status,
+                'events_count': len(day_events),
+                'tooltip': tooltip,
+            })
+        strip_weeks.append(days_in_week)
+        curr_d += timedelta(days=7)
+        col_idx += 1
+
+    attendance_rate = round((clean_days_past / total_school_days_past * 100), 1) if total_school_days_past > 0 else 100.0
+
+    heatmap_strip = {
+        'weeks': strip_weeks,
+        'month_labels': month_labels,
+        'total_weeks': len(strip_weeks),
+        'total_school_days_past': total_school_days_past,
+        'clean_days_past': clean_days_past,
+        'event_days_past': event_days_past,
+        'attendance_rate': attendance_rate,
+    }
 
     # 4. Rozkład absencji per przedmiot
     subjects_map: dict[str, dict[str, Any]] = {}
@@ -2097,6 +2269,11 @@ def prepare_attendance_view_data(
         'timeline_days': timeline_days,
         'timeline_days_count': len(timeline_days),
         'heatmap_months': heatmap_months,
+        'heatmap_strip': heatmap_strip,
+        'view_mode': view_mode,
+        'active_month_key': active_month_key,
+        'prev_month_key': prev_month_key,
+        'next_month_key': next_month_key,
         'subjects_summary': subjects_summary,
         'periods_summary': raw_summaries,
         'has_any_events': len(attendance_history) > 0 or total_absences > 0 or lates_count > 0,
@@ -2108,6 +2285,8 @@ def get_student_dashboard_bundle(
     login: str,
     config: dict,
     now: datetime | None = None,
+    attendance_view_mode: str | None = None,
+    attendance_selected_month: str | None = None,
 ) -> dict[str, Any]:
     """Przygotowuje komplet danych dla wybranego ucznia do wyświetlenia na dashboardzie."""
     ref_now = now or datetime.now()
@@ -2127,10 +2306,23 @@ def get_student_dashboard_bundle(
     attendance_history = storage.get_attendance_history(login) if hasattr(storage, 'get_attendance_history') else []
     attendance_summary = storage.get_attendance_summary(login) if hasattr(storage, 'get_attendance_summary') else []
     attendance_last_sync = storage.get_last_attendance_sync(login) if hasattr(storage, 'get_last_attendance_sync') else None
+
+    # Określenie trybu widoku frekwencji (argument > config > domyślnie 'heatmap')
+    effective_att_view_mode = (
+        attendance_view_mode
+        or config.get('attendance_view_mode')
+        or (config.get('web') or {}).get('attendance_view_mode')
+        or 'heatmap'
+    )
+    if effective_att_view_mode not in ('heatmap', 'month'):
+        effective_att_view_mode = 'heatmap'
+
     attendance_view_data = prepare_attendance_view_data(
         attendance_history=attendance_history,
         attendance_summary=attendance_summary,
         ref_now=ref_now,
+        view_mode=effective_att_view_mode,
+        selected_month=attendance_selected_month,
     )
 
     # Analityka ocen

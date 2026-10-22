@@ -11,6 +11,23 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ---
 
+## [2.8.0] – 2026-10-22
+
+### Dodane
+- email notification and report with attendence data
+- email notification and report with attendence data
+- 2 graphs to choose in attendace view
+- 1 new module: attendance
+- improved Wiadomosci view navigation
+
+### Naprawione
+- modify colors in some themes
+
+### Dokumentacja
+- refactor docs
+- refactor docs
+
+---
 ## [2.7.0] – 2026-10-21
 
 ### Dodane
@@ -383,7 +400,8 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ---
 
-[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v2.7.0...HEAD
+[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v2.8.0...HEAD
+[2.8.0]: https://github.com/cackoarek/librus2mail/compare/v2.7.0...v2.8.0
 [2.7.0]: https://github.com/cackoarek/librus2mail/compare/v2.6.0...v2.7.0
 [2.6.0]: https://github.com/cackoarek/librus2mail/compare/v2.5.0...v2.6.0
 [2.5.0]: https://github.com/cackoarek/librus2mail/compare/v2.4.0...v2.5.0

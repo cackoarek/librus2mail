@@ -181,7 +181,9 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 {% if data.recent_timeline_days|length <= 3 %}md:grid-cols-3{% elif data.recent_timeline_days|length == 4 %}md:grid-cols-2 lg:grid-cols-4{% elif data.recent_timeline_days|length == 5 %}md:grid-cols-3 lg:grid-cols-5{% elif data.recent_timeline_days|length <= 7 %}md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7{% else %}md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5{% endif %} gap-3.5 items-stretch">
             {% for day in data.recent_timeline_days %}
             <div class="rounded-xl flex flex-col h-full transition-all border
-                {% if day.is_today %}
+                {% if day.unjustified_count is defined and day.unjustified_count > 0 %}
+                    bg-rose-50/25 border-rose-300 ring-1 ring-rose-400/20 shadow-sm
+                {% elif day.is_today %}
                     bg-indigo-50/40 border-indigo-300 ring-2 ring-indigo-500/20 shadow-sm
                 {% else %}
                     bg-slate-50/70 border-slate-200/80 hover:border-slate-300
@@ -189,15 +191,34 @@
 
                 <!-- Nagłówek karty dnia -->
                 <div class="p-3 border-b flex items-center justify-between
-                    {% if day.is_today %} border-indigo-200/80 bg-indigo-100/30 {% else %} border-slate-200/60 bg-white/50 {% endif %}">
+                    {% if day.unjustified_count is defined and day.unjustified_count > 0 %}
+                        border-rose-200/80 bg-rose-100/30
+                    {% elif day.is_today %}
+                        border-indigo-200/80 bg-indigo-100/30
+                    {% else %}
+                        border-slate-200/60 bg-white/50
+                    {% endif %}">
                     <div>
-                        <div class="flex items-center gap-1.5">
+                        <div class="flex items-center gap-1.5 flex-wrap">
                             <span class="text-xs font-extrabold text-slate-900">
                                 {{ day.weekday_name }}
                             </span>
                             {% if day.is_today %}
                             <span class="px-1.5 py-0.5 bg-indigo-600 text-white text-[10px] font-bold rounded-md uppercase tracking-wider">
                                 Dziś
+                            </span>
+                            {% endif %}
+                            {% if day.unjustified_count is defined and day.unjustified_count > 0 %}
+                            <span class="px-1.5 py-0.5 bg-rose-100 text-rose-800 border border-rose-300 text-[10px] font-bold rounded" title="Nieobecność nieusprawiedliwiona">
+                                🔴 {{ day.unjustified_count }} nb
+                            </span>
+                            {% elif day.justified_count is defined and day.justified_count > 0 %}
+                            <span class="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-bold rounded" title="Nieobecność usprawiedliwiona">
+                                🟢 {{ day.justified_count }} uspr.
+                            </span>
+                            {% elif day.lates_count is defined and day.lates_count > 0 %}
+                            <span class="px-1.5 py-0.5 bg-amber-100 text-amber-800 border border-amber-300 text-[10px] font-bold rounded" title="Spóźnienie">
+                                🟡 {{ day.lates_count }} sp.
                             </span>
                             {% endif %}
                         </div>
@@ -208,7 +229,13 @@
 
                     <span class="text-[11px] font-bold px-2 py-0.5 rounded-full
                         {% if day.events_count > 0 %}
-                            {% if day.is_today %} bg-indigo-100 text-indigo-700 {% else %} bg-slate-200/80 text-slate-700 {% endif %}
+                            {% if day.unjustified_count is defined and day.unjustified_count > 0 %}
+                                bg-rose-100 text-rose-800
+                            {% elif day.is_today %}
+                                bg-indigo-100 text-indigo-700
+                            {% else %}
+                                bg-slate-200/80 text-slate-700
+                            {% endif %}
                         {% else %}
                             bg-slate-100 text-slate-400
                         {% endif %}">
@@ -220,7 +247,7 @@
                 <div class="p-2.5 flex-1 max-h-[380px] overflow-y-auto space-y-2">
                     {% if day.events %}
                         {% for ev in day.events %}
-                        <div class="bg-white rounded-lg p-2.5 border border-slate-200/90 shadow-2xs hover:shadow-xs transition text-xs">
+                        <div class="bg-white rounded-lg p-2.5 border border-slate-200/90 shadow-2xs hover:shadow-xs transition text-xs{% if ev.event_class %} {{ ev.event_class }}{% endif %}">
 
                             <!-- Typ: Ocena -->
                             {% if ev.type == 'grade' %}
@@ -365,6 +392,50 @@
                                     {% endif %}
                                     <a href="{{ url_for('web.timetable_view') }}" class="text-[10px] font-bold text-violet-600 hover:text-violet-800 inline-flex items-center gap-0.5 mt-1">
                                         Szczegóły w terminarzu ➔
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Typ: Frekwencja / Nieobecność -->
+                            {% elif ev.type == 'attendance' %}
+                            <div class="flex items-start gap-2">
+                                <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center font-extrabold text-xs shadow-2xs {{ ev.badge_color }}">
+                                    {{ ev.badge }}
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-1">
+                                        <a href="{{ url_for('web.attendance_view') }}#day-{{ ev.date }}"
+                                           class="font-bold {% if ev.is_absence and not ev.is_justified %}text-rose-900 hover:text-rose-700{% elif ev.is_absence and ev.is_justified %}text-emerald-900 hover:text-emerald-700{% elif ev.is_late %}text-amber-900 hover:text-amber-700{% else %}text-slate-900 hover:text-indigo-600{% endif %} truncate transition"
+                                           title="{{ ev.title }}">
+                                            {{ ev.subject or 'Frekwencja' }}
+                                        </a>
+                                        {% if ev.time_str %}
+                                        <span class="text-[10px] font-bold {% if ev.is_absence and not ev.is_justified %}text-rose-600{% elif ev.is_absence and ev.is_justified %}text-emerald-600{% elif ev.is_late %}text-amber-600{% else %}text-slate-400{% endif %} shrink-0">
+                                            {{ ev.time_str }}
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-[11px] font-semibold {% if ev.is_absence and not ev.is_justified %}text-rose-700{% elif ev.is_absence and ev.is_justified %}text-emerald-700{% elif ev.is_late %}text-amber-700{% else %}text-slate-600{% endif %} mt-0.5">
+                                        {{ ev.badge_label }}
+                                    </div>
+                                    {% if ev.topic %}
+                                    <div class="text-[11px] text-slate-600 italic mt-0.5 truncate" title="{{ ev.topic }}">
+                                        "{{ ev.topic }}"
+                                    </div>
+                                    {% endif %}
+                                    {% if ev.teacher %}
+                                    <div class="text-[10px] text-slate-500 mt-0.5">
+                                        {{ ev.teacher }}
+                                    </div>
+                                    {% endif %}
+                                    {% if ev.justification_info %}
+                                    <div class="text-[10px] font-medium text-emerald-700 mt-0.5">
+                                        ℹ️ {{ ev.justification_info }}
+                                    </div>
+                                    {% endif %}
+                                    <a href="{{ url_for('web.attendance_view') }}#day-{{ ev.date }}"
+                                       class="text-[10px] font-bold {% if ev.is_absence and not ev.is_justified %}text-rose-600 hover:text-rose-800{% elif ev.is_absence and ev.is_justified %}text-emerald-600 hover:text-emerald-800{% elif ev.is_late %}text-amber-600 hover:text-amber-800{% else %}text-indigo-600 hover:text-indigo-800{% endif %} inline-flex items-center gap-0.5 mt-1">
+                                        Szczegóły we frekwencji ➔
                                     </a>
                                 </div>
                             </div>

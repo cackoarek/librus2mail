@@ -400,6 +400,99 @@
             color: #ecfdf5 !important;
         }
 
+        /* Trwająca lekcja oraz banery przerw w widokach ciemnych (Dark, Midnight, Forest) */
+        html.dark .lesson-current-row,
+        [data-theme="dark"] .lesson-current-row,
+        [data-theme="midnight"] .lesson-current-row,
+        [data-theme="forest"] .lesson-current-row {
+            background-color: rgba(6, 78, 59, 0.45) !important;
+            border-left-color: #10b981 !important;
+            box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.35) !important;
+        }
+
+        html.dark [data-theme="midnight"] .lesson-current-row,
+        [data-theme="midnight"] .lesson-current-row {
+            background-color: rgba(6, 78, 59, 0.55) !important;
+            box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.4) !important;
+        }
+
+        html.dark [data-theme="forest"] .lesson-current-row,
+        [data-theme="forest"] .lesson-current-row {
+            background-color: rgba(6, 95, 70, 0.5) !important;
+            box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.4) !important;
+        }
+
+        /* Teksty i etykiety wewnątrz karty trwającej lekcji */
+        html.dark .lesson-current-row .lesson-subject,
+        html.dark .lesson-current-row .lesson-subject strong,
+        [data-theme="dark"] .lesson-current-row .lesson-subject,
+        [data-theme="midnight"] .lesson-current-row .lesson-subject,
+        [data-theme="forest"] .lesson-current-row .lesson-subject {
+            color: #ecfdf5 !important;
+        }
+
+        html.dark .lesson-current-row .lesson-time,
+        html.dark .lesson-current-row .lesson-classroom,
+        [data-theme="dark"] .lesson-current-row .lesson-time,
+        [data-theme="midnight"] .lesson-current-row .lesson-time,
+        [data-theme="forest"] .lesson-current-row .lesson-time,
+        [data-theme="dark"] .lesson-current-row .lesson-classroom,
+        [data-theme="midnight"] .lesson-current-row .lesson-classroom,
+        [data-theme="forest"] .lesson-current-row .lesson-classroom {
+            color: #a7f3d0 !important;
+        }
+
+        /* Pigułka odliczania czasu i pigułka statusu lekcji w toku */
+        html.dark .lesson-current-time-badge,
+        html.dark .lesson-current-status-badge,
+        [data-theme="dark"] .lesson-current-time-badge,
+        [data-theme="midnight"] .lesson-current-time-badge,
+        [data-theme="forest"] .lesson-current-time-badge,
+        [data-theme="dark"] .lesson-current-status-badge,
+        [data-theme="midnight"] .lesson-current-status-badge,
+        [data-theme="forest"] .lesson-current-status-badge {
+            background-color: rgba(6, 78, 59, 0.8) !important;
+            color: #ecfdf5 !important;
+            border-color: rgba(16, 185, 129, 0.5) !important;
+        }
+
+        /* Etykiety nagłówka i przyciski 'Dzisiaj' w trybach ciemnych */
+        html.dark .lesson-current-header-badge,
+        html.dark .lesson-today-btn,
+        [data-theme="dark"] .lesson-current-header-badge,
+        [data-theme="midnight"] .lesson-current-header-badge,
+        [data-theme="forest"] .lesson-current-header-badge,
+        [data-theme="dark"] .lesson-today-btn,
+        [data-theme="midnight"] .lesson-today-btn,
+        [data-theme="forest"] .lesson-today-btn {
+            background-color: rgba(6, 78, 59, 0.4) !important;
+            color: #6ee7b7 !important;
+            border-color: rgba(16, 185, 129, 0.35) !important;
+        }
+
+        /* Baner przerwy w trybach ciemnych */
+        html.dark .lesson-break-banner,
+        [data-theme="dark"] .lesson-break-banner,
+        [data-theme="midnight"] .lesson-break-banner,
+        [data-theme="forest"] .lesson-break-banner {
+            background: linear-gradient(to right, rgba(15, 23, 42, 0.95), rgba(6, 78, 59, 0.4), rgba(15, 23, 42, 0.95)) !important;
+            border-color: rgba(16, 185, 129, 0.3) !important;
+            color: #ecfdf5 !important;
+        }
+        html.dark .lesson-break-banner span,
+        html.dark .lesson-break-banner div,
+        [data-theme="dark"] .lesson-break-banner span,
+        [data-theme="midnight"] .lesson-break-banner span,
+        [data-theme="forest"] .lesson-break-banner span {
+            color: #a7f3d0 !important;
+        }
+        html.dark .lesson-break-banner .break-bell,
+        [data-theme="dark"] .lesson-break-banner .break-bell,
+        [data-theme="midnight"] .lesson-break-banner .break-bell,
+        [data-theme="forest"] .lesson-break-banner .break-bell {
+            color: #67e8f9 !important;
+        }
+
         html.dark .bg-rose-50, html.dark [class*="bg-rose-50/"] { background-color: rgba(244, 63, 94, 0.15) !important; }
         html.dark .bg-rose-100, html.dark [class*="bg-rose-100/"] { background-color: rgba(244, 63, 94, 0.22) !important; }
         html.dark .text-rose-700, html.dark .text-rose-800, html.dark .text-rose-900, html.dark .text-rose-950 { color: #fda4af !important; }
@@ -958,7 +1051,7 @@
         </div>
         <div class="flex items-center gap-2 flex-wrap">
             <span class="px-3 py-1 bg-indigo-50 text-indigo-700 font-extrabold text-xs rounded-full border border-indigo-100">
-                Łącznie: 31 zdarzeń
+                Łącznie: 32 zdarzeń
             </span>
             <a href="web_ustawienia.html#kalendarium"
                class="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition"
@@ -979,12 +1072,15 @@
 
                 <!-- Nagłówek karty dnia -->
                 <div class="p-3 border-b flex items-center justify-between
-                     border-slate-200/60 bg-white/50 ">
+                    
+                        border-slate-200/60 bg-white/50
+                    ">
                     <div>
-                        <div class="flex items-center gap-1.5">
+                        <div class="flex items-center gap-1.5 flex-wrap">
                             <span class="text-xs font-extrabold text-slate-900">
                                 Poniedziałek
                             </span>
+                            
                             
                         </div>
                         <span class="text-[11px] font-semibold text-slate-400">
@@ -994,7 +1090,9 @@
 
                     <span class="text-[11px] font-bold px-2 py-0.5 rounded-full
                         
-                             bg-slate-200/80 text-slate-700 
+                            
+                                bg-slate-200/80 text-slate-700
+                            
                         ">
                         6
                     </span>
@@ -1035,6 +1133,7 @@
                                 </div>
                             </div>
 
+                            <!-- Typ: Frekwencja / Nieobecność -->
                             
 
                         </div>
@@ -1210,12 +1309,15 @@
 
                 <!-- Nagłówek karty dnia -->
                 <div class="p-3 border-b flex items-center justify-between
-                     border-slate-200/60 bg-white/50 ">
+                    
+                        border-slate-200/60 bg-white/50
+                    ">
                     <div>
-                        <div class="flex items-center gap-1.5">
+                        <div class="flex items-center gap-1.5 flex-wrap">
                             <span class="text-xs font-extrabold text-slate-900">
                                 Wtorek
                             </span>
+                            
                             
                         </div>
                         <span class="text-[11px] font-semibold text-slate-400">
@@ -1225,7 +1327,9 @@
 
                     <span class="text-[11px] font-bold px-2 py-0.5 rounded-full
                         
-                             bg-slate-200/80 text-slate-700 
+                            
+                                bg-slate-200/80 text-slate-700
+                            
                         ">
                         9
                     </span>
@@ -1552,12 +1656,15 @@ Przypominam, że ze względu na sprzyjające warunki pogodowe, lekcje wychowania
 
                 <!-- Nagłówek karty dnia -->
                 <div class="p-3 border-b flex items-center justify-between
-                     border-slate-200/60 bg-white/50 ">
+                    
+                        border-slate-200/60 bg-white/50
+                    ">
                     <div>
-                        <div class="flex items-center gap-1.5">
+                        <div class="flex items-center gap-1.5 flex-wrap">
                             <span class="text-xs font-extrabold text-slate-900">
                                 Środa
                             </span>
+                            
                             
                         </div>
                         <span class="text-[11px] font-semibold text-slate-400">
@@ -1567,7 +1674,9 @@ Przypominam, że ze względu na sprzyjające warunki pogodowe, lekcje wychowania
 
                     <span class="text-[11px] font-bold px-2 py-0.5 rounded-full
                         
-                             bg-slate-200/80 text-slate-700 
+                            
+                                bg-slate-200/80 text-slate-700
+                            
                         ">
                         5
                     </span>
@@ -1763,12 +1872,15 @@ Od przyszłego tygodnia ruszają bezpłatne zajęcia SKS z piłki siatkowej i ko
 
                 <!-- Nagłówek karty dnia -->
                 <div class="p-3 border-b flex items-center justify-between
-                     border-slate-200/60 bg-white/50 ">
+                    
+                        border-slate-200/60 bg-white/50
+                    ">
                     <div>
-                        <div class="flex items-center gap-1.5">
+                        <div class="flex items-center gap-1.5 flex-wrap">
                             <span class="text-xs font-extrabold text-slate-900">
                                 Czwartek
                             </span>
+                            
                             
                         </div>
                         <span class="text-[11px] font-semibold text-slate-400">
@@ -1778,7 +1890,9 @@ Od przyszłego tygodnia ruszają bezpłatne zajęcia SKS z piłki siatkowej i ko
 
                     <span class="text-[11px] font-bold px-2 py-0.5 rounded-full
                         
-                             bg-slate-200/80 text-slate-700 
+                            
+                                bg-slate-200/80 text-slate-700
+                            
                         ">
                         7
                     </span>
@@ -2030,15 +2144,22 @@ Od przyszłego tygodnia ruszają bezpłatne zajęcia SKS z piłki siatkowej i ko
 
                 <!-- Nagłówek karty dnia -->
                 <div class="p-3 border-b flex items-center justify-between
-                     border-indigo-200/80 bg-indigo-100/30 ">
+                    
+                        border-indigo-200/80 bg-indigo-100/30
+                    ">
                     <div>
-                        <div class="flex items-center gap-1.5">
+                        <div class="flex items-center gap-1.5 flex-wrap">
                             <span class="text-xs font-extrabold text-slate-900">
                                 Piątek
                             </span>
                             
                             <span class="px-1.5 py-0.5 bg-indigo-600 text-white text-[10px] font-bold rounded-md uppercase tracking-wider">
                                 Dziś
+                            </span>
+                            
+                            
+                            <span class="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-bold rounded" title="Nieobecność usprawiedliwiona">
+                                🟢 1 uspr.
                             </span>
                             
                         </div>
@@ -2049,15 +2170,67 @@ Od przyszłego tygodnia ruszają bezpłatne zajęcia SKS z piłki siatkowej i ko
 
                     <span class="text-[11px] font-bold px-2 py-0.5 rounded-full
                         
-                             bg-indigo-100 text-indigo-700 
+                            
+                                bg-indigo-100 text-indigo-700
+                            
                         ">
-                        4
+                        5
                     </span>
                 </div>
 
                 <!-- Lista zdarzeń w danym dniu -->
                 <div class="p-2.5 flex-1 max-h-[380px] overflow-y-auto space-y-2">
                     
+                        
+                        <div class="bg-white rounded-lg p-2.5 border border-slate-200/90 shadow-2xs hover:shadow-xs transition text-xs border-l-4 border-l-emerald-500 bg-emerald-50/40">
+
+                            <!-- Typ: Ocena -->
+                            
+                            <div class="flex items-start gap-2">
+                                <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center font-extrabold text-xs shadow-2xs bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                    🟢 u
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-1">
+                                        <a href="web_frekwencja.html#day-2026-09-18"
+                                           class="font-bold text-emerald-900 hover:text-emerald-700 truncate transition"
+                                           title="Nieobecność uspr.: Geografia">
+                                            Geografia
+                                        </a>
+                                        
+                                        <span class="text-[10px] font-bold text-emerald-600 shrink-0">
+                                            Lekcja 3
+                                        </span>
+                                        
+                                    </div>
+                                    <div class="text-[11px] font-semibold text-emerald-700 mt-0.5">
+                                        Nieobecność usprawiedliwiona
+                                    </div>
+                                    
+                                    <div class="text-[11px] text-slate-600 italic mt-0.5 truncate" title="Ukształtowanie powierzchni Ziemi">
+                                        "Ukształtowanie powierzchni Ziemi"
+                                    </div>
+                                    
+                                    
+                                    <div class="text-[10px] text-slate-500 mt-0.5">
+                                        Dorota Opolska
+                                    </div>
+                                    
+                                    
+                                    <div class="text-[10px] font-medium text-emerald-700 mt-0.5">
+                                        ℹ️ e-Usprawiedliwienie
+                                    </div>
+                                    
+                                    <a href="web_frekwencja.html#day-2026-09-18"
+                                       class="text-[10px] font-bold text-emerald-600 hover:text-emerald-800 inline-flex items-center gap-0.5 mt-1">
+                                        Szczegóły we frekwencji ➔
+                                    </a>
+                                </div>
+                            </div>
+
+                            
+
+                        </div>
                         
                         <div class="bg-white rounded-lg p-2.5 border border-slate-200/90 shadow-2xs hover:shadow-xs transition text-xs">
 
@@ -2123,6 +2296,7 @@ Od przyszłego tygodnia ruszają bezpłatne zajęcia SKS z piłki siatkowej i ko
                                 </div>
                             </div>
 
+                            <!-- Typ: Frekwencja / Nieobecność -->
                             
 
                         </div>
@@ -2492,7 +2666,7 @@ Od przyszłego tygodnia ruszają bezpłatne zajęcia SKS z piłki siatkowej i ko
                         <!-- Status po prawej na pulpicie -->
                         <div class="flex items-center gap-2 flex-shrink-0 text-xs">
                             
-                            <a href="/frekwencja#day-2026-09-18"
+                            <a href="web_frekwencja.html#day-2026-09-18"
                                class="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-lg border transition-all
                                
                                    bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200

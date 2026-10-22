@@ -96,7 +96,7 @@
         <!-- Etykieta statusu wybranego dnia -->
         {% if selected_day %}
             {% if selected_day.is_today and lessons_ongoing %}
-            <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-bold flex items-center gap-1.5">
+            <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-bold flex items-center gap-1.5 lesson-current-header-badge dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-700">
                 <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                 <span>Dzisiaj (lekcje w toku)</span>
             </span>
@@ -150,7 +150,7 @@
 
         {% if today_date in days_data | map(attribute='date') | list and selected_date != today_date %}
         <a href="{{ url_for('web.schedule_view', date=today_date, view=view_mode) }}"
-           class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition">
+           class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition lesson-today-btn dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-700">
             <span>🎯 Dzisiaj</span>
         </a>
         {% endif %}
@@ -238,7 +238,7 @@
                 </span>
                 {% endif %}
                 {% if day.substitution_count == 0 and day.cancelled_count == 0 and (day.unjustified_count is not defined or day.unjustified_count == 0) and (day.justified_count is not defined or day.justified_count == 0) and day.total_count > 0 %}
-                <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 font-semibold rounded-lg border border-emerald-200">
+                <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 font-semibold rounded-lg border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-700">
                     ✅ Plan bez zmian
                 </span>
                 {% endif %}
@@ -259,7 +259,7 @@
 
             <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all
                 {% if l.is_cancelled %} bg-rose-50/50 border-l-4 border-rose-500
-                {% elif is_curr %} bg-emerald-50/80 border-l-4 border-emerald-500 ring-1 ring-emerald-300 shadow-sm
+                {% elif is_curr %} bg-emerald-50/80 border-l-4 border-emerald-500 ring-1 ring-emerald-300 shadow-sm lesson-current-row dark:bg-emerald-950/50 dark:ring-emerald-500/40
                 {% elif l.attendance and l.attendance.is_absence and not l.attendance.is_justified %} bg-rose-50/70 border-l-4 border-rose-500
                 {% elif l.attendance and l.attendance.is_absence and l.attendance.is_justified %} bg-emerald-50/50 border-l-4 border-emerald-500
                 {% elif l.attendance and l.attendance.is_late %} bg-amber-50/50 border-l-4 border-amber-400
@@ -286,7 +286,7 @@
                             #{{ l.lesson_no }}
                         </span>
                         {% endif %}
-                        <div class="text-[11px] font-semibold {% if is_curr %}text-emerald-700 font-bold{% elif is_comp %}text-slate-400{% else %}text-slate-500{% endif %} mt-1 whitespace-nowrap">
+                        <div class="text-[11px] font-semibold {% if is_curr %}text-emerald-700 font-bold lesson-time dark:text-emerald-300{% elif is_comp %}text-slate-400{% else %}text-slate-500{% endif %} mt-1 whitespace-nowrap">
                             {{ l.time_from or '--:--' }} - {{ l.time_to or '--:--' }}
                         </div>
                     </div>
@@ -294,7 +294,7 @@
                     <!-- Przedmiot i detale -->
                     <div>
                         <div class="flex items-center gap-2 flex-wrap">
-                            <span class="font-bold text-sm sm:text-base {% if l.is_cancelled %}text-slate-400 line-through{% elif is_comp %}text-slate-600{% elif is_curr %}text-emerald-950 font-black{% else %}text-slate-900{% endif %}">
+                            <span class="font-bold text-sm sm:text-base {% if l.is_cancelled %}text-slate-400 line-through{% elif is_comp %}text-slate-600{% elif is_curr %}text-emerald-950 font-black lesson-subject dark:text-emerald-100{% else %}text-slate-900{% endif %}">
                                 {{ l.subject }}
                             </span>
 
@@ -304,7 +304,7 @@
                                 TRWA TERAZ
                             </span>
                             {% if l.minutes_left is defined and l.minutes_left > 0 %}
-                            <span class="text-[11px] font-bold text-emerald-800 bg-emerald-100/90 px-2 py-0.5 rounded border border-emerald-300">
+                            <span class="text-[11px] font-bold text-emerald-800 bg-emerald-100/90 px-2 py-0.5 rounded border border-emerald-300 lesson-current-time-badge dark:bg-emerald-900/80 dark:text-emerald-200 dark:border-emerald-600">
                                 ⏱️ jeszcze {{ l.minutes_left }} min
                             </span>
                             {% endif %}
@@ -354,7 +354,7 @@
                             {% if l.classroom %}
                             <span class="inline-flex items-center gap-1">
                                 <span>🚪 Sala:</span>
-                                <strong class="{% if is_curr %}text-emerald-900 font-extrabold{% else %}text-slate-700{% endif %}">{{ l.classroom }}</strong>
+                                <strong class="{% if is_curr %}text-emerald-900 font-extrabold lesson-classroom dark:text-emerald-300{% else %}text-slate-700{% endif %}">{{ l.classroom }}</strong>
                             </span>
                             {% endif %}
                             {% if l.teacher %}
@@ -397,7 +397,7 @@
                         Lekcja odwołana
                     </span>
                     {% elif is_curr %}
-                    <span class="inline-flex items-center gap-1.5 font-extrabold text-xs text-emerald-800 bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-300 shadow-xs">
+                    <span class="inline-flex items-center gap-1.5 font-extrabold text-xs text-emerald-800 bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-300 shadow-xs lesson-current-status-badge dark:bg-emerald-900/80 dark:text-emerald-200 dark:border-emerald-600">
                         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                         Lekcja w toku
                     </span>
@@ -427,13 +427,13 @@
 
             <!-- Banerek przerwy jeśli akurat trwa przerwa po tej lekcji -->
             {% if day.is_today and l.has_break_after and l.break_after_info %}
-            <div class="px-4 py-2.5 bg-gradient-to-r from-amber-50 via-sky-50 to-amber-50 border-y border-amber-200/60 flex items-center justify-between text-xs font-bold text-amber-950">
+            <div class="px-4 py-2.5 bg-gradient-to-r from-amber-50 via-sky-50 to-amber-50 border-y border-amber-200/60 flex items-center justify-between text-xs font-bold text-amber-950 lesson-break-banner dark:from-slate-900/90 dark:via-emerald-950/40 dark:to-slate-900/90 dark:border-emerald-800/40 dark:text-emerald-200">
                 <div class="flex items-center gap-2">
                     <span class="text-base">☕</span>
                     <span>Trwa przerwa między lekcjami</span>
-                    <span class="text-[11px] font-semibold text-amber-800">(do {{ l.break_after_info.next_time_from }})</span>
+                    <span class="text-[11px] font-semibold text-amber-800 dark:text-amber-300">(do {{ l.break_after_info.next_time_from }})</span>
                 </div>
-                <div class="flex items-center gap-1 text-sky-800 font-black text-xs">
+                <div class="flex items-center gap-1 text-sky-800 font-black text-xs break-bell dark:text-cyan-300">
                     <span>Dzwonek za {{ l.break_after_info.minutes_left }} min</span>
                     <span>→</span>
                 </div>

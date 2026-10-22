@@ -19,6 +19,7 @@ def make_offline_friendly(html: str) -> str:
         ('href="/plan"', 'href="web_plan.html"'),
         ('href="/oceny"', 'href="web_oceny.html"'),
         ('href="/terminarz"', 'href="web_terminarz.html"'),
+        ('href="/frekwencja"', 'href="web_frekwencja.html"'),
         ('href="/wiadomosci"', 'href="web_wiadomosci.html"'),
         ('href="/raporty/podsumowanie"', 'href="web_raporty_podsumowanie.html"'),
         ('href="/raporty/szanse"', 'href="web_raporty_szanse.html"'),
@@ -40,6 +41,8 @@ def make_offline_friendly(html: str) -> str:
     # Linki podstron raportów z parametrami (days, variant, date)
     html = re.sub(r'href="/\?date=[^"]*"', 'href="web_dashboard.html"', html)
     html = re.sub(r'href="/plan\?[^"]*"', 'href="web_plan.html"', html)
+    html = re.sub(r'href="/(?:frekwencja|attendance)\?[^"]*"', 'href="web_frekwencja.html"', html)
+    html = re.sub(r'href="/(?:frekwencja|attendance)#([^"]*)"', r'href="web_frekwencja.html#\1"', html)
     html = re.sub(r'href="/oceny\?[^"]*tab=optymalizator[^"]*"', 'href="web_oceny_optymalizator.html"', html)
     html = re.sub(r'href="/oceny\?[^"]*tab=swiadectwo[^"]*"', 'href="web_oceny_swiadectwo.html"', html)
     html = re.sub(r'href="/raporty/szanse(\?[^"]*)?"', 'href="web_raporty_szanse.html"', html)
@@ -151,6 +154,7 @@ def export_web_views(
         ('/oceny?tab=optymalizator', 'web_oceny_optymalizator.html', "optymalizator celu"),
         ('/oceny/Matematyka', 'web_przedmiot_matematyka.html', "analiza przedmiotu (Matematyka)"),
         ('/terminarz', 'web_terminarz.html', "terminarz"),
+        ('/frekwencja', 'web_frekwencja.html', "frekwencja i obecność"),
         ('/wiadomosci', 'web_wiadomosci.html', "wiadomości"),
         ('/raporty/podsumowanie', 'web_raporty_podsumowanie.html', "podsumowanie powiadomień"),
         ('/raporty/postepy', 'web_raporty_postepy.html', "raport postępów"),

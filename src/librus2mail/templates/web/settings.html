@@ -756,8 +756,8 @@
                     <label class="block text-xs font-bold text-slate-700 uppercase mb-2">
                         Typy zdarzeń widoczne w kalendarium:
                     </label>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {% set enabled_types = timeline_cfg.get('event_types') if timeline_cfg.get('event_types') is not none else ['grades', 'messages', 'notifications', 'tests'] %}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {% set enabled_types = timeline_cfg.get('event_types') if timeline_cfg.get('event_types') is not none else ['grades', 'messages', 'notifications', 'tests', 'attendance'] %}
                         <!-- Oceny -->
                         <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
                             <input type="checkbox" name="timeline_type_grades" {% if 'grades' in enabled_types %}checked{% endif %}
@@ -767,6 +767,18 @@
                                     <span>📝</span> Oceny
                                 </span>
                                 <span class="text-[11px] text-slate-500 block">Nowo wystawione oceny z przedmiotów</span>
+                            </div>
+                        </label>
+
+                        <!-- Frekwencja i nieobecności -->
+                        <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                            <input type="checkbox" name="timeline_type_attendance" {% if 'attendance' in enabled_types %}checked{% endif %}
+                                   class="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                            <div>
+                                <span class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                    <span>⏱️</span> Frekwencja i obecność
+                                </span>
+                                <span class="text-[11px] text-slate-500 block">Nieobecności, spóźnienia i zwolnienia</span>
                             </div>
                         </label>
 
@@ -795,7 +807,7 @@
                         </label>
 
                         <!-- Sprawdziany i terminarz -->
-                        <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                        <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-100 transition sm:col-span-2 lg:col-span-1">
                             <input type="checkbox" name="timeline_type_tests" {% if 'tests' in enabled_types %}checked{% endif %}
                                    class="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
                             <div>

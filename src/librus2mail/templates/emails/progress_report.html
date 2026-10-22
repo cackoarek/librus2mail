@@ -45,6 +45,34 @@
                     <div style="font-size: 11px; color: #ef4444; font-weight: bold;">np/bz: {{ analysis.unprepared_count }}</div>
                 </td>
             </tr>
+            {% if attendance and attendance.has_any %}
+            <tr>
+                <td colspan="2" valign="top" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; text-align: left;">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                        <tr>
+                            <td align="left" valign="middle">
+                                <div style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">⏱️ Frekwencja w okresie</div>
+                                <div style="font-size: 13px; font-weight: 700; color: #1e293b; margin-top: 2px;">
+                                    {% if attendance.period_absences_count == 0 and attendance.period_lates_count == 0 %}
+                                        100% obecności w okresie 🎉
+                                    {% else %}
+                                        {{ attendance.period_absences_count }} nieobecnoś{{ 'ć' if attendance.period_absences_count == 1 else ('ci' if attendance.period_absences_count < 5 else 'ci') }}
+                                        {% if attendance.period_justified_count > 0 %}<span style="color: #15803d; font-weight: 600;"> ({{ attendance.period_justified_count }} uspr.)</span>{% endif %}
+                                        {% if attendance.period_unjustified_count > 0 %}<span style="color: #b91c1c; font-weight: 600;"> ({{ attendance.period_unjustified_count }} nieuspr.)</span>{% endif %}
+                                        {% if attendance.period_lates_count > 0 %}<span style="color: #b45309; font-weight: 600;">, {{ attendance.period_lates_count }} spóźn.</span>{% endif %}
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td align="right" valign="middle" style="text-align: right;">
+                                <span style="background-color: {{ '#dcfce7' if attendance.period_unjustified_count == 0 else '#fee2e2' }}; color: {{ '#15803d' if attendance.period_unjustified_count == 0 else '#991b1b' }}; border: 1px solid {{ '#86efac' if attendance.period_unjustified_count == 0 else '#fca5a5' }}; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px;">
+                                    {{ attendance.period_entries | length }} zdarzen{{ 'ie' if (attendance.period_entries | length) == 1 else ('ia' if (attendance.period_entries | length) < 5 else 'i') }}
+                                </span>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            {% endif %}
         </table>
 
         <!-- Karta Porównania z Poprzednim Okresem (Dynamika i Forma Ucznia) -->
@@ -326,6 +354,76 @@
                 <li><strong>{{ d.subject }}</strong>: ostatnia ocena {{ d.last_date_str }} ({{ d.days_ago }} dni temu)</li>
                 {% endfor %}
             </ul>
+        </div>
+        {% endif %}
+
+        <!-- Zdarzenia frekwencji w analizowanym okresie -->
+        {% if attendance and attendance.has_any and attendance.period_entries %}
+        <div style="margin-top: 22px; margin-bottom: 22px;">
+            <div style="border-bottom: 2px solid #ef4444; padding-bottom: 8px; margin-bottom: 14px;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                    <tr>
+                        <td align="left" valign="middle">
+                            <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #1e293b;">
+                                ⏱️ Zdarzenia frekwencji w analizowanym okresie ({{ attendance.period_entries | length }})
+                            </h3>
+                        </td>
+                        <td align="right" valign="middle">
+                            <span style="background-color: #fef2f2; color: #991b1b; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px;">
+                                {% if attendance.period_absences_count > 0 %}{{ attendance.period_absences_count }} nieob.{% endif %}
+                                {% if attendance.period_absences_count > 0 and attendance.period_lates_count > 0 %}, {% endif %}
+                                {% if attendance.period_lates_count > 0 %}{{ attendance.period_lates_count }} spóźn.{% endif %}
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);">
+                {% for att in attendance.period_entries %}
+                {% set is_abs = att.is_absence %}
+                {% set is_just = att.is_justified %}
+                {% set is_late = att.is_late %}
+                {% set a_bg = '#dcfce7' if is_just else ('#fef9c3' if is_late else ('#fee2e2' if is_abs else '#f1f5f9')) %}
+                {% set a_color = '#15803d' if is_just else ('#854d0e' if is_late else ('#991b1b' if is_abs else '#475569')) %}
+                {% set a_border = '#86efac' if is_just else ('#fef08a' if is_late else ('#fca5a5' if is_abs else '#cbd5e1')) %}
+                {% set a_strip = '#22c55e' if is_just else ('#eab308' if is_late else ('#ef4444' if is_abs else '#64748b')) %}
+                {% set a_icon = '🟢' if is_just else ('🟡' if is_late else ('🔴' if is_abs else '⏱️')) %}
+                <div style="background-color: #ffffff; border-left: 4px solid {{ a_strip }}; border-bottom: {{ '1px solid #f1f5f9' if not loop.last else 'none' }}; padding: 10px 14px;">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                        <tr>
+                            <td valign="top">
+                                <span style="font-size: 14px; font-weight: 700; color: #1e293b;">
+                                    {{ att.subject or 'Brak przedmiotu' }}
+                                </span>
+                                {% if att.lesson_no %}
+                                <span style="color: #64748b; font-size: 11px; margin-left: 4px;">(Lekcja {{ att.lesson_no }})</span>
+                                {% endif %}
+                                <span style="background-color: {{ a_bg }}; color: {{ a_color }}; border: 1px solid {{ a_border }}; font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 4px; margin-left: 6px; display: inline-block;">
+                                    {{ a_icon }} {{ att.type or att.symbol }}
+                                </span>
+                                {% if att.justification_info %}
+                                <span style="background-color: #f1f5f9; color: #475569; font-size: 11px; padding: 2px 6px; border-radius: 4px; margin-left: 4px; display: inline-block;">
+                                    {{ att.justification_info }}
+                                </span>
+                                {% endif %}
+                                {% if att.topic %}
+                                <div style="font-size: 12px; color: #64748b; margin-top: 3px;">
+                                    Temat: <em>{{ att.topic }}</em>
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td align="right" valign="top" style="text-align: right; white-space: nowrap; font-size: 12px; color: #64748b;">
+                                📅 {{ att.date }}
+                                {% if att.teacher %}
+                                <div style="color: #94a3b8; font-size: 11px; margin-top: 2px;">{{ att.teacher }}</div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                {% endfor %}
+            </div>
         </div>
         {% endif %}
 

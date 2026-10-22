@@ -153,6 +153,7 @@ class LibrusUserConfig(BaseConfigModel):
     read_grades: bool = True
     read_timetable: bool = True
     read_schedule: bool = True
+    read_attendance: bool = True
     schedule_day_offset: int = 1
     one_summary_message: bool = True
     notification_receivers: list[EmailStr] = Field(default_factory=list)
@@ -215,6 +216,14 @@ class WebConfig(BaseConfigModel):
     secret_key: SecretStr | str | None = None
     max_login_attempts: int = 5
     lockout_duration_s: int = 900
+    attendance_view_mode: str = "heatmap"
+
+    @field_validator('attendance_view_mode', mode='after')
+    @classmethod
+    def validate_web_attendance_view_mode(cls, v: Any) -> str:
+        if isinstance(v, str) and v.lower() in ('heatmap', 'month'):
+            return v.lower()
+        return "heatmap"
 
     @field_validator('password', 'secret_key', mode='after')
     @classmethod
@@ -257,13 +266,22 @@ class AppSettings(BaseSettings, collections.abc.MutableMapping):
     one_summary_message: bool = True
     read_schedule: bool = True
     read_timetable: bool = True
+    read_attendance: bool = True
     read_messages: bool = True
     read_grades: bool = True
+    attendance_view_mode: str = "heatmap"
     semester_split_date: str | None = None
     annual_grade_algorithm: str = "all_year_weighted"
     mail: MailConfig = Field(default_factory=MailConfig)
     schedule: ScheduleConfig = Field(default_factory=ScheduleConfig)
     web: WebConfig = Field(default_factory=WebConfig)
+
+    @field_validator('attendance_view_mode', mode='after')
+    @classmethod
+    def validate_attendance_view_mode(cls, v: Any) -> str:
+        if isinstance(v, str) and v.lower() in ('heatmap', 'month'):
+            return v.lower()
+        return "heatmap"
 
     @model_validator(mode='before')
     @classmethod
@@ -306,7 +324,7 @@ class AppSettings(BaseSettings, collections.abc.MutableMapping):
                 'notification_receivers': receivers,
             }
 
-            for flag in ('read_messages', 'read_grades', 'read_timetable', 'read_schedule', 'one_summary_message'):
+            for flag in ('read_messages', 'read_grades', 'read_timetable', 'read_schedule', 'read_attendance', 'one_summary_message'):
                 env_val = os.getenv(f'LIBRUS_{flag.upper()}')
                 if env_val is not None:
                     user_dict[flag] = env_val.lower() in ('true', '1', 'yes')
@@ -449,6 +467,15 @@ class AppSettings(BaseSettings, collections.abc.MutableMapping):
         annual_algo_env = os.getenv('LIBRUS_ANNUAL_GRADE_ALGORITHM')
         if annual_algo_env and not data.get('annual_grade_algorithm'):
             data['annual_grade_algorithm'] = annual_algo_env.strip()
+
+        # 8. Obsługa attendance_view_mode ze zmiennych środowiskowych i synchronizacja
+        att_mode_env = os.getenv('LIBRUS_ATTENDANCE_VIEW_MODE')
+        if att_mode_env:
+            data['attendance_view_mode'] = att_mode_env.strip().lower()
+        if 'attendance_view_mode' not in data and isinstance(data.get('web'), dict) and 'attendance_view_mode' in data['web']:
+            data['attendance_view_mode'] = data['web']['attendance_view_mode']
+        elif 'attendance_view_mode' in data and isinstance(data.get('web'), dict) and 'attendance_view_mode' not in data['web']:
+            data['web']['attendance_view_mode'] = data['attendance_view_mode']
 
         return data
 

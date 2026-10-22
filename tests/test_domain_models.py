@@ -5,6 +5,8 @@ import unittest
 
 from librus2mail.domain_models import (
     Announcement,
+    AttendanceEntry,
+    AttendancePeriodSummary,
     Grade,
     Message,
     Notification,
@@ -156,6 +158,110 @@ class TestDomainModels(unittest.TestCase):
         student = analyzer.calculate_metrics()
         self.assertGreater(student.overall_avg, 4.0)
         self.assertTrue(len(student.achievements) > 0)
+
+    def test_attendance_domain_models(self):
+        entry = AttendanceEntry(
+            id='5001',
+            date='2026-10-21',
+            lesson_no=1,
+            subject='Język angielski',
+            symbol='u',
+            type='nieobecność uspr.',
+            teacher='Jan Kowalski',
+            topic='Unit 3 test',
+            added_by='Jan Kowalski',
+            is_trip=False,
+            is_late=False,
+            is_absence=True,
+            is_justified=True,
+            is_exempt=False,
+            justification_info='e-Usprawiedliwienie',
+            color='#2ECC71',
+            period='Okres 1',
+        )
+
+        self.assertEqual(entry.id, '5001')
+        self.assertEqual(entry.date, '2026-10-21')
+        self.assertEqual(entry.lesson_no, 1)
+        self.assertEqual(entry.subject, 'Język angielski')
+        self.assertEqual(entry['symbol'], 'u')
+        self.assertTrue(entry.is_justified)
+        self.assertTrue(entry.is_absence)
+        self.assertFalse(entry.is_late)
+        self.assertEqual(entry.color, '#2ECC71')
+
+        summary = AttendancePeriodSummary(
+            label='Suma za okres 1',
+            period='Okres 1',
+            justified=5,
+            unjustified=1,
+            total_absences=6,
+            lates=2,
+            exemptions=0,
+        )
+        self.assertEqual(summary.period, 'Okres 1')
+        self.assertEqual(summary.justified, 5)
+        self.assertEqual(summary.total_absences, 6)
+        self.assertEqual(summary['lates'], 2)
+
+    def test_attendance_storage_integration(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            storage = FileStorage(tmp_dir)
+            user_login = '1234567'
+
+            entries = [
+                AttendanceEntry(
+                    id='5001',
+                    date='2026-10-21',
+                    lesson_no=1,
+                    subject='Matematyka',
+                    symbol='u',
+                    type='nieobecność uspr.',
+                    is_absence=True,
+                    is_justified=True,
+                ).to_dict(),
+                AttendanceEntry(
+                    id='5002',
+                    date='2026-10-22',
+                    lesson_no=2,
+                    subject='Fizyka',
+                    symbol='sp',
+                    type='spóźnienie',
+                    is_late=True,
+                ).to_dict(),
+            ]
+            summary = [
+                AttendancePeriodSummary(
+                    label='Suma za okres 1',
+                    period='Okres 1',
+                    justified=1,
+                    unjustified=0,
+                    total_absences=1,
+                    lates=1,
+                    exemptions=0,
+                ).to_dict()
+            ]
+
+            storage.save_attendance(user_login, entries, summary)
+
+            history = storage.get_attendance_history(user_login)
+            self.assertEqual(len(history), 2)
+            # Powinno być posortowane malejąco po dacie: 2026-10-22 najpierw
+            self.assertEqual(history[0]['id'], '5002')
+            self.assertEqual(history[1]['id'], '5001')
+
+            stored_summary = storage.get_attendance_summary(user_login)
+            self.assertEqual(len(stored_summary), 1)
+            self.assertEqual(stored_summary[0]['lates'], 1)
+
+            last_sync = storage.get_last_attendance_sync(user_login)
+            self.assertIsNotNone(last_sync)
+
+            # Test archiwizacji czyści historię frekwencji
+            storage.archive_school_year(user_login, "2025/2026")
+            cleared_history = storage.get_attendance_history(user_login)
+            self.assertEqual(cleared_history, [])
+            self.assertIsNone(storage.get_last_attendance_sync(user_login))
 
 
 if __name__ == '__main__':

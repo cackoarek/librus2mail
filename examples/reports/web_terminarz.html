@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pl" class="h-full">
+<html lang="pl" class="h-full scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -400,6 +400,99 @@
             color: #ecfdf5 !important;
         }
 
+        /* Trwająca lekcja oraz banery przerw w widokach ciemnych (Dark, Midnight, Forest) */
+        html.dark .lesson-current-row,
+        [data-theme="dark"] .lesson-current-row,
+        [data-theme="midnight"] .lesson-current-row,
+        [data-theme="forest"] .lesson-current-row {
+            background-color: rgba(6, 78, 59, 0.45) !important;
+            border-left-color: #10b981 !important;
+            box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.35) !important;
+        }
+
+        html.dark [data-theme="midnight"] .lesson-current-row,
+        [data-theme="midnight"] .lesson-current-row {
+            background-color: rgba(6, 78, 59, 0.55) !important;
+            box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.4) !important;
+        }
+
+        html.dark [data-theme="forest"] .lesson-current-row,
+        [data-theme="forest"] .lesson-current-row {
+            background-color: rgba(6, 95, 70, 0.5) !important;
+            box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.4) !important;
+        }
+
+        /* Teksty i etykiety wewnątrz karty trwającej lekcji */
+        html.dark .lesson-current-row .lesson-subject,
+        html.dark .lesson-current-row .lesson-subject strong,
+        [data-theme="dark"] .lesson-current-row .lesson-subject,
+        [data-theme="midnight"] .lesson-current-row .lesson-subject,
+        [data-theme="forest"] .lesson-current-row .lesson-subject {
+            color: #ecfdf5 !important;
+        }
+
+        html.dark .lesson-current-row .lesson-time,
+        html.dark .lesson-current-row .lesson-classroom,
+        [data-theme="dark"] .lesson-current-row .lesson-time,
+        [data-theme="midnight"] .lesson-current-row .lesson-time,
+        [data-theme="forest"] .lesson-current-row .lesson-time,
+        [data-theme="dark"] .lesson-current-row .lesson-classroom,
+        [data-theme="midnight"] .lesson-current-row .lesson-classroom,
+        [data-theme="forest"] .lesson-current-row .lesson-classroom {
+            color: #a7f3d0 !important;
+        }
+
+        /* Pigułka odliczania czasu i pigułka statusu lekcji w toku */
+        html.dark .lesson-current-time-badge,
+        html.dark .lesson-current-status-badge,
+        [data-theme="dark"] .lesson-current-time-badge,
+        [data-theme="midnight"] .lesson-current-time-badge,
+        [data-theme="forest"] .lesson-current-time-badge,
+        [data-theme="dark"] .lesson-current-status-badge,
+        [data-theme="midnight"] .lesson-current-status-badge,
+        [data-theme="forest"] .lesson-current-status-badge {
+            background-color: rgba(6, 78, 59, 0.8) !important;
+            color: #ecfdf5 !important;
+            border-color: rgba(16, 185, 129, 0.5) !important;
+        }
+
+        /* Etykiety nagłówka i przyciski 'Dzisiaj' w trybach ciemnych */
+        html.dark .lesson-current-header-badge,
+        html.dark .lesson-today-btn,
+        [data-theme="dark"] .lesson-current-header-badge,
+        [data-theme="midnight"] .lesson-current-header-badge,
+        [data-theme="forest"] .lesson-current-header-badge,
+        [data-theme="dark"] .lesson-today-btn,
+        [data-theme="midnight"] .lesson-today-btn,
+        [data-theme="forest"] .lesson-today-btn {
+            background-color: rgba(6, 78, 59, 0.4) !important;
+            color: #6ee7b7 !important;
+            border-color: rgba(16, 185, 129, 0.35) !important;
+        }
+
+        /* Baner przerwy w trybach ciemnych */
+        html.dark .lesson-break-banner,
+        [data-theme="dark"] .lesson-break-banner,
+        [data-theme="midnight"] .lesson-break-banner,
+        [data-theme="forest"] .lesson-break-banner {
+            background: linear-gradient(to right, rgba(15, 23, 42, 0.95), rgba(6, 78, 59, 0.4), rgba(15, 23, 42, 0.95)) !important;
+            border-color: rgba(16, 185, 129, 0.3) !important;
+            color: #ecfdf5 !important;
+        }
+        html.dark .lesson-break-banner span,
+        html.dark .lesson-break-banner div,
+        [data-theme="dark"] .lesson-break-banner span,
+        [data-theme="midnight"] .lesson-break-banner span,
+        [data-theme="forest"] .lesson-break-banner span {
+            color: #a7f3d0 !important;
+        }
+        html.dark .lesson-break-banner .break-bell,
+        [data-theme="dark"] .lesson-break-banner .break-bell,
+        [data-theme="midnight"] .lesson-break-banner .break-bell,
+        [data-theme="forest"] .lesson-break-banner .break-bell {
+            color: #67e8f9 !important;
+        }
+
         html.dark .bg-rose-50, html.dark [class*="bg-rose-50/"] { background-color: rgba(244, 63, 94, 0.15) !important; }
         html.dark .bg-rose-100, html.dark [class*="bg-rose-100/"] { background-color: rgba(244, 63, 94, 0.22) !important; }
         html.dark .text-rose-700, html.dark .text-rose-800, html.dark .text-rose-900, html.dark .text-rose-950 { color: #fda4af !important; }
@@ -516,6 +609,10 @@
                            class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors bg-indigo-50 text-indigo-700">
                             🔔 Terminarz
                         </a>
+                        <a href="web_frekwencja.html"
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            ⏱️ Frekwencja
+                        </a>
                         <a href="web_wiadomosci.html"
                            class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
                             ✉️ Wiadomości
@@ -583,7 +680,7 @@
                         
                         <div class="hidden sm:inline-block relative text-left">
                             <select onchange="window.location.href='/student/' + this.value + '?next=' + encodeURIComponent(window.location.pathname + window.location.search)"
-                                    class="bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold rounded-xl px-2.5 py-1.5 pr-6 max-w-[125px] xl:max-w-[145px] 2xl:max-w-[190px] truncate focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
+                                    class="bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold rounded-xl px-2.5 py-1.5 pr-6 max-w-[230px] xl:max-w-[265px] 2xl:max-w-[345px] truncate focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
                                 
                                 <option value="8912345" >
                                     👤 Jan Kowalski (klasa 5A) (8912345)
@@ -651,6 +748,7 @@
             <a href="web_plan.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📅 Plan lekcji</a>
             <a href="web_oceny.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📝 Oceny</a>
             <a href="web_terminarz.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap bg-indigo-600 text-white">🔔 Terminarz</a>
+            <a href="web_frekwencja.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">⏱️ Frekwencja</a>
             <a href="web_wiadomosci.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">✉️ Wiadomości</a>
             <a href="web_raporty_podsumowanie.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📈 Raporty</a>
             <a href="web_ustawienia.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">⚙️ Ustawienia</a>
@@ -759,6 +857,10 @@
                     <a href="web_terminarz.html"
                        class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors bg-indigo-600 text-white">
                         <span class="text-base">🔔</span> <span>Terminarz i sprawdziany</span>
+                    </a>
+                    <a href="web_frekwencja.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
+                        <span class="text-base">⏱️</span> <span>Frekwencja i obecność</span>
                     </a>
                     <a href="web_wiadomosci.html"
                        class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
@@ -1312,7 +1414,7 @@
     <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500">
         <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div class="flex items-center gap-2 font-medium">
-                <span>🏫 Librus2mail v2.6.0</span>
+                <span>🏫 Librus2mail v2.7.0</span>
                 <span>•</span>
                 <span>Prywatny Dashboard Rodzica</span>
             </div>

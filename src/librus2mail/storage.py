@@ -19,6 +19,7 @@ FIELD_LAST_PROGRESS_REPORT_DATE = "last_progress_report_date"
 FIELD_LAST_PROGRESS_REPORT_DATES = "last_progress_report_dates"
 FIELD_TIMETABLE_LAST_SYNC = "timetable_last_sync"
 FIELD_SCHEDULE_LAST_SYNC = "schedule_last_sync"
+FIELD_ATTENDANCE_LAST_SYNC = "attendance_last_sync"
 
 
 def read_json_safe(path: Path | str) -> dict[str, Any]:
@@ -326,6 +327,36 @@ class BaseStorage(ABC):
     @abstractmethod
     def save_last_schedule_sync(self, user_login: str, date_iso: str) -> None:
         """Zapisuje znacznik czasu (ISO) ostatniej synchronizacji planu lekcji."""
+        pass
+
+    @abstractmethod
+    def save_attendance(
+        self,
+        user_login: str,
+        entries: list[dict],
+        summary: list[dict] | dict | None = None,
+    ) -> None:
+        """Zapisuje listę wpisów z frekwencji (nieobecności, spóźnienia) oraz podsumowanie okresów."""
+        pass
+
+    @abstractmethod
+    def get_attendance_history(self, user_login: str) -> list[dict]:
+        """Zwraca listę zarejestrowanych wpisów frekwencji."""
+        pass
+
+    @abstractmethod
+    def get_attendance_summary(self, user_login: str) -> list[dict] | dict:
+        """Zwraca podsumowanie frekwencji (okresy, sumy)."""
+        pass
+
+    @abstractmethod
+    def get_last_attendance_sync(self, user_login: str) -> str | None:
+        """Zwraca znacznik czasu (ISO) ostatniej synchronizacji frekwencji lub None."""
+        pass
+
+    @abstractmethod
+    def save_last_attendance_sync(self, user_login: str, date_iso: str) -> None:
+        """Zapisuje znacznik czasu (ISO) ostatniej synchronizacji frekwencji."""
         pass
 
     @abstractmethod
@@ -916,6 +947,88 @@ class FileStorage(BaseStorage):
         data[FIELD_SCHEDULE_LAST_SYNC] = date_iso
         write_json_atomic(path, data)
 
+    def save_attendance(
+        self,
+        user_login: str,
+        entries: list[dict],
+        summary: list[dict] | dict | None = None,
+    ) -> None:
+        """Zapisuje listę wpisów z frekwencji (nieobecności, spóźnienia) oraz podsumowanie okresów w storage."""
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
+        data['librus_login'] = str(user_login)
+        existing = {}
+        for e in data.get('attendance_history', []):
+            eid = e.get('id') or f"{e.get('date')}_{e.get('lesson_no')}_{e.get('symbol')}"
+            if eid:
+                e['id'] = str(eid)
+                existing[str(eid)] = e
+
+        now_iso = datetime.now().isoformat()
+        for raw_e in entries:
+            e = raw_e.to_dict() if hasattr(raw_e, 'to_dict') else (raw_e.model_dump() if hasattr(raw_e, 'model_dump') else dict(raw_e))
+            eid = e.get('id') or f"{e.get('date')}_{e.get('lesson_no')}_{e.get('symbol')}"
+            if eid:
+                eid_str = str(eid)
+                e['id'] = eid_str
+                if eid_str in existing:
+                    existing[eid_str].update({k: v for k, v in e.items() if v is not None})
+                    existing[eid_str]['updated_at'] = now_iso
+                else:
+                    e_copy = dict(e)
+                    e_copy['added_at'] = e_copy.get('added_at') or now_iso
+                    e_copy['updated_at'] = now_iso
+                    existing[eid_str] = e_copy
+
+        data['attendance_history'] = sorted(
+            existing.values(),
+            key=lambda x: (
+                x.get('date', ''),
+                int(x.get('lesson_no', 0)) if str(x.get('lesson_no', '')).isdigit() else 99,
+            ),
+            reverse=True,
+        )
+        if summary is not None:
+            if isinstance(summary, list):
+                summary_data = [
+                    s.to_dict() if hasattr(s, 'to_dict') else (s.model_dump() if hasattr(s, 'model_dump') else dict(s))
+                    for s in summary
+                ]
+            elif hasattr(summary, 'to_dict'):
+                summary_data = summary.to_dict()
+            elif hasattr(summary, 'model_dump'):
+                summary_data = summary.model_dump()
+            elif isinstance(summary, dict):
+                summary_data = dict(summary)
+            else:
+                summary_data = summary
+            data['attendance_summary'] = summary_data
+        data[FIELD_ATTENDANCE_LAST_SYNC] = now_iso
+        write_json_atomic(path, data)
+
+    def get_attendance_history(self, user_login: str) -> list[dict]:
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
+        ah = data.get('attendance_history', [])
+        return ah if isinstance(ah, list) else []
+
+    def get_attendance_summary(self, user_login: str) -> list[dict] | dict:
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
+        return data.get('attendance_summary', [])
+
+    def get_last_attendance_sync(self, user_login: str) -> str | None:
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
+        return data.get(FIELD_ATTENDANCE_LAST_SYNC)
+
+    def save_last_attendance_sync(self, user_login: str, date_iso: str) -> None:
+        path = self._get_file_path(user_login)
+        data = read_json_safe(path)
+        data['librus_login'] = str(user_login)
+        data[FIELD_ATTENDANCE_LAST_SYNC] = date_iso
+        write_json_atomic(path, data)
+
     def archive_school_year(self, user_login: str, school_year_label: str) -> Path:
         """
         Archiwizuje dane bieżącego roku szkolnego do katalogu storage/archive/<login>_<rok>.json.
@@ -957,8 +1070,11 @@ class FileStorage(BaseStorage):
             'all_subjects': [],
             'timetable_entries': [],
             'schedule_history': [],
+            'attendance_history': [],
+            'attendance_summary': [],
             'last_notify_time': None,
             'last_collect_time': None,
+            'attendance_last_sync': None,
             'rollover_at': datetime.now().isoformat(),
         }
         write_json_atomic(path, new_year_data)
@@ -1090,6 +1206,17 @@ class ArchivedFileStorage(FileStorage):
         pass
 
     def save_last_schedule_sync(self, user_login: str, date_iso: str) -> None:
+        pass
+
+    def save_attendance(
+        self,
+        user_login: str,
+        entries: list[dict],
+        summary: list[dict] | dict | None = None,
+    ) -> None:
+        pass
+
+    def save_last_attendance_sync(self, user_login: str, date_iso: str) -> None:
         pass
 
     def archive_school_year(self, user_login: str, school_year_label: str) -> Path:

@@ -14,6 +14,43 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 ## [2.7.0] – 2026-10-21
 
 ### Dodane
+- **Moduł frekwencji i obecności ucznia (Scraping, Storage & Panel WWW)**:
+  - Automatyczne pobieranie danych o frekwencji z systemu Librus Synergia (`/przegladaj_nb/uczen`) w `librus.py` i `librus_collector.py` z możliwością wyłączenia opcją konfiguracyjną `read_attendance: false`.
+  - Parsowanie wpisów frekwencji w `dom_parser.py`: ekstrakcja daty, godziny lekcyjnej, przedmiotu, symbolu (`nb`, `u`, `sp`, `zw`), typu absencji, nauczyciela, tematu lekcji, informacji o wycieczkach oraz adnotacji modułu e-Usprawiedliwień, wraz z oficjalnymi sumarycznymi tabelami semestralnymi.
+  - Nowe modele domenowe `AttendanceEntry` oraz `AttendanceSummary` w `domain_models.py` i pełna persystencja w `storage.py` (`save_attendance`, `get_attendance_history`, `get_attendance_summary`).
+  - **Nowa podstrona w panelu WWW (`/frekwencja` oraz `/attendance`)**:
+    - Umieszczenie nowej pozycji w głównym pasku nawigacyjnym pomiędzy *Terminarz* a *Wiadomości*.
+    - **Karty metryk KPI**: liczniki nieobecności nieusprawiedliwionych (z alertem o wymaganej reakcji), usprawiedliwionych, spóźnień oraz zwolnień.
+    - **Dwa tryby wizualizacji kalendarza z rozwijanym menu wyboru (`attendance_view_mode`)**:
+      - **Opcja 2 (domyślna)**: Roczna horyzontalna heatmapa obecności w stylu GitHub (kompaktowy pasek tygodni IX–VI z etykietami miesięcy, statystykami frekwencji i kolorowymi kafelkami statusu dni).
+      - **Opcja 1**: Widok pojedynczego miesiąca z wygodnymi pigułkami wyboru miesięcy (sygnalizatory zdarzeń, wyszarzone miesiące przyszłe) i dedykowaną, czytelną siatką dni wybranego miesiąca.
+      - Rozwijane menu wyboru umieszczone bezpośrednio na karcie Frekwencji z natychmiastowym przełączaniem widoków i trwałym zapisem wyboru w `config.yaml` (`POST /api/attendance/view-mode`).
+    - **Interaktywna oś czasu (Timeline)**: pogrupowane chronologicznie zdarzenia z odznakami symboli, szczegółami lekcji i statusami e-Usprawiedliwień.
+    - **Zestawienie przedmiotowe i podsumowanie okresów**: agregacja absencji według przedmiotów oraz oficjalne tabele semestralne Librus.
+  - **Oznaczanie frekwencji w Planie lekcji (`/plan`) i na Pulpicie (`/`)**:
+    - Inteligentna korelacja lekcji z frekwencją według klucza `(data, nr_lekcji)`.
+    - Kolorystyczne oznaczenie krawędzi kart lekcji (🔴 czerwona dla nieuspr., 🟢 zielona dla uspr., 🟡 żółta dla spóźnień).
+    - Odznaki przy nazwach przedmiotów (np. `🔴 Nieobecność (nieuspr.)`, `🟢 Usprawiedliwiona (e-Usprawiedliwienie)`, `🟡 Spóźnienie`).
+    - Skrótowe przyciski `⏱️ Frekwencja: [symbol]` / `⏱️ [symbol]` z linkami kotwicowymi prowadzącymi do sekcji danego dnia w module frekwencji.
+    - Kropki statusu obecności na pigułkach wyboru dni tygodnia w widoku `/plan`.
+    - Liczniki obecności w podsumowaniu planu dnia (`🔴 X nieuspr.`, `🟢 Y uspr.`, `🟡 Z spóźnień`).
+  - **Prezentacja i wyróżnianie frekwencji w Kalendarium zdarzeń na Pulpicie (`/`)**:
+    - Włączenie zdarzeń frekwencji (nieobecności usprawiedliwione i nieusprawiedliwione, spóźnienia, zwolnienia) do chronologicznego kalendarium ostatnich dni na pulpicie głównym (`build_recent_days_timeline`).
+    - Odznaczanie kart zdarzeń kolorowymi obramowaniami (`border-l-4`), wyrazistymi odznakami (`🔴 nb`, `🟢 u`, `🟡 sp`, `🔵 zw`), numerem lekcji, tematem, nauczycielem i adnotacją e-Usprawiedliwień oraz bezpośrednim łączem kotwicowym do danego dnia w module frekwencji.
+    - Sygnalizowanie absencji bezpośrednio w nagłówkach dni w kalendarium (np. `🔴 1 nb`, `🟢 1 uspr.`, `🟡 1 sp.`) oraz alertowe oznaczenie obramowania całej karty dnia w przypadku nieobecności nieusprawiedliwionej.
+    - Dodanie nowej opcji wyboru typu zdarzeń „⏱️ Frekwencja i obecność” w formularzu Ustawień w sekcji kalendarium (`timeline.event_types`).
+  - **Prezentacja frekwencji w powiadomieniach e-mail i raportach okresowych**:
+    - **Raport postępów ucznia (`librus_progress_report.py` / `progress_report.html`)**:
+      - Dodanie kafelka KPI w podsumowaniu okresu prezentującego bilans frekwencji (nieobecności usprawiedliwione/nieusprawiedliwione, spóźnienia).
+      - Dedykowana sekcja „⏱️ Zdarzenia frekwencji w analizowanym okresie” z odznakami symboli (`🟢 nieobecność uspr.`, `🔴 nieobecność`, `🟡 spóźnienie`), numerem lekcji, przedmiotem, statusem e-Usprawiedliwienia, nauczycielem i tematem lekcji.
+      - Aktualizacja funkcji `print_cli_summary` w konsoli o zestawienie zdarzeń frekwencji.
+    - **Bieżące powiadomienia e-mail (`librus_updates_notifier.py` / `summary.html`)**:
+      - Uwzględnienie frekwencji w tytule e-maila (np. `frekwencja (1 nieob.)`).
+      - Czwarty kafelek KPI „Frekwencja” w nagłówku podsumowania.
+      - Wizualne odznaki statusu obecności bezpośrednio przy lekcjach w planie dnia powiadomienia (`🟢 Usprawiedliwiona`, `🔴 Nieobecność nieuspr.`, `🟡 Spóźnienie`).
+      - Dedykowana karta podsumowująca nowe wpisy frekwencji w treści powiadomienia.
+    - Przekazywanie i formatowanie frekwencji w `MailSender`, `GmailSender`, `SmtpSender`, `UpdatesNotifier` oraz `LibrusCollector`.
+  - Wygenerowano statyczny widok demonstracyjny `examples/reports/web_frekwencja.html` i zaktualizowano zestaw raportów w `examples/reports/` (w tym `raport_8979296.html` oraz `powiadomienie_collector.html`).
 - **Śledzenie lekcji w czasie rzeczywistym w Planie lekcji i na Pulpicie (Live Lesson Tracker)**:
   - Automatyczne wykrywanie lekcji trwającej w danej chwili (`🟢 TRWA TERAZ`) z pulsującym wskaźnikiem, licznikiem czasu do dzwonka (`⏱️ jeszcze X min`) oraz wyeksponowanym numerem sali i nazwiskiem nauczyciela.
   - Oznaczanie lekcji, które się już odbyły (`✓ Odbyła się`) ze stonowanym tłem i wyciszonym kontrastem, co ułatwia rodzicowi natychmiastowe zorientowanie się w bieżącym planie dnia.
@@ -39,7 +76,17 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
   - Dedykowany slajd tytułowy (Intro) oraz slajd podsumowujący (Outro).
   - Indywidualnie konfigurowalny czas trwania każdego slajdu, parametry scrolla oraz opcja procentowego skalowania wielkości czcionki (`font_scale`).
 
-### Zmienione
+### Zmieniono
+- **Kompleksowa reorganizacja i dekompozycja dokumentacji (`README.md` oraz katalog `docs/`)**:
+  - Odchudzenie i przebudowa `README.md` do zwięzłego, nowoczesnego formatu wizytówki projektu (~210 linii) skupionej na kluczowych wyróżnikach, tabeli widoków demonstracyjnych live na GitHub Pages, architekturze 5 modułów i szybkim starcie w 3 krokach.
+  - Utworzenie dedykowanego katalogu `docs/` zawierającego wyczerpujące, tematyczne przewodniki:
+    - `docs/modules.md`: szczegółowa specyfikacja wszystkich 5 modułów i centralnego orkiestratora.
+    - `docs/configuration.md`: kompletny podręcznik pliku konfiguracyjnego `config.yaml`, zmiennych środowiskowych, konfiguracji kont pocztowych (Gmail App Passwords, SMTP) oraz parametrów frekwencji i bezpieczeństwa.
+    - `docs/useful-scripts.md`: przeniesienie `useful-scripts.md` do katalogu `docs/`, rozszerzenie o Moduł 5 (`librus_web.py` z pełną listą flag CLI), aktualizacja architektury do 5 modułów i uaktualnienie odnośników w całym projekcie.
+    - `docs/deployment.md`: kompletny przewodnik wdrożeniowy (Docker, Docker Compose, systemd Linux / Raspberry Pi, harmonogram cron, reverse proxy Nginx).
+    - `docs/architecture.md`: architektura rozwiązania, paradygmat Local-First, format bazy danych `storage/`, modele Pydantic i diagramy przepływu danych.
+    - `docs/development.md`: podręcznik deweloperski (pytest, ruff, generowanie raportów demo, publikacja wersji i aktualizacja changeloga).
+    - `docs/faq-and-troubleshooting.md`: baza wiedzy, najczęstsze błędy (`NotLogged`, timeouty, hasła aplikacji Gmail) i odpowiedzi na pytania użytkowników.
 - **Responsywność i ergonomia paska nawigacyjnego (Navbar)**:
   - Rozszerzenie kontenera nagłówka do `max-w-[1600px]` z płynnym dopasowaniem szerokości, co zapobiega ściskaniu elementów na ekranach laptopów (1280–1400 px).
   - Zastosowanie kompaktowej typografii i paddingów zakładek (`px-2.5 py-1.5`, `text-xs`) na ekranach `xl`, powiększającej się automatycznie do `px-3 py-2` i `text-sm` na dużych monitorach `2xl`.
@@ -51,6 +98,9 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 - **Rozbudowa opisu archiwizacji w Ustawieniach**: Dodanie jasnej instrukcji informującej rodzica, że zarchiwizowane okresy można w każdej chwili przeglądać w menu wyboru ucznia na górnym pasku.
 
 ### Naprawione
+- **Kontrast i czytelność trwającej lekcji w motywach ciemnych (Pulpit i Plan lekcji)**:
+  - Rozwiązano problem niskiego kontrastu (jasna czcionka na jasnym tle) karty aktualnie trwającej lekcji (`TRWA TERAZ`, `⏱️ jeszcze X min`, godziny, sala, status `Lekcja w toku`) oraz banera przerwy międzylekcyjnej (`☕ Przerwa między lekcjami`) w motywach ciemnych (*Slate Dark*, *Midnight / Północ* i *Szmaragd*).
+  - Wprowadzono dedykowane klasy semantyczne (`lesson-current-row`, `lesson-subject`, `lesson-time`, `lesson-classroom`, `lesson-current-time-badge`, `lesson-current-status-badge`, `lesson-break-banner`, `lesson-current-header-badge`, `lesson-today-btn`) wraz z precyzyjnie dobranymi regułami CSS i wariantami Tailwind `dark:`, zapewniającymi wysoki kontrast, głębokie ciemnozielone tła i wyraźny, czytelny tekst w każdym wariancie kolorystycznym.
 - **Poprawki kontrastu i czytelności we wszystkich ciemnych motywach (Ciemny, Północ, Szmaragd)**:
   - Naprawiono widoczność nieaktywnych oraz aktywnych podzakładek w modułach Oceny („Aktualne oceny”, „Świadectwo”, „Optymalizator celu”) i Raporty.
   - Poprawiono czytelność boksów informacyjnych i poradników w zakładce Ustawienia (np. sekcja „Jak przeglądać dane z minionych lat?”).

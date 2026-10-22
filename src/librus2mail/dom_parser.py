@@ -6,10 +6,19 @@ ogłoszeń, ocen, terminarza i planu lekcji. Działa w 100% offline na obiektach
 
 import re
 from collections.abc import Callable
+from typing import Any
 
 from bs4 import BeautifulSoup, Tag
 
-from .domain_models import Announcement, Grade, Message, ScheduleLesson, TimetableEntry
+from .domain_models import (
+    Announcement,
+    AttendanceEntry,
+    AttendancePeriodSummary,
+    Grade,
+    Message,
+    ScheduleLesson,
+    TimetableEntry,
+)
 
 DEFAULT_LESSON_TIMES: dict[int, tuple[str, str]] = {
     1: ("08:00", "08:45"),
@@ -648,3 +657,157 @@ def parse_schedule_html(
                 }))
 
     return entries
+
+
+def parse_attendance_html(
+    html_or_soup: str | BeautifulSoup,
+) -> dict[str, list[Any]]:
+    """
+    Defensywnie parsuje stronę frekwencji ucznia (/przegladaj_nb/uczen).
+    Wyciąga pojedyncze zdarzenia (nieobecności, spóźnienia, zwolnienia) oraz podsumowania okresów.
+    Zwraca słownik z kluczami 'entries' (AttendanceEntry) oraz 'periods_summary' (AttendancePeriodSummary).
+    """
+    soup = ensure_soup(html_or_soup)
+
+    # Obsługa zrzutów źródeł stron (Chromium / Firefox view-source dump)
+    if soup.find('td', class_='line-content'):
+        extracted_text = '\n'.join(c.get_text() for c in soup.find_all('td', class_='line-content'))
+        soup = ensure_soup(extracted_text)
+
+    table = soup.find('table', class_='big')
+    if not table:
+        for t in soup.find_all('table'):
+            t_text = safe_get_text(t, separator=' ').lower()
+            if 'nieobecności' in t_text or 'nieobecnosc' in t_text:
+                table = t
+                break
+
+    if not table:
+        return {'entries': [], 'periods_summary': []}
+
+    current_period = 'Okres 1'
+    entries: list[AttendanceEntry] = []
+    periods_summary: list[AttendancePeriodSummary] = []
+
+    for row in table.find_all('tr'):
+        cells = row.find_all(['td', 'th'])
+        if not cells:
+            continue
+
+        # Nagłówek okresu, np. <td>Okres 1</td> lub <th>Okres 2</th>
+        if len(cells) == 1:
+            txt = safe_get_text(cells[0])
+            if 'okres' in txt.lower():
+                current_period = txt
+            continue
+
+        row_text = safe_get_text(row, separator=' ').lower()
+
+        # Wiersz podsumowania okresu lub roku szkolnego
+        if 'suma za okres' in row_text or 'suma w roku' in row_text:
+            label = safe_get_text(cells[1]) if len(cells) > 1 else ''
+
+            def to_int(cell_tag: Tag | None) -> int:
+                if not cell_tag:
+                    return 0
+                val = safe_get_text(cell_tag)
+                return int(val) if val.isdigit() else 0
+
+            u_val = to_int(cells[2]) if len(cells) > 2 else 0
+            nu_val = to_int(cells[3]) if len(cells) > 3 else 0
+            total_val = to_int(cells[4]) if len(cells) > 4 else 0
+            sp_val = to_int(cells[5]) if len(cells) > 5 else 0
+            zw_val = to_int(cells[6]) if len(cells) > 6 else 0
+
+            periods_summary.append(
+                AttendancePeriodSummary.model_validate({
+                    'label': label,
+                    'period': current_period,
+                    'justified': u_val,
+                    'unjustified': nu_val,
+                    'total_absences': total_val,
+                    'lates': sp_val,
+                    'exemptions': zw_val,
+                })
+            )
+            continue
+
+        # Komunikat o braku nieobecności
+        if 'brak nieobecności' in row_text or 'brak nieobecnosci' in row_text:
+            continue
+
+        # Wiersz z danymi dnia: Kolumna 0 zawiera datę 'YYYY-MM-DD'
+        col0_text = safe_get_text(cells[0])
+        m_date = re.search(r'(\d{4}-\d{2}-\d{2})', col0_text)
+        if not m_date:
+            continue
+        date_iso = m_date.group(1)
+
+        # Kolumna 1 zawiera ikonki zdarzeń frekwencyjnych z klasą 'ocena'
+        if len(cells) > 1:
+            for a in cells[1].find_all('a', class_='ocena'):
+                onclick = a.get('onclick', '')
+                m_id = re.search(r'/przegladaj_nb/szczegoly/(\d+)', onclick)
+                entry_id = m_id.group(1) if m_id else None
+
+                symbol = safe_get_text(a)
+                title = a.get('title', '')
+
+                if not entry_id:
+                    entry_id = f"nb_{date_iso}_{symbol}_{len(entries)}"
+
+                parent_p = a.find_parent('p', class_='box')
+                color = ''
+                if parent_p and 'style' in parent_p.attrs:
+                    m_col = re.search(r'background-color:\s*([^;]+)', parent_p['style'])
+                    if m_col:
+                        color = m_col.group(1).strip()
+
+                kv = parse_tooltip_kv(title)
+
+                type_name = kv.get('rodzaj', '')
+                lesson_str = kv.get('godzina lekcyjna', '')
+                lesson_no = int(lesson_str) if str(lesson_str).isdigit() else 0
+                subject = kv.get('lekcja', '')
+                teacher = kv.get('nauczyciel', '')
+                topic = kv.get('temat zajęć', '')
+                added_by = kv.get('dodał', '')
+                is_trip = kv.get('czy wycieczka', '').lower() == 'tak'
+
+                sym_lower = symbol.lower()
+                type_lower = type_name.lower()
+                is_late = 'spóźnienie' in type_lower or 'spoznienie' in type_lower or sym_lower == 'sp'
+                is_exempt = 'zwolnienie' in type_lower or sym_lower == 'zw'
+                is_justified = 'uspr' in type_lower or sym_lower == 'u'
+                is_absence = ('nieobecność' in type_lower or 'nieobecnosc' in type_lower or sym_lower in ('u', 'nb')) and not is_late and not is_exempt
+
+                justification_info = ''
+                if 'e-usprawiedliwienia' in title.lower():
+                    justification_info = 'e-Usprawiedliwienie'
+                elif 'usprawiedliwienie' in title.lower():
+                    justification_info = 'Usprawiedliwienie'
+
+                entries.append(
+                    AttendanceEntry.model_validate({
+                        'id': str(entry_id),
+                        'date': date_iso,
+                        'lesson_no': lesson_no,
+                        'subject': subject,
+                        'symbol': symbol,
+                        'type': type_name,
+                        'teacher': teacher,
+                        'topic': topic,
+                        'added_by': added_by,
+                        'is_trip': is_trip,
+                        'is_late': is_late,
+                        'is_absence': is_absence,
+                        'is_justified': is_justified,
+                        'is_exempt': is_exempt,
+                        'justification_info': justification_info,
+                        'color': color,
+                        'period': current_period,
+                        'raw_tooltip': title,
+                    })
+                )
+
+    return {'entries': entries, 'periods_summary': periods_summary}

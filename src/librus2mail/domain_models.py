@@ -148,6 +148,41 @@ class Announcement(BaseDomainModel):
 Notification = Announcement
 
 
+class AttendancePeriodSummary(BaseDomainModel):
+    """Model podsumowania frekwencji dla danego okresu lub całego roku szkolnego."""
+
+    label: str = ""
+    period: str = "Okres 1"
+    justified: int = 0
+    unjustified: int = 0
+    total_absences: int = 0
+    lates: int = 0
+    exemptions: int = 0
+
+
+class AttendanceEntry(BaseDomainModel):
+    """Model pojedynczego wpisu frekwencji (nieobecność, spóźnienie, zwolnienie itp.)."""
+
+    id: str
+    date: str
+    lesson_no: int | str = 0
+    subject: str = ""
+    symbol: str = ""
+    type: str = ""
+    teacher: str = ""
+    topic: str = ""
+    added_by: str = ""
+    is_trip: bool = False
+    is_late: bool = False
+    is_absence: bool = False
+    is_justified: bool = False
+    is_exempt: bool = False
+    justification_info: str = ""
+    color: str = ""
+    period: str = "Okres 1"
+    raw_tooltip: str = ""
+
+
 class TimetableEntry(BaseDomainModel):
     """Model wpisu w terminarzu szkolnym (sprawdzian, kartkówka, praca domowa, nieobecność)."""
 
@@ -190,6 +225,8 @@ ScheduleEntry = ScheduleLesson
 
 __all__ = [
     "Announcement",
+    "AttendanceEntry",
+    "AttendancePeriodSummary",
     "BaseDomainModel",
     "Grade",
     "Message",

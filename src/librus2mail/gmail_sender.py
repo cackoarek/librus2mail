@@ -44,12 +44,12 @@ class GmailSender(MailSender):
         title = f"{user_config['librus_login_name']} ma nowe oceny w Librusie ({grades_summary})"
         self.__send_gmail(user_config, title, mail_content, self.sender_email, self.password)
 
-    def send_mail_with_summary(self, user_config, messages=None, notifications=None, grades=None, timetable=None, schedule=None):
+    def send_mail_with_summary(self, user_config, messages=None, notifications=None, grades=None, timetable=None, schedule=None, attendance=None):
         messages = messages or []
         notifications = notifications or []
         grades = grades or []
-        mail_content = self.create_mail_content_for_summary(user_config, messages, notifications, grades, timetable=timetable, schedule=schedule)
-        title = self._create_summary_title(user_config, messages, notifications, grades, timetable=timetable, schedule=schedule)
+        mail_content = self.create_mail_content_for_summary(user_config, messages, notifications, grades, timetable=timetable, schedule=schedule, attendance=attendance)
+        title = self._create_summary_title(user_config, messages, notifications, grades, timetable=timetable, schedule=schedule, attendance=attendance)
         self.__send_gmail(user_config, title, mail_content, self.sender_email, self.password)
 
     def send_error_notification(self, user_config, error, step_name="", details=None, storage=None, cooldown_s=3600):
@@ -78,13 +78,19 @@ class GmailSender(MailSender):
             logger.error(f"Nie udało się wysłać powiadomienia o błędzie przez Gmail: {e}")
             return False
 
-    def send_progress_report(self, user_config: dict, analysis: dict, timetable: dict | None = None) -> bool:
+    def send_progress_report(
+        self,
+        user_config: dict,
+        analysis: dict,
+        timetable: dict | None = None,
+        attendance: dict | None = None,
+    ) -> bool:
         receivers = user_config.get('notification_receivers')
         if not receivers:
             logger.warning(f"Brak odbiorców powiadomień (notification_receivers) dla konta {user_config.get('librus_login')}")
             return False
 
-        mail_content = self.create_mail_content_for_progress_report(user_config, analysis, timetable=timetable)
+        mail_content = self.create_mail_content_for_progress_report(user_config, analysis, timetable=timetable, attendance=attendance)
         title = self._create_progress_report_title(user_config, analysis)
         try:
             logger.info(f"Wysyłam raport postępów dla {user_config.get('librus_login')} do {receivers}")

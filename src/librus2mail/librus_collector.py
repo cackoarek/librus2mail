@@ -160,6 +160,11 @@ class LibrusCollector:
                 sleep(5)
                 librus.fetch_schedule()
 
+            if user_config.get('read_attendance', True):
+                step = "frekwencja"
+                sleep(5)
+                librus.fetch_attendance()
+
             if hasattr(self.storage, 'set_student_name'):
                 self.storage.set_student_name(login, name)
 
@@ -171,22 +176,29 @@ class LibrusCollector:
             new_msgs = librus.get_not_known_messages_and_mark_as_known() if user_config.get('read_messages', True) else []
             new_notifs = librus.get_not_known_notifications_and_mark_as_known()
             new_grades = librus.get_not_known_grades_and_mark_as_known() if user_config.get('read_grades', True) else []
+            new_attendance_raw = (
+                librus.get_not_known_attendance_and_mark_as_known()
+                if (user_config.get('read_attendance', True) and hasattr(librus, 'get_not_known_attendance_and_mark_as_known'))
+                else []
+            )
+            new_attendance = new_attendance_raw if isinstance(new_attendance_raw, (list, tuple)) else []
 
             if hasattr(self.storage, 'clear_last_error'):
                 self.storage.clear_last_error(login)
 
             timetable_count = len(getattr(librus, 'timetable', []))
             schedule_count = len(getattr(librus, 'schedule', []))
-            if new_msgs or new_notifs or new_grades:
+            if new_msgs or new_notifs or new_grades or new_attendance:
                 logger.info(
                     f"{name} ({login}): Zakończono pobieranie danych ze szkoły. Wykryto nowe wpisy w dzienniku: "
-                    f"wiadomości: {len(new_msgs)}, ogłoszenia: {len(new_notifs)}, oceny: {len(new_grades)} "
+                    f"wiadomości: {len(new_msgs)}, ogłoszenia: {len(new_notifs)}, oceny: {len(new_grades)}, "
+                    f"frekwencja: {len(new_attendance)} "
                     f"(wpisy w terminarzu: {timetable_count}, lekcje w planie: {schedule_count})."
                 )
             else:
                 logger.info(
                     f"{name} ({login}): Zakończono pobieranie danych ze szkoły. Brak nowych wpisów w dzienniku "
-                    f"(wiadomości: 0, ogłoszenia: 0, oceny: 0, wpisy w terminarzu: {timetable_count}, lekcje w planie: {schedule_count})."
+                    f"(wiadomości: 0, ogłoszenia: 0, oceny: 0, frekwencja: 0, wpisy w terminarzu: {timetable_count}, lekcje w planie: {schedule_count})."
                 )
 
             return {
@@ -199,9 +211,12 @@ class LibrusCollector:
                 'grades': getattr(librus, 'grades', []),
                 'timetable': getattr(librus, 'timetable', []),
                 'schedule': getattr(librus, 'schedule', []),
+                'attendance': getattr(librus, 'attendance', []),
+                'attendance_summary': getattr(librus, 'attendance_summary', []),
                 'new_messages': new_msgs,
                 'new_notifications': new_notifs,
                 'new_grades': new_grades,
+                'new_attendance': new_attendance,
             }
         except (LibrusNetworkError, requests.RequestException) as e:
             logger.warning(f"{name} ({login}): Problem sieciowy na etapie '{step}': {e}")
@@ -258,9 +273,11 @@ class LibrusCollector:
             'messages': [],
             'notifications': [],
             'grades': [],
+            'attendance': [],
             'new_messages': [],
             'new_notifications': [],
             'new_grades': [],
+            'new_attendance': [],
         }
 
     def collect_all(self, users: list[dict]) -> dict[str, dict[str, Any]]:
@@ -335,6 +352,7 @@ def resolve_target_users(
                 default_read_messages = first_user.get('read_messages', config.get('read_messages', True))
                 default_read_timetable = first_user.get('read_timetable', config.get('read_timetable', True))
                 default_read_schedule = first_user.get('read_schedule', config.get('read_schedule', True))
+                default_read_attendance = first_user.get('read_attendance', config.get('read_attendance', True))
                 custom_name = storage.get_student_name(user_filter) if hasattr(storage, 'get_student_name') else None
                 student_name = custom_name or f"Uczeń ({user_filter})"
                 matched = [{
@@ -346,6 +364,7 @@ def resolve_target_users(
                     'read_messages': default_read_messages,
                     'read_timetable': default_read_timetable,
                     'read_schedule': default_read_schedule,
+                    'read_attendance': default_read_attendance,
                 }]
                 logger.info(f"Załadowano profil ze storage: '{student_name}'.")
             else:
@@ -364,6 +383,7 @@ def resolve_target_users(
             default_read_messages = first_user.get('read_messages', config.get('read_messages', True))
             default_read_timetable = first_user.get('read_timetable', config.get('read_timetable', True))
             default_read_schedule = first_user.get('read_schedule', config.get('read_schedule', True))
+            default_read_attendance = first_user.get('read_attendance', config.get('read_attendance', True))
             auto_users = []
             for s_login in stored_logins:
                 s_name = storage.get_student_name(s_login) or f"Uczeń ({s_login})"
@@ -376,6 +396,7 @@ def resolve_target_users(
                     'read_messages': default_read_messages,
                     'read_timetable': default_read_timetable,
                     'read_schedule': default_read_schedule,
+                    'read_attendance': default_read_attendance,
                 })
             logger.info(f"Załadowano profile uczniów odnalezione w '{effective_storage_dir}': {[u['librus_login_name'] for u in auto_users]}")
             users = auto_users
@@ -436,9 +457,11 @@ def execute_collection_cycle(
                     all_messages=c_item.get('messages'),
                     all_notifications=c_item.get('notifications'),
                     all_grades=c_item.get('grades'),
+                    all_attendance=c_item.get('attendance'),
                     new_messages=c_item.get('new_messages'),
                     new_notifications=c_item.get('new_notifications'),
                     new_grades=c_item.get('new_grades'),
+                    new_attendance=c_item.get('new_attendance'),
                     days=days,
                     hours=hours,
                     dry_run=dry_run,

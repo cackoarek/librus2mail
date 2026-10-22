@@ -130,6 +130,7 @@ class MailSender:
         grades: list = None,
         timetable: dict = None,
         schedule: dict = None,
+        attendance: list = None,
     ) -> str:
         parts = []
         if messages:
@@ -155,6 +156,17 @@ class MailSender:
             if len(grades) > 2:
                 grades_summary += f" (+{len(grades) - 2})"
             parts.append(f"nowe oceny ({grades_summary})")
+
+        if attendance:
+            u_count = sum(1 for a in attendance if a.get('is_absence'))
+            l_count = sum(1 for a in attendance if a.get('is_late'))
+            att_parts = []
+            if u_count > 0:
+                att_parts.append(f"{u_count} nieob.")
+            if l_count > 0:
+                att_parts.append(f"{l_count} spóźn.")
+            if att_parts:
+                parts.append(f"frekwencja ({', '.join(att_parts)})")
 
         if schedule and (schedule.get('substitution_count', 0) > 0 or schedule.get('cancelled_count', 0) > 0):
             sub_count = schedule.get('substitution_count', 0)
@@ -190,6 +202,7 @@ class MailSender:
         grades: list = None,
         timetable: dict = None,
         schedule: dict = None,
+        attendance: list = None,
     ) -> str:
         template = jinja_env.get_template('summary.html')
         return template.render(
@@ -199,6 +212,7 @@ class MailSender:
             grades=grades or [],
             timetable=timetable,
             schedule=schedule,
+            attendance=attendance or [],
         )
 
     def send_mail_with_messages(self, user_config, messages):
@@ -210,7 +224,7 @@ class MailSender:
     def send_mail_with_grades(self, user_config, grades):
         pass
 
-    def send_mail_with_summary(self, user_config, messages=None, notifications=None, grades=None, timetable=None, schedule=None):
+    def send_mail_with_summary(self, user_config, messages=None, notifications=None, grades=None, timetable=None, schedule=None, attendance=None):
         pass
 
     @classmethod
@@ -229,6 +243,7 @@ class MailSender:
         user_config: dict,
         analysis: dict,
         timetable: dict | None = None,
+        attendance: dict | None = None,
     ) -> str:
         name = str(user_config.get('librus_login_name') or user_config.get('librus_login', ''))
         login = str(user_config.get('librus_login', ''))
@@ -257,6 +272,7 @@ class MailSender:
             borderline_risk_map=borderline_risk_map,
             dormant_items=dormant_items,
             timetable=timetable,
+            attendance=attendance,
         )
 
     @classmethod
@@ -304,6 +320,7 @@ class MailSender:
         user_config: dict,
         analysis: dict,
         timetable: dict | None = None,
+        attendance: dict | None = None,
     ) -> bool:
         pass
 

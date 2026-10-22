@@ -11,6 +11,7 @@ from bs4 import BeautifulSoup
 
 from .dom_parser import (
     parse_announcements_html,
+    parse_attendance_html,
     parse_grades_html,
     parse_messages_html,
     parse_schedule_html,
@@ -36,8 +37,10 @@ NOTIFICATIONS_URL = 'https://synergia.librus.pl/ogloszenia'
 GRADES_URL = 'https://synergia.librus.pl/przegladaj_oceny/uczen'
 TIMETABLE_URL = 'https://synergia.librus.pl/terminarz'
 PLAN_LEKCJI_URL = 'https://synergia.librus.pl/przegladaj_plan_lekcji'
+ATTENDANCE_URL = 'https://synergia.librus.pl/przegladaj_nb/uczen'
 
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+DEFAULT_TIMEOUT = 20
 
 
 class Librus:
@@ -54,6 +57,11 @@ class Librus:
         self.__do_read_grades = config.get('read_grades', True)
         self.__do_read_timetable = config.get('read_timetable', True)
         self.__do_read_schedule = config.get('read_schedule', True)
+        self.__do_read_attendance = config.get('read_attendance', True)
+        self.attendance: list[dict[str, Any]] = []
+        self.attendance_summary: list[dict[str, Any]] = []
+        self._attendance_fetched = False
+        self.__known_attendance: set[str] = set()
         self.__librus_login = config.get('librus_login')
         raw_password = config.get('librus_password')
         self.__librus_password = (
@@ -114,7 +122,7 @@ class Librus:
             'Referer': 'https://portal.librus.pl/'
         }
         try:
-            res = self.__session.get(PORTAL_RODZINA_URL, headers=init_headers)
+            res = self.__session.get(PORTAL_RODZINA_URL, headers=init_headers, timeout=DEFAULT_TIMEOUT)
         except requests.RequestException as e:
             logger.error(f"Inicjalizacja autoryzacji konta {self.__librus_login} nie powiodła się: {e}")
             raise LibrusNetworkError(f"Błąd sieciowy przy inicjalizacji autoryzacji: {e}", request=getattr(e, 'request', None), response=getattr(e, 'response', None)) from e
@@ -139,7 +147,7 @@ class Librus:
             'pass': self.__librus_password
         }
         try:
-            post_res = self.__session.post(login_target_url, data=login_payload, headers=post_headers)
+            post_res = self.__session.post(login_target_url, data=login_payload, headers=post_headers, timeout=DEFAULT_TIMEOUT)
         except requests.RequestException as e:
             logger.error(f"Wysyłanie formularza logowania dla {self.__librus_login} nie powiodło się: {e}")
             raise LibrusNetworkError(f"Błąd sieciowy przy logowaniu: {e}", request=getattr(e, 'request', None), response=getattr(e, 'response', None)) from e
@@ -182,7 +190,7 @@ class Librus:
             'Referer': login_target_url
         }
         try:
-            grant_res = self.__session.get(next_url, headers=grant_headers)
+            grant_res = self.__session.get(next_url, headers=grant_headers, timeout=DEFAULT_TIMEOUT)
         except requests.RequestException as e:
             logger.error(f"Błąd sieciowy podczas pobierania grantu dla {self.__librus_login}: {e}")
             raise LibrusNetworkError(f"Błąd sieciowy podczas pobierania grantu: {e}", request=getattr(e, 'request', None), response=getattr(e, 'response', None)) from e
@@ -217,7 +225,7 @@ class Librus:
                 **self.__generate_baner_header(),
             }
             try:
-                two_fa_res = self.__session.post(action_target, data=two_fa_payload, headers=two_fa_headers)
+                two_fa_res = self.__session.post(action_target, data=two_fa_payload, headers=two_fa_headers, timeout=DEFAULT_TIMEOUT)
             except requests.RequestException as e:
                 logger.error(f"Błąd sieciowy podczas wysyłania 2FA dla {self.__librus_login}: {e}")
                 raise LibrusNetworkError(f"Błąd sieciowy podczas pomijania 2FA: {e}", request=getattr(e, 'request', None), response=getattr(e, 'response', None)) from e
@@ -232,7 +240,7 @@ class Librus:
                     final_grant = f"https://api.librus.pl{final_grant}"
                 logger.info("Pobieram docelowy grant autoryzacji")
                 try:
-                    grant_res = self.__session.get(final_grant, headers=grant_headers)
+                    grant_res = self.__session.get(final_grant, headers=grant_headers, timeout=DEFAULT_TIMEOUT)
                 except requests.RequestException as e:
                     logger.error(f"Błąd sieciowy podczas pobierania grantu po 2FA dla {self.__librus_login}: {e}")
                     raise LibrusNetworkError(f"Błąd sieciowy podczas pobierania grantu po 2FA: {e}", request=getattr(e, 'request', None), response=getattr(e, 'response', None)) from e
@@ -260,7 +268,7 @@ class Librus:
         url = f"{MESSAGE_BODY_URL}{link}"
         logger.info(f"Pobieram treść wiadomość {link}")
         try:
-            res = self.__session.get(url, headers=self.__headers)
+            res = self.__session.get(url, headers=self.__headers, timeout=DEFAULT_TIMEOUT)
         except requests.RequestException as e:
             logger.error(f"Błąd sieciowy przy pobieraniu wiadomości {link}: {e}")
             raise LibrusNetworkError(f"Błąd sieciowy przy pobieraniu wiadomości: {e}", request=getattr(e, 'request', None), response=getattr(e, 'response', None)) from e
@@ -379,6 +387,12 @@ class Librus:
                     str(self.__librus_login),
                     self.schedule,
                 )
+            if hasattr(self, 'attendance') and (self.attendance or getattr(self, '_attendance_fetched', False) or getattr(self, 'attendance_summary', None)) and hasattr(self.__storage, 'save_attendance'):
+                self.__storage.save_attendance(
+                    str(self.__librus_login),
+                    self.attendance,
+                    summary=getattr(self, 'attendance_summary', None),
+                )
 
     def get_not_known_messages_and_mark_as_known(self) -> list[dict[str, bool | str | Any]]:
         resp = [message for message in self.messages if message['id'] not in self.__known_messages]
@@ -428,6 +442,10 @@ class Librus:
     @property
     def do_read_timetable(self) -> bool:
         return self.__do_read_timetable
+
+    @property
+    def do_read_attendance(self) -> bool:
+        return self.__do_read_attendance
 
     def fetch_grades(self, force: bool = False):
         if not self.__do_read_grades and not force:
@@ -479,7 +497,7 @@ class Librus:
         if month and year:
             headers = {**self.__headers, 'Referer': TIMETABLE_URL}
             try:
-                res = self.__session.post(TIMETABLE_URL, data={'miesiac': str(month), 'rok': str(year)}, headers=headers)
+                res = self.__session.post(TIMETABLE_URL, data={'miesiac': str(month), 'rok': str(year)}, headers=headers, timeout=DEFAULT_TIMEOUT)
             except requests.RequestException as e:
                 logger.error(f"Błąd sieciowy przy pobieraniu terminarza dla {month}/{year}: {e}")
                 raise LibrusNetworkError(f"Błąd sieciowy przy pobieraniu terminarza: {e}", request=getattr(e, 'request', None), response=getattr(e, 'response', None)) from e
@@ -509,7 +527,7 @@ class Librus:
                     next_year = now.year + 1 if now.month == 12 else now.year
                     sleep(2)
                     headers = {**self.__headers, 'Referer': TIMETABLE_URL}
-                    res_next = self.__session.post(TIMETABLE_URL, data={'miesiac': str(next_month), 'rok': str(next_year)}, headers=headers)
+                    res_next = self.__session.post(TIMETABLE_URL, data={'miesiac': str(next_month), 'rok': str(next_year)}, headers=headers, timeout=DEFAULT_TIMEOUT)
                     if res_next.status_code == 200:
                         soup_next = BeautifulSoup(res_next.content, 'html.parser')
                         next_entries = self._parse_timetable_soup(soup_next)
@@ -557,7 +575,7 @@ class Librus:
             try:
                 if w_idx > 0:
                     sleep(1)
-                res = self.__session.post(PLAN_LEKCJI_URL, data={'tydzien': week_str}, headers=headers)
+                res = self.__session.post(PLAN_LEKCJI_URL, data={'tydzien': week_str}, headers=headers, timeout=DEFAULT_TIMEOUT)
                 if res.status_code == 200:
                     soup = BeautifulSoup(res.content, 'html.parser')
                     try:
@@ -599,13 +617,49 @@ class Librus:
         self.save_state()
         return entries
 
+    def fetch_attendance(self, force: bool = False) -> list[dict[str, Any]]:
+        if not self.__do_read_attendance and not force:
+            logger.info("Pobieranie frekwencji jest wyłączone w konfiguracji (read_attendance: false)")
+            self.attendance = []
+            self.attendance_summary = []
+            return []
+
+        if not self.logged:
+            raise NotLogged()
+
+        logger.info("Pobieram frekwencję ucznia")
+        soup = self.parse_page(ATTENDANCE_URL)
+
+        try:
+            parsed = parse_attendance_html(soup)
+        except (LibrusError, requests.RequestException):
+            raise
+        except Exception as e:
+            logger.error(f"Błąd parsowania frekwencji: {e}", exc_info=True)
+            raise LibrusParsingError(f"Błąd parsowania frekwencji: {e}") from e
+
+        entries = parsed.get('entries', [])
+        summary = parsed.get('periods_summary', [])
+        logger.info(f"Pobrano {len(entries)} wpisów frekwencji")
+        self.attendance = entries
+        self.attendance_summary = summary
+        self._attendance_fetched = True
+        self.save_state()
+        return entries
+
+    def get_not_known_attendance_and_mark_as_known(self) -> list[dict[str, Any]]:
+        resp = [att for att in self.attendance if att.get('id') and att['id'] not in self.__known_attendance]
+        self.__known_attendance.update(att['id'] for att in self.attendance if att.get('id'))
+        self.save_state()
+        return resp
+
     def parse_page(self, url: str) -> BeautifulSoup:
         headers = {
             **self.__headers,
             'Referer': 'https://synergia.librus.pl/'
         }
         try:
-            res = self.__session.get(url, headers=headers)
+            res = self.__session.get(url, headers=headers, timeout=DEFAULT_TIMEOUT)
         except requests.RequestException as e:
             logger.error(f"Błąd sieciowy podczas pobierania {url}: {e}")
             raise LibrusNetworkError(f"Błąd sieciowy podczas pobierania {url}: {e}", request=getattr(e, 'request', None), response=getattr(e, 'response', None)) from e

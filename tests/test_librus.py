@@ -854,6 +854,122 @@ class TestLibrus(unittest.TestCase):
         self.assertIn("Świadectwo z wyróżnieniem", content)
         self.assertIn("Wysoka średnia ogólna.", content)
 
+    def test_attendance_presentation_in_progress_and_summary_emails(self):
+        from librus2mail.mail_sender import MailSender
+        from librus2mail.progress_report import prepare_attendance_report_summary
+        from librus2mail.updates_notifier import prepare_schedule_summary
+
+        user_cfg = {'librus_login': '8979296', 'librus_login_name': 'Jan Kowalski'}
+        att_entries = [
+            {
+                'id': '5001',
+                'date': '2026-09-18',
+                'lesson_no': 3,
+                'subject': 'Geografia',
+                'symbol': 'u',
+                'type': 'nieobecność uspr.',
+                'teacher': 'Dorota Opolska',
+                'topic': 'Ukształtowanie powierzchni Ziemi',
+                'is_absence': True,
+                'is_justified': True,
+                'is_late': False,
+                'is_exempt': False,
+                'justification_info': 'e-Usprawiedliwienie',
+            },
+            {
+                'id': '5002',
+                'date': '2026-09-10',
+                'lesson_no': 1,
+                'subject': 'Fizyka',
+                'symbol': 'sp',
+                'type': 'spóźnienie',
+                'is_absence': False,
+                'is_justified': False,
+                'is_late': True,
+                'is_exempt': False,
+            }
+        ]
+
+        # 1. Test prepare_attendance_report_summary filtering
+        p_start = datetime(2026, 9, 11)
+        p_end = datetime(2026, 9, 18, 23, 59, 59)
+        att_sum = prepare_attendance_report_summary(att_entries, p_start, p_end)
+        self.assertTrue(att_sum['has_any'])
+        self.assertEqual(len(att_sum['period_entries']), 1)
+        self.assertEqual(att_sum['period_absences_count'], 1)
+        self.assertEqual(att_sum['period_justified_count'], 1)
+        self.assertEqual(att_sum['period_unjustified_count'], 0)
+        self.assertEqual(att_sum['period_lates_count'], 0)
+
+        # 2. Test progress_report.html rendering with attendance
+        analysis = {
+            'period_start_str': '11.09.2026',
+            'period_end_str': '18.09.2026',
+            'overall_avg': 4.54,
+            'period_avg': 4.80,
+            'total_grades_count': 20,
+            'period_grades_count': 5,
+            'activity_pluses': 1,
+            'activity_minuses': 0,
+            'unprepared_count': 0,
+            'insights_strengths': [],
+            'insights_warnings': [],
+            'subjects': [],
+            'period_grades': [],
+            'distribution_overall': {},
+            'distribution_period': {},
+        }
+        progress_html = MailSender.create_mail_content_for_progress_report(
+            user_cfg, analysis, attendance=att_sum
+        )
+        self.assertIn("Frekwencja w okresie", progress_html)
+        self.assertIn("1 nieobecność", progress_html)
+        self.assertIn("1 uspr.", progress_html)
+        self.assertIn("Geografia", progress_html)
+        self.assertIn("Lekcja 3", progress_html)
+        self.assertIn("nieobecność uspr.", progress_html)
+        self.assertIn("e-Usprawiedliwienie", progress_html)
+        self.assertIn("Dorota Opolska", progress_html)
+        self.assertIn("Ukształtowanie powierzchni Ziemi", progress_html)
+
+        # 3. Test summary title with attendance
+        summary_title = MailSender._create_summary_title(
+            user_cfg, attendance=[att_entries[0]]
+        )
+        self.assertIn("frekwencja (1 nieob.)", summary_title)
+
+        # 4. Test schedule table attendance correlation
+        schedule_entries = [
+            {
+                'date': '2026-09-18',
+                'lesson_no': 3,
+                'subject': 'Geografia',
+                'time_from': '09:50',
+                'time_to': '10:35',
+            }
+        ]
+        sched_res = prepare_schedule_summary(
+            schedule_entries=schedule_entries,
+            attendance_entries=att_entries,
+            now=datetime(2026, 9, 18),
+            day_offset=0,
+        )
+        self.assertTrue(sched_res['has_any'])
+        lesson = sched_res['lessons'][0]
+        self.assertIn('attendance', lesson)
+        self.assertEqual(lesson['attendance']['type'], 'nieobecność uspr.')
+
+        # 5. Test summary.html rendering with attendance and schedule badge
+        summary_html = MailSender.create_mail_content_for_summary(
+            user_cfg,
+            schedule=sched_res,
+            attendance=[att_entries[0]],
+        )
+        self.assertIn("Frekwencja", summary_html)
+        self.assertIn("nowe wpisy", summary_html)
+        self.assertIn("nieobecność uspr.", summary_html)
+        self.assertIn("Geografia", summary_html)
+
     def test_send_progress_report_gmail_and_smtp(self):
         from librus2mail.gmail_sender import GmailSender
         from librus2mail.smtp_sender import SmtpSender
@@ -1620,6 +1736,7 @@ class TestLibrus(unittest.TestCase):
             mock_librus.get_not_known_messages_and_mark_as_known.return_value = []
             mock_librus.get_not_known_notifications_and_mark_as_known.return_value = []
             mock_librus.get_not_known_grades_and_mark_as_known.return_value = []
+            mock_librus.get_not_known_attendance_and_mark_as_known.return_value = []
             collector.parsers[login] = mock_librus
 
             with patch('librus2mail.librus_collector.sleep'):
@@ -1952,8 +2069,11 @@ class TestLibrus(unittest.TestCase):
         </html>
         """
         self.librus.logged = True
-        with patch.object(self.librus, 'parse_page') as mock_parse:
+        with patch.object(self.librus, 'parse_page') as mock_parse, \
+             patch.object(self.librus._Librus__session, 'post') as mock_post, \
+             patch('librus2mail.librus.sleep'):
             from bs4 import BeautifulSoup
+            mock_post.return_value = MagicMock(status_code=404)
             mock_parse.return_value = BeautifulSoup(sample_calendar_html, 'html.parser')
             entries = self.librus.fetch_timetable()
 
@@ -2449,6 +2569,8 @@ class TestLibrus(unittest.TestCase):
     def test_fetch_schedule_disabled_and_enabled(self):
         import copy
 
+        import requests
+
         # 1. Test when read_schedule: False
         cfg_disabled = copy.deepcopy(self.config)
         cfg_disabled['read_schedule'] = False
@@ -2467,13 +2589,25 @@ class TestLibrus(unittest.TestCase):
             <tr><td class="center">1</td><td>08:00-08:45</td><td id="timetableEntryBox" data-date="2026-09-21">Fizyka s. 12</td></tr>
         </table>
         """
-        with patch.object(l_enabled, 'parse_page') as mock_parse:
-            from bs4 import BeautifulSoup
-            mock_parse.return_value = BeautifulSoup(sample_html, 'html.parser')
+        mock_response = MagicMock(status_code=200, content=sample_html.encode('utf-8'))
+        with patch.object(l_enabled._Librus__session, 'post', return_value=mock_response), \
+             patch('librus2mail.librus.sleep'):
             res_en = l_enabled.fetch_schedule(force=True)
             self.assertEqual(len(res_en), 1)
             self.assertEqual(res_en[0]['subject'], 'Fizyka')
             self.assertEqual(l_enabled.schedule, res_en)
+
+        # 3. Test fallback to parse_page when POST fails
+        l_fallback = Librus(self.config)
+        l_fallback.logged = True
+        with patch.object(l_fallback._Librus__session, 'post', side_effect=requests.RequestException("Network error")), \
+             patch.object(l_fallback, 'parse_page') as mock_parse, \
+             patch('librus2mail.librus.sleep'):
+            from bs4 import BeautifulSoup
+            mock_parse.return_value = BeautifulSoup(sample_html, 'html.parser')
+            res_fb = l_fallback.fetch_schedule(force=True)
+            self.assertEqual(len(res_fb), 1)
+            self.assertEqual(res_fb[0]['subject'], 'Fizyka')
 
     def test_schedule_summary_preparation_and_email_rendering(self):
         from librus2mail.mail_sender import MailSender
@@ -2729,6 +2863,111 @@ class TestLibrus(unittest.TestCase):
             with self.assertRaises(LibrusParsingError) as ctx:
                 self.librus.fetch_grades()
             self.assertIsInstance(ctx.exception, LibrusError)
+
+    def test_fetch_attendance_disabled_when_read_attendance_false(self):
+        cfg = {
+            'librus_login': '123456',
+            'librus_password': 'secret_password',
+            'read_attendance': False,
+        }
+        lib = Librus(cfg)
+        lib.logged = True
+        entries = lib.fetch_attendance()
+        self.assertEqual(entries, [])
+        self.assertEqual(lib.attendance, [])
+        self.assertEqual(lib.attendance_summary, [])
+
+    def test_fetch_attendance_with_valid_fixture(self):
+        storage_mock = MagicMock()
+        cfg = {
+            'librus_login': '123456',
+            'librus_password': 'secret_password',
+            'read_attendance': True,
+        }
+        lib = Librus(cfg, storage=storage_mock)
+        lib.logged = True
+
+        fixture_path = Path(__file__).parent / "fixtures" / "attendance.html"
+        fixture_html = fixture_path.read_text(encoding="utf-8")
+        from bs4 import BeautifulSoup
+
+        with patch.object(lib, 'parse_page', return_value=BeautifulSoup(fixture_html, 'html.parser')):
+            entries = lib.fetch_attendance()
+            self.assertEqual(len(entries), 4)
+            self.assertEqual(len(lib.attendance_summary), 1)
+            storage_mock.save_attendance.assert_called_once()
+
+            # Sprawdzenie get_not_known_attendance_and_mark_as_known
+            new_items = lib.get_not_known_attendance_and_mark_as_known()
+            self.assertEqual(len(new_items), 4)
+
+            # Kolejne wywołanie nie powinno zwrócić już znanych wpisów
+            second_call_items = lib.get_not_known_attendance_and_mark_as_known()
+            self.assertEqual(len(second_call_items), 0)
+
+    def test_fetch_attendance_empty_fixture_persists_summary_and_sync(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            from librus2mail.storage import FileStorage
+            storage = FileStorage(tmp_dir)
+            cfg = {
+                'librus_login': '123456',
+                'librus_password': 'secret_password',
+                'read_attendance': True,
+            }
+            lib = Librus(cfg, storage=storage)
+            lib.logged = True
+
+            fixture_path = Path(__file__).parent / "fixtures" / "attendance_empty.html"
+            fixture_html = fixture_path.read_text(encoding="utf-8")
+            from bs4 import BeautifulSoup
+
+            with patch.object(lib, 'parse_page', return_value=BeautifulSoup(fixture_html, 'html.parser')):
+                entries = lib.fetch_attendance()
+                self.assertEqual(entries, [])
+                self.assertEqual(len(lib.attendance_summary), 1)
+
+            # Weryfikacja zapisu do fizycznego storage mimo 0 wpisów nieobecności
+            self.assertEqual(storage.get_attendance_history('123456'), [])
+            summary = storage.get_attendance_summary('123456')
+            self.assertEqual(len(summary), 1)
+            self.assertEqual(summary[0]['total_absences'], 0)
+            self.assertIsNotNone(storage.get_last_attendance_sync('123456'))
+
+    def test_collector_fetches_attendance(self):
+        config = {'storage_dir': 'storage'}
+        mock_storage = MagicMock()
+        collector = LibrusCollector(config, storage=mock_storage)
+        user_cfg = {
+            'librus_login': '12345',
+            'librus_login_name': 'Janek',
+            'read_messages': False,
+            'read_grades': False,
+            'read_timetable': False,
+            'read_schedule': False,
+            'read_attendance': True,
+        }
+        with patch('librus2mail.librus_collector.Librus') as mock_librus_cls, \
+             patch('librus2mail.librus_collector.sleep'):
+            mock_inst = MagicMock()
+            mock_inst.attendance = [{'id': '5001', 'date': '2026-10-21', 'symbol': 'u'}]
+            mock_inst.attendance_summary = [{'period': 'Okres 1', 'total_absences': 1}]
+            mock_librus_cls.return_value = mock_inst
+            res = collector.collect_user(user_cfg)
+            self.assertTrue(res['success'])
+            mock_inst.fetch_attendance.assert_called_once()
+            self.assertEqual(res['attendance'], [{'id': '5001', 'date': '2026-10-21', 'symbol': 'u'}])
+            self.assertEqual(res['attendance_summary'], [{'period': 'Okres 1', 'total_absences': 1}])
+
+    def test_parsing_error_in_fetch_attendance_raises_librus_parsing_error(self):
+        self.librus.logged = True
+        with patch.object(self.librus, 'parse_page') as mock_parse, \
+             patch('librus2mail.librus.parse_attendance_html', side_effect=KeyError("Brak klucza")):
+            from bs4 import BeautifulSoup
+            mock_parse.return_value = BeautifulSoup("<html></html>", 'html.parser')
+            with self.assertRaises(LibrusParsingError) as ctx:
+                self.librus.fetch_attendance()
+            self.assertIsInstance(ctx.exception, LibrusError)
+
 
 
 if __name__ == '__main__':

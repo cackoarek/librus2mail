@@ -69,6 +69,15 @@ class TestConfigModels(unittest.TestCase):
         default_app = AppSettings.model_validate({})
         self.assertIsNone(default_app.semester_split_date)
         self.assertEqual(default_app.annual_grade_algorithm, 'all_year_weighted')
+        self.assertTrue(default_app.read_attendance)
+
+        user_custom = LibrusUserConfig.model_validate({
+            'librus_login': '123456',
+            'librus_password': 'secret_password_123',
+            'read_attendance': False,
+        })
+        self.assertFalse(user_custom.read_attendance)
+        self.assertFalse(user_custom['read_attendance'])
 
         invalid_app = AppSettings.model_validate({
             'semester_split_date': 'nieprawidlowa-data',

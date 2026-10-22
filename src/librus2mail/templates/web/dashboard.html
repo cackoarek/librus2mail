@@ -123,6 +123,29 @@
     </a>
 </div>
 
+{% if data.attendance_view_data and data.attendance_view_data.unjustified_absences > 0 %}
+<!-- Alert o nieusprawiedliwionych nieobecnościach -->
+<div class="bg-rose-50 border border-rose-200 rounded-2xl p-4 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-xs">
+    <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-base shrink-0">
+            ⚠️
+        </div>
+        <div>
+            <h4 class="text-xs font-bold text-rose-900">
+                Uwaga: Uczeń posiada {{ data.attendance_view_data.unjustified_absences }} nieusprawiedliwione godziny lekcyjne
+            </h4>
+            <p class="text-[11px] text-rose-700 mt-0.5">
+                Sprawdź wykaz opuszczonych lekcji i wyślij e-Usprawiedliwienie w portalu Librus.
+            </p>
+        </div>
+    </div>
+    <a href="{{ url_for('web.attendance_view') }}"
+       class="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-xs transition-colors shrink-0">
+        <span>Zobacz frekwencję</span> ➔
+    </a>
+</div>
+{% endif %}
+
 {% if data.recent_timeline_enabled %}
 <!-- Moduł: Kalendarium Ostatnich Dni (Pełna szerokość) -->
 <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6">
@@ -158,7 +181,9 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 {% if data.recent_timeline_days|length <= 3 %}md:grid-cols-3{% elif data.recent_timeline_days|length == 4 %}md:grid-cols-2 lg:grid-cols-4{% elif data.recent_timeline_days|length == 5 %}md:grid-cols-3 lg:grid-cols-5{% elif data.recent_timeline_days|length <= 7 %}md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7{% else %}md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5{% endif %} gap-3.5 items-stretch">
             {% for day in data.recent_timeline_days %}
             <div class="rounded-xl flex flex-col h-full transition-all border
-                {% if day.is_today %}
+                {% if day.unjustified_count is defined and day.unjustified_count > 0 %}
+                    bg-rose-50/25 border-rose-300 ring-1 ring-rose-400/20 shadow-sm
+                {% elif day.is_today %}
                     bg-indigo-50/40 border-indigo-300 ring-2 ring-indigo-500/20 shadow-sm
                 {% else %}
                     bg-slate-50/70 border-slate-200/80 hover:border-slate-300
@@ -166,15 +191,34 @@
 
                 <!-- Nagłówek karty dnia -->
                 <div class="p-3 border-b flex items-center justify-between
-                    {% if day.is_today %} border-indigo-200/80 bg-indigo-100/30 {% else %} border-slate-200/60 bg-white/50 {% endif %}">
+                    {% if day.unjustified_count is defined and day.unjustified_count > 0 %}
+                        border-rose-200/80 bg-rose-100/30
+                    {% elif day.is_today %}
+                        border-indigo-200/80 bg-indigo-100/30
+                    {% else %}
+                        border-slate-200/60 bg-white/50
+                    {% endif %}">
                     <div>
-                        <div class="flex items-center gap-1.5">
+                        <div class="flex items-center gap-1.5 flex-wrap">
                             <span class="text-xs font-extrabold text-slate-900">
                                 {{ day.weekday_name }}
                             </span>
                             {% if day.is_today %}
                             <span class="px-1.5 py-0.5 bg-indigo-600 text-white text-[10px] font-bold rounded-md uppercase tracking-wider">
                                 Dziś
+                            </span>
+                            {% endif %}
+                            {% if day.unjustified_count is defined and day.unjustified_count > 0 %}
+                            <span class="px-1.5 py-0.5 bg-rose-100 text-rose-800 border border-rose-300 text-[10px] font-bold rounded" title="Nieobecność nieusprawiedliwiona">
+                                🔴 {{ day.unjustified_count }} nb
+                            </span>
+                            {% elif day.justified_count is defined and day.justified_count > 0 %}
+                            <span class="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-bold rounded" title="Nieobecność usprawiedliwiona">
+                                🟢 {{ day.justified_count }} uspr.
+                            </span>
+                            {% elif day.lates_count is defined and day.lates_count > 0 %}
+                            <span class="px-1.5 py-0.5 bg-amber-100 text-amber-800 border border-amber-300 text-[10px] font-bold rounded" title="Spóźnienie">
+                                🟡 {{ day.lates_count }} sp.
                             </span>
                             {% endif %}
                         </div>
@@ -185,7 +229,13 @@
 
                     <span class="text-[11px] font-bold px-2 py-0.5 rounded-full
                         {% if day.events_count > 0 %}
-                            {% if day.is_today %} bg-indigo-100 text-indigo-700 {% else %} bg-slate-200/80 text-slate-700 {% endif %}
+                            {% if day.unjustified_count is defined and day.unjustified_count > 0 %}
+                                bg-rose-100 text-rose-800
+                            {% elif day.is_today %}
+                                bg-indigo-100 text-indigo-700
+                            {% else %}
+                                bg-slate-200/80 text-slate-700
+                            {% endif %}
                         {% else %}
                             bg-slate-100 text-slate-400
                         {% endif %}">
@@ -197,7 +247,7 @@
                 <div class="p-2.5 flex-1 max-h-[380px] overflow-y-auto space-y-2">
                     {% if day.events %}
                         {% for ev in day.events %}
-                        <div class="bg-white rounded-lg p-2.5 border border-slate-200/90 shadow-2xs hover:shadow-xs transition text-xs">
+                        <div class="bg-white rounded-lg p-2.5 border border-slate-200/90 shadow-2xs hover:shadow-xs transition text-xs{% if ev.event_class %} {{ ev.event_class }}{% endif %}">
 
                             <!-- Typ: Ocena -->
                             {% if ev.type == 'grade' %}
@@ -346,6 +396,50 @@
                                 </div>
                             </div>
 
+                            <!-- Typ: Frekwencja / Nieobecność -->
+                            {% elif ev.type == 'attendance' %}
+                            <div class="flex items-start gap-2">
+                                <div class="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center font-extrabold text-xs shadow-2xs {{ ev.badge_color }}">
+                                    {{ ev.badge }}
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-1">
+                                        <a href="{{ url_for('web.attendance_view') }}#day-{{ ev.date }}"
+                                           class="font-bold {% if ev.is_absence and not ev.is_justified %}text-rose-900 hover:text-rose-700{% elif ev.is_absence and ev.is_justified %}text-emerald-900 hover:text-emerald-700{% elif ev.is_late %}text-amber-900 hover:text-amber-700{% else %}text-slate-900 hover:text-indigo-600{% endif %} truncate transition"
+                                           title="{{ ev.title }}">
+                                            {{ ev.subject or 'Frekwencja' }}
+                                        </a>
+                                        {% if ev.time_str %}
+                                        <span class="text-[10px] font-bold {% if ev.is_absence and not ev.is_justified %}text-rose-600{% elif ev.is_absence and ev.is_justified %}text-emerald-600{% elif ev.is_late %}text-amber-600{% else %}text-slate-400{% endif %} shrink-0">
+                                            {{ ev.time_str }}
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-[11px] font-semibold {% if ev.is_absence and not ev.is_justified %}text-rose-700{% elif ev.is_absence and ev.is_justified %}text-emerald-700{% elif ev.is_late %}text-amber-700{% else %}text-slate-600{% endif %} mt-0.5">
+                                        {{ ev.badge_label }}
+                                    </div>
+                                    {% if ev.topic %}
+                                    <div class="text-[11px] text-slate-600 italic mt-0.5 truncate" title="{{ ev.topic }}">
+                                        "{{ ev.topic }}"
+                                    </div>
+                                    {% endif %}
+                                    {% if ev.teacher %}
+                                    <div class="text-[10px] text-slate-500 mt-0.5">
+                                        {{ ev.teacher }}
+                                    </div>
+                                    {% endif %}
+                                    {% if ev.justification_info %}
+                                    <div class="text-[10px] font-medium text-emerald-700 mt-0.5">
+                                        ℹ️ {{ ev.justification_info }}
+                                    </div>
+                                    {% endif %}
+                                    <a href="{{ url_for('web.attendance_view') }}#day-{{ ev.date }}"
+                                       class="text-[10px] font-bold {% if ev.is_absence and not ev.is_justified %}text-rose-600 hover:text-rose-800{% elif ev.is_absence and ev.is_justified %}text-emerald-600 hover:text-emerald-800{% elif ev.is_late %}text-amber-600 hover:text-amber-800{% else %}text-indigo-600 hover:text-indigo-800{% endif %} inline-flex items-center gap-0.5 mt-1">
+                                        Szczegóły we frekwencji ➔
+                                    </a>
+                                </div>
+                            </div>
+
                             {% endif %}
 
                         </div>
@@ -469,17 +563,26 @@
             {% endif %}
 
             {% if data.schedule_summary.has_any and data.schedule_summary.lessons %}
-                <!-- Alerty o zmianach w planie -->
-                {% if data.schedule_summary.cancelled_count > 0 or data.schedule_summary.substitution_count > 0 %}
-                <div class="p-3.5 mx-4 mt-4 bg-amber-50 border border-amber-200 rounded-xl text-xs font-semibold text-amber-900 flex items-center gap-3">
-                    <span>⚠️</span>
+                <!-- Alerty o zmianach w planie i frekwencji -->
+                {% if data.schedule_summary.cancelled_count > 0 or data.schedule_summary.substitution_count > 0 or (data.schedule_summary.attendance_events_count is defined and data.schedule_summary.attendance_events_count > 0) %}
+                <div class="p-3.5 mx-4 mt-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 flex items-center gap-3">
+                    <span>ℹ️</span>
                     <div class="flex items-center gap-2 flex-wrap">
-                        <span>Uwaga na zmiany:</span>
+                        <span>Uwagi do planu i obecności:</span>
                         {% if data.schedule_summary.substitution_count > 0 %}
                         <span class="px-2 py-0.5 bg-amber-100 rounded text-amber-800 font-bold">🔄 {{ data.schedule_summary.substitution_count }} zastępstwo</span>
                         {% endif %}
                         {% if data.schedule_summary.cancelled_count > 0 %}
                         <span class="px-2 py-0.5 bg-rose-100 rounded text-rose-800 font-bold">❌ {{ data.schedule_summary.cancelled_count }} odwołana</span>
+                        {% endif %}
+                        {% if data.schedule_summary.unjustified_count is defined and data.schedule_summary.unjustified_count > 0 %}
+                        <span class="px-2 py-0.5 bg-rose-100 text-rose-800 rounded font-bold">🔴 {{ data.schedule_summary.unjustified_count }} nieuspr.</span>
+                        {% endif %}
+                        {% if data.schedule_summary.justified_count is defined and data.schedule_summary.justified_count > 0 %}
+                        <span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded font-bold">🟢 {{ data.schedule_summary.justified_count }} uspr.</span>
+                        {% endif %}
+                        {% if data.schedule_summary.lates_count is defined and data.schedule_summary.lates_count > 0 %}
+                        <span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded font-bold">🟡 {{ data.schedule_summary.lates_count }} {% if data.schedule_summary.lates_count == 1 %}spóźnienie{% elif data.schedule_summary.lates_count in [2, 3, 4] %}spóźnienia{% else %}spóźnień{% endif %}</span>
                         {% endif %}
                     </div>
                 </div>
@@ -495,6 +598,9 @@
                     <div class="p-3.5 rounded-xl transition-all flex items-center justify-between gap-4
                         {% if l.is_cancelled %} bg-rose-50/60 border-l-4 border-rose-500
                         {% elif is_curr %} bg-emerald-50/80 border-l-4 border-emerald-500 ring-1 ring-emerald-300 shadow-sm
+                        {% elif l.attendance and l.attendance.is_absence and not l.attendance.is_justified %} bg-rose-50/70 border-l-4 border-rose-500
+                        {% elif l.attendance and l.attendance.is_absence and l.attendance.is_justified %} bg-emerald-50/50 border-l-4 border-emerald-500
+                        {% elif l.attendance and l.attendance.is_late %} bg-amber-50/50 border-l-4 border-amber-400
                         {% elif l.is_substitution %} bg-amber-50/60 border-l-4 border-amber-500
                         {% elif l.test %} bg-indigo-50/40 border-l-4 border-indigo-500
                         {% elif is_comp %} bg-slate-50/40 opacity-70 hover:opacity-100 border-l-4 border-slate-300
@@ -558,6 +664,26 @@
                                         📝 {{ l.test.category }}: {{ l.test.description or l.test.subject }}
                                     </span>
                                     {% endif %}
+
+                                    {% if l.attendance %}
+                                        {% if l.attendance.is_absence and not l.attendance.is_justified %}
+                                        <span class="px-2 py-0.5 bg-rose-100 text-rose-800 text-[10px] font-extrabold rounded border border-rose-300 flex items-center gap-1" title="{{ l.attendance.type }}">
+                                            🔴 Nieobecność (nieuspr.)
+                                        </span>
+                                        {% elif l.attendance.is_absence and l.attendance.is_justified %}
+                                        <span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-extrabold rounded border border-emerald-300 flex items-center gap-1" title="{{ l.attendance.type }}">
+                                            🟢 Usprawiedliwiona{% if l.attendance.justification_info %} ({{ l.attendance.justification_info }}){% endif %}
+                                        </span>
+                                        {% elif l.attendance.is_late %}
+                                        <span class="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-extrabold rounded border border-amber-300 flex items-center gap-1" title="{{ l.attendance.type }}">
+                                            🟡 Spóźnienie
+                                        </span>
+                                        {% elif l.attendance.is_exempt %}
+                                        <span class="px-2 py-0.5 bg-sky-100 text-sky-800 text-[10px] font-extrabold rounded border border-sky-300 flex items-center gap-1" title="{{ l.attendance.type }}">
+                                            🔵 Zwolnienie
+                                        </span>
+                                        {% endif %}
+                                    {% endif %}
                                 </div>
 
                                 <div class="text-xs text-slate-500 mt-1 flex items-center gap-3">
@@ -580,6 +706,22 @@
 
                         <!-- Status po prawej na pulpicie -->
                         <div class="flex items-center gap-2 flex-shrink-0 text-xs">
+                            {% if l.attendance %}
+                            <a href="{{ url_for('web.attendance_view') }}#day-{{ data.schedule_summary.date }}"
+                               class="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-lg border transition-all
+                               {% if l.attendance.is_absence and not l.attendance.is_justified %}
+                                   bg-rose-100 text-rose-800 border-rose-300 hover:bg-rose-200
+                               {% elif l.attendance.is_absence and l.attendance.is_justified %}
+                                   bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200
+                               {% elif l.attendance.is_late %}
+                                   bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-200
+                               {% else %}
+                                   bg-sky-100 text-sky-800 border-sky-300 hover:bg-sky-200
+                               {% endif %}"
+                               title="Przejdź do frekwencji">
+                                <span>⏱️ {{ l.attendance.symbol }}</span>
+                            </a>
+                            {% endif %}
                             {% if is_curr %}
                             <span class="inline-flex items-center gap-1.5 font-extrabold text-xs text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-xl border border-emerald-300 shadow-xs">
                                 <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>

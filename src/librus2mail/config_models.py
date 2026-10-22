@@ -153,6 +153,7 @@ class LibrusUserConfig(BaseConfigModel):
     read_grades: bool = True
     read_timetable: bool = True
     read_schedule: bool = True
+    read_attendance: bool = True
     schedule_day_offset: int = 1
     one_summary_message: bool = True
     notification_receivers: list[EmailStr] = Field(default_factory=list)
@@ -257,6 +258,7 @@ class AppSettings(BaseSettings, collections.abc.MutableMapping):
     one_summary_message: bool = True
     read_schedule: bool = True
     read_timetable: bool = True
+    read_attendance: bool = True
     read_messages: bool = True
     read_grades: bool = True
     semester_split_date: str | None = None
@@ -306,7 +308,7 @@ class AppSettings(BaseSettings, collections.abc.MutableMapping):
                 'notification_receivers': receivers,
             }
 
-            for flag in ('read_messages', 'read_grades', 'read_timetable', 'read_schedule', 'one_summary_message'):
+            for flag in ('read_messages', 'read_grades', 'read_timetable', 'read_schedule', 'read_attendance', 'one_summary_message'):
                 env_val = os.getenv(f'LIBRUS_{flag.upper()}')
                 if env_val is not None:
                     user_dict[flag] = env_val.lower() in ('true', '1', 'yes')

@@ -1269,10 +1269,12 @@ def build_schedule_day_context(
     timetable_entries: list[dict[str, Any]] | None = None,
     ref_now: datetime | None = None,
     requested_date: str | None = None,
+    attendance_entries: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Przygotowuje spójny kontekst wyboru i nawigacji dnia dla planu lekcji (pulpit oraz /plan):
 
     - Koreluje sprawdziany/kartkówki z lekcjami.
+    - Koreluje zdarzenia frekwencyjne (nieobecności, spóźnienia, zwolnienia) z lekcjami.
     - Określa, czy lekcje w bieżącym dniu trwają (na podstawie godziny zakończenia ostatniej aktywnej lekcji).
     - Domyślnie wybiera dzień bieżący (gdy trwają lekcje) lub najbliższy przyszły dzień nauki (gdy lekcje minęły / dzień wolny).
     - Wyznacza poprzedni i kolejny dzień w sekwencji dla przycisków nawigacji.
@@ -1283,6 +1285,16 @@ def build_schedule_day_context(
         t_d = t.get('date')
         if t_d and t.get('type') == 'test':
             tests_by_date.setdefault(t_d, []).append(t)
+
+    attendance_by_date_and_lesson: dict[tuple[str, int], dict] = {}
+    for att in attendance_entries or []:
+        a_date = att.get('date')
+        if not a_date:
+            continue
+        clean_ad = a_date.split()[0] if ' ' in a_date else a_date
+        les_no = int(att.get('lesson_no', 0)) if str(att.get('lesson_no', '')).isdigit() else 0
+        if les_no > 0:
+            attendance_by_date_and_lesson[(clean_ad, les_no)] = att
 
     by_date: dict[str, list] = {}
     for entry in all_lessons or []:
@@ -1299,6 +1311,11 @@ def build_schedule_day_context(
                     if test_sub and (test_sub in e_sub or e_sub in test_sub):
                         e_copy['test'] = test_item
                         break
+
+            e_les_no = int(e_copy.get('lesson_no', 0)) if str(e_copy.get('lesson_no', '')).isdigit() else 0
+            if (clean_d, e_les_no) in attendance_by_date_and_lesson:
+                e_copy['attendance'] = attendance_by_date_and_lesson[(clean_d, e_les_no)]
+
             by_date[clean_d].append(e_copy)
 
     for d, l_list in by_date.items():
@@ -1404,6 +1421,19 @@ def build_schedule_day_context(
         cancelled_count = sum(1 for x in day_lessons if x.get('is_cancelled'))
         substitution_count = sum(1 for x in day_lessons if x.get('is_substitution'))
         tests_count = sum(1 for x in day_lessons if x.get('test'))
+        attendance_events_count = sum(1 for x in day_lessons if x.get('attendance'))
+        unjustified_count = sum(
+            1 for x in day_lessons
+            if x.get('attendance') and x['attendance'].get('is_absence') and not x['attendance'].get('is_justified')
+        )
+        justified_count = sum(
+            1 for x in day_lessons
+            if x.get('attendance') and x['attendance'].get('is_absence') and x['attendance'].get('is_justified')
+        )
+        lates_count = sum(
+            1 for x in day_lessons
+            if x.get('attendance') and x['attendance'].get('is_late')
+        )
 
         start_time = active_day_lessons[0].get('time_from') if active_day_lessons else (day_lessons[0].get('time_from') if day_lessons else '')
         end_time = active_day_lessons[-1].get('time_to') if active_day_lessons else (day_lessons[-1].get('time_to') if day_lessons else '')
@@ -1536,6 +1566,10 @@ def build_schedule_day_context(
             'cancelled_count': cancelled_count,
             'substitution_count': substitution_count,
             'tests_count': tests_count,
+            'attendance_events_count': attendance_events_count,
+            'unjustified_count': unjustified_count,
+            'justified_count': justified_count,
+            'lates_count': lates_count,
             'time_span': time_span,
             'has_any': len(day_lessons) > 0,
             'is_break_now': is_break_now,
@@ -1557,6 +1591,10 @@ def build_schedule_day_context(
         'cancelled_count': 0,
         'substitution_count': 0,
         'tests_count': 0,
+        'attendance_events_count': 0,
+        'unjustified_count': 0,
+        'justified_count': 0,
+        'lates_count': 0,
         'time_span': '',
         'date': today_str,
         'is_today': True,
@@ -1812,6 +1850,259 @@ def build_recent_days_timeline(
     return timeline_days, total_events
 
 
+POLISH_MONTH_NAMES: dict[int, str] = {
+    1: "Styczeń", 2: "Luty", 3: "Marzec", 4: "Kwiecień", 5: "Maj", 6: "Czerwiec",
+    7: "Lipiec", 8: "Sierpień", 9: "Wrzesień", 10: "Październik", 11: "Listopad", 12: "Grudzień",
+}
+
+POLISH_WEEKDAY_NAMES: dict[int, str] = {
+    0: "poniedziałek", 1: "wtorek", 2: "środa", 3: "czwartek",
+    4: "piątek", 5: "sobota", 6: "niedziela",
+}
+
+
+def prepare_attendance_view_data(
+    attendance_history: list[dict],
+    attendance_summary: list[dict] | dict | None = None,
+    ref_now: datetime | None = None,
+) -> dict[str, Any]:
+    """
+    Przygotowuje komplet danych dla widoku frekwencji na WWW:
+    - Zagregowane metryki KPI (nieusprawiedliwione, usprawiedliwione, spóźnienia, zwolnienia)
+    - Pogrupowaną oś czasu (Timeline) ze zwartymi kartami dni i agregacją pełnych dni
+    - Semestralny mini-kalendarz / heatmapę miesięcy
+    - Rozkład absencji per przedmiot
+    - Podsumowania okresów
+    """
+    import calendar
+
+    ref_date = (ref_now or datetime.now()).date()
+
+    # 1. Zliczanie podstawowych metryk
+    unjustified_absences = 0
+    justified_absences = 0
+    total_absences = 0
+    lates_count = 0
+    exemptions_count = 0
+    trips_count = 0
+
+    for e in attendance_history:
+        if e.get('is_late'):
+            lates_count += 1
+        elif e.get('is_exempt'):
+            exemptions_count += 1
+        elif e.get('is_absence'):
+            if e.get('is_justified'):
+                justified_absences += 1
+            else:
+                unjustified_absences += 1
+            total_absences += 1
+        if e.get('is_trip'):
+            trips_count += 1
+
+    # Jeżeli w podsumowaniu z Librusa są oficjalne sumy, bierzemy większą wartość
+    raw_summaries = (
+        attendance_summary
+        if isinstance(attendance_summary, list)
+        else ([attendance_summary] if isinstance(attendance_summary, dict) else [])
+    )
+    if raw_summaries:
+        sum_u = sum(s.get('justified', 0) for s in raw_summaries if isinstance(s, dict))
+        sum_nu = sum(s.get('unjustified', 0) for s in raw_summaries if isinstance(s, dict))
+        sum_tot = sum(s.get('total_absences', 0) for s in raw_summaries if isinstance(s, dict))
+        sum_sp = sum(s.get('lates', 0) for s in raw_summaries if isinstance(s, dict))
+        sum_zw = sum(s.get('exemptions', 0) for s in raw_summaries if isinstance(s, dict))
+
+        unjustified_absences = max(unjustified_absences, sum_nu)
+        justified_absences = max(justified_absences, sum_u)
+        total_absences = max(total_absences, sum_tot)
+        lates_count = max(lates_count, sum_sp)
+        exemptions_count = max(exemptions_count, sum_zw)
+
+    # 2. Grupowanie wpisów w oś czasu (dni)
+    by_date: dict[str, list[dict]] = {}
+    for e in attendance_history:
+        d = e.get('date')
+        if d:
+            by_date.setdefault(d, []).append(e)
+
+    timeline_days = []
+    # Sortowanie dat malejąco (najnowsze pierwsze)
+    for d_iso in sorted(by_date.keys(), reverse=True):
+        entries = by_date[d_iso]
+        # Sortowanie wpisów wg numeru lekcji
+        entries_sorted = sorted(
+            entries,
+            key=lambda x: int(x.get('lesson_no', 0)) if str(x.get('lesson_no', '')).isdigit() else 99,
+        )
+
+        d_parsed = parse_date_safe(d_iso)
+        if d_parsed:
+            weekday_str = POLISH_WEEKDAY_NAMES.get(d_parsed.weekday(), "")
+            date_display = f"{weekday_str.capitalize()}, {d_parsed.day} {POLISH_MONTH_NAMES.get(d_parsed.month, '')} {d_parsed.year}"
+            date_short = f"{d_parsed.day:02d}.{d_parsed.month:02d}"
+        else:
+            date_display = d_iso
+            date_short = d_iso
+
+        d_absences = sum(1 for x in entries if x.get('is_absence'))
+        d_unjustified = sum(1 for x in entries if x.get('is_absence') and not x.get('is_justified'))
+        d_justified = sum(1 for x in entries if x.get('is_absence') and x.get('is_justified'))
+        d_lates = sum(1 for x in entries if x.get('is_late'))
+        d_exemptions = sum(1 for x in entries if x.get('is_exempt'))
+
+        is_full_day = d_absences >= 4
+
+        if d_unjustified > 0:
+            status_type = 'unjustified'
+            badge_color = 'rose'
+            badge_label = f"{d_unjustified}h nieusprawiedliwione" if not is_full_day else "Cały dzień (nieusprawiedliwiony)"
+        elif d_justified > 0:
+            status_type = 'justified'
+            badge_color = 'emerald'
+            badge_label = f"{d_justified}h usprawiedliwione" if not is_full_day else "Cały dzień usprawiedliwiony"
+        elif d_lates > 0:
+            status_type = 'late'
+            badge_color = 'amber'
+            badge_label = f"Spóźnienie ({d_lates})"
+        else:
+            status_type = 'exempt'
+            badge_color = 'sky'
+            badge_label = f"Zwolnienie ({d_exemptions})"
+
+        timeline_days.append({
+            'date': d_iso,
+            'date_display': date_display,
+            'date_short': date_short,
+            'entries': entries_sorted,
+            'total_events': len(entries),
+            'absences_count': d_absences,
+            'unjustified_count': d_unjustified,
+            'justified_count': d_justified,
+            'lates_count': d_lates,
+            'exemptions_count': d_exemptions,
+            'is_full_day': is_full_day,
+            'status_type': status_type,
+            'badge_color': badge_color,
+            'badge_label': badge_label,
+        })
+
+    # 3. Semestralny mini-kalendarz (Heatmapa miesięcy roku szkolnego)
+    if ref_date.month >= 8:
+        start_year = ref_date.year
+    else:
+        start_year = ref_date.year - 1
+    end_year = start_year + 1
+
+    school_months = [
+        (start_year, 9), (start_year, 10), (start_year, 11), (start_year, 12),
+        (end_year, 1), (end_year, 2), (end_year, 3), (end_year, 4), (end_year, 5), (end_year, 6),
+    ]
+
+    heatmap_months = []
+    today_iso = ref_date.strftime('%Y-%m-%d')
+
+    for y, m in school_months:
+        cal = calendar.monthcalendar(y, m)
+        weeks = []
+        month_events_count = 0
+
+        for week in cal:
+            days = []
+            for day_idx, day_num in enumerate(week):
+                if day_num == 0:
+                    days.append({'day_num': None})
+                else:
+                    d_iso = f"{y:04d}-{m:02d}-{day_num:02d}"
+                    is_weekend = day_idx in (5, 6)
+                    is_today = (d_iso == today_iso)
+                    day_events = by_date.get(d_iso, [])
+                    month_events_count += len(day_events)
+
+                    status = 'clean'
+                    tooltip = ""
+                    if day_events:
+                        if any(x.get('is_absence') and not x.get('is_justified') for x in day_events):
+                            status = 'unjustified'
+                            tooltip = f"{day_num:02d}.{m:02d}: Nieobecność nieusprawiedliwiona ({len(day_events)} lekcji)"
+                        elif any(x.get('is_absence') and x.get('is_justified') for x in day_events):
+                            status = 'justified'
+                            tooltip = f"{day_num:02d}.{m:02d}: Nieobecność usprawiedliwiona ({len(day_events)} lekcji)"
+                        elif any(x.get('is_late') for x in day_events):
+                            status = 'late'
+                            tooltip = f"{day_num:02d}.{m:02d}: Spóźnienie"
+                        elif any(x.get('is_exempt') for x in day_events):
+                            status = 'exempt'
+                            tooltip = f"{day_num:02d}.{m:02d}: Zwolnienie"
+
+                    days.append({
+                        'day_num': day_num,
+                        'date_iso': d_iso,
+                        'is_weekend': is_weekend,
+                        'is_today': is_today,
+                        'status': status,
+                        'events_count': len(day_events),
+                        'tooltip': tooltip,
+                    })
+            weeks.append(days)
+
+        heatmap_months.append({
+            'year': y,
+            'month': m,
+            'month_name': f"{POLISH_MONTH_NAMES[m]} {y}",
+            'short_name': POLISH_MONTH_NAMES[m],
+            'has_events': month_events_count > 0,
+            'events_count': month_events_count,
+            'weeks': weeks,
+        })
+
+    # 4. Rozkład absencji per przedmiot
+    subjects_map: dict[str, dict[str, Any]] = {}
+    for e in attendance_history:
+        s_name = e.get('subject') or 'Inne'
+        if s_name not in subjects_map:
+            subjects_map[s_name] = {
+                'subject': s_name,
+                'total_absences': 0,
+                'unjustified': 0,
+                'justified': 0,
+                'lates': 0,
+                'exemptions': 0,
+            }
+        sm = subjects_map[s_name]
+        if e.get('is_late'):
+            sm['lates'] += 1
+        elif e.get('is_exempt'):
+            sm['exemptions'] += 1
+        elif e.get('is_absence'):
+            sm['total_absences'] += 1
+            if e.get('is_justified'):
+                sm['justified'] += 1
+            else:
+                sm['unjustified'] += 1
+
+    subjects_summary = sorted(
+        subjects_map.values(),
+        key=lambda x: (x['unjustified'], x['total_absences'], x['lates']),
+        reverse=True,
+    )
+
+    return {
+        'total_absences': total_absences,
+        'unjustified_absences': unjustified_absences,
+        'justified_absences': justified_absences,
+        'lates_count': lates_count,
+        'exemptions_count': exemptions_count,
+        'trips_count': trips_count,
+        'timeline_days': timeline_days,
+        'timeline_days_count': len(timeline_days),
+        'heatmap_months': heatmap_months,
+        'subjects_summary': subjects_summary,
+        'periods_summary': raw_summaries,
+        'has_any_events': len(attendance_history) > 0 or total_absences > 0 or lates_count > 0,
+    }
+
+
 def get_student_dashboard_bundle(
     storage: BaseStorage,
     login: str,
@@ -1831,6 +2122,16 @@ def get_student_dashboard_bundle(
     notifications = sort_items_descending(raw_notifications)
     last_sync = storage.get_last_collect_time(login) if hasattr(storage, 'get_last_collect_time') else None
     last_sync_human = format_human_timestamp(last_sync, now=ref_now)
+
+    # Frekwencja ucznia
+    attendance_history = storage.get_attendance_history(login) if hasattr(storage, 'get_attendance_history') else []
+    attendance_summary = storage.get_attendance_summary(login) if hasattr(storage, 'get_attendance_summary') else []
+    attendance_last_sync = storage.get_last_attendance_sync(login) if hasattr(storage, 'get_last_attendance_sync') else None
+    attendance_view_data = prepare_attendance_view_data(
+        attendance_history=attendance_history,
+        attendance_summary=attendance_summary,
+        ref_now=ref_now,
+    )
 
     # Analityka ocen
     excluded_subjects = storage.get_excluded_certificate_subjects(login) if hasattr(storage, 'get_excluded_certificate_subjects') else []
@@ -1853,7 +2154,12 @@ def get_student_dashboard_bundle(
 
     # Terminarz i plan lekcji
     timetable_summary = prepare_timetable_summary(timetable, reference_date=ref_now.date())
-    sched_ctx = build_schedule_day_context(schedule, timetable_entries=timetable, ref_now=ref_now)
+    sched_ctx = build_schedule_day_context(
+        schedule,
+        timetable_entries=timetable,
+        ref_now=ref_now,
+        attendance_entries=attendance_history,
+    )
     schedule_summary = sched_ctx['selected_summary']
     today_schedule_summary = prepare_schedule_summary(schedule, timetable_entries=timetable, now=ref_now, day_offset=0)
 
@@ -1944,6 +2250,10 @@ def get_student_dashboard_bundle(
         'last_sync_human': last_sync_human,
         'all_schedule': schedule,
         'all_timetable': timetable,
+        'attendance_history': attendance_history,
+        'attendance_summary': attendance_summary,
+        'attendance_last_sync': attendance_last_sync,
+        'attendance_view_data': attendance_view_data,
     }
 
 

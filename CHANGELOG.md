@@ -10,6 +10,24 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 ## [Unreleased]
 
 ### Dodane
+- **Moduł frekwencji i obecności ucznia (Scraping, Storage & Panel WWW)**:
+  - Automatyczne pobieranie danych o frekwencji z systemu Librus Synergia (`/przegladaj_nb/uczen`) w `librus.py` i `librus_collector.py` z możliwością wyłączenia opcją konfiguracyjną `read_attendance: false`.
+  - Parsowanie wpisów frekwencji w `dom_parser.py`: ekstrakcja daty, godziny lekcyjnej, przedmiotu, symbolu (`nb`, `u`, `sp`, `zw`), typu absencji, nauczyciela, tematu lekcji, informacji o wycieczkach oraz adnotacji modułu e-Usprawiedliwień, wraz z oficjalnymi sumarycznymi tabelami semestralnymi.
+  - Nowe modele domenowe `AttendanceEntry` oraz `AttendanceSummary` w `domain_models.py` i pełna persystencja w `storage.py` (`save_attendance`, `get_attendance_history`, `get_attendance_summary`).
+  - **Nowa podstrona w panelu WWW (`/frekwencja` oraz `/attendance`)**:
+    - Umieszczenie nowej pozycji w głównym pasku nawigacyjnym pomiędzy *Terminarz* a *Wiadomości*.
+    - **Karty metryk KPI**: liczniki nieobecności nieusprawiedliwionych (z alertem o wymaganej reakcji), usprawiedliwionych, spóźnień oraz zwolnień.
+    - **Semestralna mapa obecności / kalendarz**: miniatury miesięcy (wrzesień – czerwiec) z kolorystycznym oznaczeniem statusu każdego dnia i interaktywnym przewijaniem (`scrollToDay`) do osi czasu.
+    - **Interaktywna oś czasu (Timeline)**: pogrupowane chronologicznie zdarzenia z odznakami symboli, szczegółami lekcji i statusami e-Usprawiedliwień.
+    - **Zestawienie przedmiotowe i podsumowanie okresów**: agregacja absencji według przedmiotów oraz oficjalne tabele semestralne Librus.
+  - **Oznaczanie frekwencji w Planie lekcji (`/plan`) i na Pulpicie (`/`)**:
+    - Inteligentna korelacja lekcji z frekwencją według klucza `(data, nr_lekcji)`.
+    - Kolorystyczne oznaczenie krawędzi kart lekcji (🔴 czerwona dla nieuspr., 🟢 zielona dla uspr., 🟡 żółta dla spóźnień).
+    - Odznaki przy nazwach przedmiotów (np. `🔴 Nieobecność (nieuspr.)`, `🟢 Usprawiedliwiona (e-Usprawiedliwienie)`, `🟡 Spóźnienie`).
+    - Skrótowe przyciski `⏱️ Frekwencja: [symbol]` / `⏱️ [symbol]` z linkami kotwicowymi prowadzącymi do sekcji danego dnia w module frekwencji.
+    - Kropki statusu obecności na pigułkach wyboru dni tygodnia w widoku `/plan`.
+    - Liczniki obecności w podsumowaniu planu dnia (`🔴 X nieuspr.`, `🟢 Y uspr.`, `🟡 Z spóźnień`).
+  - Wygenerowano statyczny widok demonstracyjny `examples/reports/web_frekwencja.html` i zaktualizowano zestaw raportów w `examples/reports/`.
 - **Śledzenie lekcji w czasie rzeczywistym w Planie lekcji i na Pulpicie (Live Lesson Tracker)**:
   - Automatyczne wykrywanie lekcji trwającej w danej chwili (`🟢 TRWA TERAZ`) z pulsującym wskaźnikiem, licznikiem czasu do dzwonka (`⏱️ jeszcze X min`) oraz wyeksponowanym numerem sali i nazwiskiem nauczyciela.
   - Oznaczanie lekcji, które się już odbyły (`✓ Odbyła się`) ze stonowanym tłem i wyciszonym kontrastem, co ułatwia rodzicowi natychmiastowe zorientowanie się w bieżącym planie dnia.

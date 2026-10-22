@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pl" class="h-full">
+<html lang="pl" class="h-full scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -516,6 +516,10 @@
                            class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
                             🔔 Terminarz
                         </a>
+                        <a href="web_frekwencja.html"
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            ⏱️ Frekwencja
+                        </a>
                         <a href="web_wiadomosci.html"
                            class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
                             ✉️ Wiadomości
@@ -583,7 +587,7 @@
                         
                         <div class="hidden sm:inline-block relative text-left">
                             <select onchange="window.location.href='/student/' + this.value + '?next=' + encodeURIComponent(window.location.pathname + window.location.search)"
-                                    class="bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold rounded-xl px-2.5 py-1.5 pr-6 max-w-[125px] xl:max-w-[145px] 2xl:max-w-[190px] truncate focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
+                                    class="bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold rounded-xl px-2.5 py-1.5 pr-6 max-w-[230px] xl:max-w-[265px] 2xl:max-w-[345px] truncate focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
                                 
                                 <option value="8912345" >
                                     👤 Jan Kowalski (klasa 5A) (8912345)
@@ -651,6 +655,7 @@
             <a href="web_plan.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap bg-indigo-600 text-white">📅 Plan lekcji</a>
             <a href="web_oceny.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📝 Oceny</a>
             <a href="web_terminarz.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">🔔 Terminarz</a>
+            <a href="web_frekwencja.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">⏱️ Frekwencja</a>
             <a href="web_wiadomosci.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">✉️ Wiadomości</a>
             <a href="web_raporty_podsumowanie.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📈 Raporty</a>
             <a href="web_ustawienia.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">⚙️ Ustawienia</a>
@@ -759,6 +764,10 @@
                     <a href="web_terminarz.html"
                        class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
                         <span class="text-base">🔔</span> <span>Terminarz i sprawdziany</span>
+                    </a>
+                    <a href="web_frekwencja.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
+                        <span class="text-base">⏱️</span> <span>Frekwencja i obecność</span>
                     </a>
                     <a href="web_wiadomosci.html"
                        class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
@@ -872,7 +881,7 @@
         <span class="text-[9px] uppercase px-1 py-0.5 rounded bg-white/20 text-white font-black">Dziś</span>
         
         
-        <span class="w-2 h-2 rounded-full bg-rose-500" title="Odwołane lekcje"></span>
+        <span class="w-2 h-2 rounded-full bg-emerald-500" title="Nieobecność usprawiedliwiona"></span>
         
     </a>
     
@@ -982,6 +991,13 @@
             <!-- Podsumowanie zmian w danym dniu -->
             <div class="flex items-center gap-2 flex-wrap text-xs">
                 
+                
+                <span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-bold rounded-lg border border-emerald-200">
+                    🟢 1 uspr.
+                </span>
+                
+                
+                
                 <span class="px-2.5 py-1 bg-indigo-50 text-indigo-800 font-bold rounded-lg border border-indigo-200">
                     📝 1 sprawdzian
                 </span>
@@ -1039,6 +1055,8 @@
                             
 
                             
+
+                            
                         </div>
 
                         <!-- Sala i Nauczyciel -->
@@ -1064,6 +1082,7 @@
 
                 <!-- Prawa kolumna: Etykieta statusu -->
                 <div class="flex items-center gap-2 sm:self-center text-xs">
+                    
                     
                     <span class="inline-flex items-center gap-1 text-[11px] font-bold text-sky-800 bg-sky-100 px-2.5 py-1 rounded-lg border border-sky-300">
                         <span>⏳</span> Następna lekcja (za 480 min)
@@ -1110,6 +1129,8 @@
                             
 
                             
+
+                            
                         </div>
 
                         <!-- Sala i Nauczyciel -->
@@ -1136,6 +1157,7 @@
                 <!-- Prawa kolumna: Etykieta statusu -->
                 <div class="flex items-center gap-2 sm:self-center text-xs">
                     
+                    
                     <span class="text-slate-500 text-[11px]">
                         Planowo
                     </span>
@@ -1151,7 +1173,7 @@
             
 
             <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all
-                 bg-amber-50/50 border-l-4 border-amber-500
+                 bg-emerald-50/50 border-l-4 border-emerald-500
                 ">
 
                 <!-- Lewa kolumna: Godzina i przedmiot -->
@@ -1186,6 +1208,14 @@
                             
 
                             
+
+                            
+                                
+                                <span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-extrabold rounded border border-emerald-300 flex items-center gap-1" title="nieobecność uspr.">
+                                    🟢 Usprawiedliwiona (e-Usprawiedliwienie)
+                                </span>
+                                
+                            
                         </div>
 
                         <!-- Sala i Nauczyciel -->
@@ -1215,6 +1245,16 @@
 
                 <!-- Prawa kolumna: Etykieta statusu -->
                 <div class="flex items-center gap-2 sm:self-center text-xs">
+                    
+                    <a href="/frekwencja#day-2026-09-18"
+                       class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all
+                       
+                           bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200
+                       "
+                       title="Przejdź do frekwencji">
+                        <span>⏱️ Frekwencja: u</span>
+                    </a>
+                    
                     
                     <span class="text-amber-800 font-bold bg-amber-100 px-2.5 py-1 rounded-lg">
                         Zmiana w planie
@@ -1266,6 +1306,8 @@
                                 📝 Sprawdzian: Lektura: Hobbit
                             </span>
                             
+
+                            
                         </div>
 
                         <!-- Sala i Nauczyciel -->
@@ -1291,6 +1333,7 @@
 
                 <!-- Prawa kolumna: Etykieta statusu -->
                 <div class="flex items-center gap-2 sm:self-center text-xs">
+                    
                     
                     <span class="text-indigo-800 font-bold bg-indigo-100 px-2.5 py-1 rounded-lg">
                         Sprawdzian
@@ -1337,6 +1380,8 @@
                             
 
                             
+
+                            
                         </div>
 
                         <!-- Sala i Nauczyciel -->
@@ -1362,6 +1407,7 @@
 
                 <!-- Prawa kolumna: Etykieta statusu -->
                 <div class="flex items-center gap-2 sm:self-center text-xs">
+                    
                     
                     <span class="text-slate-500 text-[11px]">
                         Planowo
@@ -1413,6 +1459,8 @@
                             
 
                             
+
+                            
                         </div>
 
                         <!-- Sala i Nauczyciel -->
@@ -1439,6 +1487,7 @@
                 <!-- Prawa kolumna: Etykieta statusu -->
                 <div class="flex items-center gap-2 sm:self-center text-xs">
                     
+                    
                     <span class="text-rose-700 font-bold bg-rose-100 px-2.5 py-1 rounded-lg">
                         Lekcja odwołana
                     </span>
@@ -1462,7 +1511,7 @@
     <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500">
         <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div class="flex items-center gap-2 font-medium">
-                <span>🏫 Librus2mail v2.6.0</span>
+                <span>🏫 Librus2mail v2.7.0</span>
                 <span>•</span>
                 <span>Prywatny Dashboard Rodzica</span>
             </div>

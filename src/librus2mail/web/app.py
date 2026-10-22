@@ -324,6 +324,7 @@ def dashboard():
         timetable_entries=data.get('all_timetable', []),
         ref_now=ref_now,
         requested_date=requested_date,
+        attendance_entries=data.get('attendance_history', []),
     )
 
     if sched_ctx['selected_day']:
@@ -349,6 +350,7 @@ def schedule_view():
         timetable_entries=data.get('all_timetable', []),
         ref_now=ref_now,
         requested_date=requested_date,
+        attendance_entries=data.get('attendance_history', []),
     )
 
     view_mode = request.args.get('view', 'day').strip()
@@ -483,6 +485,19 @@ def timetable_view():
 
     data = get_student_dashboard_bundle(storage, active_login, config, now=request.app_actual_date)
     return render_template('web/timetable.html', data=data)
+
+
+@web_bp.route('/attendance')
+@web_bp.route('/frekwencja')
+@login_required
+def attendance_view():
+    """Widok frekwencji, obecności i spóźnień ucznia."""
+    config = request.app_config
+    storage = request.app_storage
+    active_login = get_active_student_login(config, storage, session_login=session.get('active_student_login'))
+
+    data = get_student_dashboard_bundle(storage, active_login, config, now=request.app_actual_date)
+    return render_template('web/attendance.html', data=data)
 
 
 @web_bp.route('/wiadomosci')

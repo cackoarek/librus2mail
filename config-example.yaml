@@ -36,6 +36,9 @@ librus_users:
     # Pobieranie planu lekcji wraz z zastępstwami i odwołanymi lekcjami (domyślnie: true).
     read_schedule: true
 
+    # Pobieranie danych o frekwencji ucznia (nieobecności, spóźnienia, zwolnienia) (domyślnie: true).
+    read_attendance: true
+
     # Przesunięcie dnia dla planu lekcji w powiadomieniu (w dniach względem daty raportu/uruchomienia):
     # - 1: prezentuje plan na kolejny dzień szkolny (jutro, a w piątek/weekend na najbliższy poniedziałek - domyślnie).
     # - 0: prezentuje plan na bieżący dzień raportu (dzisiaj).

@@ -1,0 +1,519 @@
+{% extends "web/base.html" %}
+
+{% block title %}Frekwencja - {{ data.name }}{% endblock %}
+
+{% block content %}
+<!-- Nagłówek -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-200">
+    <div>
+        <div class="flex items-center gap-2">
+            <a href="{{ url_for('web.dashboard') }}" class="text-xs font-bold text-indigo-600 hover:text-indigo-800">
+                ← Powrót do pulpitu
+            </a>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1 flex items-center gap-3">
+            <span>⏱️ Frekwencja & Obecność: {{ data.name }}</span>
+            {% if '(' ~ data.login ~ ')' not in data.name %}
+            <span class="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full border border-slate-200">
+                {{ data.login }}
+            </span>
+            {% endif %}
+        </h1>
+        <p class="text-xs text-slate-500 mt-1">
+            Zestawienie obecności, nieobecności usprawiedliwionych i nieusprawiedliwionych, spóźnień oraz zwolnień pobrane z Librus Synergia.
+        </p>
+    </div>
+
+    <!-- Przyciski akcji -->
+    <div class="flex items-center gap-2">
+        <button hx-post="{{ url_for('web.action_sync') }}"
+                hx-vals='{"login": "{{ data.login }}"}'
+                hx-target="#attendance-action-toast"
+                hx-indicator="#attendance-sync-spinner"
+                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm shadow-indigo-100 transition-all cursor-pointer">
+            <span id="attendance-sync-spinner" class="htmx-indicator animate-spin">⏳</span>
+            <span>Odśwież dane z Librusa</span>
+        </button>
+    </div>
+</div>
+
+<div id="attendance-action-toast" class="mt-4"></div>
+
+{% set att = data.attendance_view_data %}
+
+<!-- Karty KPI -->
+<div class="grid grid-cols-2 lg:grid-cols-5 gap-4 my-6">
+    <!-- Nieusprawiedliwione (Alert) -->
+    <div class="p-5 rounded-2xl border shadow-sm {{ 'bg-rose-50 border-rose-200' if att.unjustified_absences > 0 else 'bg-white border-slate-200' }}">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider {{ 'text-rose-600' if att.unjustified_absences > 0 else 'text-slate-400' }}">
+                Nieusprawiedliwione
+            </span>
+            <span class="p-2 rounded-xl {{ 'bg-rose-100 text-rose-700' if att.unjustified_absences > 0 else 'bg-slate-100 text-slate-600' }} text-sm">
+                {{ '⚠️' if att.unjustified_absences > 0 else '✓' }}
+            </span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+            <span class="text-3xl font-extrabold {{ 'text-rose-700' if att.unjustified_absences > 0 else 'text-slate-900' }}">
+                {{ att.unjustified_absences }}
+            </span>
+            <span class="text-xs font-semibold {{ 'text-rose-600' if att.unjustified_absences > 0 else 'text-slate-500' }}">
+                godz. {{ 'wymaga reakcji' if att.unjustified_absences > 0 else 'do wyjaśnienia' }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Usprawiedliwione -->
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Usprawiedliwione</span>
+            <span class="p-2 rounded-xl bg-emerald-50 text-emerald-600 text-sm">🟢</span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+            <span class="text-3xl font-extrabold text-slate-900">{{ att.justified_absences }}</span>
+            <span class="text-xs font-semibold text-slate-500">godz. usprawiedliwionych</span>
+        </div>
+    </div>
+
+    <!-- Spóźnienia -->
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Spóźnienia</span>
+            <span class="p-2 rounded-xl bg-amber-50 text-amber-600 text-sm">🟡</span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+            <span class="text-3xl font-extrabold text-slate-900">{{ att.lates_count }}</span>
+            <span class="text-xs font-semibold text-slate-500">razy</span>
+        </div>
+    </div>
+
+    <!-- Zwolnienia i wycieczki -->
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Zwolnienia / Wycieczki</span>
+            <span class="p-2 rounded-xl bg-sky-50 text-sky-600 text-sm">🔵</span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+            <span class="text-3xl font-extrabold text-slate-900">{{ att.exemptions_count + att.trips_count }}</span>
+            <span class="text-xs font-semibold text-slate-500">godz.</span>
+        </div>
+    </div>
+
+    <!-- Łącznie nieobecności -->
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm col-span-2 lg:col-span-1">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Łącznie opuszczonych</span>
+            <span class="p-2 rounded-xl bg-indigo-50 text-indigo-600 text-sm">📊</span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+            <span class="text-3xl font-extrabold text-slate-900">{{ att.total_absences }}</span>
+            <span class="text-xs font-semibold text-slate-500">godzin lekcyjnych</span>
+        </div>
+    </div>
+</div>
+
+<!-- Sekcja 1: Semestralny mini-kalendarz miesięcy (Heatmapa obecności) -->
+<div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm mb-8">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-100">
+        <div>
+            <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                <span>📅 Przegląd obecności w roku szkolnym</span>
+            </h2>
+            <p class="text-xs text-slate-500 mt-0.5">
+                Kompaktowa mapa miesięcy. Kolorowe wskaźniki oznaczają dni ze zdarzeniami frekwencyjnymi.
+            </p>
+        </div>
+
+        <!-- Legenda -->
+        <div class="flex flex-wrap items-center gap-3 text-xs text-slate-600">
+            <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Nieusprawiedliwiona</span>
+            <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Usprawiedliwiona</span>
+            <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Spóźnienie</span>
+            <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span> Zwolnienie</span>
+            <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-slate-200"></span> Pełna obecność</span>
+        </div>
+    </div>
+
+    <!-- Siatka miesięcy -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 pt-4">
+        {% for m in att.heatmap_months %}
+        <div class="border rounded-xl p-3 {{ 'border-indigo-200 bg-indigo-50/20' if m.has_events else 'border-slate-100 bg-slate-50/40' }}">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold text-slate-800">{{ m.short_name }} {{ m.year }}</span>
+                {% if m.has_events %}
+                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                    {{ m.events_count }} zdarz.
+                </span>
+                {% endif %}
+            </div>
+
+            <!-- Nagłówki dni tygodnia -->
+            <div class="grid grid-cols-7 gap-1 text-[9px] font-semibold text-slate-400 text-center mb-1">
+                <span>P</span><span>W</span><span>Ś</span><span>C</span><span>P</span><span class="text-slate-300">S</span><span class="text-slate-300">N</span>
+            </div>
+
+            <!-- Dni miesiąca -->
+            <div class="grid grid-cols-7 gap-1 text-center">
+                {% for week in m.weeks %}
+                    {% for day in week %}
+                        {% if day.day_num is none %}
+                            <div class="h-6"></div>
+                        {% else %}
+                            {% set is_active = day.status != 'clean' %}
+                            <button type="button"
+                                    {% if is_active %}
+                                    onclick="scrollToDay('{{ day.date_iso }}')"
+                                    title="{{ day.tooltip }}"
+                                    {% else %}
+                                    title="{{ day.day_num }} {{ m.short_name }}: 100% obecności"
+                                    {% endif %}
+                                    class="h-6 w-full rounded flex items-center justify-center text-[10px] font-medium transition-all relative
+                                    {{ 'cursor-pointer hover:ring-2 hover:ring-indigo-400' if is_active else 'cursor-default' }}
+                                    {% if day.status == 'unjustified' %}
+                                        bg-rose-500 text-white font-bold shadow-xs
+                                    {% elif day.status == 'justified' %}
+                                        bg-emerald-500 text-white font-bold shadow-xs
+                                    {% elif day.status == 'late' %}
+                                        bg-amber-400 text-slate-900 font-bold shadow-xs
+                                    {% elif day.status == 'exempt' %}
+                                        bg-sky-400 text-white font-bold shadow-xs
+                                    {% elif day.is_today %}
+                                        border border-indigo-500 text-indigo-700 font-bold bg-white
+                                    {% elif day.is_weekend %}
+                                        text-slate-300
+                                    {% else %}
+                                        text-slate-600 hover:bg-slate-200/50
+                                    {% endif %}">
+                                {{ day.day_num }}
+                            </button>
+                        {% endif %}
+                    {% endfor %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Główna zawartość: Oś czasu (Timeline) + Podsumowanie przedmiotowe -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Kolumna lewa (2 kolumny): Oś czasu zdarzeń -->
+    <div class="lg:col-span-2 space-y-4">
+        <div class="flex items-center justify-between pb-2">
+            <div>
+                <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <span>📋 Dziennik nieobecności i spóźnień</span>
+                    <span class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold">
+                        {{ att.timeline_days_count }} dni
+                    </span>
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Szczegółowa lista dni z zarejestrowanymi zdarzeniami frekwencyjnymi.
+                </p>
+            </div>
+
+            <!-- Szybkie filtry -->
+            <div class="flex items-center gap-1.5 text-xs">
+                <button type="button" onclick="filterAttendance('all')" id="btn-filter-all"
+                        class="px-2.5 py-1 rounded-lg font-bold bg-indigo-600 text-white transition-colors cursor-pointer">
+                    Wszystkie
+                </button>
+                <button type="button" onclick="filterAttendance('unjustified')" id="btn-filter-unjustified"
+                        class="px-2.5 py-1 rounded-lg font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer">
+                    Nieusprawiedliwione
+                </button>
+                <button type="button" onclick="filterAttendance('lates')" id="btn-filter-lates"
+                        class="px-2.5 py-1 rounded-lg font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer">
+                    Spóźnienia
+                </button>
+            </div>
+        </div>
+
+        {% if not att.timeline_days %}
+        <!-- Pusty stan -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-sm">
+            <div class="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-3xl mx-auto mb-4">
+                🌟
+            </div>
+            <h3 class="text-base font-bold text-slate-900">Brak zarejestrowanych nieobecności</h3>
+            <p class="text-xs text-slate-500 max-w-md mx-auto mt-1">
+                Uczeń nie ma zarejestrowanych żadnych nieobecności, spóźnień ani zwolnień w dzienniku Librus. Gratulacje – wzorowa 100% frekwencja!
+            </p>
+        </div>
+        {% else %}
+        <!-- Lista dni -->
+        <div class="space-y-4" id="attendance-timeline-container">
+            {% for day in att.timeline_days %}
+            <div id="day-{{ day.date }}"
+                 data-status="{{ day.status_type }}"
+                 data-has-unjustified="{{ 'true' if day.unjustified_count > 0 else 'false' }}"
+                 data-has-lates="{{ 'true' if day.lates_count > 0 else 'false' }}"
+                 class="attendance-day-card bg-white rounded-2xl border transition-all duration-200 shadow-sm overflow-hidden
+                 {{ 'border-rose-200 ring-1 ring-rose-200' if day.unjustified_count > 0 else 'border-slate-200' }}">
+
+                <!-- Nagłówek karty dnia -->
+                <div class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 bg-slate-50/50">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm
+                            {% if day.status_type == 'unjustified' %}
+                                bg-rose-100 text-rose-700
+                            {% elif day.status_type == 'justified' %}
+                                bg-emerald-100 text-emerald-700
+                            {% elif day.status_type == 'late' %}
+                                bg-amber-100 text-amber-800
+                            {% else %}
+                                bg-sky-100 text-sky-700
+                            {% endif %}">
+                            {{ day.date_short }}
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                <span>{{ day.date_display }}</span>
+                            </h3>
+                            <p class="text-xs text-slate-500">
+                                Liczba zdarzeń: {{ day.total_events }} •
+                                {% if day.is_full_day %}
+                                    <span class="font-semibold text-rose-600">Cały dzień absencji</span>
+                                {% else %}
+                                    Cząstkowa nieobecność
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold px-3 py-1 rounded-full
+                            {% if day.badge_color == 'rose' %}
+                                bg-rose-100 text-rose-700 border border-rose-200
+                            {% elif day.badge_color == 'emerald' %}
+                                bg-emerald-100 text-emerald-700 border border-emerald-200
+                            {% elif day.badge_color == 'amber' %}
+                                bg-amber-100 text-amber-800 border border-amber-200
+                            {% else %}
+                                bg-sky-100 text-sky-700 border border-sky-200
+                            {% endif %}">
+                            {{ day.badge_label }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Wiersze poszczególnych lekcji w danym dniu -->
+                <div class="divide-y divide-slate-100 p-2 sm:p-3">
+                    {% for entry in day.entries %}
+                    <div class="p-3 sm:px-4 sm:py-3 rounded-xl hover:bg-slate-50/80 transition-colors flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div class="flex items-start gap-3">
+                            <!-- Symbol badge -->
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0
+                                {% if entry.color %}
+                                    text-white
+                                {% elif entry.is_late %}
+                                    bg-amber-400 text-slate-900
+                                {% elif entry.is_absence and not entry.is_justified %}
+                                    bg-rose-500 text-white
+                                {% elif entry.is_absence and entry.is_justified %}
+                                    bg-emerald-500 text-white
+                                {% else %}
+                                    bg-sky-400 text-white
+                                {% endif %}"
+                                {% if entry.color %}style="background-color: {{ entry.color }};"{% endif %}>
+                                {{ entry.symbol }}
+                            </div>
+
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-extrabold text-slate-900">
+                                        Lekcja {{ entry.lesson_no }}: {{ entry.subject }}
+                                    </span>
+                                    {% if entry.justification_info %}
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                                        {{ entry.justification_info }}
+                                    </span>
+                                    {% endif %}
+                                    {% if entry.is_trip %}
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                        Wycieczka
+                                    </span>
+                                    {% endif %}
+                                </div>
+
+                                <div class="text-xs text-slate-500 mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                                    {% if entry.teacher %}
+                                    <span>Nauczyciel: <strong class="text-slate-700 font-medium">{{ entry.teacher }}</strong></span>
+                                    {% endif %}
+                                    {% if entry.type %}
+                                    <span>Typ: <strong class="text-slate-700 font-medium">{{ entry.type }}</strong></span>
+                                    {% endif %}
+                                    {% if entry.period %}
+                                    <span class="text-slate-400">({{ entry.period }})</span>
+                                    {% endif %}
+                                </div>
+
+                                {% if entry.topic %}
+                                <div class="mt-1 text-xs text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                    <span class="text-slate-400 font-semibold">Temat lekcji:</span> {{ entry.topic }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="text-right shrink-0">
+                            <span class="text-xs font-semibold
+                                {% if entry.is_absence and not entry.is_justified %}
+                                    text-rose-600
+                                {% elif entry.is_absence and entry.is_justified %}
+                                    text-emerald-600
+                                {% elif entry.is_late %}
+                                    text-amber-600
+                                {% else %}
+                                    text-sky-600
+                                {% endif %}">
+                                {% if entry.is_absence and not entry.is_justified %}
+                                    🔴 Nieobecność
+                                {% elif entry.is_absence and entry.is_justified %}
+                                    🟢 Usprawiedliwiona
+                                {% elif entry.is_late %}
+                                    🟡 Spóźnienie
+                                {% else %}
+                                    🔵 Zwolnienie
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Kolumna prawa: Zestawienie przedmiotowe & Oficjalne podsumowania -->
+    <div class="space-y-6">
+        <!-- Zestawienie przedmiotowe -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+            <h3 class="text-sm font-bold text-slate-900 pb-3 border-b border-slate-100 flex items-center justify-between">
+                <span>📚 Absencje wg przedmiotów</span>
+                <span class="text-xs font-normal text-slate-400">{{ att.subjects_summary|length }} przedmiotów</span>
+            </h3>
+
+            {% if not att.subjects_summary %}
+            <p class="text-xs text-slate-400 text-center py-6">
+                Brak opuszczonych lekcji z poszczególnych przedmiotów.
+            </p>
+            {% else %}
+            <div class="divide-y divide-slate-100 mt-2">
+                {% for subj in att.subjects_summary %}
+                <div class="py-3 flex items-center justify-between text-xs">
+                    <div>
+                        <span class="font-bold text-slate-800">{{ subj.subject }}</span>
+                        <div class="text-[11px] text-slate-400 mt-0.5">
+                            {% if subj.unjustified > 0 %}
+                            <span class="text-rose-600 font-semibold">{{ subj.unjustified }} nieuspr.</span> •
+                            {% endif %}
+                            {% if subj.justified > 0 %}
+                            <span class="text-emerald-600">{{ subj.justified }} uspr.</span> •
+                            {% endif %}
+                            {% if subj.lates > 0 %}
+                            <span class="text-amber-600">{{ subj.lates }} spóźn.</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="font-extrabold text-slate-900 text-sm">{{ subj.total_absences }}</span>
+                        <span class="text-[10px] text-slate-400 block">godz.</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Oficjalne sumy okresów z Librusa -->
+        {% if att.periods_summary %}
+        <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+            <h3 class="text-sm font-bold text-slate-900 pb-3 border-b border-slate-100">
+                📊 Podsumowania semestralne (Librus)
+            </h3>
+            <div class="space-y-4 mt-3">
+                {% for p in att.periods_summary %}
+                <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-100">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold text-slate-800">{{ p.period or p.label }}</span>
+                        <span class="text-xs font-extrabold text-indigo-600">Łącznie: {{ p.total_absences }}h</span>
+                    </div>
+                    <div class="grid grid-cols-4 gap-2 text-center text-[11px]">
+                        <div class="bg-white p-1.5 rounded-lg border border-slate-100">
+                            <span class="text-slate-400 block text-[9px] uppercase font-bold">U</span>
+                            <span class="font-bold text-emerald-600">{{ p.justified }}</span>
+                        </div>
+                        <div class="bg-white p-1.5 rounded-lg border border-slate-100">
+                            <span class="text-slate-400 block text-[9px] uppercase font-bold">NU</span>
+                            <span class="font-bold text-rose-600">{{ p.unjustified }}</span>
+                        </div>
+                        <div class="bg-white p-1.5 rounded-lg border border-slate-100">
+                            <span class="text-slate-400 block text-[9px] uppercase font-bold">SP</span>
+                            <span class="font-bold text-amber-600">{{ p.lates }}</span>
+                        </div>
+                        <div class="bg-white p-1.5 rounded-lg border border-slate-100">
+                            <span class="text-slate-400 block text-[9px] uppercase font-bold">ZW</span>
+                            <span class="font-bold text-sky-600">{{ p.exemptions }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Karta pomocy / informacyjna -->
+        <div class="bg-indigo-50/50 rounded-2xl border border-indigo-100 p-5 text-xs text-indigo-900">
+            <h4 class="font-bold flex items-center gap-2 mb-1.5">
+                <span>💡 Wskazówka dla rodzica</span>
+            </h4>
+            <p class="text-indigo-800/80 leading-relaxed">
+                Nieobecności oznaczone kolorem czerwonym wymagają usprawiedliwienia w Librusie przez moduł <em>e-Usprawiedliwienia</em> lub bezpośrednio u wychowawcy.
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+function scrollToDay(dateIso) {
+    const el = document.getElementById('day-' + dateIso);
+    if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('ring-4', 'ring-indigo-400');
+        setTimeout(() => {
+            el.classList.remove('ring-4', 'ring-indigo-400');
+        }, 1800);
+    }
+}
+
+function filterAttendance(type) {
+    const cards = document.querySelectorAll('.attendance-day-card');
+    const btnAll = document.getElementById('btn-filter-all');
+    const btnUnj = document.getElementById('btn-filter-unjustified');
+    const btnLat = document.getElementById('btn-filter-lates');
+
+    // Reset styli przycisków
+    [btnAll, btnUnj, btnLat].forEach(b => {
+        b.className = 'px-2.5 py-1 rounded-lg font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer';
+    });
+
+    if (type === 'all') {
+        btnAll.className = 'px-2.5 py-1 rounded-lg font-bold bg-indigo-600 text-white transition-colors cursor-pointer';
+        cards.forEach(c => c.style.display = '');
+    } else if (type === 'unjustified') {
+        btnUnj.className = 'px-2.5 py-1 rounded-lg font-bold bg-rose-600 text-white transition-colors cursor-pointer';
+        cards.forEach(c => {
+            c.style.display = c.dataset.hasUnjustified === 'true' ? '' : 'none';
+        });
+    } else if (type === 'lates') {
+        btnLat.className = 'px-2.5 py-1 rounded-lg font-bold bg-amber-500 text-white transition-colors cursor-pointer';
+        cards.forEach(c => {
+            c.style.display = c.dataset.hasLates === 'true' ? '' : 'none';
+        });
+    }
+}
+</script>
+{% endblock %}

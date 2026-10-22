@@ -285,6 +285,15 @@ class TestWebDashboard(unittest.TestCase):
         self.assertIn('Wiadomości i Ogłoszenia'.encode(), res_msg.data)
         self.assertIn(b'Zebranie z rodzicami', res_msg.data)
 
+        # 5b. Widok frekwencji
+        res_att = client.get('/frekwencja')
+        self.assertEqual(res_att.status_code, 200)
+        self.assertIn('Frekwencja & Obecność'.encode(), res_att.data)
+        self.assertIn(b'href="/frekwencja"', res_dash.data)
+
+        res_att_alias = client.get('/attendance')
+        self.assertEqual(res_att_alias.status_code, 200)
+
         # 6. Widok centrum akcji
         res_act = client.get('/akcje')
         self.assertEqual(res_act.status_code, 200)
@@ -735,6 +744,7 @@ class TestWebDashboard(unittest.TestCase):
             'web_oceny_optymalizator.html',
             'web_przedmiot_matematyka.html',
             'web_terminarz.html',
+            'web_frekwencja.html',
             'web_wiadomosci.html',
             'web_raporty_podsumowanie.html',
             'web_raporty_postepy.html',
@@ -2335,6 +2345,275 @@ class TestWebDashboard(unittest.TestCase):
         self.assertIn('data-theme-card="dark"', html_settings)
         self.assertIn('data-theme-card="midnight"', html_settings)
         self.assertIn('data-theme-card="forest"', html_settings)
+
+    def test_attendance_view_with_data_and_empty_state(self):
+        """Testuje podstronę /frekwencja w stanie pustym oraz z zapisanymi danymi absencji."""
+        app = create_app(
+            config_path=self.config_path,
+            storage_dir=self.storage_dir,
+            no_auth=True,
+            secret_key='test-secret',
+        )
+        client = app.test_client()
+
+        # 1. Pusty stan dla studenta (brak absencji)
+        res_empty = client.get('/frekwencja')
+        self.assertEqual(res_empty.status_code, 200)
+        html_empty = res_empty.data.decode('utf-8')
+        self.assertIn('Brak zarejestrowanych nieobecności', html_empty)
+        self.assertIn('wzorowa 100% frekwencja', html_empty)
+
+        # 2. Zapisanie danych frekwencji do storage
+        storage = get_storage(self.mock_config, self.storage_dir)
+        entries = [
+            {
+                'id': '9001',
+                'date': '2026-09-18',
+                'lesson_no': 3,
+                'subject': 'Geografia',
+                'symbol': 'u',
+                'type': 'nieobecność uspr.',
+                'teacher': 'Dorota Opolska',
+                'topic': 'Ukształtowanie terenu',
+                'is_absence': True,
+                'is_justified': True,
+                'is_late': False,
+                'is_exempt': False,
+                'is_trip': False,
+                'justification_info': 'e-Usprawiedliwienie',
+            },
+            {
+                'id': '9002',
+                'date': '2026-09-22',
+                'lesson_no': 2,
+                'subject': 'Matematyka',
+                'symbol': 'nb',
+                'type': 'nieobecność',
+                'teacher': 'Jan Kowalski',
+                'is_absence': True,
+                'is_justified': False,
+                'is_late': False,
+                'is_exempt': False,
+                'is_trip': False,
+            },
+            {
+                'id': '9003',
+                'date': '2026-09-22',
+                'lesson_no': 1,
+                'subject': 'Fizyka',
+                'symbol': 'sp',
+                'type': 'spóźnienie',
+                'teacher': 'Piotr Wiśniewski',
+                'is_absence': False,
+                'is_justified': False,
+                'is_late': True,
+                'is_exempt': False,
+                'is_trip': False,
+            },
+        ]
+        summary = [
+            {
+                'period': 'Okres 1',
+                'label': 'Suma za okres 1',
+                'justified': 1,
+                'unjustified': 1,
+                'total_absences': 2,
+                'lates': 1,
+                'exemptions': 0,
+            }
+        ]
+        storage.save_attendance('123456', entries, summary)
+
+        # 3. Ponowne odpytanie /frekwencja z danymi
+        res_with_data = client.get('/frekwencja')
+        self.assertEqual(res_with_data.status_code, 200)
+        html = res_with_data.data.decode('utf-8')
+
+        # Weryfikacja kart KPI
+        self.assertIn('Nieusprawiedliwione', html)
+        self.assertIn('wymaga reakcji', html)
+        self.assertIn('Usprawiedliwione', html)
+        self.assertIn('Spóźnienia', html)
+
+        # Weryfikacja osi czasu (Timeline)
+        self.assertIn('Geografia', html)
+        self.assertIn('Matematyka', html)
+        self.assertIn('e-Usprawiedliwienie', html)
+        self.assertIn('Fizyka', html)
+        self.assertIn('Spóźnienie', html)
+
+        # Weryfikacja semestralnego kalendarza
+        self.assertIn('Przegląd obecności w roku szkolnym', html)
+        self.assertIn('scrollToDay', html)
+
+        # Weryfikacja zestawienia przedmiotowego
+        self.assertIn('Absencje wg przedmiotów', html)
+
+        # Weryfikacja podsumowania semestralnego
+        self.assertIn('Podsumowania semestralne (Librus)', html)
+        self.assertIn('Okres 1', html)
+
+        # Weryfikacja alertu na głównym Pulpicie (Dashboard)
+        res_dash = client.get('/')
+        self.assertEqual(res_dash.status_code, 200)
+        dash_html = res_dash.data.decode('utf-8')
+        self.assertIn('nieusprawiedliwione godziny lekcyjne', dash_html)
+        self.assertIn('href="/frekwencja"', dash_html)
+
+    def test_attendance_integration_in_schedule_and_dashboard(self):
+        """Weryfikuje oznaczanie zdarzeń frekwencji (nb, u, sp, zw) w planie lekcji na pulpicie oraz w widoku /plan."""
+        storage = get_storage(self.mock_config, self.storage_dir)
+
+        # 1. Zapisanie lekcji w schedule na 2026-09-18
+        storage.save_schedule_entries('123456', [
+            {
+                'id': 'sch_18_1',
+                'date': '2026-09-18',
+                'lesson_no': 1,
+                'time_from': '08:00',
+                'time_to': '08:45',
+                'subject': 'Język polski',
+                'teacher': 'B. Wiśniewska',
+                'classroom': '11',
+                'is_substitution': False,
+                'is_cancelled': False,
+            },
+            {
+                'id': 'sch_18_2',
+                'date': '2026-09-18',
+                'lesson_no': 2,
+                'time_from': '08:55',
+                'time_to': '09:40',
+                'subject': 'Matematyka',
+                'teacher': 'A. Nowak',
+                'classroom': '12',
+                'is_substitution': False,
+                'is_cancelled': False,
+            },
+            {
+                'id': 'sch_18_3',
+                'date': '2026-09-18',
+                'lesson_no': 3,
+                'time_from': '09:50',
+                'time_to': '10:35',
+                'subject': 'Geografia',
+                'teacher': 'D. Opolska',
+                'classroom': '22',
+                'is_substitution': False,
+                'is_cancelled': False,
+            },
+            {
+                'id': 'sch_18_4',
+                'date': '2026-09-18',
+                'lesson_no': 4,
+                'time_from': '10:45',
+                'time_to': '11:30',
+                'subject': 'Historia',
+                'teacher': 'C. Wójcik',
+                'classroom': '15',
+                'is_substitution': False,
+                'is_cancelled': False,
+            },
+        ])
+
+        # 2. Zapisanie zdarzeń frekwencji na 2026-09-18 (lekcja 2 spóźnienie, lekcja 3 nieobecność uspr., lekcja 4 nieobecność nieuspr.)
+        entries = [
+            {
+                'id': 'att_18_2',
+                'date': '2026-09-18',
+                'lesson_no': 2,
+                'subject': 'Matematyka',
+                'symbol': 'sp',
+                'type': 'spóźnienie',
+                'teacher': 'A. Nowak',
+                'is_absence': False,
+                'is_justified': False,
+                'is_late': True,
+                'is_exempt': False,
+                'is_trip': False,
+            },
+            {
+                'id': 'att_18_3',
+                'date': '2026-09-18',
+                'lesson_no': 3,
+                'subject': 'Geografia',
+                'symbol': 'u',
+                'type': 'nieobecność uspr.',
+                'teacher': 'D. Opolska',
+                'topic': 'Ukształtowanie terenu',
+                'is_absence': True,
+                'is_justified': True,
+                'is_late': False,
+                'is_exempt': False,
+                'is_trip': False,
+                'justification_info': 'e-Usprawiedliwienie',
+            },
+            {
+                'id': 'att_18_4',
+                'date': '2026-09-18',
+                'lesson_no': 4,
+                'subject': 'Historia',
+                'symbol': 'nb',
+                'type': 'nieobecność',
+                'teacher': 'C. Wójcik',
+                'is_absence': True,
+                'is_justified': False,
+                'is_late': False,
+                'is_exempt': False,
+                'is_trip': False,
+            },
+        ]
+        storage.save_attendance('123456', entries, [])
+
+        app = create_app(
+            config_path=self.config_path,
+            storage_dir=self.storage_dir,
+            no_auth=True,
+            secret_key='test-secret',
+        )
+        client = app.test_client()
+
+        # 3. Weryfikacja w widoku /plan?date=2026-09-18
+        res_plan = client.get('/plan?date=2026-09-18')
+        self.assertEqual(res_plan.status_code, 200)
+        html_plan = res_plan.data.decode('utf-8')
+
+        # Wskaźniki w nagłówku dnia
+        self.assertIn('🔴 1 nieuspr.', html_plan)
+        self.assertIn('🟢 1 uspr.', html_plan)
+        self.assertIn('🟡 1 spóźnienie', html_plan)
+
+        # Odznaki przy przedmiotach
+        self.assertIn('🟡 Spóźnienie', html_plan)
+        self.assertIn('🟢 Usprawiedliwiona (e-Usprawiedliwienie)', html_plan)
+        self.assertIn('🔴 Nieobecność (nieuspr.)', html_plan)
+
+        # Przyciski ze skrótem frekwencji po prawej stronie
+        self.assertIn('⏱️ Frekwencja: sp', html_plan)
+        self.assertIn('⏱️ Frekwencja: u', html_plan)
+        self.assertIn('⏱️ Frekwencja: nb', html_plan)
+        self.assertIn('/frekwencja#day-2026-09-18', html_plan)
+
+        # 4. Weryfikacja na Pulpicie (Dashboard) przy wyborze tej daty /?date=2026-09-18
+        res_dash = client.get('/?date=2026-09-18')
+        self.assertEqual(res_dash.status_code, 200)
+        html_dash = res_dash.data.decode('utf-8')
+
+        # Alerty w sekcji planu na pulpicie
+        self.assertIn('🔴 1 nieuspr.', html_dash)
+        self.assertIn('🟢 1 uspr.', html_dash)
+        self.assertIn('🟡 1 spóźnienie', html_dash)
+
+        # Etykiety przy przedmiotach na pulpicie
+        self.assertIn('🟡 Spóźnienie', html_dash)
+        self.assertIn('🟢 Usprawiedliwiona (e-Usprawiedliwienie)', html_dash)
+        self.assertIn('🔴 Nieobecność (nieuspr.)', html_dash)
+
+        # Przyciski po prawej stronie na pulpicie
+        self.assertIn('⏱️ sp', html_dash)
+        self.assertIn('⏱️ u', html_dash)
+        self.assertIn('⏱️ nb', html_dash)
+
 
 
 if __name__ == '__main__':

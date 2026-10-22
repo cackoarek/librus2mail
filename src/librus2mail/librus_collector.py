@@ -160,6 +160,11 @@ class LibrusCollector:
                 sleep(5)
                 librus.fetch_schedule()
 
+            if user_config.get('read_attendance', True):
+                step = "frekwencja"
+                sleep(5)
+                librus.fetch_attendance()
+
             if hasattr(self.storage, 'set_student_name'):
                 self.storage.set_student_name(login, name)
 
@@ -199,6 +204,8 @@ class LibrusCollector:
                 'grades': getattr(librus, 'grades', []),
                 'timetable': getattr(librus, 'timetable', []),
                 'schedule': getattr(librus, 'schedule', []),
+                'attendance': getattr(librus, 'attendance', []),
+                'attendance_summary': getattr(librus, 'attendance_summary', []),
                 'new_messages': new_msgs,
                 'new_notifications': new_notifs,
                 'new_grades': new_grades,
@@ -335,6 +342,7 @@ def resolve_target_users(
                 default_read_messages = first_user.get('read_messages', config.get('read_messages', True))
                 default_read_timetable = first_user.get('read_timetable', config.get('read_timetable', True))
                 default_read_schedule = first_user.get('read_schedule', config.get('read_schedule', True))
+                default_read_attendance = first_user.get('read_attendance', config.get('read_attendance', True))
                 custom_name = storage.get_student_name(user_filter) if hasattr(storage, 'get_student_name') else None
                 student_name = custom_name or f"Uczeń ({user_filter})"
                 matched = [{
@@ -346,6 +354,7 @@ def resolve_target_users(
                     'read_messages': default_read_messages,
                     'read_timetable': default_read_timetable,
                     'read_schedule': default_read_schedule,
+                    'read_attendance': default_read_attendance,
                 }]
                 logger.info(f"Załadowano profil ze storage: '{student_name}'.")
             else:
@@ -364,6 +373,7 @@ def resolve_target_users(
             default_read_messages = first_user.get('read_messages', config.get('read_messages', True))
             default_read_timetable = first_user.get('read_timetable', config.get('read_timetable', True))
             default_read_schedule = first_user.get('read_schedule', config.get('read_schedule', True))
+            default_read_attendance = first_user.get('read_attendance', config.get('read_attendance', True))
             auto_users = []
             for s_login in stored_logins:
                 s_name = storage.get_student_name(s_login) or f"Uczeń ({s_login})"
@@ -376,6 +386,7 @@ def resolve_target_users(
                     'read_messages': default_read_messages,
                     'read_timetable': default_read_timetable,
                     'read_schedule': default_read_schedule,
+                    'read_attendance': default_read_attendance,
                 })
             logger.info(f"Załadowano profile uczniów odnalezione w '{effective_storage_dir}': {[u['librus_login_name'] for u in auto_users]}")
             users = auto_users

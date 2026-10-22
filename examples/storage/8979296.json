@@ -1122,5 +1122,41 @@
     "Plastyka",
     "Sztuka",
     "Wychowanie fizyczne"
-  ]
+  ],
+  "attendance_history": [
+    {
+      "id": "5001",
+      "date": "2026-09-18",
+      "lesson_no": 3,
+      "subject": "Geografia",
+      "symbol": "u",
+      "type": "nieobecność uspr.",
+      "teacher": "Dorota Opolska",
+      "topic": "Ukształtowanie powierzchni Ziemi",
+      "added_by": "Dorota Opolska",
+      "is_trip": false,
+      "is_late": false,
+      "is_absence": true,
+      "is_justified": true,
+      "is_exempt": false,
+      "justification_info": "e-Usprawiedliwienie",
+      "color": "#2ECC71",
+      "period": "Okres 1",
+      "raw_tooltip": "Rodzaj: nieobecność uspr.<br> Data: 2026-09-18 (pt.) <br>Lekcja: Geografia<br>Nauczyciel: Dorota Opolska<br>Godzina lekcyjna: 3</b><br/>Czy wycieczka: Nie<br>Dodał: Dorota Opolska<br /><span class=\"blue\">Usprawiedliwienie dodane za pomocą modułu <nobr>e-Usprawiedliwienia</nobr></span>",
+      "added_at": "2026-09-18T18:00:00.000000",
+      "updated_at": "2026-09-18T18:00:00.000000"
+    }
+  ],
+  "attendance_summary": [
+    {
+      "label": "Suma za okres 1",
+      "period": "Okres 1",
+      "justified": 1,
+      "unjustified": 0,
+      "total_absences": 1,
+      "lates": 0,
+      "exemptions": 0
+    }
+  ],
+  "attendance_last_sync": "2026-09-18T18:00:00.000000"
 }

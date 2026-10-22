@@ -7,6 +7,7 @@ from pathlib import Path
 
 from librus2mail.dom_parser import (
     parse_announcements_html,
+    parse_attendance_html,
     parse_grades_html,
     parse_messages_html,
     parse_schedule_html,
@@ -225,3 +226,101 @@ class TestScheduleParser:
 
     def test_parse_schedule_empty_html(self):
         assert parse_schedule_html("<div>Brak planu</div>") == []
+
+
+class TestAttendanceParser:
+    """Testy parsowania frekwencji ucznia (/przegladaj_nb/uczen)."""
+
+    def test_parse_attendance_fixture(self):
+        fixture_html = (FIXTURES_DIR / "attendance.html").read_text(encoding="utf-8")
+        result = parse_attendance_html(fixture_html)
+
+        entries = result["entries"]
+        periods = result["periods_summary"]
+
+        assert len(entries) == 4
+        assert len(periods) == 1
+
+        # Sprawdzenie wpisu nieobecności usprawiedliwionej (u)
+        u_entry = next(e for e in entries if e.id == "5001")
+        assert u_entry.symbol == "u"
+        assert u_entry.date == "2026-10-21"
+        assert u_entry.lesson_no == 1
+        assert u_entry.subject == "język angielski"
+        assert u_entry.teacher == "Jan Kowalski"
+        assert u_entry.is_justified is True
+        assert u_entry.is_absence is True
+        assert u_entry.is_late is False
+        assert u_entry.is_exempt is False
+        assert u_entry.justification_info == "e-Usprawiedliwienie"
+        assert u_entry.color == "#2ECC71"
+
+        # Sprawdzenie nieobecności nieusprawiedliwionej (nb)
+        nb_entry = next(e for e in entries if e.id == "5002")
+        assert nb_entry.symbol == "nb"
+        assert nb_entry.date == "2026-10-21"
+        assert nb_entry.lesson_no == 2
+        assert nb_entry.subject == "matematyka"
+        assert nb_entry.is_justified is False
+        assert nb_entry.is_absence is True
+        assert nb_entry.color == "#E74C3C"
+
+        # Sprawdzenie spóźnienia (sp)
+        sp_entry = next(e for e in entries if e.id == "5003")
+        assert sp_entry.symbol == "sp"
+        assert sp_entry.date == "2026-10-20"
+        assert sp_entry.lesson_no == 3
+        assert sp_entry.subject == "historia"
+        assert sp_entry.topic == "Powstanie państwa polskiego."
+        assert sp_entry.is_late is True
+        assert sp_entry.is_absence is False
+
+        # Sprawdzenie zwolnienia (zw)
+        zw_entry = next(e for e in entries if e.id == "5004")
+        assert zw_entry.symbol == "zw"
+        assert zw_entry.date == "2026-10-20"
+        assert zw_entry.lesson_no == 4
+        assert zw_entry.subject == "wychowanie fizyczne"
+        assert zw_entry.is_exempt is True
+        assert zw_entry.is_absence is False
+
+        # Sprawdzenie podsumowania okresu
+        p1 = periods[0]
+        assert p1.period == "Okres 1"
+        assert p1.justified == 1
+        assert p1.unjustified == 1
+        assert p1.total_absences == 2
+        assert p1.lates == 1
+        assert p1.exemptions == 1
+
+    def test_parse_attendance_empty_fixture(self):
+        fixture_html = (FIXTURES_DIR / "attendance_empty.html").read_text(encoding="utf-8")
+        result = parse_attendance_html(fixture_html)
+
+        assert result["entries"] == []
+        assert len(result["periods_summary"]) == 1
+        p1 = result["periods_summary"][0]
+        assert p1.period == "Okres 1"
+        assert p1.justified == 0
+        assert p1.unjustified == 0
+        assert p1.total_absences == 0
+        assert p1.lates == 0
+        assert p1.exemptions == 0
+
+    def test_parse_attendance_broken_html(self):
+        result = parse_attendance_html("<div>Brak tabeli frekwencji</div>")
+        assert result == {"entries": [], "periods_summary": []}
+
+    def test_parse_attendance_view_source_dump(self):
+        # Symulacja zrzutu źródła w tagach <td class="line-content">
+        raw = """
+        <html><body><table>
+          <tr><td class="line-content">&lt;table class="big decorated"&gt;</td></tr>
+          <tr><td class="line-content">&lt;tr&gt;&lt;td colspan="7"&gt;Okres 1&lt;/td&gt;&lt;/tr&gt;</td></tr>
+          <tr><td class="line-content">&lt;tr&gt;&lt;td colspan="7"&gt;Brak nieobecności&lt;/td&gt;&lt;/tr&gt;</td></tr>
+          <tr><td class="line-content">&lt;/table&gt;</td></tr>
+        </table></body></html>
+        """
+        result = parse_attendance_html(raw)
+        assert result["entries"] == []
+

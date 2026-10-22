@@ -11,6 +11,7 @@ from bs4 import BeautifulSoup
 
 from .dom_parser import (
     parse_announcements_html,
+    parse_attendance_html,
     parse_grades_html,
     parse_messages_html,
     parse_schedule_html,
@@ -36,6 +37,7 @@ NOTIFICATIONS_URL = 'https://synergia.librus.pl/ogloszenia'
 GRADES_URL = 'https://synergia.librus.pl/przegladaj_oceny/uczen'
 TIMETABLE_URL = 'https://synergia.librus.pl/terminarz'
 PLAN_LEKCJI_URL = 'https://synergia.librus.pl/przegladaj_plan_lekcji'
+ATTENDANCE_URL = 'https://synergia.librus.pl/przegladaj_nb/uczen'
 
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
 DEFAULT_TIMEOUT = 20
@@ -55,6 +57,11 @@ class Librus:
         self.__do_read_grades = config.get('read_grades', True)
         self.__do_read_timetable = config.get('read_timetable', True)
         self.__do_read_schedule = config.get('read_schedule', True)
+        self.__do_read_attendance = config.get('read_attendance', True)
+        self.attendance: list[dict[str, Any]] = []
+        self.attendance_summary: list[dict[str, Any]] = []
+        self._attendance_fetched = False
+        self.__known_attendance: set[str] = set()
         self.__librus_login = config.get('librus_login')
         raw_password = config.get('librus_password')
         self.__librus_password = (
@@ -380,6 +387,12 @@ class Librus:
                     str(self.__librus_login),
                     self.schedule,
                 )
+            if hasattr(self, 'attendance') and (self.attendance or getattr(self, '_attendance_fetched', False) or getattr(self, 'attendance_summary', None)) and hasattr(self.__storage, 'save_attendance'):
+                self.__storage.save_attendance(
+                    str(self.__librus_login),
+                    self.attendance,
+                    summary=getattr(self, 'attendance_summary', None),
+                )
 
     def get_not_known_messages_and_mark_as_known(self) -> list[dict[str, bool | str | Any]]:
         resp = [message for message in self.messages if message['id'] not in self.__known_messages]
@@ -429,6 +442,10 @@ class Librus:
     @property
     def do_read_timetable(self) -> bool:
         return self.__do_read_timetable
+
+    @property
+    def do_read_attendance(self) -> bool:
+        return self.__do_read_attendance
 
     def fetch_grades(self, force: bool = False):
         if not self.__do_read_grades and not force:
@@ -599,6 +616,42 @@ class Librus:
         self.schedule = entries
         self.save_state()
         return entries
+
+    def fetch_attendance(self, force: bool = False) -> list[dict[str, Any]]:
+        if not self.__do_read_attendance and not force:
+            logger.info("Pobieranie frekwencji jest wyłączone w konfiguracji (read_attendance: false)")
+            self.attendance = []
+            self.attendance_summary = []
+            return []
+
+        if not self.logged:
+            raise NotLogged()
+
+        logger.info("Pobieram frekwencję ucznia")
+        soup = self.parse_page(ATTENDANCE_URL)
+
+        try:
+            parsed = parse_attendance_html(soup)
+        except (LibrusError, requests.RequestException):
+            raise
+        except Exception as e:
+            logger.error(f"Błąd parsowania frekwencji: {e}", exc_info=True)
+            raise LibrusParsingError(f"Błąd parsowania frekwencji: {e}") from e
+
+        entries = parsed.get('entries', [])
+        summary = parsed.get('periods_summary', [])
+        logger.info(f"Pobrano {len(entries)} wpisów frekwencji")
+        self.attendance = entries
+        self.attendance_summary = summary
+        self._attendance_fetched = True
+        self.save_state()
+        return entries
+
+    def get_not_known_attendance_and_mark_as_known(self) -> list[dict[str, Any]]:
+        resp = [att for att in self.attendance if att.get('id') and att['id'] not in self.__known_attendance]
+        self.__known_attendance.update(att['id'] for att in self.attendance if att.get('id'))
+        self.save_state()
+        return resp
 
     def parse_page(self, url: str) -> BeautifulSoup:
         headers = {

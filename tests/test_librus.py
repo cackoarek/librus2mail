@@ -2747,6 +2747,111 @@ class TestLibrus(unittest.TestCase):
                 self.librus.fetch_grades()
             self.assertIsInstance(ctx.exception, LibrusError)
 
+    def test_fetch_attendance_disabled_when_read_attendance_false(self):
+        cfg = {
+            'librus_login': '123456',
+            'librus_password': 'secret_password',
+            'read_attendance': False,
+        }
+        lib = Librus(cfg)
+        lib.logged = True
+        entries = lib.fetch_attendance()
+        self.assertEqual(entries, [])
+        self.assertEqual(lib.attendance, [])
+        self.assertEqual(lib.attendance_summary, [])
+
+    def test_fetch_attendance_with_valid_fixture(self):
+        storage_mock = MagicMock()
+        cfg = {
+            'librus_login': '123456',
+            'librus_password': 'secret_password',
+            'read_attendance': True,
+        }
+        lib = Librus(cfg, storage=storage_mock)
+        lib.logged = True
+
+        fixture_path = Path(__file__).parent / "fixtures" / "attendance.html"
+        fixture_html = fixture_path.read_text(encoding="utf-8")
+        from bs4 import BeautifulSoup
+
+        with patch.object(lib, 'parse_page', return_value=BeautifulSoup(fixture_html, 'html.parser')):
+            entries = lib.fetch_attendance()
+            self.assertEqual(len(entries), 4)
+            self.assertEqual(len(lib.attendance_summary), 1)
+            storage_mock.save_attendance.assert_called_once()
+
+            # Sprawdzenie get_not_known_attendance_and_mark_as_known
+            new_items = lib.get_not_known_attendance_and_mark_as_known()
+            self.assertEqual(len(new_items), 4)
+
+            # Kolejne wywołanie nie powinno zwrócić już znanych wpisów
+            second_call_items = lib.get_not_known_attendance_and_mark_as_known()
+            self.assertEqual(len(second_call_items), 0)
+
+    def test_fetch_attendance_empty_fixture_persists_summary_and_sync(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            from librus2mail.storage import FileStorage
+            storage = FileStorage(tmp_dir)
+            cfg = {
+                'librus_login': '123456',
+                'librus_password': 'secret_password',
+                'read_attendance': True,
+            }
+            lib = Librus(cfg, storage=storage)
+            lib.logged = True
+
+            fixture_path = Path(__file__).parent / "fixtures" / "attendance_empty.html"
+            fixture_html = fixture_path.read_text(encoding="utf-8")
+            from bs4 import BeautifulSoup
+
+            with patch.object(lib, 'parse_page', return_value=BeautifulSoup(fixture_html, 'html.parser')):
+                entries = lib.fetch_attendance()
+                self.assertEqual(entries, [])
+                self.assertEqual(len(lib.attendance_summary), 1)
+
+            # Weryfikacja zapisu do fizycznego storage mimo 0 wpisów nieobecności
+            self.assertEqual(storage.get_attendance_history('123456'), [])
+            summary = storage.get_attendance_summary('123456')
+            self.assertEqual(len(summary), 1)
+            self.assertEqual(summary[0]['total_absences'], 0)
+            self.assertIsNotNone(storage.get_last_attendance_sync('123456'))
+
+    def test_collector_fetches_attendance(self):
+        config = {'storage_dir': 'storage'}
+        mock_storage = MagicMock()
+        collector = LibrusCollector(config, storage=mock_storage)
+        user_cfg = {
+            'librus_login': '12345',
+            'librus_login_name': 'Janek',
+            'read_messages': False,
+            'read_grades': False,
+            'read_timetable': False,
+            'read_schedule': False,
+            'read_attendance': True,
+        }
+        with patch('librus2mail.librus_collector.Librus') as mock_librus_cls, \
+             patch('librus2mail.librus_collector.sleep'):
+            mock_inst = MagicMock()
+            mock_inst.attendance = [{'id': '5001', 'date': '2026-10-21', 'symbol': 'u'}]
+            mock_inst.attendance_summary = [{'period': 'Okres 1', 'total_absences': 1}]
+            mock_librus_cls.return_value = mock_inst
+            res = collector.collect_user(user_cfg)
+            self.assertTrue(res['success'])
+            mock_inst.fetch_attendance.assert_called_once()
+            self.assertEqual(res['attendance'], [{'id': '5001', 'date': '2026-10-21', 'symbol': 'u'}])
+            self.assertEqual(res['attendance_summary'], [{'period': 'Okres 1', 'total_absences': 1}])
+
+    def test_parsing_error_in_fetch_attendance_raises_librus_parsing_error(self):
+        self.librus.logged = True
+        with patch.object(self.librus, 'parse_page') as mock_parse, \
+             patch('librus2mail.librus.parse_attendance_html', side_effect=KeyError("Brak klucza")):
+            from bs4 import BeautifulSoup
+            mock_parse.return_value = BeautifulSoup("<html></html>", 'html.parser')
+            with self.assertRaises(LibrusParsingError) as ctx:
+                self.librus.fetch_attendance()
+            self.assertIsInstance(ctx.exception, LibrusError)
+
+
 
 if __name__ == '__main__':
     unittest.main()

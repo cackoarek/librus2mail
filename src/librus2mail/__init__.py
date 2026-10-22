@@ -9,6 +9,7 @@ from .config_watcher import ConfigWatcher, sleep_with_config_watch
 from .date_utils import parse_date_safe, parse_datetime_safe
 from .dom_parser import (
     parse_announcements_html,
+    parse_attendance_html,
     parse_grades_html,
     parse_messages_html,
     parse_schedule_html,
@@ -17,6 +18,8 @@ from .dom_parser import (
 )
 from .domain_models import (
     Announcement,
+    AttendanceEntry,
+    AttendancePeriodSummary,
     Grade,
     Message,
     Notification,
@@ -74,6 +77,8 @@ __all__ = [
     "TimetableEntry",
     "ScheduleLesson",
     "ScheduleEntry",
+    "AttendanceEntry",
+    "AttendancePeriodSummary",
     "GmailSender",
     "Librus",
     "LibrusError",
@@ -112,4 +117,5 @@ __all__ = [
     "parse_subjects_from_html",
     "parse_timetable_html",
     "parse_schedule_html",
+    "parse_attendance_html",
 ]

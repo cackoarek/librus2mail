@@ -7,7 +7,8 @@
 [![CI Status](https://img.shields.io/github/actions/workflow/status/cackoarek/librus2mail/ci.yml?branch=main&label=CI&style=flat-square&logo=githubactions&logoColor=white)](https://github.com/cackoarek/librus2mail/actions/workflows/ci.yml)
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-3776AB.svg?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![Code Style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg?style=flat-square&logo=ruff&logoColor=white)](https://github.com/astral-sh/ruff)
-[![Tests: pytest](https://img.shields.io/badge/tests-pytest%20(233%20passed)-success.svg?style=flat-square&logo=pytest&logoColor=white)](tests/)
+[![Tests: pytest](https://img.shields.io/badge/tests-pytest%20(245%20passed)-success.svg?style=flat-square&logo=pytest&logoColor=white)](tests/)
+[![CI - Code Quality & Tests](https://github.com/cackoarek/librus2mail/actions/workflows/ci.yml/badge.svg)](https://github.com/cackoarek/librus2mail/actions/workflows/ci.yml)
 [![Packaging: PEP 517/518](https://img.shields.io/badge/packaging-PEP%20517%2F518-00599C.svg?style=flat-square)](pyproject.toml)
 [![Web UI: Flask + Tailwind](https://img.shields.io/badge/web%20ui-Flask%20%2B%20Tailwind-4B8BBE.svg?style=flat-square&logo=flask&logoColor=white)](src/librus2mail/web/)
 [![Docker Ready](https://img.shields.io/badge/docker-ready-2496ED.svg?style=flat-square&logo=docker&logoColor=white)](docker/docker-installation.md)
@@ -1041,3 +1042,7 @@ Projekt powstał w oparciu o analizę mechanizmu komunikacji z API Librusa zawar
 ## Licencja
 
 Projekt udostępniany jest na warunkach otwartej licencji **MIT**. Szczegółowe informacje znajdują się w pliku [LICENSE](LICENSE).
+
+---
+
+> **Nota prawna**: Librus2mail jest niezależnym projektem edukacyjnym o otwartym kodzie źródłowym, niepowiązanym, nienadzorowanym ani nieautoryzowanym przez spółkę Librus Sp. z o.o. Znak towarowy „Librus” został użyty wyłącznie w celach informacyjnych w celu wskazania kompatybilności i interoperacyjności oprogramowania. 

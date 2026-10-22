@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pl" class="h-full">
+<html lang="pl" class="h-full scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -516,6 +516,10 @@
                            class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
                             🔔 Terminarz
                         </a>
+                        <a href="web_frekwencja.html"
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            ⏱️ Frekwencja
+                        </a>
                         <a href="web_wiadomosci.html"
                            class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
                             ✉️ Wiadomości
@@ -583,7 +587,7 @@
                         
                         <div class="hidden sm:inline-block relative text-left">
                             <select onchange="window.location.href='/student/' + this.value + '?next=' + encodeURIComponent(window.location.pathname + window.location.search)"
-                                    class="bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold rounded-xl px-2.5 py-1.5 pr-6 max-w-[125px] xl:max-w-[145px] 2xl:max-w-[190px] truncate focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
+                                    class="bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold rounded-xl px-2.5 py-1.5 pr-6 max-w-[230px] xl:max-w-[265px] 2xl:max-w-[345px] truncate focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
                                 
                                 <option value="8912345" >
                                     👤 Jan Kowalski (klasa 5A) (8912345)
@@ -651,6 +655,7 @@
             <a href="web_plan.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📅 Plan lekcji</a>
             <a href="web_oceny.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📝 Oceny</a>
             <a href="web_terminarz.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">🔔 Terminarz</a>
+            <a href="web_frekwencja.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">⏱️ Frekwencja</a>
             <a href="web_wiadomosci.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">✉️ Wiadomości</a>
             <a href="web_raporty_podsumowanie.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📈 Raporty</a>
             <a href="web_ustawienia.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">⚙️ Ustawienia</a>
@@ -759,6 +764,10 @@
                     <a href="web_terminarz.html"
                        class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
                         <span class="text-base">🔔</span> <span>Terminarz i sprawdziany</span>
+                    </a>
+                    <a href="web_frekwencja.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
+                        <span class="text-base">⏱️</span> <span>Frekwencja i obecność</span>
                     </a>
                     <a href="web_wiadomosci.html"
                        class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
@@ -928,6 +937,8 @@
         </div>
     </a>
 </div>
+
+
 
 
 <!-- Moduł: Kalendarium Ostatnich Dni (Pełna szerokość) -->
@@ -2259,17 +2270,22 @@ Od przyszłego tygodnia ruszają bezpłatne zajęcia SKS z piłki siatkowej i ko
             
 
             
-                <!-- Alerty o zmianach w planie -->
+                <!-- Alerty o zmianach w planie i frekwencji -->
                 
-                <div class="p-3.5 mx-4 mt-4 bg-amber-50 border border-amber-200 rounded-xl text-xs font-semibold text-amber-900 flex items-center gap-3">
-                    <span>⚠️</span>
+                <div class="p-3.5 mx-4 mt-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 flex items-center gap-3">
+                    <span>ℹ️</span>
                     <div class="flex items-center gap-2 flex-wrap">
-                        <span>Uwaga na zmiany:</span>
+                        <span>Uwagi do planu i obecności:</span>
                         
                         <span class="px-2 py-0.5 bg-amber-100 rounded text-amber-800 font-bold">🔄 1 zastępstwo</span>
                         
                         
                         <span class="px-2 py-0.5 bg-rose-100 rounded text-rose-800 font-bold">❌ 1 odwołana</span>
+                        
+                        
+                        
+                        <span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded font-bold">🟢 1 uspr.</span>
+                        
                         
                     </div>
                 </div>
@@ -2312,6 +2328,8 @@ Od przyszłego tygodnia ruszają bezpłatne zajęcia SKS z piłki siatkowej i ko
                                     
 
                                     
+
+                                    
                                 </div>
 
                                 <div class="text-xs text-slate-500 mt-1 flex items-center gap-3">
@@ -2330,6 +2348,7 @@ Od przyszłego tygodnia ruszają bezpłatne zajęcia SKS z piłki siatkowej i ko
 
                         <!-- Status po prawej na pulpicie -->
                         <div class="flex items-center gap-2 flex-shrink-0 text-xs">
+                            
                             
                             <span class="inline-flex items-center gap-1 text-[11px] font-bold text-sky-800 bg-sky-100 px-2.5 py-1 rounded-lg border border-sky-300">
                                 <span>⏳</span> Następna
@@ -2375,6 +2394,8 @@ Od przyszłego tygodnia ruszają bezpłatne zajęcia SKS z piłki siatkowej i ko
                                     
 
                                     
+
+                                    
                                 </div>
 
                                 <div class="text-xs text-slate-500 mt-1 flex items-center gap-3">
@@ -2394,6 +2415,7 @@ Od przyszłego tygodnia ruszają bezpłatne zajęcia SKS z piłki siatkowej i ko
                         <!-- Status po prawej na pulpicie -->
                         <div class="flex items-center gap-2 flex-shrink-0 text-xs">
                             
+                            
                         </div>
                     </div>
 
@@ -2405,7 +2427,7 @@ Od przyszłego tygodnia ruszają bezpłatne zajęcia SKS z piłki siatkowej i ko
                     
 
                     <div class="p-3.5 rounded-xl transition-all flex items-center justify-between gap-4
-                         bg-amber-50/60 border-l-4 border-amber-500
+                         bg-emerald-50/50 border-l-4 border-emerald-500
                         ">
 
                         <div class="flex items-center gap-4">
@@ -2439,6 +2461,14 @@ Od przyszłego tygodnia ruszają bezpłatne zajęcia SKS z piłki siatkowej i ko
                                     
 
                                     
+
+                                    
+                                        
+                                        <span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-extrabold rounded border border-emerald-300 flex items-center gap-1" title="nieobecność uspr.">
+                                            🟢 Usprawiedliwiona (e-Usprawiedliwienie)
+                                        </span>
+                                        
+                                    
                                 </div>
 
                                 <div class="text-xs text-slate-500 mt-1 flex items-center gap-3">
@@ -2461,6 +2491,16 @@ Od przyszłego tygodnia ruszają bezpłatne zajęcia SKS z piłki siatkowej i ko
 
                         <!-- Status po prawej na pulpicie -->
                         <div class="flex items-center gap-2 flex-shrink-0 text-xs">
+                            
+                            <a href="/frekwencja#day-2026-09-18"
+                               class="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-lg border transition-all
+                               
+                                   bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200
+                               "
+                               title="Przejdź do frekwencji">
+                                <span>⏱️ u</span>
+                            </a>
+                            
                             
                         </div>
                     </div>
@@ -2507,6 +2547,8 @@ Od przyszłego tygodnia ruszają bezpłatne zajęcia SKS z piłki siatkowej i ko
                                         📝 Sprawdzian: Lektura: Hobbit
                                     </span>
                                     
+
+                                    
                                 </div>
 
                                 <div class="text-xs text-slate-500 mt-1 flex items-center gap-3">
@@ -2525,6 +2567,7 @@ Od przyszłego tygodnia ruszają bezpłatne zajęcia SKS z piłki siatkowej i ko
 
                         <!-- Status po prawej na pulpicie -->
                         <div class="flex items-center gap-2 flex-shrink-0 text-xs">
+                            
                             
                         </div>
                     </div>
@@ -2566,6 +2609,8 @@ Od przyszłego tygodnia ruszają bezpłatne zajęcia SKS z piłki siatkowej i ko
                                     
 
                                     
+
+                                    
                                 </div>
 
                                 <div class="text-xs text-slate-500 mt-1 flex items-center gap-3">
@@ -2584,6 +2629,7 @@ Od przyszłego tygodnia ruszają bezpłatne zajęcia SKS z piłki siatkowej i ko
 
                         <!-- Status po prawej na pulpicie -->
                         <div class="flex items-center gap-2 flex-shrink-0 text-xs">
+                            
                             
                         </div>
                     </div>
@@ -2630,6 +2676,8 @@ Od przyszłego tygodnia ruszają bezpłatne zajęcia SKS z piłki siatkowej i ko
                                     
 
                                     
+
+                                    
                                 </div>
 
                                 <div class="text-xs text-slate-500 mt-1 flex items-center gap-3">
@@ -2648,6 +2696,7 @@ Od przyszłego tygodnia ruszają bezpłatne zajęcia SKS z piłki siatkowej i ko
 
                         <!-- Status po prawej na pulpicie -->
                         <div class="flex items-center gap-2 flex-shrink-0 text-xs">
+                            
                             
                         </div>
                     </div>
@@ -3075,7 +3124,7 @@ Od przyszłego tygodnia ruszają bezpłatne zajęcia SKS z piłki siatkowej i ko
     <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500">
         <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div class="flex items-center gap-2 font-medium">
-                <span>🏫 Librus2mail v2.6.0</span>
+                <span>🏫 Librus2mail v2.7.0</span>
                 <span>•</span>
                 <span>Prywatny Dashboard Rodzica</span>
             </div>

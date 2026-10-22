@@ -516,6 +516,10 @@
                            class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors {{ 'bg-indigo-50 text-indigo-700' if request.endpoint == 'web.timetable_view' else 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
                             🔔 Terminarz
                         </a>
+                        <a href="{{ url_for('web.attendance_view') }}"
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors {{ 'bg-indigo-50 text-indigo-700' if request.endpoint == 'web.attendance_view' else 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                            ⏱️ Frekwencja
+                        </a>
                         <a href="{{ url_for('web.messages_view') }}"
                            class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors {{ 'bg-indigo-50 text-indigo-700' if request.endpoint == 'web.messages_view' else 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
                             ✉️ Wiadomości
@@ -674,6 +678,7 @@
             <a href="{{ url_for('web.schedule_view') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap {{ 'bg-indigo-600 text-white' if request.endpoint == 'web.schedule_view' else 'text-slate-600 bg-white border border-slate-200' }}">📅 Plan lekcji</a>
             <a href="{{ url_for('web.grades_view') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap {{ 'bg-indigo-600 text-white' if request.endpoint == 'web.grades_view' else 'text-slate-600 bg-white border border-slate-200' }}">📝 Oceny</a>
             <a href="{{ url_for('web.timetable_view') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap {{ 'bg-indigo-600 text-white' if request.endpoint == 'web.timetable_view' else 'text-slate-600 bg-white border border-slate-200' }}">🔔 Terminarz</a>
+            <a href="{{ url_for('web.attendance_view') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap {{ 'bg-indigo-600 text-white' if request.endpoint == 'web.attendance_view' else 'text-slate-600 bg-white border border-slate-200' }}">⏱️ Frekwencja</a>
             <a href="{{ url_for('web.messages_view') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap {{ 'bg-indigo-600 text-white' if request.endpoint == 'web.messages_view' else 'text-slate-600 bg-white border border-slate-200' }}">✉️ Wiadomości</a>
             <a href="{{ url_for('web.reports_view') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap {{ 'bg-indigo-600 text-white' if request.endpoint == 'web.reports_view' else 'text-slate-600 bg-white border border-slate-200' }}">📈 Raporty</a>
             <a href="{{ url_for('web.settings_view') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap {{ 'bg-indigo-600 text-white' if request.endpoint == 'web.settings_view' else 'text-slate-600 bg-white border border-slate-200' }}">⚙️ Ustawienia</a>
@@ -808,6 +813,10 @@
                     <a href="{{ url_for('web.timetable_view') }}"
                        class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors {{ 'bg-indigo-600 text-white' if request.endpoint == 'web.timetable_view' else 'hover:bg-slate-100' }}">
                         <span class="text-base">🔔</span> <span>Terminarz i sprawdziany</span>
+                    </a>
+                    <a href="{{ url_for('web.attendance_view') }}"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors {{ 'bg-indigo-600 text-white' if request.endpoint == 'web.attendance_view' else 'hover:bg-slate-100' }}">
+                        <span class="text-base">⏱️</span> <span>Frekwencja i obecność</span>
                     </a>
                     <a href="{{ url_for('web.messages_view') }}"
                        class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors {{ 'bg-indigo-600 text-white' if request.endpoint == 'web.messages_view' else 'hover:bg-slate-100' }}">

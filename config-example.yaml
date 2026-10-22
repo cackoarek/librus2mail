@@ -214,9 +214,10 @@ timeline:
   # Odwrotna kolejność kart (najnowsze / dzisiejszy dzień na początku, u góry na telefonie) (domyślnie: false):
   reverse_order: false
 
-  # Typy zdarzeń uwzględniane w kalendarium (domyślnie wszystkie 4):
+  # Typy zdarzeń uwzględniane w kalendarium (domyślnie wszystkie 5):
   event_types:
     - grades          # 📝 Oceny
+    - attendance      # ⏱️ Frekwencja (nieobecności, spóźnienia)
     - messages        # ✉️ Wiadomości
     - notifications   # 📢 Ogłoszenia szkolne
     - tests           # 🔔 Sprawdziany i zapowiedzi sprawdzianów

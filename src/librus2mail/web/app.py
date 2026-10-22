@@ -1350,11 +1350,11 @@ def settings_view():
         existing_timeline = config.get('timeline', {}) if isinstance(config.get('timeline'), (dict, collections.abc.Mapping)) else {}
 
         selected_event_types: list[str] = []
-        for etype in ['grades', 'messages', 'notifications', 'tests']:
+        for etype in ['grades', 'messages', 'notifications', 'tests', 'attendance']:
             if f'timeline_type_{etype}' in form:
                 selected_event_types.append(etype)
         if not selected_event_types and 'timeline_settings_present' not in form:
-            selected_event_types = existing_timeline.get('event_types', ['grades', 'messages', 'notifications', 'tests'])
+            selected_event_types = existing_timeline.get('event_types', ['grades', 'messages', 'notifications', 'tests', 'attendance'])
 
         try:
             timeline_days_in = int(form.get('timeline_days', 5))
@@ -1398,7 +1398,7 @@ def settings_view():
             'days': web_cfg.get('timeline_days', config.get('timeline_days', 5)),
             'hide_weekends': web_cfg.get('timeline_hide_weekends', config.get('timeline_hide_weekends', False)),
             'reverse_order': web_cfg.get('timeline_reverse_order', False),
-            'event_types': web_cfg.get('timeline_event_types', ['grades', 'messages', 'notifications', 'tests']),
+            'event_types': web_cfg.get('timeline_event_types', ['grades', 'messages', 'notifications', 'tests', 'attendance']),
         }
 
     return render_template(

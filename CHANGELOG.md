@@ -30,6 +30,11 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
     - Skrótowe przyciski `⏱️ Frekwencja: [symbol]` / `⏱️ [symbol]` z linkami kotwicowymi prowadzącymi do sekcji danego dnia w module frekwencji.
     - Kropki statusu obecności na pigułkach wyboru dni tygodnia w widoku `/plan`.
     - Liczniki obecności w podsumowaniu planu dnia (`🔴 X nieuspr.`, `🟢 Y uspr.`, `🟡 Z spóźnień`).
+  - **Prezentacja i wyróżnianie frekwencji w Kalendarium zdarzeń na Pulpicie (`/`)**:
+    - Włączenie zdarzeń frekwencji (nieobecności usprawiedliwione i nieusprawiedliwione, spóźnienia, zwolnienia) do chronologicznego kalendarium ostatnich dni na pulpicie głównym (`build_recent_days_timeline`).
+    - Odznaczanie kart zdarzeń kolorowymi obramowaniami (`border-l-4`), wyrazistymi odznakami (`🔴 nb`, `🟢 u`, `🟡 sp`, `🔵 zw`), numerem lekcji, tematem, nauczycielem i adnotacją e-Usprawiedliwień oraz bezpośrednim łączem kotwicowym do danego dnia w module frekwencji.
+    - Sygnalizowanie absencji bezpośrednio w nagłówkach dni w kalendarium (np. `🔴 1 nb`, `🟢 1 uspr.`, `🟡 1 sp.`) oraz alertowe oznaczenie obramowania całej karty dnia w przypadku nieobecności nieusprawiedliwionej.
+    - Dodanie nowej opcji wyboru typu zdarzeń „⏱️ Frekwencja i obecność” w formularzu Ustawień w sekcji kalendarium (`timeline.event_types`).
   - **Prezentacja frekwencji w powiadomieniach e-mail i raportach okresowych**:
     - **Raport postępów ucznia (`librus_progress_report.py` / `progress_report.html`)**:
       - Dodanie kafelka KPI w podsumowaniu okresu prezentującego bilans frekwencji (nieobecności usprawiedliwione/nieusprawiedliwione, spóźnienia).
@@ -79,6 +84,9 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 - **Rozbudowa opisu archiwizacji w Ustawieniach**: Dodanie jasnej instrukcji informującej rodzica, że zarchiwizowane okresy można w każdej chwili przeglądać w menu wyboru ucznia na górnym pasku.
 
 ### Naprawione
+- **Kontrast i czytelność trwającej lekcji w motywach ciemnych (Pulpit i Plan lekcji)**:
+  - Rozwiązano problem niskiego kontrastu (jasna czcionka na jasnym tle) karty aktualnie trwającej lekcji (`TRWA TERAZ`, `⏱️ jeszcze X min`, godziny, sala, status `Lekcja w toku`) oraz banera przerwy międzylekcyjnej (`☕ Przerwa między lekcjami`) w motywach ciemnych (*Slate Dark*, *Midnight / Północ* i *Szmaragd*).
+  - Wprowadzono dedykowane klasy semantyczne (`lesson-current-row`, `lesson-subject`, `lesson-time`, `lesson-classroom`, `lesson-current-time-badge`, `lesson-current-status-badge`, `lesson-break-banner`, `lesson-current-header-badge`, `lesson-today-btn`) wraz z precyzyjnie dobranymi regułami CSS i wariantami Tailwind `dark:`, zapewniającymi wysoki kontrast, głębokie ciemnozielone tła i wyraźny, czytelny tekst w każdym wariancie kolorystycznym.
 - **Poprawki kontrastu i czytelności we wszystkich ciemnych motywach (Ciemny, Północ, Szmaragd)**:
   - Naprawiono widoczność nieaktywnych oraz aktywnych podzakładek w modułach Oceny („Aktualne oceny”, „Świadectwo”, „Optymalizator celu”) i Raporty.
   - Poprawiono czytelność boksów informacyjnych i poradników w zakładce Ustawienia (np. sekcja „Jak przeglądać dane z minionych lat?”).

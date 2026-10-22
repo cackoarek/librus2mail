@@ -1648,10 +1648,11 @@ def build_recent_days_timeline(
     hide_weekends: bool = False,
     reverse_order: bool = False,
     enabled_types: list[str] | set[str] | None = None,
+    attendance: list[dict[str, Any]] | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
     """
     Buduje chronologiczne kalendarium ostatnich N dni (domyślnie 5) z zebranymi zdarzeniami:
-    ocenami, wiadomościami, ogłoszeniami szkolnymi oraz zapowiedzianymi sprawdzianami.
+    ocenami, wiadomościami, ogłoszeniami szkolnymi, zapowiedzianymi sprawdzianami oraz frekwencją.
     Opcjonalnie ukrywa weekendy (sobota i niedziela), prezentując tylko dni szkolne.
     Obsługuje odwrotną kolejność sortowania (najnowsze dni na początku/u góry) oraz filtrowanie typów zdarzeń.
     """
@@ -1660,7 +1661,7 @@ def build_recent_days_timeline(
     days_count = max(1, min(30, days_count))
 
     if enabled_types is None:
-        norm_types = {'grades', 'messages', 'notifications', 'tests'}
+        norm_types = {'grades', 'messages', 'notifications', 'tests', 'attendance'}
     else:
         norm_types = {str(t).strip().lower() for t in enabled_types}
 
@@ -1698,6 +1699,11 @@ def build_recent_days_timeline(
             'messages_count': 0,
             'notifications_count': 0,
             'tests_count': 0,
+            'attendance_count': 0,
+            'absences_count': 0,
+            'unjustified_count': 0,
+            'justified_count': 0,
+            'lates_count': 0,
         }
 
     # 1. Oceny
@@ -1833,15 +1839,115 @@ def build_recent_days_timeline(
                         })
                         date_to_day[add_str]['tests_count'] += 1
 
+    # 5. Frekwencja i obecność (nieobecności, spóźnienia, zwolnienia)
+    if 'attendance' in norm_types and attendance:
+        for att in attendance:
+            raw_date = att.get('date')
+            dt = parse_datetime_safe(raw_date)
+            if dt:
+                d_str = dt.strftime('%Y-%m-%d')
+                if d_str in date_to_day:
+                    is_abs = bool(att.get('is_absence'))
+                    is_just = bool(att.get('is_justified'))
+                    is_late = bool(att.get('is_late'))
+                    is_exempt = bool(att.get('is_exempt'))
+                    symbol = (att.get('symbol') or '').strip()
+                    subject = (att.get('subject') or '').strip()
+                    lesson_no = att.get('lesson_no') or ''
+                    lesson_str = f'Lekcja {lesson_no}' if lesson_no else ''
+
+                    if is_abs:
+                        if is_just:
+                            icon = '🟢'
+                            badge = f'🟢 {symbol}' if symbol else '🟢 uspr.'
+                            badge_label = 'Nieobecność usprawiedliwiona'
+                            badge_color = 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                            event_class = 'border-l-4 border-l-emerald-500 bg-emerald-50/40'
+                            title = f"Nieobecność uspr.: {subject or 'Lekcja'}"
+                            date_to_day[d_str]['justified_count'] += 1
+                        else:
+                            icon = '🔴'
+                            badge = f'🔴 {symbol}' if symbol else '🔴 nb'
+                            badge_label = 'Nieobecność nieuspr.'
+                            badge_color = 'bg-rose-100 text-rose-800 border border-rose-300'
+                            event_class = 'border-l-4 border-l-rose-500 bg-rose-50/50 ring-1 ring-rose-200'
+                            title = f"Nieobecność nieuspr.: {subject or 'Lekcja'}"
+                            date_to_day[d_str]['unjustified_count'] += 1
+                        date_to_day[d_str]['absences_count'] += 1
+                    elif is_late:
+                        icon = '🟡'
+                        badge = f'🟡 {symbol}' if symbol else '🟡 sp.'
+                        badge_label = 'Spóźnienie'
+                        badge_color = 'bg-amber-100 text-amber-800 border border-amber-300'
+                        event_class = 'border-l-4 border-l-amber-500 bg-amber-50/40'
+                        title = f"Spóźnienie: {subject or 'Lekcja'}"
+                        date_to_day[d_str]['lates_count'] += 1
+                    elif is_exempt:
+                        icon = '🔵'
+                        badge = f'🔵 {symbol}' if symbol else '🔵 zw.'
+                        badge_label = 'Zwolnienie'
+                        badge_color = 'bg-sky-100 text-sky-800 border border-sky-300'
+                        event_class = 'border-l-4 border-l-sky-500 bg-sky-50/40'
+                        title = f"Zwolnienie: {subject or 'Lekcja'}"
+                    else:
+                        icon = '⏱️'
+                        badge = symbol or '⏱️'
+                        badge_label = att.get('type') or 'Frekwencja'
+                        badge_color = 'bg-slate-100 text-slate-800 border border-slate-300'
+                        event_class = 'border-l-4 border-l-slate-400 bg-slate-50/40'
+                        title = f"Frekwencja: {subject or 'Lekcja'}"
+
+                    date_to_day[d_str]['events'].append({
+                        'type': 'attendance',
+                        'icon': icon,
+                        'badge': badge,
+                        'badge_label': badge_label,
+                        'badge_color': badge_color,
+                        'event_class': event_class,
+                        'title': title,
+                        'subject': subject,
+                        'symbol': symbol,
+                        'lesson_no': lesson_no,
+                        'is_absence': is_abs,
+                        'is_justified': is_just,
+                        'is_late': is_late,
+                        'is_exempt': is_exempt,
+                        'teacher': att.get('teacher', ''),
+                        'topic': att.get('topic', ''),
+                        'justification_info': att.get('justification_info', ''),
+                        'datetime': dt,
+                        'date': d_str,
+                        'time_str': lesson_str,
+                        'raw': att,
+                    })
+                    date_to_day[d_str]['attendance_count'] += 1
+
     # Sortowanie zdarzeń wewnątrz każdego dnia i kalkulacja sum
     timeline_days = []
     total_events = 0
-    type_priority = {'test': 1, 'test_announced': 2, 'grade': 3, 'message': 4, 'notification': 5}
+
+    def _event_sort_key(ev: dict[str, Any]) -> tuple:
+        etype = ev.get('type', '')
+        if etype == 'attendance':
+            prio = 0 if (ev.get('is_absence') and not ev.get('is_justified')) else 1
+        elif etype == 'test':
+            prio = 2
+        elif etype == 'test_announced':
+            prio = 3
+        elif etype == 'grade':
+            prio = 4
+        elif etype == 'message':
+            prio = 5
+        elif etype == 'notification':
+            prio = 6
+        else:
+            prio = 99
+        return (prio, str(ev.get('datetime') or ''), str(ev.get('lesson_no') or ''))
 
     for d in target_dates:
         d_str = d.strftime('%Y-%m-%d')
         day_data = date_to_day[d_str]
-        day_data['events'].sort(key=lambda ev: (type_priority.get(ev['type'], 99), str(ev.get('datetime') or '')))
+        day_data['events'].sort(key=_event_sort_key)
         day_data['events_count'] = len(day_data['events'])
         day_data['has_events'] = bool(day_data['events'])
         total_events += day_data['events_count']
@@ -2387,11 +2493,11 @@ def get_student_dashboard_bundle(
     if raw_event_types is None:
         raw_event_types = web_cfg.get('timeline_event_types')
     if raw_event_types is None:
-        timeline_event_types = ['grades', 'messages', 'notifications', 'tests']
+        timeline_event_types = ['grades', 'messages', 'notifications', 'tests', 'attendance']
     elif isinstance(raw_event_types, (list, tuple, set)):
         timeline_event_types = [str(x).strip().lower() for x in raw_event_types if str(x).strip()]
     else:
-        timeline_event_types = ['grades', 'messages', 'notifications', 'tests']
+        timeline_event_types = ['grades', 'messages', 'notifications', 'tests', 'attendance']
 
     if timeline_enabled:
         recent_timeline_days, recent_timeline_total_events = build_recent_days_timeline(
@@ -2399,6 +2505,7 @@ def get_student_dashboard_bundle(
             messages=raw_messages,
             notifications=raw_notifications,
             timetable=timetable,
+            attendance=attendance_history,
             now=ref_now,
             days_count=timeline_days_count,
             hide_weekends=timeline_hide_weekends,

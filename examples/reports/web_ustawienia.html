@@ -400,6 +400,99 @@
             color: #ecfdf5 !important;
         }
 
+        /* Trwająca lekcja oraz banery przerw w widokach ciemnych (Dark, Midnight, Forest) */
+        html.dark .lesson-current-row,
+        [data-theme="dark"] .lesson-current-row,
+        [data-theme="midnight"] .lesson-current-row,
+        [data-theme="forest"] .lesson-current-row {
+            background-color: rgba(6, 78, 59, 0.45) !important;
+            border-left-color: #10b981 !important;
+            box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.35) !important;
+        }
+
+        html.dark [data-theme="midnight"] .lesson-current-row,
+        [data-theme="midnight"] .lesson-current-row {
+            background-color: rgba(6, 78, 59, 0.55) !important;
+            box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.4) !important;
+        }
+
+        html.dark [data-theme="forest"] .lesson-current-row,
+        [data-theme="forest"] .lesson-current-row {
+            background-color: rgba(6, 95, 70, 0.5) !important;
+            box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.4) !important;
+        }
+
+        /* Teksty i etykiety wewnątrz karty trwającej lekcji */
+        html.dark .lesson-current-row .lesson-subject,
+        html.dark .lesson-current-row .lesson-subject strong,
+        [data-theme="dark"] .lesson-current-row .lesson-subject,
+        [data-theme="midnight"] .lesson-current-row .lesson-subject,
+        [data-theme="forest"] .lesson-current-row .lesson-subject {
+            color: #ecfdf5 !important;
+        }
+
+        html.dark .lesson-current-row .lesson-time,
+        html.dark .lesson-current-row .lesson-classroom,
+        [data-theme="dark"] .lesson-current-row .lesson-time,
+        [data-theme="midnight"] .lesson-current-row .lesson-time,
+        [data-theme="forest"] .lesson-current-row .lesson-time,
+        [data-theme="dark"] .lesson-current-row .lesson-classroom,
+        [data-theme="midnight"] .lesson-current-row .lesson-classroom,
+        [data-theme="forest"] .lesson-current-row .lesson-classroom {
+            color: #a7f3d0 !important;
+        }
+
+        /* Pigułka odliczania czasu i pigułka statusu lekcji w toku */
+        html.dark .lesson-current-time-badge,
+        html.dark .lesson-current-status-badge,
+        [data-theme="dark"] .lesson-current-time-badge,
+        [data-theme="midnight"] .lesson-current-time-badge,
+        [data-theme="forest"] .lesson-current-time-badge,
+        [data-theme="dark"] .lesson-current-status-badge,
+        [data-theme="midnight"] .lesson-current-status-badge,
+        [data-theme="forest"] .lesson-current-status-badge {
+            background-color: rgba(6, 78, 59, 0.8) !important;
+            color: #ecfdf5 !important;
+            border-color: rgba(16, 185, 129, 0.5) !important;
+        }
+
+        /* Etykiety nagłówka i przyciski 'Dzisiaj' w trybach ciemnych */
+        html.dark .lesson-current-header-badge,
+        html.dark .lesson-today-btn,
+        [data-theme="dark"] .lesson-current-header-badge,
+        [data-theme="midnight"] .lesson-current-header-badge,
+        [data-theme="forest"] .lesson-current-header-badge,
+        [data-theme="dark"] .lesson-today-btn,
+        [data-theme="midnight"] .lesson-today-btn,
+        [data-theme="forest"] .lesson-today-btn {
+            background-color: rgba(6, 78, 59, 0.4) !important;
+            color: #6ee7b7 !important;
+            border-color: rgba(16, 185, 129, 0.35) !important;
+        }
+
+        /* Baner przerwy w trybach ciemnych */
+        html.dark .lesson-break-banner,
+        [data-theme="dark"] .lesson-break-banner,
+        [data-theme="midnight"] .lesson-break-banner,
+        [data-theme="forest"] .lesson-break-banner {
+            background: linear-gradient(to right, rgba(15, 23, 42, 0.95), rgba(6, 78, 59, 0.4), rgba(15, 23, 42, 0.95)) !important;
+            border-color: rgba(16, 185, 129, 0.3) !important;
+            color: #ecfdf5 !important;
+        }
+        html.dark .lesson-break-banner span,
+        html.dark .lesson-break-banner div,
+        [data-theme="dark"] .lesson-break-banner span,
+        [data-theme="midnight"] .lesson-break-banner span,
+        [data-theme="forest"] .lesson-break-banner span {
+            color: #a7f3d0 !important;
+        }
+        html.dark .lesson-break-banner .break-bell,
+        [data-theme="dark"] .lesson-break-banner .break-bell,
+        [data-theme="midnight"] .lesson-break-banner .break-bell,
+        [data-theme="forest"] .lesson-break-banner .break-bell {
+            color: #67e8f9 !important;
+        }
+
         html.dark .bg-rose-50, html.dark [class*="bg-rose-50/"] { background-color: rgba(244, 63, 94, 0.15) !important; }
         html.dark .bg-rose-100, html.dark [class*="bg-rose-100/"] { background-color: rgba(244, 63, 94, 0.22) !important; }
         html.dark .text-rose-700, html.dark .text-rose-800, html.dark .text-rose-900, html.dark .text-rose-950 { color: #fda4af !important; }
@@ -1903,7 +1996,7 @@
                     <label class="block text-xs font-bold text-slate-700 uppercase mb-2">
                         Typy zdarzeń widoczne w kalendarium:
                     </label>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         
                         <!-- Oceny -->
                         <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
@@ -1914,6 +2007,18 @@
                                     <span>📝</span> Oceny
                                 </span>
                                 <span class="text-[11px] text-slate-500 block">Nowo wystawione oceny z przedmiotów</span>
+                            </div>
+                        </label>
+
+                        <!-- Frekwencja i nieobecności -->
+                        <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                            <input type="checkbox" name="timeline_type_attendance" checked
+                                   class="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                            <div>
+                                <span class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                    <span>⏱️</span> Frekwencja i obecność
+                                </span>
+                                <span class="text-[11px] text-slate-500 block">Nieobecności, spóźnienia i zwolnienia</span>
                             </div>
                         </label>
 
@@ -1942,7 +2047,7 @@
                         </label>
 
                         <!-- Sprawdziany i terminarz -->
-                        <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                        <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-100 transition sm:col-span-2 lg:col-span-1">
                             <input type="checkbox" name="timeline_type_tests" checked
                                    class="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
                             <div>

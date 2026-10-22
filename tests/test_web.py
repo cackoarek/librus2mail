@@ -2152,6 +2152,136 @@ class TestWebDashboard(unittest.TestCase):
         self.assertTrue(saved_cfg['timeline']['reverse_order'])
         self.assertEqual(saved_cfg['timeline']['event_types'], ['grades', 'tests'])
 
+    def test_timeline_attendance_events(self):
+        """Testuje oznaczanie zdarzeń frekwencji (nieobecności usprawiedliwione i nieusprawiedliwione, spóźnienia) w kalendarium pulpitu."""
+        ref_now = datetime(2026, 9, 18, 12, 0, 0)
+        attendance = [
+            {
+                'id': 'att_nb',
+                'date': '2026-09-18',
+                'lesson_no': 2,
+                'subject': 'Fizyka',
+                'symbol': 'nb',
+                'type': 'nieobecność nieuspr.',
+                'is_absence': True,
+                'is_justified': False,
+                'teacher': 'Marek Nowak',
+                'topic': 'Zjawisko indukcji',
+            },
+            {
+                'id': 'att_u',
+                'date': '2026-09-18',
+                'lesson_no': 3,
+                'subject': 'Geografia',
+                'symbol': 'u',
+                'type': 'nieobecność uspr.',
+                'is_absence': True,
+                'is_justified': True,
+                'justification_info': 'e-Usprawiedliwienie',
+                'teacher': 'Dorota Opolska',
+            },
+            {
+                'id': 'att_sp',
+                'date': '2026-09-17',
+                'lesson_no': 1,
+                'subject': 'Język polski',
+                'symbol': 'sp',
+                'type': 'spóźnienie',
+                'is_late': True,
+                'teacher': 'Anna Kowalska',
+            },
+        ]
+
+        # 1. Test jednostkowy build_recent_days_timeline z frekwencją
+        days, total = build_recent_days_timeline(
+            grades=[],
+            messages=[],
+            notifications=[],
+            timetable=[],
+            attendance=attendance,
+            now=ref_now,
+            days_count=5,
+        )
+        self.assertEqual(total, 3)
+
+        # 18.09 (dzisiaj): dwie nieobecności (jedna nieuspr., jedna uspr.)
+        day_18 = next(d for d in days if d['date'] == '2026-09-18')
+        self.assertEqual(day_18['attendance_count'], 2)
+        self.assertEqual(day_18['unjustified_count'], 1)
+        self.assertEqual(day_18['justified_count'], 1)
+        self.assertEqual(day_18['absences_count'], 2)
+
+        # Nieobecność nieusprawiedliwiona ma najwyższy priorytet i jest na samej górze
+        self.assertEqual(day_18['events'][0]['type'], 'attendance')
+        self.assertEqual(day_18['events'][0]['subject'], 'Fizyka')
+        self.assertEqual(day_18['events'][0]['badge'], '🔴 nb')
+        self.assertTrue(day_18['events'][0]['is_absence'])
+        self.assertFalse(day_18['events'][0]['is_justified'])
+
+        # Druga to nieobecność usprawiedliwiona z Geografii
+        self.assertEqual(day_18['events'][1]['subject'], 'Geografia')
+        self.assertEqual(day_18['events'][1]['badge'], '🟢 u')
+        self.assertEqual(day_18['events'][1]['justification_info'], 'e-Usprawiedliwienie')
+
+        # 17.09: spóźnienie z Języka polskiego
+        day_17 = next(d for d in days if d['date'] == '2026-09-17')
+        self.assertEqual(day_17['attendance_count'], 1)
+        self.assertEqual(day_17['lates_count'], 1)
+        self.assertEqual(day_17['events'][0]['badge'], '🟡 sp')
+        self.assertTrue(day_17['events'][0]['is_late'])
+
+        # 2. Test integracyjny z widokiem HTML dashboardu
+        student_data = {
+            'student_name': 'Jan Kowalski (klasa 5A)',
+            'last_collect_time': '2026-09-18 20:00:00',
+            'grades_history': [],
+            'messages_history': [],
+            'notifications_history': [],
+            'timetable_history': [],
+            'attendance_history': attendance,
+        }
+        with open(os.path.join(self.storage_dir, '123456.json'), 'w', encoding='utf-8') as f:
+            json.dump(student_data, f)
+
+        app = create_app(
+            config_path=self.config_path,
+            storage_dir=self.storage_dir,
+            actual_date=ref_now,
+            no_auth=True,
+        )
+        client = app.test_client()
+        res = client.get('/')
+        self.assertEqual(res.status_code, 200)
+
+        html = res.data.decode('utf-8')
+        self.assertIn("Kalendarium ostatnich 5 dni", html)
+        self.assertIn("Fizyka", html)
+        self.assertIn("Geografia", html)
+        self.assertIn("🔴 1 nb", html)
+        self.assertIn("Szczegóły we frekwencji ➔", html)
+        self.assertIn("e-Usprawiedliwienie", html)
+
+        # 3. Test zapisu typu 'attendance' przez formularz Ustawień
+        post_data = {
+            'student_login_0': '123456',
+            'student_name_0': 'Jan Kowalski',
+            'mail_provider': 'gmail',
+            'mail_login': 'parent@example.com',
+            'timeline_settings_present': '1',
+            'timeline_enabled': 'on',
+            'timeline_days': '5',
+            'timeline_type_grades': 'on',
+            'timeline_type_attendance': 'on',
+            'collection_mode': 'interval',
+            'collection_interval_hours': '1',
+        }
+        res_post = client.post('/ustawienia', data=post_data, follow_redirects=True)
+        self.assertEqual(res_post.status_code, 200)
+        with open(self.config_path, encoding='utf-8') as f:
+            saved_cfg = yaml.safe_load(f)
+        self.assertIn('attendance', saved_cfg['timeline']['event_types'])
+        self.assertEqual(saved_cfg['timeline']['event_types'], ['grades', 'attendance'])
+
     def test_annual_archive_and_historical_browser(self):
         """Testuje moduł archiwizacji rocznej (storage.py) oraz przeglądarkę historyczną w panelu WWW."""
         app = create_app(config_path=self.config_path, storage_dir=self.storage_dir, no_auth=True)

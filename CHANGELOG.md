@@ -9,6 +9,10 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ## [Unreleased]
 
+---
+
+## [2.9.0] – 2026-10-23
+
 ### Dodane
 - **Automatyczny audyt bezpieczeństwa i skanowanie podatności (CI & Dependabot)**:
   - Dodano dedykowany workflow GitHub Actions ([security.yml](file:///.github/workflows/security.yml)) uruchamiający cotygodniowy audyt podatności w zależnościach za pomocą [pip-audit](https://github.com/pypa/pip-audit) (baza PyPI/OSV CVE) oraz statyczną analizę bezpieczeństwa kodu (SAST) za pomocą [bandit](https://github.com/PyCQA/bandit).
@@ -36,7 +40,6 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
   - Zabezpieczono endpoint przełączania widoku frekwencji (`/api/attendance/view-mode`) oraz formularz ustawień przed usuwaniem sekcji `timeline` z pliku `config.yaml`.
 
 ---
-
 ## [2.8.0] – 2026-10-22
 
 ### Dodane
@@ -428,7 +431,8 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ---
 
-[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v2.8.0...HEAD
+[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v2.9.0...HEAD
+[2.9.0]: https://github.com/cackoarek/librus2mail/compare/v2.8.0...v2.9.0
 [2.8.0]: https://github.com/cackoarek/librus2mail/compare/v2.7.0...v2.8.0
 [2.7.0]: https://github.com/cackoarek/librus2mail/compare/v2.6.0...v2.7.0
 [2.6.0]: https://github.com/cackoarek/librus2mail/compare/v2.5.0...v2.6.0

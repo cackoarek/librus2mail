@@ -29,6 +29,12 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
   - Inteligentne pozycjonowanie dymka (dokowanie nad/pod komórką, zabezpieczenie przed wykraczaniem poza krawędzie ekranu, płynne zamykanie przy przewijaniu).
   - Spójna obsługa dymka zarówno w rocznej Heatmapie w stylu GitHub, jak i w widoku kalendarza miesięcznego.
 
+### Naprawione
+- **Trwałość ustawień modułu Kalendarium (Pulpit główny)**:
+  - Naprawiono problem samoistnego resetowania się ustawień Kalendarium (`timeline`: liczba dni, ukrywanie weekendów, odwrotna kolejność kart) do domyślnych wartości (5 dni, brak ukrywania, standardowa kolejność).
+  - Dodano model [TimelineConfig](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/config_models.py) do `AppSettings` oraz zaktualizowano mechanizm serializacji `_serialize_value()`, aby nie gubił dynamicznych pól `__pydantic_extra__` przy wywołaniach `to_dict()`.
+  - Zabezpieczono endpoint przełączania widoku frekwencji (`/api/attendance/view-mode`) oraz formularz ustawień przed usuwaniem sekcji `timeline` z pliku `config.yaml`.
+
 ---
 
 ## [2.8.0] – 2026-10-22

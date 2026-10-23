@@ -34,6 +34,12 @@ def _serialize_value(val: Any, expose_secrets: bool = True) -> Any:
         for k, v in val.__dict__.items():
             if not k.startswith('_'):
                 res[k] = _serialize_value(v, expose_secrets)
+        # Zachowaj dodatkowe pola zdefiniowane dynamicznie (extra='allow' w Pydantic v2)
+        extra = getattr(val, '__pydantic_extra__', None)
+        if isinstance(extra, dict):
+            for k, v in extra.items():
+                if not k.startswith('_') and k not in res:
+                    res[k] = _serialize_value(v, expose_secrets)
         return res
     if isinstance(val, dict):
         return {k: _serialize_value(v, expose_secrets) for k, v in val.items()}
@@ -56,6 +62,8 @@ class BaseConfigModel(BaseModel, collections.abc.MutableMapping):
             val = getattr(self, item)
         elif item in self.__dict__:
             val = self.__dict__[item]
+        elif getattr(self, '__pydantic_extra__', None) and item in self.__pydantic_extra__:
+            val = self.__pydantic_extra__[item]
         else:
             raise KeyError(item)
 
@@ -67,11 +75,16 @@ class BaseConfigModel(BaseModel, collections.abc.MutableMapping):
         if hasattr(self, key):
             setattr(self, key, value)
         else:
-            setattr(self, key, value)
+            extra = getattr(self, '__pydantic_extra__', None)
+            if extra is None:
+                self.__pydantic_extra__ = {}
+            self.__pydantic_extra__[key] = value
 
     def __delitem__(self, key: str) -> None:
-        if hasattr(self, key):
+        if hasattr(self, key) and key in self.model_fields:
             delattr(self, key)
+        elif getattr(self, '__pydantic_extra__', None) and key in self.__pydantic_extra__:
+            del self.__pydantic_extra__[key]
         elif key in self.__dict__:
             del self.__dict__[key]
         else:
@@ -83,6 +96,7 @@ class BaseConfigModel(BaseModel, collections.abc.MutableMapping):
         return (
             hasattr(self, item)
             or item in self.__dict__
+            or bool(getattr(self, '__pydantic_extra__', None) and item in self.__pydantic_extra__)
         )
 
     def __iter__(self):
@@ -242,6 +256,35 @@ class WebConfig(BaseConfigModel):
         return str(self.password)
 
 
+class TimelineConfig(BaseConfigModel):
+    """Konfiguracja modułu kalendarium zdarzeń (pulpit główny)."""
+
+    enabled: bool = True
+    days: int = 5
+    hide_weekends: bool = False
+    reverse_order: bool = False
+    event_types: list[str] = Field(
+        default_factory=lambda: ['grades', 'messages', 'notifications', 'tests', 'attendance']
+    )
+
+    @field_validator('days', mode='before')
+    @classmethod
+    def validate_days(cls, v: Any) -> int:
+        try:
+            val = int(v)
+            return max(1, min(14, val))
+        except (ValueError, TypeError):
+            return 5
+
+    @field_validator('event_types', mode='before')
+    @classmethod
+    def validate_event_types(cls, v: Any) -> list[str]:
+        if isinstance(v, list):
+            valid = [str(x).strip().lower() for x in v if str(x).strip()]
+            return valid or ['grades', 'messages', 'notifications', 'tests', 'attendance']
+        return ['grades', 'messages', 'notifications', 'tests', 'attendance']
+
+
 class AppSettings(BaseSettings, collections.abc.MutableMapping):
     """Główny model ustawień aplikacji Librus2mail z obsługą YAML i zmiennych środowiskowych."""
 
@@ -275,6 +318,7 @@ class AppSettings(BaseSettings, collections.abc.MutableMapping):
     mail: MailConfig = Field(default_factory=MailConfig)
     schedule: ScheduleConfig = Field(default_factory=ScheduleConfig)
     web: WebConfig = Field(default_factory=WebConfig)
+    timeline: TimelineConfig = Field(default_factory=TimelineConfig)
 
     @field_validator('attendance_view_mode', mode='after')
     @classmethod
@@ -477,6 +521,18 @@ class AppSettings(BaseSettings, collections.abc.MutableMapping):
         elif 'attendance_view_mode' in data and isinstance(data.get('web'), dict) and 'attendance_view_mode' not in data['web']:
             data['web']['attendance_view_mode'] = data['attendance_view_mode']
 
+        # 9. Obsługa sekcji timeline z fallbackiem do web.timeline_*
+        if not data.get('timeline') and isinstance(data.get('web'), dict):
+            web_dict = data['web']
+            if any(k.startswith('timeline_') for k in web_dict):
+                data['timeline'] = {
+                    'enabled': web_dict.get('timeline_enabled', True),
+                    'days': web_dict.get('timeline_days', 5),
+                    'hide_weekends': web_dict.get('timeline_hide_weekends', False),
+                    'reverse_order': web_dict.get('timeline_reverse_order', False),
+                    'event_types': web_dict.get('timeline_event_types', ['grades', 'messages', 'notifications', 'tests', 'attendance']),
+                }
+
         return data
 
     @field_validator('semester_split_date', mode='before')
@@ -504,6 +560,8 @@ class AppSettings(BaseSettings, collections.abc.MutableMapping):
             val = getattr(self, item)
         elif item in self.__dict__:
             val = self.__dict__[item]
+        elif getattr(self, '__pydantic_extra__', None) and item in self.__pydantic_extra__:
+            val = self.__pydantic_extra__[item]
         else:
             raise KeyError(item)
 
@@ -515,11 +573,16 @@ class AppSettings(BaseSettings, collections.abc.MutableMapping):
         if hasattr(self, key):
             setattr(self, key, value)
         else:
-            setattr(self, key, value)
+            extra = getattr(self, '__pydantic_extra__', None)
+            if extra is None:
+                self.__pydantic_extra__ = {}
+            self.__pydantic_extra__[key] = value
 
     def __delitem__(self, key: str) -> None:
-        if hasattr(self, key):
+        if hasattr(self, key) and key in self.model_fields:
             delattr(self, key)
+        elif getattr(self, '__pydantic_extra__', None) and key in self.__pydantic_extra__:
+            del self.__pydantic_extra__[key]
         elif key in self.__dict__:
             del self.__dict__[key]
         else:
@@ -531,6 +594,7 @@ class AppSettings(BaseSettings, collections.abc.MutableMapping):
         return (
             hasattr(self, item)
             or item in self.__dict__
+            or bool(getattr(self, '__pydantic_extra__', None) and item in self.__pydantic_extra__)
         )
 
     def __iter__(self):

@@ -3283,11 +3283,18 @@ def test_librus_credentials(login: str, password: str) -> tuple[bool, str]:
         return False, f"Błąd połączenia z portalem Librus: {e}"
 
 
-def save_config_yaml(config_dict: dict[str, Any], target_path: str = 'config.yaml') -> str:
+def save_config_yaml(config_dict: dict[str, Any] | Any, target_path: str = 'config.yaml') -> str:
     """Zapisuje słownik konfiguracyjny do pliku YAML z zachowaniem czytelnej struktury."""
     from pathlib import Path
 
     import yaml
+
+    if hasattr(config_dict, 'to_dict'):
+        config_dict = config_dict.to_dict()
+    elif hasattr(config_dict, 'model_dump'):
+        config_dict = config_dict.model_dump()
+    elif not isinstance(config_dict, dict):
+        config_dict = dict(config_dict)
 
     target = Path(target_path).resolve()
     target.parent.mkdir(parents=True, exist_ok=True)

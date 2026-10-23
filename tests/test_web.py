@@ -2173,6 +2173,19 @@ class TestWebDashboard(unittest.TestCase):
         self.assertTrue(saved_cfg['timeline']['reverse_order'])
         self.assertEqual(saved_cfg['timeline']['event_types'], ['grades', 'tests'])
 
+        # 9. Test odporności na reset: zmiana trybu widoku frekwencji (/api/attendance/view-mode)
+        # NIE może wyczyścić ani zresetować ustawień sekcji timeline w pliku config.yaml
+        res_att_mode = client.post('/api/attendance/view-mode', json={'mode': 'month'})
+        self.assertEqual(res_att_mode.status_code, 200)
+        with open(self.config_path, encoding='utf-8') as f:
+            saved_cfg_after_att = yaml.safe_load(f)
+        self.assertIn('timeline', saved_cfg_after_att)
+        self.assertEqual(saved_cfg_after_att['timeline']['days'], 7)
+        self.assertTrue(saved_cfg_after_att['timeline']['hide_weekends'])
+        self.assertTrue(saved_cfg_after_att['timeline']['reverse_order'])
+        self.assertEqual(saved_cfg_after_att['timeline']['event_types'], ['grades', 'tests'])
+        self.assertEqual(saved_cfg_after_att['attendance_view_mode'], 'month')
+
     def test_timeline_attendance_events(self):
         """Testuje oznaczanie zdarzeń frekwencji (nieobecności usprawiedliwione i nieusprawiedliwione, spóźnienia) w kalendarium pulpitu."""
         ref_now = datetime(2026, 9, 18, 12, 0, 0)

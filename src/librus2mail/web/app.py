@@ -1193,6 +1193,13 @@ def setup_submit():
             'max_login_attempts': 5,
             'lockout_duration_s': 900,
         },
+        'timeline': {
+            'enabled': True,
+            'days': 5,
+            'hide_weekends': False,
+            'reverse_order': False,
+            'event_types': ['grades', 'messages', 'notifications', 'tests', 'attendance'],
+        },
     }
 
     try:
@@ -1372,13 +1379,16 @@ def settings_view():
         except (ValueError, TypeError):
             effective_days = 5
 
-        new_config['timeline'] = {
-            'enabled': 'timeline_enabled' in form,
-            'days': effective_days,
-            'hide_weekends': 'timeline_hide_weekends' in form,
-            'reverse_order': 'timeline_reverse_order' in form,
-            'event_types': selected_event_types,
-        }
+        if 'timeline_settings_present' in form:
+            new_config['timeline'] = {
+                'enabled': 'timeline_enabled' in form,
+                'days': effective_days,
+                'hide_weekends': 'timeline_hide_weekends' in form,
+                'reverse_order': 'timeline_reverse_order' in form,
+                'event_types': selected_event_types,
+            }
+        elif 'timeline' in config:
+            new_config['timeline'] = dict(existing_timeline) if isinstance(existing_timeline, dict) else existing_timeline.to_dict()
 
         try:
             save_config_yaml(new_config, config_path)

@@ -16,6 +16,7 @@ from .config_models import (
     ScheduleConfig,
     ScheduleReportItemConfig,
     StudentReportConfig,
+    TimelineConfig,
     WebConfig,
 )
 
@@ -72,6 +73,7 @@ __all__ = [
     "ScheduleConfig",
     "ScheduleReportItemConfig",
     "StudentReportConfig",
+    "TimelineConfig",
     "WebConfig",
     "get_reports_schedules",
     "read_config",

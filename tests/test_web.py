@@ -1420,7 +1420,11 @@ class TestWebDashboard(unittest.TestCase):
         self.assertIn('Odbyła się', ongoing_html)
         self.assertIn('Lekcja w toku', ongoing_html)
 
-        # 1b. Podczas przerwy między lekcjami (2026-09-23 08:50) -> informacja o przerwie
+        # Sprawdzenie spójności prezentacji lekcji w toku na Pulpicie głównym (/)
+        dash_ongoing_html = client_ongoing.get('/').data.decode('utf-8')
+        self.assertIn('w toku', dash_ongoing_html)
+
+        # 1b. Podczas przerwy między lekcjami (2026-09-23 08:50) -> informacja o przerwie i spójny badge następnej lekcji
         app_break = create_app(
             config_path=self.config_path,
             storage_dir=self.storage_dir,
@@ -1432,6 +1436,23 @@ class TestWebDashboard(unittest.TestCase):
         break_html = res_break.data.decode('utf-8')
         self.assertIn('Trwa przerwa między lekcjami', break_html)
         self.assertIn('Dzwonek za 5 min', break_html)
+        self.assertIn('Następna lekcja (za 5 min)', break_html)
+
+        # Sprawdzenie spójności "Następna lekcja (za X min)" na Pulpicie (/)
+        dash_break_html = app_break.test_client().get('/').data.decode('utf-8')
+        self.assertIn('Następna lekcja (za 5 min)', dash_break_html)
+
+        # 1c. Tuż przed dzwonkiem (2026-09-23 08:53) -> "Następna lekcja (za 2 min)" spójnie na /plan i /
+        app_2min = create_app(
+            config_path=self.config_path,
+            storage_dir=self.storage_dir,
+            no_auth=True,
+            actual_date=datetime(2026, 9, 23, 8, 53, 0),
+        )
+        plan_2min_html = app_2min.test_client().get('/plan').data.decode('utf-8')
+        dash_2min_html = app_2min.test_client().get('/').data.decode('utf-8')
+        self.assertIn('Następna lekcja (za 2 min)', plan_2min_html)
+        self.assertIn('Następna lekcja (za 2 min)', dash_2min_html)
 
         # 1c. Przed rozpoczęciem lekcji w bieżącym dniu (2026-09-23 00:28 - w nocy / rano przed 08:00)
         app_before = create_app(
@@ -2152,6 +2173,19 @@ class TestWebDashboard(unittest.TestCase):
         self.assertTrue(saved_cfg['timeline']['reverse_order'])
         self.assertEqual(saved_cfg['timeline']['event_types'], ['grades', 'tests'])
 
+        # 9. Test odporności na reset: zmiana trybu widoku frekwencji (/api/attendance/view-mode)
+        # NIE może wyczyścić ani zresetować ustawień sekcji timeline w pliku config.yaml
+        res_att_mode = client.post('/api/attendance/view-mode', json={'mode': 'month'})
+        self.assertEqual(res_att_mode.status_code, 200)
+        with open(self.config_path, encoding='utf-8') as f:
+            saved_cfg_after_att = yaml.safe_load(f)
+        self.assertIn('timeline', saved_cfg_after_att)
+        self.assertEqual(saved_cfg_after_att['timeline']['days'], 7)
+        self.assertTrue(saved_cfg_after_att['timeline']['hide_weekends'])
+        self.assertTrue(saved_cfg_after_att['timeline']['reverse_order'])
+        self.assertEqual(saved_cfg_after_att['timeline']['event_types'], ['grades', 'tests'])
+        self.assertEqual(saved_cfg_after_att['attendance_view_mode'], 'month')
+
     def test_timeline_attendance_events(self):
         """Testuje oznaczanie zdarzeń frekwencji (nieobecności usprawiedliwione i nieusprawiedliwione, spóźnienia) w kalendarium pulpitu."""
         ref_now = datetime(2026, 9, 18, 12, 0, 0)
@@ -2572,9 +2606,14 @@ class TestWebDashboard(unittest.TestCase):
         self.assertIn('Fizyka', html)
         self.assertIn('Spóźnienie', html)
 
-        # Weryfikacja semestralnego kalendarza
+        # Weryfikacja semestralnego kalendarza i dymka (popovera) heatmapy
         self.assertIn('Przegląd obecności w roku szkolnym', html)
         self.assertIn('scrollToDay', html)
+        self.assertIn('attendance-heatmap-popover', html)
+        self.assertIn('data-heatmap-has-events="true"', html)
+        self.assertIn('data-events=', html)
+        self.assertIn('data-unjustified="1"', html)
+        self.assertIn('data-justified="1"', html)
 
         # Weryfikacja zestawienia przedmiotowego
         self.assertIn('Absencje wg przedmiotów', html)
@@ -2792,6 +2831,111 @@ class TestWebDashboard(unittest.TestCase):
         self.assertIn('⏱️ sp', html_dash)
         self.assertIn('⏱️ u', html_dash)
         self.assertIn('⏱️ nb', html_dash)
+
+    def test_chronicle_timeline_unit_and_views(self):
+        """Testy jednostkowe build_chronicle_timeline oraz integracji widoku kroniki w Terminarzu."""
+        from datetime import datetime
+
+        from librus2mail.web.services import build_chronicle_timeline
+
+        # 1. Test jednostkowy pustych danych
+        empty_res = build_chronicle_timeline([], [], [], [], [])
+        self.assertEqual(empty_res['total_events'], 0)
+        self.assertEqual(empty_res['total_days'], 0)
+        self.assertEqual(empty_res['days'], [])
+        self.assertEqual(empty_res['available_months'], [])
+
+        # 2. Test jednostkowy bogatych danych
+        grades = [
+            {'grade': '5', 'subject': 'Matematyka', 'category': 'Sprawdzian', 'date': '2026-09-10 10:00:00', 'weight': '3'},
+            {'grade': '4+', 'subject': 'Fizyka', 'category': 'Kartkówka', 'date': '2026-10-05 11:30:00', 'weight': '2'},
+        ]
+        messages = [
+            {'title': 'Wycieczka klasowa', 'sender': 'Wychowawca', 'datetime': '2026-09-11 12:00:00', 'body': 'Szczegóły wycieczki...'},
+        ]
+        notifications = [
+            {'title': 'Dzień sportu', 'sender': 'Dyrekcja', 'datetime': '2026-09-12 08:00:00', 'body': 'Zawody sportowe...'},
+        ]
+        timetable = [
+            {'subject': 'Historia', 'category': 'Sprawdzian', 'date': '2026-09-15', 'lesson_no': 2, 'description': 'Średniowiecze'},
+        ]
+        attendance = [
+            {
+                'date': '2026-09-18',
+                'lesson_no': 3,
+                'subject': 'Geografia',
+                'symbol': 'nb',
+                'is_absence': True,
+                'is_justified': False,
+                'teacher': 'D. Opolska',
+                'topic': 'Hydrosfera',
+            }
+        ]
+
+        ref_now = datetime(2026, 10, 20, 12, 0, 0)
+        res = build_chronicle_timeline(grades, messages, notifications, timetable, attendance, now=ref_now)
+
+        self.assertEqual(res['total_events'], 6)
+        self.assertEqual(res['total_days'], 6)
+        self.assertEqual(res['total_grades'], 2)
+        self.assertEqual(res['total_messages'], 1)
+        self.assertEqual(res['total_notifications'], 1)
+        self.assertEqual(res['total_tests'], 1)
+        self.assertEqual(res['total_attendance'], 1)
+        self.assertEqual(res['total_unjustified'], 1)
+        self.assertEqual(res['default_month_key'], '2026-10')
+        self.assertEqual(res['initial_visible_days'], 1)
+        self.assertEqual(res['initial_visible_events'], 1)
+
+        # Sprawdzenie dostępnych miesięcy (posortowane malejąco: 2026-10, 2026-09)
+        month_keys = [m['key'] for m in res['available_months']]
+        self.assertEqual(month_keys, ['2026-10', '2026-09'])
+        self.assertEqual(res['available_months'][0]['label'], 'Październik 2026')
+        self.assertEqual(res['available_months'][1]['label'], 'Wrzesień 2026')
+
+        # Dni posortowane malejąco
+        self.assertEqual(res['days'][0]['date'], '2026-10-05')
+        self.assertEqual(res['days'][-1]['date'], '2026-09-10')
+
+        # Wyszukiwanie tokenów w danym dniu
+        geo_day = next(d for d in res['days'] if d['date'] == '2026-09-18')
+        self.assertIn('geografia', geo_day['search_text'])
+        self.assertIn('opolska', geo_day['search_text'])
+        self.assertIn('hydrosfera', geo_day['search_text'])
+
+        # 3. Integracja widoków webowych
+        app = create_app(config_path=self.config_path, storage_dir=self.storage_dir, no_auth=True)
+        client = app.test_client()
+
+        # Dashboard zawiera odnośnik do pełnego kalendarium
+        res_dash = client.get('/')
+        self.assertEqual(res_dash.status_code, 200)
+        self.assertIn(b'/terminarz?view=chronicle', res_dash.data)
+        html_dash = res_dash.data.decode('utf-8')
+        self.assertIn('Pełne kalendarium', html_dash)
+
+        # /terminarz domyślnie renderuje zakładki
+        res_tt = client.get('/terminarz')
+        self.assertEqual(res_tt.status_code, 200)
+        html_tt = res_tt.data.decode('utf-8')
+        self.assertIn('Najbliższe dni', html_tt)
+        self.assertIn('Kronika szkolna', html_tt)
+        self.assertIn('tab-btn-upcoming', html_tt)
+        self.assertIn('tab-btn-chronicle', html_tt)
+        self.assertIn('chronicle-days-container', html_tt)
+
+        # /terminarz?view=chronicle renderuje z aktywną kroniką
+        res_chron = client.get('/terminarz?view=chronicle')
+        self.assertEqual(res_chron.status_code, 200)
+        html_chron = res_chron.data.decode('utf-8')
+        self.assertIn('Miesiąc:', html_chron)
+        self.assertIn('chronicle-month-btn', html_chron)
+        self.assertIn('chronicleState', html_chron)
+
+        # /kalendarium przekierowuje (302) do /terminarz?view=chronicle
+        res_redir = client.get('/kalendarium')
+        self.assertEqual(res_redir.status_code, 302)
+        self.assertTrue(res_redir.location.endswith('/terminarz?view=chronicle'))
 
 
 

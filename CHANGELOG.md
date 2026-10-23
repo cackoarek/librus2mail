@@ -9,6 +9,32 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ## [Unreleased]
 
+### Dodane
+- **Automatyczny audyt bezpieczeństwa i skanowanie podatności (CI & Dependabot)**:
+  - Dodano dedykowany workflow GitHub Actions ([security.yml](file:///.github/workflows/security.yml)) uruchamiający cotygodniowy audyt podatności w zależnościach za pomocą [pip-audit](https://github.com/pypa/pip-audit) (baza PyPI/OSV CVE) oraz statyczną analizę bezpieczeństwa kodu (SAST) za pomocą [bandit](https://github.com/PyCQA/bandit).
+  - Skonfigurowano [dependabot.yml](file:///.github/dependabot.yml) do automatycznego monitorowania zależności Pythona oraz akcji CI z automatycznym generowaniem Pull Requestów z łatkami CVE.
+  - Podbito bezpieczne minimalne wersje bibliotek `requests>=2.32.0` oraz `jinja2>=3.1.4` w [requirements.txt](file:///requirements.txt) i [pyproject.toml](file:///pyproject.toml).
+  - Oznaczono kontrolowane miejsca w kodzie (`mail_sender.py`, `app.py`), uzyskując 0 podatności i w 100% czysty wynik analizy SAST Bandit.
+- **Pełna przeglądarka Kalendarium szkolnego (Kronika) w zakładce Terminarz**:
+  - Rozszerzono zakładkę **Terminarz** ([timetable.html](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/templates/web/timetable.html)) o przełącznik trybów: **Najbliższe dni** (perspektywa w przód) oraz **Kronika szkolna** (pełna historia wstecz).
+  - Silnik agregacji [build_chronicle_timeline()](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/web/services.py) łączący wszystkie zarejestrowane w bazie zdarzenia: oceny, frekwencję (nieobecności, spóźnienia, zwolnienia), zapowiedziane sprawdziany, wiadomości od nauczycieli oraz ogłoszenia szkolne.
+  - Karty KPI podsumowujące całą historię (liczba ocen, frekwencja z wyróżnieniem nieobecności nieusprawiedliwionych, sprawdziany, komunikacja).
+  - Pasek kontrolny z dynamicznym wyborem miesiąca (`Wszystkie`, `Wrzesień`, `Październik`...), filtrami typów zdarzeń (pigułki wielokrotnego wyboru) oraz natychmiastową wyszukiwarką na żywo (po przedmiotach, nauczycielach, opisach i tematach).
+  - Nowy przycisk na Pulpicie w module kalendarium: **`Pełne kalendarium ➔`**, prowadzący bezpośrednio do kroniki szkolnej w Terminarzu.
+  - Skrótowa trasa URL `/kalendarium` przekierowująca do `/terminarz?view=chronicle`.
+  - Pełna interaktywność i wsparcie offline dla eksportowanych raportów HTML ([web_terminarz.html](file:///home/acacko/PycharmProjects/librus2mail/examples/reports/web_terminarz.html)).
+- **Interaktywny dymek szczegółów (Popover / Tooltip) po najechaniu na komórkę Heatmapy frekwencji**:
+  - Dodano dynamiczny dymek po najechaniu kursorem (`hover` / `focus`) na komórki heatmapy z odnotowanymi zdarzeniami frekwencyjnymi (nieobecności nieusprawiedliwione i usprawiedliwione, spóźnienia, zwolnienia).
+  - Dymek prezentuje pełne podsumowanie dnia bez konieczności klikania i przewijania strony do osi czasu: sformatowaną datę w języku polskim, pigułki z podsumowaniem liczbowym (`🔴 1 nieobecność nieuspr.`, `🟢 2 usprawiedliwione`, `🟡 1 spóźnienie`, `🔵 1 zwolnienie`) oraz listę zajęć lekcyjnych ze szczegółami (przedmiot, godzina lekcyjna, symbol, nauczyciel, temat zajęć i status e-Usprawiedliwienia).
+  - Inteligentne pozycjonowanie dymka (dokowanie nad/pod komórką, zabezpieczenie przed wykraczaniem poza krawędzie ekranu, płynne zamykanie przy przewijaniu).
+  - Spójna obsługa dymka zarówno w rocznej Heatmapie w stylu GitHub, jak i w widoku kalendarza miesięcznego.
+
+### Naprawione
+- **Trwałość ustawień modułu Kalendarium (Pulpit główny)**:
+  - Naprawiono problem samoistnego resetowania się ustawień Kalendarium (`timeline`: liczba dni, ukrywanie weekendów, odwrotna kolejność kart) do domyślnych wartości (5 dni, brak ukrywania, standardowa kolejność).
+  - Dodano model [TimelineConfig](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/config_models.py) do `AppSettings` oraz zaktualizowano mechanizm serializacji `_serialize_value()`, aby nie gubił dynamicznych pól `__pydantic_extra__` przy wywołaniach `to_dict()`.
+  - Zabezpieczono endpoint przełączania widoku frekwencji (`/api/attendance/view-mode`) oraz formularz ustawień przed usuwaniem sekcji `timeline` z pliku `config.yaml`.
+
 ---
 
 ## [2.8.0] – 2026-10-22
@@ -21,6 +47,8 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 - improved Wiadomosci view navigation
 
 ### Naprawione
+- **Spójność oznaczenia następnej lekcji na Pulpicie i w Planie lekcji**:
+  - Ujednolicono treść odznaki nadchodzącej lekcji w widoku planu lekcji na Pulpicie (`dashboard.html`), zastępując skrótowy napis `Następna` pełną, spójną z zakładką Plan lekcji (`schedule.html`) frazą `Następna lekcja (za X min)` z dynamicznym odliczaniem czasu do rozpoczęcia zajęć.
 - modify colors in some themes
 
 ### Dokumentacja

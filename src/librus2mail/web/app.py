@@ -478,13 +478,23 @@ def subject_detail_view(subject_name: str):
 @web_bp.route('/terminarz')
 @login_required
 def timetable_view():
-    """Widok nadchodzących sprawdzianów i nieobecności nauczycieli."""
+    """Widok nadchodzących sprawdzianów, nieobecności nauczycieli oraz kroniki kalendarium."""
     config = request.app_config
     storage = request.app_storage
     active_login = get_active_student_login(config, storage, session_login=session.get('active_student_login'))
 
+    req_view = (request.args.get('view') or request.args.get('tab') or 'upcoming').lower()
+    initial_view = 'chronicle' if req_view in ('chronicle', 'kalendarium', 'kronika') else 'upcoming'
+
     data = get_student_dashboard_bundle(storage, active_login, config, now=request.app_actual_date)
-    return render_template('web/timetable.html', data=data)
+    return render_template('web/timetable.html', data=data, initial_view=initial_view)
+
+
+@web_bp.route('/kalendarium')
+@login_required
+def kalendarium_redirect():
+    """Skrót/przekierowanie bezpośrednio do widoku pełnego kalendarium (kroniki) w terminarzu."""
+    return redirect(url_for('web.timetable_view', view='chronicle'))
 
 
 @web_bp.route('/attendance')
@@ -1183,6 +1193,13 @@ def setup_submit():
             'max_login_attempts': 5,
             'lockout_duration_s': 900,
         },
+        'timeline': {
+            'enabled': True,
+            'days': 5,
+            'hide_weekends': False,
+            'reverse_order': False,
+            'event_types': ['grades', 'messages', 'notifications', 'tests', 'attendance'],
+        },
     }
 
     try:
@@ -1362,13 +1379,16 @@ def settings_view():
         except (ValueError, TypeError):
             effective_days = 5
 
-        new_config['timeline'] = {
-            'enabled': 'timeline_enabled' in form,
-            'days': effective_days,
-            'hide_weekends': 'timeline_hide_weekends' in form,
-            'reverse_order': 'timeline_reverse_order' in form,
-            'event_types': selected_event_types,
-        }
+        if 'timeline_settings_present' in form:
+            new_config['timeline'] = {
+                'enabled': 'timeline_enabled' in form,
+                'days': effective_days,
+                'hide_weekends': 'timeline_hide_weekends' in form,
+                'reverse_order': 'timeline_reverse_order' in form,
+                'event_types': selected_event_types,
+            }
+        elif 'timeline' in config:
+            new_config['timeline'] = dict(existing_timeline) if isinstance(existing_timeline, dict) else existing_timeline.to_dict()
 
         try:
             save_config_yaml(new_config, config_path)
@@ -1749,7 +1769,7 @@ def main():
 
     cfg_app = app.config.get('APP_CONFIG', {}) if isinstance(app.config.get('APP_CONFIG'), (dict, collections.abc.Mapping)) else {}
     cfg_web = cfg_app.get('web', {}) if isinstance(cfg_app.get('web'), (dict, collections.abc.Mapping)) else {}
-    effective_host = args.host or cfg_web.get('host') or '0.0.0.0'
+    effective_host = args.host or cfg_web.get('host') or '0.0.0.0'  # nosec
     effective_port = args.port or int(cfg_web.get('port', 5000))
 
     is_loop_enabled = cfg_app.get('work_in_loop', True) if isinstance(cfg_app, (dict, collections.abc.Mapping)) else True

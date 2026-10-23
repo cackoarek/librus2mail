@@ -1926,24 +1926,6 @@ def build_recent_days_timeline(
     timeline_days = []
     total_events = 0
 
-    def _event_sort_key(ev: dict[str, Any]) -> tuple:
-        etype = ev.get('type', '')
-        if etype == 'attendance':
-            prio = 0 if (ev.get('is_absence') and not ev.get('is_justified')) else 1
-        elif etype == 'test':
-            prio = 2
-        elif etype == 'test_announced':
-            prio = 3
-        elif etype == 'grade':
-            prio = 4
-        elif etype == 'message':
-            prio = 5
-        elif etype == 'notification':
-            prio = 6
-        else:
-            prio = 99
-        return (prio, str(ev.get('datetime') or ''), str(ev.get('lesson_no') or ''))
-
     for d in target_dates:
         d_str = d.strftime('%Y-%m-%d')
         day_data = date_to_day[d_str]
@@ -1956,6 +1938,25 @@ def build_recent_days_timeline(
     return timeline_days, total_events
 
 
+def _event_sort_key(ev: dict[str, Any]) -> tuple:
+    etype = ev.get('type', '')
+    if etype == 'attendance':
+        prio = 0 if (ev.get('is_absence') and not ev.get('is_justified')) else 1
+    elif etype == 'test':
+        prio = 2
+    elif etype == 'test_announced':
+        prio = 3
+    elif etype == 'grade':
+        prio = 4
+    elif etype == 'message':
+        prio = 5
+    elif etype == 'notification':
+        prio = 6
+    else:
+        prio = 99
+    return (prio, str(ev.get('datetime') or ''), str(ev.get('lesson_no') or ''))
+
+
 POLISH_MONTH_NAMES: dict[int, str] = {
     1: "Styczeń", 2: "Luty", 3: "Marzec", 4: "Kwiecień", 5: "Maj", 6: "Czerwiec",
     7: "Lipiec", 8: "Sierpień", 9: "Wrzesień", 10: "Październik", 11: "Listopad", 12: "Grudzień",
@@ -1965,6 +1966,517 @@ POLISH_WEEKDAY_NAMES: dict[int, str] = {
     0: "poniedziałek", 1: "wtorek", 2: "środa", 3: "czwartek",
     4: "piątek", 5: "sobota", 6: "niedziela",
 }
+
+POLISH_MONTH_NAMES_GENITIVE: dict[int, str] = {
+    1: "stycznia", 2: "lutego", 3: "marca", 4: "kwietnia", 5: "maja", 6: "czerwca",
+    7: "lipca", 8: "sierpnia", 9: "września", 10: "października", 11: "listopada", 12: "grudnia",
+}
+
+
+def build_chronicle_timeline(
+    grades: list[dict[str, Any]],
+    messages: list[dict[str, Any]],
+    notifications: list[dict[str, Any]],
+    timetable: list[dict[str, Any]],
+    attendance: list[dict[str, Any]] | None = None,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """
+    Buduje pełną chronologiczną kronikę (kalendarium) wszystkich zarejestrowanych zdarzeń ucznia:
+    ocen, frekwencji (nieobecności, spóźnienia, zwolnienia), zapowiedzianych sprawdzianów,
+    wiadomości oraz ogłoszeń szkolnych z całej historii zapisanej w bazie/storage.
+
+    Zwraca słownik zawierający:
+    - total_events, total_days
+    - liczniki poszczególnych kategorii (oceny, sprawdziany, frekwencja, wiadomości, ogłoszenia)
+    - available_months: listę miesięcy ze zdarzeniami do filtrowania
+    - days: listę dni posortowanych malejąco (od najnowszych), z przypisanymi zdarzeniami
+    """
+    ref_now = now or datetime.now()
+    ref_date = ref_now.date()
+
+    date_to_day: dict[str, dict[str, Any]] = {}
+
+    def get_or_create_day(d: date) -> dict[str, Any]:
+        d_str = d.strftime('%Y-%m-%d')
+        if d_str not in date_to_day:
+            month_key = d.strftime('%Y-%m')
+            m_gen = POLISH_MONTH_NAMES_GENITIVE.get(d.month, f"{d.month:02d}")
+            w_name = POLISH_WEEKDAY_NAMES.get(d.weekday(), '').capitalize()
+            weekdays_short = ["Pon", "Wt", "Śr", "Czw", "Pt", "Sob", "Ndz"]
+            date_to_day[d_str] = {
+                'date': d_str,
+                'date_obj': d,
+                'month_key': month_key,
+                'formatted_date': d.strftime('%d.%m.%Y'),
+                'formatted_day_month': f"{d.day} {m_gen}",
+                'weekday_name': w_name,
+                'weekday_short': weekdays_short[d.weekday()],
+                'is_today': (d == ref_date),
+                'is_weekend': (d.weekday() >= 5),
+                'events': [],
+                'events_count': 0,
+                'grades_count': 0,
+                'messages_count': 0,
+                'notifications_count': 0,
+                'tests_count': 0,
+                'attendance_count': 0,
+                'absences_count': 0,
+                'unjustified_count': 0,
+                'justified_count': 0,
+                'lates_count': 0,
+                'types_set': set(),
+                'search_tokens': [d_str, f"{d.day} {m_gen}", w_name],
+            }
+        return date_to_day[d_str]
+
+    # 1. Oceny
+    for g in grades:
+        raw_date = g.get('date') or g.get('added_at')
+        dt = parse_datetime_safe(raw_date)
+        if dt:
+            d = dt.date()
+            d_str = d.strftime('%Y-%m-%d')
+            grade_val = str(g.get('grade') or '').strip()
+            badge_color = _get_grade_badge_color(grade_val)
+            subj = g.get('subject') or 'Ocena'
+            cat = g.get('category') if g.get('category') != '-' else ''
+            weight = g.get('weight') or '1'
+            comment = g.get('comment') if g.get('comment') != '-' else ''
+            teacher = g.get('teacher', '')
+            time_str = dt.strftime('%H:%M') if dt.hour != 0 or dt.minute != 0 else ''
+
+            day = get_or_create_day(d)
+            day['events'].append({
+                'type': 'grade',
+                'icon': '📝',
+                'badge': grade_val,
+                'badge_color': badge_color,
+                'title': subj,
+                'subject': subj,
+                'category': cat,
+                'weight': weight,
+                'comment': comment,
+                'teacher': teacher,
+                'datetime': dt,
+                'time_str': time_str,
+                'date': d_str,
+                'raw': g,
+            })
+            day['grades_count'] += 1
+            day['types_set'].add('grade')
+            day['search_tokens'].extend([subj, cat, comment, teacher, grade_val])
+
+    # 2. Wiadomości
+    for m in messages:
+        raw_date = m.get('datetime') or m.get('date') or m.get('added_at')
+        dt = parse_datetime_safe(raw_date)
+        if dt:
+            d = dt.date()
+            d_str = d.strftime('%Y-%m-%d')
+            title = m.get('title') or 'Wiadomość'
+            sender = m.get('sender', '')
+            body = (m.get('body') or '').strip()
+            snippet = (body[:140] + '...') if len(body) > 140 else body
+            time_str = dt.strftime('%H:%M') if dt.hour != 0 or dt.minute != 0 else ''
+
+            day = get_or_create_day(d)
+            day['events'].append({
+                'type': 'message',
+                'icon': '✉️',
+                'badge': 'Wiadomość',
+                'title': title,
+                'sender': sender,
+                'snippet': snippet,
+                'body': body,
+                'datetime': dt,
+                'time_str': time_str,
+                'date': d_str,
+                'raw': m,
+            })
+            day['messages_count'] += 1
+            day['types_set'].add('message')
+            day['search_tokens'].extend([title, sender, body[:200]])
+
+    # 3. Ogłoszenia
+    for n in notifications:
+        raw_date = n.get('datetime') or n.get('date') or n.get('added_at')
+        dt = parse_datetime_safe(raw_date)
+        if dt:
+            d = dt.date()
+            d_str = d.strftime('%Y-%m-%d')
+            title = n.get('title') or 'Ogłoszenie'
+            sender = n.get('sender', '')
+            body = (n.get('body') or '').strip()
+            snippet = (body[:140] + '...') if len(body) > 140 else body
+            time_str = dt.strftime('%H:%M') if dt.hour != 0 or dt.minute != 0 else ''
+
+            day = get_or_create_day(d)
+            day['events'].append({
+                'type': 'notification',
+                'icon': '📢',
+                'badge': 'Ogłoszenie',
+                'title': title,
+                'sender': sender,
+                'snippet': snippet,
+                'body': body,
+                'datetime': dt,
+                'time_str': time_str,
+                'date': d_str,
+                'raw': n,
+            })
+            day['notifications_count'] += 1
+            day['types_set'].add('notification')
+            day['search_tokens'].extend([title, sender, body[:200]])
+
+    # 4. Sprawdziany i terminarz
+    seen_test_events: set[tuple[str, str, str, str]] = set()
+    for t in timetable:
+        # A. Sprawdzian odbywający się w danym dniu
+        raw_test_date = t.get('date')
+        test_dt = parse_datetime_safe(raw_test_date)
+        if test_dt:
+            d = test_dt.date()
+            d_str = d.strftime('%Y-%m-%d')
+            cat = t.get('category') or 'Sprawdzian'
+            subj = t.get('subject') or 'Przedmiot'
+            desc = (t.get('description') or '').strip()
+            teacher = t.get('teacher', '')
+            lesson_no = t.get('lesson_no', '')
+            dedup_key = ('test', subj, cat, d_str)
+            if dedup_key not in seen_test_events:
+                seen_test_events.add(dedup_key)
+                day = get_or_create_day(d)
+                day['events'].append({
+                    'type': 'test',
+                    'icon': '🔔',
+                    'badge': cat,
+                    'title': f'{cat}: {subj}',
+                    'subject': subj,
+                    'description': desc,
+                    'lesson_no': lesson_no,
+                    'teacher': teacher,
+                    'datetime': test_dt,
+                    'time_str': f'Lekcja {lesson_no}' if lesson_no else '',
+                    'date': d_str,
+                    'is_announced_future': False,
+                    'raw': t,
+                })
+                day['tests_count'] += 1
+                day['types_set'].add('test')
+                day['search_tokens'].extend([subj, cat, desc, teacher])
+
+        # B. Sprawdzian zapowiedziany w danym dniu na przyszłość
+        raw_add_date = t.get('add_date')
+        add_dt = parse_datetime_safe(raw_add_date)
+        if add_dt and test_dt and test_dt.date() > add_dt.date():
+            add_d = add_dt.date()
+            add_str = add_d.strftime('%Y-%m-%d')
+            cat = t.get('category') or 'Sprawdzian'
+            subj = t.get('subject') or 'Przedmiot'
+            desc = (t.get('description') or '').strip()
+            target_date_str = test_dt.strftime('%d.%m')
+            dedup_key = ('test_announced', subj, cat, f'{add_str}->{target_date_str}')
+            if dedup_key not in seen_test_events:
+                seen_test_events.add(dedup_key)
+                day = get_or_create_day(add_d)
+                day['events'].append({
+                    'type': 'test',
+                    'sub_type': 'test_announced',
+                    'icon': '🗓️',
+                    'badge': f'Na {target_date_str}',
+                    'title': f'Zapowiedziano: {cat} ({subj})',
+                    'subject': subj,
+                    'description': desc,
+                    'target_date': target_date_str,
+                    'teacher': t.get('teacher', ''),
+                    'datetime': add_dt,
+                    'time_str': add_dt.strftime('%H:%M') if add_dt.hour != 0 or add_dt.minute != 0 else '',
+                    'date': add_str,
+                    'is_announced_future': True,
+                    'raw': t,
+                })
+                day['tests_count'] += 1
+                day['types_set'].add('test')
+                day['search_tokens'].extend([subj, cat, desc, t.get('teacher', '')])
+
+    # 5. Frekwencja
+    if attendance:
+        for att in attendance:
+            raw_date = att.get('date')
+            dt = parse_datetime_safe(raw_date)
+            if dt:
+                d = dt.date()
+                d_str = d.strftime('%Y-%m-%d')
+                is_abs = bool(att.get('is_absence'))
+                is_just = bool(att.get('is_justified'))
+                is_late = bool(att.get('is_late'))
+                is_exempt = bool(att.get('is_exempt'))
+                symbol = (att.get('symbol') or '').strip()
+                subject = (att.get('subject') or '').strip()
+                lesson_no = att.get('lesson_no') or ''
+                lesson_str = f'Lekcja {lesson_no}' if lesson_no else ''
+                teacher = att.get('teacher', '')
+                topic = att.get('topic', '')
+                just_info = att.get('justification_info', '')
+
+                if is_abs:
+                    if is_just:
+                        icon = '🟢'
+                        badge = f'🟢 {symbol}' if symbol else '🟢 uspr.'
+                        badge_label = 'Nieobecność usprawiedliwiona'
+                        badge_color = 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                        event_class = 'border-l-4 border-l-emerald-500 bg-emerald-50/40'
+                        title = f"Nieobecność uspr.: {subject or 'Lekcja'}"
+                    else:
+                        icon = '🔴'
+                        badge = f'🔴 {symbol}' if symbol else '🔴 nb'
+                        badge_label = 'Nieobecność nieuspr.'
+                        badge_color = 'bg-rose-100 text-rose-800 border border-rose-300'
+                        event_class = 'border-l-4 border-l-rose-500 bg-rose-50/50 ring-1 ring-rose-200'
+                        title = f"Nieobecność nieuspr.: {subject or 'Lekcja'}"
+                elif is_late:
+                    icon = '🟡'
+                    badge = f'🟡 {symbol}' if symbol else '🟡 sp.'
+                    badge_label = 'Spóźnienie'
+                    badge_color = 'bg-amber-100 text-amber-800 border border-amber-300'
+                    event_class = 'border-l-4 border-l-amber-500 bg-amber-50/40'
+                    title = f"Spóźnienie: {subject or 'Lekcja'}"
+                elif is_exempt:
+                    icon = '🔵'
+                    badge = f'🔵 {symbol}' if symbol else '🔵 zw.'
+                    badge_label = 'Zwolnienie'
+                    badge_color = 'bg-sky-100 text-sky-800 border border-sky-300'
+                    event_class = 'border-l-4 border-l-sky-500 bg-sky-50/40'
+                    title = f"Zwolnienie: {subject or 'Lekcja'}"
+                else:
+                    icon = '⏱️'
+                    badge = symbol or '⏱️'
+                    badge_label = att.get('type') or 'Frekwencja'
+                    badge_color = 'bg-slate-100 text-slate-800 border border-slate-300'
+                    event_class = 'border-l-4 border-l-slate-400 bg-slate-50/40'
+                    title = f"Frekwencja: {subject or 'Lekcja'}"
+
+                day = get_or_create_day(d)
+                day['events'].append({
+                    'type': 'attendance',
+                    'icon': icon,
+                    'badge': badge,
+                    'badge_label': badge_label,
+                    'badge_color': badge_color,
+                    'event_class': event_class,
+                    'title': title,
+                    'subject': subject,
+                    'symbol': symbol,
+                    'lesson_no': lesson_no,
+                    'is_absence': is_abs,
+                    'is_justified': is_just,
+                    'is_late': is_late,
+                    'is_exempt': is_exempt,
+                    'teacher': teacher,
+                    'topic': topic,
+                    'justification_info': just_info,
+                    'datetime': dt,
+                    'date': d_str,
+                    'time_str': lesson_str,
+                    'raw': att,
+                })
+                day['attendance_count'] += 1
+                day['types_set'].add('attendance')
+                if is_abs:
+                    day['absences_count'] += 1
+                    if is_just:
+                        day['justified_count'] += 1
+                    else:
+                        day['unjustified_count'] += 1
+                elif is_late:
+                    day['lates_count'] += 1
+                day['search_tokens'].extend([subject, symbol, teacher, topic, just_info])
+
+    # Sortowanie dni malejąco (od najnowszych do najstarszych)
+    sorted_dates = sorted(date_to_day.keys(), reverse=True)
+    days: list[dict[str, Any]] = []
+
+    for d_str in sorted_dates:
+        day_data = date_to_day[d_str]
+        day_data['events'].sort(key=_event_sort_key)
+        day_data['events_count'] = len(day_data['events'])
+        day_data['has_events'] = bool(day_data['events'])
+        day_data['types_str'] = ' '.join(sorted(day_data['types_set']))
+        day_data['types_list'] = sorted(day_data['types_set'])
+        day_data['search_text'] = ' '.join(str(tok).lower() for tok in day_data['search_tokens'] if tok)
+        days.append(day_data)
+
+    # Budowanie podsumowania dostępnych miesięcy
+    months_dict: dict[str, dict[str, Any]] = {}
+    for day in days:
+        m_key = day['month_key']
+        if m_key not in months_dict:
+            y, m = m_key.split('-')
+            m_name = POLISH_MONTH_NAMES.get(int(m), m)
+            months_dict[m_key] = {
+                'key': m_key,
+                'label': f"{m_name} {y}",
+                'month_name': m_name,
+                'year': y,
+                'events_count': 0,
+                'days_count': 0,
+            }
+        months_dict[m_key]['events_count'] += day['events_count']
+        months_dict[m_key]['days_count'] += 1
+
+    available_months = [months_dict[k] for k in sorted(months_dict.keys(), reverse=True)]
+
+    current_month_key = ref_date.strftime('%Y-%m')
+    if current_month_key in months_dict:
+        default_month_key = current_month_key
+    elif available_months:
+        default_month_key = available_months[0]['key']
+    else:
+        default_month_key = 'all'
+
+    default_month_data = months_dict.get(default_month_key)
+    initial_visible_days = default_month_data['days_count'] if default_month_data else len(days)
+    initial_visible_events = default_month_data['events_count'] if default_month_data else sum(d['events_count'] for d in days)
+
+    return {
+        'total_events': sum(d['events_count'] for d in days),
+        'total_days': len(days),
+        'total_grades': sum(d['grades_count'] for d in days),
+        'total_messages': sum(d['messages_count'] for d in days),
+        'total_notifications': sum(d['notifications_count'] for d in days),
+        'total_tests': sum(d['tests_count'] for d in days),
+        'total_attendance': sum(d['attendance_count'] for d in days),
+        'total_absences': sum(d['absences_count'] for d in days),
+        'total_unjustified': sum(d['unjustified_count'] for d in days),
+        'total_justified': sum(d['justified_count'] for d in days),
+        'total_lates': sum(d['lates_count'] for d in days),
+        'available_months': available_months,
+        'current_month_key': current_month_key,
+        'default_month_key': default_month_key,
+        'initial_visible_days': initial_visible_days,
+        'initial_visible_events': initial_visible_events,
+        'days': days,
+    }
+
+
+def _format_day_events_for_tooltip(
+    day_events: list[dict[str, Any]],
+    day_date: date,
+    is_weekend: bool,
+    is_future: bool,
+    is_in_sy: bool = True,
+) -> dict[str, Any]:
+    """Przygotowuje ustrukturyzowane dane i szczegółowe podsumowanie zdarzeń dnia dla dymka (popovera) frekwencji."""
+    if not is_in_sy:
+        return {
+            'status': 'out_of_bounds',
+            'tooltip': '',
+            'events_count': 0,
+            'unjustified_count': 0,
+            'justified_count': 0,
+            'late_count': 0,
+            'exempt_count': 0,
+            'date_display': '',
+            'events_summary': [],
+        }
+
+    weekday_pl = POLISH_WEEKDAY_NAMES.get(day_date.weekday(), "")
+    month_pl = POLISH_MONTH_NAMES_GENITIVE.get(day_date.month, POLISH_MONTH_NAMES.get(day_date.month, ""))
+    date_display = f"{weekday_pl.capitalize()}, {day_date.day} {month_pl} {day_date.year}"
+
+    if is_future:
+        status = 'future'
+        tooltip = (
+            f"{day_date.day:02d}.{day_date.month:02d}: Planowany dzień nauki"
+            if not is_weekend
+            else f"{day_date.day:02d}.{day_date.month:02d}: Weekend"
+        )
+        return {
+            'status': status,
+            'tooltip': tooltip,
+            'events_count': 0,
+            'unjustified_count': 0,
+            'justified_count': 0,
+            'late_count': 0,
+            'exempt_count': 0,
+            'date_display': date_display,
+            'events_summary': [],
+        }
+
+    if not day_events:
+        if is_weekend:
+            status = 'weekend'
+            tooltip = f"{day_date.day:02d}.{day_date.month:02d}: Weekend"
+        else:
+            status = 'clean'
+            tooltip = f"{day_date.day:02d}.{day_date.month:02d}: 100% obecności"
+        return {
+            'status': status,
+            'tooltip': tooltip,
+            'events_count': 0,
+            'unjustified_count': 0,
+            'justified_count': 0,
+            'late_count': 0,
+            'exempt_count': 0,
+            'date_display': date_display,
+            'events_summary': [],
+        }
+
+    # Zdarzenia frekwencyjne w tym dniu
+    entries_sorted = sorted(
+        day_events,
+        key=lambda x: int(x.get('lesson_no', 0)) if str(x.get('lesson_no', '')).isdigit() else 99,
+    )
+
+    d_nu = sum(1 for x in day_events if x.get('is_absence') and not x.get('is_justified'))
+    d_u = sum(1 for x in day_events if x.get('is_absence') and x.get('is_justified'))
+    d_sp = sum(1 for x in day_events if x.get('is_late'))
+    d_zw = sum(1 for x in day_events if x.get('is_exempt'))
+
+    if d_nu > 0:
+        status = 'unjustified'
+        tooltip = f"{day_date.day:02d}.{day_date.month:02d}: Nieobecność nieusprawiedliwiona ({len(day_events)} lekcji)"
+    elif d_u > 0:
+        status = 'justified'
+        tooltip = f"{day_date.day:02d}.{day_date.month:02d}: Nieobecność usprawiedliwiona ({len(day_events)} lekcji)"
+    elif d_sp > 0:
+        status = 'late'
+        tooltip = f"{day_date.day:02d}.{day_date.month:02d}: Spóźnienie"
+    elif d_zw > 0:
+        status = 'exempt'
+        tooltip = f"{day_date.day:02d}.{day_date.month:02d}: Zwolnienie"
+    else:
+        status = 'clean'
+        tooltip = f"{day_date.day:02d}.{day_date.month:02d}: 100% obecności"
+
+    events_summary = []
+    for x in entries_sorted:
+        events_summary.append({
+            'lesson_no': x.get('lesson_no'),
+            'subject': x.get('subject') or 'Inne',
+            'symbol': x.get('symbol') or '',
+            'type': x.get('type') or '',
+            'teacher': x.get('teacher') or '',
+            'topic': x.get('topic') or '',
+            'is_unjustified': bool(x.get('is_absence') and not x.get('is_justified')),
+            'is_justified': bool(x.get('is_absence') and x.get('is_justified')),
+            'is_late': bool(x.get('is_late')),
+            'is_exempt': bool(x.get('is_exempt')),
+            'justification_info': x.get('justification_info') or '',
+        })
+
+    return {
+        'status': status,
+        'tooltip': tooltip,
+        'events_count': len(day_events),
+        'unjustified_count': d_nu,
+        'justified_count': d_u,
+        'late_count': d_sp,
+        'exempt_count': d_zw,
+        'date_display': date_display,
+        'events_summary': events_summary,
+    }
 
 
 def prepare_attendance_view_data(
@@ -2150,40 +2662,19 @@ def prepare_attendance_view_data(
                     day_events = by_date.get(d_iso, [])
                     month_events_count += len(day_events)
 
-                    status = 'clean'
-                    tooltip = ""
-                    if day_events:
-                        d_u = sum(1 for x in day_events if x.get('is_absence') and x.get('is_justified'))
-                        d_nu = sum(1 for x in day_events if x.get('is_absence') and not x.get('is_justified'))
-                        d_sp = sum(1 for x in day_events if x.get('is_late'))
-                        d_zw = sum(1 for x in day_events if x.get('is_exempt'))
+                    day_d = date(y, m, day_num)
+                    day_info = _format_day_events_for_tooltip(
+                        day_events=day_events,
+                        day_date=day_d,
+                        is_weekend=is_weekend,
+                        is_future=is_future,
+                        is_in_sy=True,
+                    )
 
-                        m_unjustified += d_nu
-                        m_justified += d_u
-                        m_lates += d_sp
-                        m_exemptions += d_zw
-
-                        if d_nu > 0:
-                            status = 'unjustified'
-                            tooltip = f"{day_num:02d}.{m:02d}: Nieobecność nieusprawiedliwiona ({len(day_events)} lekcji)"
-                        elif d_u > 0:
-                            status = 'justified'
-                            tooltip = f"{day_num:02d}.{m:02d}: Nieobecność usprawiedliwiona ({len(day_events)} lekcji)"
-                        elif d_sp > 0:
-                            status = 'late'
-                            tooltip = f"{day_num:02d}.{m:02d}: Spóźnienie"
-                        elif d_zw > 0:
-                            status = 'exempt'
-                            tooltip = f"{day_num:02d}.{m:02d}: Zwolnienie"
-                    elif is_future:
-                        status = 'future'
-                        tooltip = f"{day_num:02d}.{m:02d}: Planowany dzień nauki" if not is_weekend else f"{day_num:02d}.{m:02d}: Weekend"
-                    elif is_weekend:
-                        status = 'weekend'
-                        tooltip = f"{day_num:02d}.{m:02d}: Weekend"
-                    else:
-                        status = 'clean'
-                        tooltip = f"{day_num:02d}.{m:02d}: 100% obecności"
+                    m_unjustified += day_info['unjustified_count']
+                    m_justified += day_info['justified_count']
+                    m_lates += day_info['late_count']
+                    m_exemptions += day_info['exempt_count']
 
                     days.append({
                         'day_num': day_num,
@@ -2191,9 +2682,15 @@ def prepare_attendance_view_data(
                         'is_weekend': is_weekend,
                         'is_today': is_today,
                         'is_future': is_future,
-                        'status': status,
-                        'events_count': len(day_events),
-                        'tooltip': tooltip,
+                        'status': day_info['status'],
+                        'events_count': day_info['events_count'],
+                        'unjustified_count': day_info['unjustified_count'],
+                        'justified_count': day_info['justified_count'],
+                        'late_count': day_info['late_count'],
+                        'exempt_count': day_info['exempt_count'],
+                        'date_display': day_info['date_display'],
+                        'events_summary': day_info['events_summary'],
+                        'tooltip': day_info['tooltip'],
                     })
             weeks.append(days)
 
@@ -2270,39 +2767,21 @@ def prepare_attendance_view_data(
                     'year': day_date.year,
                 })
 
-            if not is_in_sy:
-                status = 'out_of_bounds'
-                tooltip = ''
-            elif is_future:
-                status = 'future'
-                tooltip = f"{day_date.day:02d}.{day_date.month:02d}: Planowany dzień nauki" if not is_weekend else f"{day_date.day:02d}.{day_date.month:02d}: Weekend"
-            elif day_events:
+            day_info = _format_day_events_for_tooltip(
+                day_events=day_events,
+                day_date=day_date,
+                is_weekend=is_weekend,
+                is_future=is_future,
+                is_in_sy=is_in_sy,
+            )
+
+            if not is_future and is_in_sy:
                 if not is_weekend:
                     total_school_days_past += 1
-                    event_days_past += 1
-                if any(x.get('is_absence') and not x.get('is_justified') for x in day_events):
-                    status = 'unjustified'
-                    tooltip = f"{day_date.day:02d}.{day_date.month:02d}: Nieobecność nieusprawiedliwiona ({len(day_events)} lekcji)"
-                elif any(x.get('is_absence') and x.get('is_justified') for x in day_events):
-                    status = 'justified'
-                    tooltip = f"{day_date.day:02d}.{day_date.month:02d}: Nieobecność usprawiedliwiona ({len(day_events)} lekcji)"
-                elif any(x.get('is_late') for x in day_events):
-                    status = 'late'
-                    tooltip = f"{day_date.day:02d}.{day_date.month:02d}: Spóźnienie"
-                elif any(x.get('is_exempt') for x in day_events):
-                    status = 'exempt'
-                    tooltip = f"{day_date.day:02d}.{day_date.month:02d}: Zwolnienie"
-                else:
-                    status = 'clean'
-                    tooltip = f"{day_date.day:02d}.{day_date.month:02d}: 100% obecności"
-            elif is_weekend:
-                status = 'weekend'
-                tooltip = f"{day_date.day:02d}.{day_date.month:02d}: Weekend"
-            else:
-                total_school_days_past += 1
-                clean_days_past += 1
-                status = 'clean'
-                tooltip = f"{day_date.day:02d}.{day_date.month:02d}: 100% obecności"
+                    if day_events:
+                        event_days_past += 1
+                    else:
+                        clean_days_past += 1
 
             days_in_week.append({
                 'date_iso': d_iso,
@@ -2314,9 +2793,15 @@ def prepare_attendance_view_data(
                 'is_today': is_today,
                 'is_future': is_future,
                 'is_in_school_year': is_in_sy,
-                'status': status,
-                'events_count': len(day_events),
-                'tooltip': tooltip,
+                'status': day_info['status'],
+                'events_count': day_info['events_count'],
+                'unjustified_count': day_info['unjustified_count'],
+                'justified_count': day_info['justified_count'],
+                'late_count': day_info['late_count'],
+                'exempt_count': day_info['exempt_count'],
+                'date_display': day_info['date_display'],
+                'events_summary': day_info['events_summary'],
+                'tooltip': day_info['tooltip'],
             })
         strip_weeks.append(days_in_week)
         curr_d += timedelta(days=7)
@@ -2521,6 +3006,16 @@ def get_student_dashboard_bundle(
         len(d.get('tests', [])) for d in timetable_summary.get('upcoming_days', [])
     )
 
+    # Pełna kronika / kalendarium szkolne z całej historii
+    chronicle_data = build_chronicle_timeline(
+        grades=grades,
+        messages=raw_messages,
+        notifications=raw_notifications,
+        timetable=timetable,
+        attendance=attendance_history,
+        now=ref_now,
+    )
+
     return {
         'login': login,
         'name': student_name,
@@ -2537,6 +3032,7 @@ def get_student_dashboard_bundle(
         'recent_timeline_event_types': timeline_event_types,
         'recent_timeline_days': recent_timeline_days,
         'recent_timeline_total_events': recent_timeline_total_events,
+        'chronicle_data': chronicle_data,
         'timetable_summary': timetable_summary,
         'schedule_summary': schedule_summary,
         'today_schedule_summary': today_schedule_summary,
@@ -2787,11 +3283,18 @@ def test_librus_credentials(login: str, password: str) -> tuple[bool, str]:
         return False, f"Błąd połączenia z portalem Librus: {e}"
 
 
-def save_config_yaml(config_dict: dict[str, Any], target_path: str = 'config.yaml') -> str:
+def save_config_yaml(config_dict: dict[str, Any] | Any, target_path: str = 'config.yaml') -> str:
     """Zapisuje słownik konfiguracyjny do pliku YAML z zachowaniem czytelnej struktury."""
     from pathlib import Path
 
     import yaml
+
+    if hasattr(config_dict, 'to_dict'):
+        config_dict = config_dict.to_dict()
+    elif hasattr(config_dict, 'model_dump'):
+        config_dict = config_dict.model_dump()
+    elif not isinstance(config_dict, dict):
+        config_dict = dict(config_dict)
 
     target = Path(target_path).resolve()
     target.parent.mkdir(parents=True, exist_ok=True)

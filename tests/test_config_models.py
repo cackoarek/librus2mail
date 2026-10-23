@@ -12,6 +12,7 @@ from librus2mail.config import (
     MailConfig,
     NonGmailSettings,
     ScheduleConfig,
+    TimelineConfig,
     read_config,
 )
 
@@ -220,6 +221,57 @@ class TestConfigModels(unittest.TestCase):
             self.assertEqual(cfg.librus_users[1].librus_login, '222222')
         finally:
             os.environ.pop('LIBRUS_USERS', None)
+
+    def test_timeline_config_model_and_validation(self):
+        """Weryfikuje model TimelineConfig, domyślne wartości oraz obcinanie dni do zakresu 1-14."""
+        default_tl = TimelineConfig()
+        self.assertTrue(default_tl.enabled)
+        self.assertEqual(default_tl.days, 5)
+        self.assertFalse(default_tl.hide_weekends)
+        self.assertFalse(default_tl.reverse_order)
+        self.assertEqual(len(default_tl.event_types), 5)
+
+        # Clamping dni do zakresu 1-14
+        custom_tl = TimelineConfig(days=99, hide_weekends=True, reverse_order=True)
+        self.assertEqual(custom_tl.days, 14)
+        self.assertTrue(custom_tl.hide_weekends)
+        self.assertTrue(custom_tl.reverse_order)
+
+        low_tl = TimelineConfig(days=-5)
+        self.assertEqual(low_tl.days, 1)
+
+    def test_timeline_serialization_and_extra_preservation(self):
+        """Weryfikuje, że AppSettings.to_dict() oraz dict(app) zachowują sekcję timeline oraz dynamiczne pola extra."""
+        app = AppSettings.model_validate({
+            'timeline': {
+                'enabled': True,
+                'days': 8,
+                'hide_weekends': True,
+                'reverse_order': True,
+                'event_types': ['grades', 'messages'],
+            },
+            'custom_extra_key': 'preserved_value',
+        })
+        self.assertEqual(app.timeline.days, 8)
+        self.assertTrue(app.timeline.hide_weekends)
+        self.assertTrue(app.timeline.reverse_order)
+
+        # Serializacja to_dict
+        d = app.to_dict()
+        self.assertIn('timeline', d)
+        self.assertEqual(d['timeline']['days'], 8)
+        self.assertTrue(d['timeline']['hide_weekends'])
+        self.assertTrue(d['timeline']['reverse_order'])
+        self.assertIn('custom_extra_key', d)
+        self.assertEqual(d['custom_extra_key'], 'preserved_value')
+
+        # Konwersja dict(app)
+        dict_app = dict(app)
+        self.assertIn('timeline', dict_app)
+        self.assertEqual(dict_app['timeline']['days'], 8)
+        self.assertTrue(dict_app['timeline']['hide_weekends'])
+        self.assertTrue(dict_app['timeline']['reverse_order'])
+        self.assertIn('custom_extra_key', dict_app)
 
 
 if __name__ == '__main__':

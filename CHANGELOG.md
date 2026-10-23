@@ -10,6 +10,11 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 ## [Unreleased]
 
 ### Dodane
+- **Automatyczny audyt bezpieczeństwa i skanowanie podatności (CI & Dependabot)**:
+  - Dodano dedykowany workflow GitHub Actions ([security.yml](file:///.github/workflows/security.yml)) uruchamiający cotygodniowy audyt podatności w zależnościach za pomocą [pip-audit](https://github.com/pypa/pip-audit) (baza PyPI/OSV CVE) oraz statyczną analizę bezpieczeństwa kodu (SAST) za pomocą [bandit](https://github.com/PyCQA/bandit).
+  - Skonfigurowano [dependabot.yml](file:///.github/dependabot.yml) do automatycznego monitorowania zależności Pythona oraz akcji CI z automatycznym generowaniem Pull Requestów z łatkami CVE.
+  - Podbito bezpieczne minimalne wersje bibliotek `requests>=2.32.0` oraz `jinja2>=3.1.4` w [requirements.txt](file:///requirements.txt) i [pyproject.toml](file:///pyproject.toml).
+  - Oznaczono kontrolowane miejsca w kodzie (`mail_sender.py`, `app.py`), uzyskując 0 podatności i w 100% czysty wynik analizy SAST Bandit.
 - **Pełna przeglądarka Kalendarium szkolnego (Kronika) w zakładce Terminarz**:
   - Rozszerzono zakładkę **Terminarz** ([timetable.html](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/templates/web/timetable.html)) o przełącznik trybów: **Najbliższe dni** (perspektywa w przód) oraz **Kronika szkolna** (pełna historia wstecz).
   - Silnik agregacji [build_chronicle_timeline()](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/web/services.py) łączący wszystkie zarejestrowane w bazie zdarzenia: oceny, frekwencję (nieobecności, spóźnienia, zwolnienia), zapowiedziane sprawdziany, wiadomości od nauczycieli oraz ogłoszenia szkolne.

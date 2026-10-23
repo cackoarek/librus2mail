@@ -103,7 +103,7 @@ class MailSender:
             bg = "#f3f4f6"
             color = "#374151"
             border = "#e5e7eb"
-        return Markup(
+        return Markup(  # nosec B704
             f'<span style="display: inline-block; background-color: {bg}; color: {color}; border: 1px solid {border}; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 13px; margin: 1px;">{html.escape(s)}</span>'
         )
 

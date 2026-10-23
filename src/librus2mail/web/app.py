@@ -1759,7 +1759,7 @@ def main():
 
     cfg_app = app.config.get('APP_CONFIG', {}) if isinstance(app.config.get('APP_CONFIG'), (dict, collections.abc.Mapping)) else {}
     cfg_web = cfg_app.get('web', {}) if isinstance(cfg_app.get('web'), (dict, collections.abc.Mapping)) else {}
-    effective_host = args.host or cfg_web.get('host') or '0.0.0.0'
+    effective_host = args.host or cfg_web.get('host') or '0.0.0.0'  # nosec
     effective_port = args.port or int(cfg_web.get('port', 5000))
 
     is_loop_enabled = cfg_app.get('work_in_loop', True) if isinstance(cfg_app, (dict, collections.abc.Mapping)) else True

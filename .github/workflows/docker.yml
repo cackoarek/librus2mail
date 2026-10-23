@@ -57,7 +57,7 @@ jobs:
             type=sha,prefix=sha-
 
       - name: Build and test image locally (smoke test)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/Dockerfile
@@ -82,7 +82,7 @@ jobs:
 
       - name: Push image to GHCR
         if: github.event_name != 'pull_request'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/Dockerfile

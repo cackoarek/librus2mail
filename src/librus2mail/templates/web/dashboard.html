@@ -168,6 +168,12 @@
             <span class="px-3 py-1 bg-indigo-50 text-indigo-700 font-extrabold text-xs rounded-full border border-indigo-100">
                 Łącznie: {{ data.recent_timeline_total_events }} zdarzeń
             </span>
+            <a href="{{ url_for('web.timetable_view', view='chronicle') }}"
+               class="inline-flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-indigo-50 text-indigo-700 hover:text-indigo-900 font-bold text-xs rounded-xl border border-slate-200 hover:border-indigo-300 shadow-2xs transition cursor-pointer"
+               title="Przejdź do pełnej przeglądarki kalendarium (kroniki szkolnej) w Terminarzu">
+                <span>Pełne kalendarium</span>
+                <span>➔</span>
+            </a>
             <a href="{{ url_for('web.settings_view') }}#kalendarium"
                class="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition"
                title="Dostosuj kalendarium w Ustawieniach">
@@ -733,7 +739,7 @@
                             </span>
                             {% elif is_next %}
                             <span class="inline-flex items-center gap-1 text-[11px] font-bold text-sky-800 bg-sky-100 px-2.5 py-1 rounded-lg border border-sky-300">
-                                <span>⏳</span> Następna
+                                <span>⏳</span> Następna lekcja {% if l.minutes_until is defined and l.minutes_until > 0 %}(za {{ l.minutes_until }} min){% endif %}
                             </span>
                             {% endif %}
                         </div>

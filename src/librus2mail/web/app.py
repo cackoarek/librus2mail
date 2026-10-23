@@ -478,13 +478,23 @@ def subject_detail_view(subject_name: str):
 @web_bp.route('/terminarz')
 @login_required
 def timetable_view():
-    """Widok nadchodzących sprawdzianów i nieobecności nauczycieli."""
+    """Widok nadchodzących sprawdzianów, nieobecności nauczycieli oraz kroniki kalendarium."""
     config = request.app_config
     storage = request.app_storage
     active_login = get_active_student_login(config, storage, session_login=session.get('active_student_login'))
 
+    req_view = (request.args.get('view') or request.args.get('tab') or 'upcoming').lower()
+    initial_view = 'chronicle' if req_view in ('chronicle', 'kalendarium', 'kronika') else 'upcoming'
+
     data = get_student_dashboard_bundle(storage, active_login, config, now=request.app_actual_date)
-    return render_template('web/timetable.html', data=data)
+    return render_template('web/timetable.html', data=data, initial_view=initial_view)
+
+
+@web_bp.route('/kalendarium')
+@login_required
+def kalendarium_redirect():
+    """Skrót/przekierowanie bezpośrednio do widoku pełnego kalendarium (kroniki) w terminarzu."""
+    return redirect(url_for('web.timetable_view', view='chronicle'))
 
 
 @web_bp.route('/attendance')

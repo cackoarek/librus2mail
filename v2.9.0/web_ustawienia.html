@@ -1,0 +1,3047 @@
+<!DOCTYPE html>
+<html lang="pl" class="h-full scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="static_demo_csrf_token_librus2mail">
+    <title>Ustawienia Systemu - Librus2mail - Librus2mail</title>
+    <!-- Favicon z logo Librus2mail (gradient indigo-sky + 🏫) -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%25%22%20y1%3D%22100%25%22%20x2%3D%22100%25%22%20y2%3D%220%25%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%234f46e5%22/%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%230ea5e9%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2216%22%20fill%3D%22url%28%23g%29%22/%3E%3Ctext%20x%3D%2232%22%20y%3D%2234%22%20font-size%3D%2234%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%F0%9F%8F%AB%3C/text%3E%3C/svg%3E">
+
+    <!-- Pre-render Theme Initializer (zapobiega migotaniu białego tła przed załadowaniem DOM) -->
+    <script>
+        (function() {
+            try {
+                const THEMES = ['light', 'dark', 'midnight', 'forest'];
+                let saved = localStorage.getItem('librus2mail_theme') || 'auto';
+                let effective = saved;
+                if (saved === 'auto') {
+                    effective = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                if (!THEMES.includes(effective)) effective = 'light';
+                document.documentElement.setAttribute('data-theme', effective);
+                if (effective !== 'light') {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+            } catch (e) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        })();
+    </script>
+
+    <!-- TailwindCSS CDN & Config -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        theme: {
+                            body: 'var(--theme-bg-body)',
+                            card: 'var(--theme-bg-card)',
+                            'card-hover': 'var(--theme-bg-card-hover)',
+                            header: 'var(--theme-bg-header)',
+                            border: 'var(--theme-border)',
+                            'text-primary': 'var(--theme-text-primary)',
+                            'text-secondary': 'var(--theme-text-secondary)',
+                            'text-muted': 'var(--theme-text-muted)',
+                            accent: 'var(--theme-accent)',
+                            'accent-hover': 'var(--theme-accent-hover)',
+                            'accent-soft': 'var(--theme-accent-soft)',
+                            'accent-text': 'var(--theme-accent-text)',
+                        }
+                    }
+                }
+            }
+        };
+    </script>
+
+    <!-- HTMX CDN -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script>
+        // Automatyczne dołączanie tokenu CSRF do wszystkich zapytań fetch
+        (function() {
+            const _origFetch = window.fetch;
+            window.fetch = function(url, options) {
+                options = options || {};
+                options.headers = options.headers || {};
+                const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                if (token) {
+                    if (options.headers instanceof Headers) {
+                        if (!options.headers.has('X-CSRFToken')) options.headers.set('X-CSRFToken', token);
+                    } else if (!options.headers['X-CSRFToken'] && !options.headers['x-csrftoken']) {
+                        options.headers['X-CSRFToken'] = token;
+                    }
+                }
+                return _origFetch(url, options);
+            };
+        })();
+    </script>
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* ==========================================================================
+           Librus2mail Multi-Skin Design Tokens
+           ========================================================================== */
+        :root, [data-theme="light"] {
+            --theme-bg-body: #f8fafc;
+            --theme-bg-card: #ffffff;
+            --theme-bg-card-hover: #f1f5f9;
+            --theme-bg-header: rgba(255, 255, 255, 0.95);
+            --theme-bg-subtle: #f1f5f9;
+            --theme-border: #e2e8f0;
+            --theme-border-subtle: #f1f5f9;
+            --theme-text-primary: #0f172a;
+            --theme-text-secondary: #334155;
+            --theme-text-muted: #64748b;
+            --theme-accent: #4f46e5;
+            --theme-accent-hover: #4338ca;
+            --theme-accent-soft: #eef2ff;
+            --theme-accent-text: #4338ca;
+            --theme-input-bg: #ffffff;
+            --theme-input-border: #cbd5e1;
+            --theme-scrollbar-thumb: #cbd5e1;
+        }
+
+        [data-theme="dark"] {
+            --theme-bg-body: #0b1120;
+            --theme-bg-card: #151e32;
+            --theme-bg-card-hover: #1e293b;
+            --theme-bg-header: rgba(15, 23, 42, 0.95);
+            --theme-bg-subtle: #1e293b;
+            --theme-border: #243049;
+            --theme-border-subtle: #1e293b;
+            --theme-text-primary: #f8fafc;
+            --theme-text-secondary: #cbd5e1;
+            --theme-text-muted: #8191a6;
+            --theme-accent: #6366f1;
+            --theme-accent-hover: #818cf8;
+            --theme-accent-soft: rgba(99, 102, 241, 0.18);
+            --theme-accent-text: #a5b4fc;
+            --theme-input-bg: #1e293b;
+            --theme-input-border: #334155;
+            --theme-scrollbar-thumb: #334155;
+        }
+
+        [data-theme="midnight"] {
+            --theme-bg-body: #020617;
+            --theme-bg-card: #090e1a;
+            --theme-bg-card-hover: #111827;
+            --theme-bg-header: rgba(4, 7, 19, 0.96);
+            --theme-bg-subtle: #0f172a;
+            --theme-border: #1e293b;
+            --theme-border-subtle: #0f172a;
+            --theme-text-primary: #ffffff;
+            --theme-text-secondary: #cbd5e1;
+            --theme-text-muted: #64748b;
+            --theme-accent: #0ea5e9;
+            --theme-accent-hover: #38bdf8;
+            --theme-accent-soft: rgba(14, 165, 233, 0.16);
+            --theme-accent-text: #38bdf8;
+            --theme-input-bg: #0f172a;
+            --theme-input-border: #1e293b;
+            --theme-scrollbar-thumb: #1e293b;
+        }
+
+        [data-theme="forest"] {
+            --theme-bg-body: #051610;
+            --theme-bg-card: #0a241b;
+            --theme-bg-card-hover: #103629;
+            --theme-bg-header: rgba(7, 27, 20, 0.96);
+            --theme-bg-subtle: #0d2e23;
+            --theme-border: #144735;
+            --theme-border-subtle: #0d2e23;
+            --theme-text-primary: #ecfdf5;
+            --theme-text-secondary: #a7f3d0;
+            --theme-text-muted: #6ee7b7;
+            --theme-accent: #10b981;
+            --theme-accent-hover: #34d399;
+            --theme-accent-soft: rgba(16, 185, 129, 0.16);
+            --theme-accent-text: #6ee7b7;
+            --theme-input-bg: #0d2e23;
+            --theme-input-border: #144735;
+            --theme-scrollbar-thumb: #144735;
+        }
+
+        html {
+            background-color: var(--theme-bg-body);
+        }
+
+        html.dark {
+            color-scheme: dark;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--theme-bg-body);
+            color: var(--theme-text-primary);
+            transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+        }
+
+        .htmx-indicator { display: none; }
+        .htmx-request .htmx-indicator { display: inline-flex; }
+        .htmx-request.htmx-indicator { display: inline-flex; }
+
+        /* ==========================================================================
+           Automatyczne kaskadowanie motywu dla istniejących komponentów
+           ========================================================================== */
+        html.dark header {
+            background-color: var(--theme-bg-header) !important;
+            border-color: var(--theme-border) !important;
+        }
+        html.dark footer {
+            background-color: var(--theme-bg-card) !important;
+            border-color: var(--theme-border) !important;
+            color: var(--theme-text-muted) !important;
+        }
+
+        /* Karty i kontenery (w tym klasy z modyfikatorem przezroczystości Tailwind np. bg-slate-50/50, bg-slate-200/70) */
+        html.dark .bg-white:not([data-keep-color]),
+        html.dark [class*="bg-white/"]:not([data-keep-color]) {
+            background-color: var(--theme-bg-card) !important;
+        }
+        html.dark .bg-slate-50:not([data-keep-color]),
+        html.dark [class*="bg-slate-50/"]:not([data-keep-color]) {
+            background-color: var(--theme-bg-subtle) !important;
+        }
+        html.dark .bg-slate-100:not([data-keep-color]),
+        html.dark [class*="bg-slate-100/"]:not([data-keep-color]) {
+            background-color: var(--theme-bg-subtle) !important;
+        }
+        html.dark .bg-slate-200:not([data-keep-color]),
+        html.dark [class*="bg-slate-200/"]:not([data-keep-color]) {
+            background-color: var(--theme-bg-subtle) !important;
+        }
+
+        /* Segmented pill tabs & podzakładki (np. Oceny, Raporty, filtry okresów) */
+        html.dark [class*="bg-slate-200"].rounded-xl,
+        html.dark [class*="bg-slate-100"].rounded-xl,
+        html.dark [class*="bg-slate-200"] {
+            background-color: var(--theme-bg-subtle) !important;
+            border-color: var(--theme-border) !important;
+        }
+
+        /* Domyślny stan nieaktywny dla podzakładek w trybach ciemnych */
+        html.dark .subtab-btn:not(.subtab-btn-active):not(.active),
+        html.dark .grades-tab-btn:not(.subtab-btn-active):not(.active),
+        html.dark .reports-tab-btn:not(.subtab-btn-active):not(.active) {
+            color: var(--theme-text-muted) !important;
+            background-color: transparent !important;
+            border-color: transparent !important;
+            box-shadow: none !important;
+        }
+        html.dark .subtab-btn:not(.subtab-btn-active):not(.active):hover,
+        html.dark .grades-tab-btn:not(.subtab-btn-active):not(.active):hover,
+        html.dark .reports-tab-btn:not(.subtab-btn-active):not(.active):hover {
+            color: var(--theme-text-primary) !important;
+            background-color: var(--theme-bg-card-hover) !important;
+        }
+
+        /* Aktywna podzakładka w trybach ciemnych - wyrazisty akcent motywu + biały tekst! */
+        html.dark .subtab-btn.subtab-btn-active,
+        html.dark .subtab-btn.active,
+        html.dark .subtab-btn[data-active="true"],
+        html.dark .grades-tab-btn.active,
+        html.dark .grades-tab-btn.subtab-btn-active,
+        html.dark .grades-tab-btn[data-active="true"],
+        html.dark .reports-tab-btn.active,
+        html.dark .reports-tab-btn.subtab-btn-active,
+        html.dark .reports-tab-btn[data-active="true"],
+        html.dark .subtab-btn.active.bg-white,
+        html.dark .grades-tab-btn.active.bg-white,
+        html.dark .reports-tab-btn.active.bg-white {
+            background-color: var(--theme-accent) !important;
+            color: #ffffff !important;
+            font-weight: 800 !important;
+            border-color: transparent !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 0 1px rgba(255, 255, 255, 0.25) !important;
+        }
+
+        /* Stany najechania (hover) */
+        html.dark .hover\:bg-slate-50:hover,
+        html.dark .hover\:bg-slate-100:hover,
+        html.dark [class*="hover:bg-slate-"]:hover,
+        html.dark .group:hover .group-hover\:bg-slate-100 {
+            background-color: var(--theme-bg-card-hover) !important;
+        }
+        html.dark [class*="hover:bg-white"]:hover {
+            background-color: var(--theme-bg-card-hover) !important;
+        }
+
+        /* Obramowania */
+        html.dark .border-slate-100,
+        html.dark .border-slate-200,
+        html.dark .border-slate-300,
+        html.dark [class*="border-slate-"] {
+            border-color: var(--theme-border) !important;
+        }
+        html.dark .border-t.border-slate-100,
+        html.dark .border-b.border-slate-100,
+        html.dark .border-t.border-slate-200,
+        html.dark .border-b.border-slate-200 {
+            border-color: var(--theme-border) !important;
+        }
+
+        /* Typografia */
+        html.dark .text-slate-900:not([data-keep-color]),
+        html.dark .text-slate-800:not([data-keep-color]) {
+            color: var(--theme-text-primary) !important;
+        }
+        html.dark .text-slate-700:not([data-keep-color]),
+        html.dark .text-slate-600:not([data-keep-color]) {
+            color: var(--theme-text-secondary) !important;
+        }
+        html.dark .text-slate-500:not([data-keep-color]),
+        html.dark .text-slate-400:not([data-keep-color]) {
+            color: var(--theme-text-muted) !important;
+        }
+
+        /* Pola formularzy, dropdowny, select, datepicker */
+        html.dark input[type="text"],
+        html.dark input[type="password"],
+        html.dark input[type="number"],
+        html.dark input[type="email"],
+        html.dark input[type="date"],
+        html.dark input[type="time"],
+        html.dark input[type="datetime-local"],
+        html.dark input[type="search"],
+        html.dark input[type="url"],
+        html.dark select,
+        html.dark textarea {
+            background-color: var(--theme-input-bg) !important;
+            border-color: var(--theme-input-border) !important;
+            color: var(--theme-text-primary) !important;
+            color-scheme: dark;
+        }
+        html.dark select option {
+            background-color: var(--theme-bg-card) !important;
+            color: var(--theme-text-primary) !important;
+        }
+
+        /* Ikona kalendarza dla kontrolek date / time */
+        html.dark input[type="date"]::-webkit-calendar-picker-indicator,
+        html.dark input[type="time"]::-webkit-calendar-picker-indicator,
+        html.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+            filter: invert(0.9) brightness(1.2);
+            cursor: pointer;
+        }
+
+        /* ==========================================================================
+           Akcenty Indigo / motyw bazowy i aktywne elementy
+           ========================================================================== */
+        html.dark .bg-indigo-50,
+        html.dark [class*="bg-indigo-50/"],
+        html.dark .bg-indigo-100,
+        html.dark [class*="bg-indigo-100/"] {
+            background-color: var(--theme-accent-soft) !important;
+        }
+        html.dark .text-indigo-500,
+        html.dark .text-indigo-600,
+        html.dark .text-indigo-700,
+        html.dark .text-indigo-800,
+        html.dark .text-indigo-900,
+        html.dark .text-indigo-950 {
+            color: var(--theme-accent-text) !important;
+        }
+        html.dark .hover\:text-indigo-800:hover,
+        html.dark .hover\:text-indigo-700:hover,
+        html.dark [class*="hover:text-indigo-"]:hover {
+            color: var(--theme-accent-hover) !important;
+        }
+        html.dark .border-indigo-100,
+        html.dark .border-indigo-200,
+        html.dark .border-indigo-300,
+        html.dark [class*="border-indigo-"] {
+            border-color: var(--theme-border) !important;
+        }
+
+        /* Uniwersalna czytelność boksów informacyjnych i wskazówek we wszystkich trybach ciemnych */
+        html.dark [class*="bg-indigo-50"],
+        html.dark [class*="bg-sky-50"] {
+            background-color: var(--theme-accent-soft) !important;
+            border-color: var(--theme-border) !important;
+        }
+        html.dark [class*="bg-indigo-50"] .font-bold,
+        html.dark [class*="bg-indigo-50"] .font-extrabold,
+        html.dark [class*="bg-indigo-50"] strong,
+        html.dark [class*="bg-sky-50"] .font-bold,
+        html.dark [class*="bg-sky-50"] .font-extrabold,
+        html.dark [class*="bg-sky-50"] strong {
+            color: var(--theme-text-primary) !important;
+        }
+        html.dark [class*="bg-indigo-50"] p,
+        html.dark [class*="bg-indigo-50"] .leading-relaxed,
+        html.dark [class*="bg-indigo-50"] .text-indigo-800,
+        html.dark [class*="bg-indigo-50"] .text-indigo-950,
+        html.dark [class*="bg-sky-50"] p,
+        html.dark [class*="bg-sky-50"] .leading-relaxed,
+        html.dark [class*="bg-sky-50"] .text-sky-800,
+        html.dark [class*="bg-sky-50"] .text-sky-900 {
+            color: var(--theme-text-secondary) !important;
+        }
+        html.dark [class*="bg-indigo-50"] em,
+        html.dark [class*="bg-sky-50"] em {
+            color: var(--theme-accent-text) !important;
+        }
+
+        /* Pigułki i etykiety statusowe w trybie ciemnym */
+        html.dark .bg-emerald-50, html.dark [class*="bg-emerald-50/"] { background-color: rgba(16, 185, 129, 0.15) !important; }
+        html.dark .bg-emerald-100, html.dark [class*="bg-emerald-100/"] { background-color: rgba(16, 185, 129, 0.22) !important; }
+        html.dark .text-emerald-700, html.dark .text-emerald-800, html.dark .text-emerald-900, html.dark .text-emerald-950 { color: #6ee7b7 !important; }
+        html.dark .border-emerald-200, html.dark .border-emerald-100, html.dark .border-emerald-300, html.dark [class*="border-emerald-"] { border-color: rgba(16, 185, 129, 0.35) !important; }
+        html.dark [class*="bg-emerald-50"] .font-bold,
+        html.dark [class*="bg-emerald-50"] .font-extrabold,
+        html.dark [class*="bg-emerald-50"] strong {
+            color: #ecfdf5 !important;
+        }
+
+        /* Trwająca lekcja oraz banery przerw w widokach ciemnych (Dark, Midnight, Forest) */
+        html.dark .lesson-current-row,
+        [data-theme="dark"] .lesson-current-row,
+        [data-theme="midnight"] .lesson-current-row,
+        [data-theme="forest"] .lesson-current-row {
+            background-color: rgba(6, 78, 59, 0.45) !important;
+            border-left-color: #10b981 !important;
+            box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.35) !important;
+        }
+
+        html.dark [data-theme="midnight"] .lesson-current-row,
+        [data-theme="midnight"] .lesson-current-row {
+            background-color: rgba(6, 78, 59, 0.55) !important;
+            box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.4) !important;
+        }
+
+        html.dark [data-theme="forest"] .lesson-current-row,
+        [data-theme="forest"] .lesson-current-row {
+            background-color: rgba(6, 95, 70, 0.5) !important;
+            box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.4) !important;
+        }
+
+        /* Teksty i etykiety wewnątrz karty trwającej lekcji */
+        html.dark .lesson-current-row .lesson-subject,
+        html.dark .lesson-current-row .lesson-subject strong,
+        [data-theme="dark"] .lesson-current-row .lesson-subject,
+        [data-theme="midnight"] .lesson-current-row .lesson-subject,
+        [data-theme="forest"] .lesson-current-row .lesson-subject {
+            color: #ecfdf5 !important;
+        }
+
+        html.dark .lesson-current-row .lesson-time,
+        html.dark .lesson-current-row .lesson-classroom,
+        [data-theme="dark"] .lesson-current-row .lesson-time,
+        [data-theme="midnight"] .lesson-current-row .lesson-time,
+        [data-theme="forest"] .lesson-current-row .lesson-time,
+        [data-theme="dark"] .lesson-current-row .lesson-classroom,
+        [data-theme="midnight"] .lesson-current-row .lesson-classroom,
+        [data-theme="forest"] .lesson-current-row .lesson-classroom {
+            color: #a7f3d0 !important;
+        }
+
+        /* Pigułka odliczania czasu i pigułka statusu lekcji w toku */
+        html.dark .lesson-current-time-badge,
+        html.dark .lesson-current-status-badge,
+        [data-theme="dark"] .lesson-current-time-badge,
+        [data-theme="midnight"] .lesson-current-time-badge,
+        [data-theme="forest"] .lesson-current-time-badge,
+        [data-theme="dark"] .lesson-current-status-badge,
+        [data-theme="midnight"] .lesson-current-status-badge,
+        [data-theme="forest"] .lesson-current-status-badge {
+            background-color: rgba(6, 78, 59, 0.8) !important;
+            color: #ecfdf5 !important;
+            border-color: rgba(16, 185, 129, 0.5) !important;
+        }
+
+        /* Etykiety nagłówka i przyciski 'Dzisiaj' w trybach ciemnych */
+        html.dark .lesson-current-header-badge,
+        html.dark .lesson-today-btn,
+        [data-theme="dark"] .lesson-current-header-badge,
+        [data-theme="midnight"] .lesson-current-header-badge,
+        [data-theme="forest"] .lesson-current-header-badge,
+        [data-theme="dark"] .lesson-today-btn,
+        [data-theme="midnight"] .lesson-today-btn,
+        [data-theme="forest"] .lesson-today-btn {
+            background-color: rgba(6, 78, 59, 0.4) !important;
+            color: #6ee7b7 !important;
+            border-color: rgba(16, 185, 129, 0.35) !important;
+        }
+
+        /* Baner przerwy w trybach ciemnych */
+        html.dark .lesson-break-banner,
+        [data-theme="dark"] .lesson-break-banner,
+        [data-theme="midnight"] .lesson-break-banner,
+        [data-theme="forest"] .lesson-break-banner {
+            background: linear-gradient(to right, rgba(15, 23, 42, 0.95), rgba(6, 78, 59, 0.4), rgba(15, 23, 42, 0.95)) !important;
+            border-color: rgba(16, 185, 129, 0.3) !important;
+            color: #ecfdf5 !important;
+        }
+        html.dark .lesson-break-banner span,
+        html.dark .lesson-break-banner div,
+        [data-theme="dark"] .lesson-break-banner span,
+        [data-theme="midnight"] .lesson-break-banner span,
+        [data-theme="forest"] .lesson-break-banner span {
+            color: #a7f3d0 !important;
+        }
+        html.dark .lesson-break-banner .break-bell,
+        [data-theme="dark"] .lesson-break-banner .break-bell,
+        [data-theme="midnight"] .lesson-break-banner .break-bell,
+        [data-theme="forest"] .lesson-break-banner .break-bell {
+            color: #67e8f9 !important;
+        }
+
+        html.dark .bg-rose-50, html.dark [class*="bg-rose-50/"] { background-color: rgba(244, 63, 94, 0.15) !important; }
+        html.dark .bg-rose-100, html.dark [class*="bg-rose-100/"] { background-color: rgba(244, 63, 94, 0.22) !important; }
+        html.dark .text-rose-700, html.dark .text-rose-800, html.dark .text-rose-900, html.dark .text-rose-950 { color: #fda4af !important; }
+        html.dark .border-rose-200, html.dark .border-rose-100, html.dark .border-rose-300, html.dark [class*="border-rose-"] { border-color: rgba(244, 63, 94, 0.35) !important; }
+        html.dark [class*="bg-rose-50"] .font-bold,
+        html.dark [class*="bg-rose-50"] .font-extrabold,
+        html.dark [class*="bg-rose-50"] strong {
+            color: #ffe4e6 !important;
+        }
+
+        html.dark .bg-amber-50, html.dark [class*="bg-amber-50/"] { background-color: rgba(245, 158, 11, 0.15) !important; }
+        html.dark .bg-amber-100, html.dark [class*="bg-amber-100/"] { background-color: rgba(245, 158, 11, 0.22) !important; }
+        html.dark .text-amber-700, html.dark .text-amber-800, html.dark .text-amber-900, html.dark .text-amber-950 { color: #fcd34d !important; }
+        html.dark .border-amber-200, html.dark .border-amber-100, html.dark .border-amber-300, html.dark [class*="border-amber-"] { border-color: rgba(245, 158, 11, 0.35) !important; }
+        html.dark [class*="bg-amber-50"] .font-bold,
+        html.dark [class*="bg-amber-50"] .font-extrabold,
+        html.dark [class*="bg-amber-50"] strong {
+            color: #fef08a !important;
+        }
+        html.dark [class*="bg-amber-50"] p,
+        html.dark [class*="bg-amber-50"] .leading-relaxed {
+            color: #fde68a !important;
+        }
+
+        html.dark .bg-sky-50, html.dark [class*="bg-sky-50/"] { background-color: rgba(14, 165, 233, 0.15) !important; }
+        html.dark .bg-sky-100, html.dark [class*="bg-sky-100/"] { background-color: rgba(14, 165, 233, 0.22) !important; }
+        html.dark .text-sky-700, html.dark .text-sky-800, html.dark .text-sky-900, html.dark .text-sky-950 { color: #7dd3fc !important; }
+        html.dark .border-sky-200, html.dark .border-sky-100, html.dark .border-sky-300, html.dark [class*="border-sky-"] { border-color: rgba(14, 165, 233, 0.35) !important; }
+
+        html.dark .bg-blue-50, html.dark [class*="bg-blue-50/"] { background-color: rgba(59, 130, 246, 0.15) !important; }
+        html.dark .bg-blue-100, html.dark [class*="bg-blue-100/"] { background-color: rgba(59, 130, 246, 0.22) !important; }
+        html.dark .text-blue-700, html.dark .text-blue-800, html.dark .text-blue-900, html.dark .text-blue-950 { color: #93c5fd !important; }
+        html.dark .border-blue-200, html.dark .border-blue-100, html.dark .border-blue-300, html.dark [class*="border-blue-"] { border-color: rgba(59, 130, 246, 0.35) !important; }
+
+        html.dark .bg-purple-50, html.dark [class*="bg-purple-50/"] { background-color: rgba(168, 85, 247, 0.15) !important; }
+        html.dark .bg-purple-100, html.dark [class*="bg-purple-100/"] { background-color: rgba(168, 85, 247, 0.22) !important; }
+        html.dark .text-purple-700, html.dark .text-purple-800, html.dark .text-purple-900, html.dark .text-purple-950 { color: #d8b4fe !important; }
+        html.dark .border-purple-200, html.dark .border-purple-100, html.dark .border-purple-300, html.dark [class*="border-purple-"] { border-color: rgba(168, 85, 247, 0.35) !important; }
+
+        /* Tabele w trybie ciemnym */
+        html.dark thead { background-color: var(--theme-bg-subtle) !important; }
+        html.dark th { color: var(--theme-text-muted) !important; }
+        html.dark tbody tr:hover { background-color: var(--theme-bg-card-hover) !important; }
+
+        /* Tła okien modalnych */
+        html.dark .fixed.inset-0.bg-slate-900\/50,
+        html.dark .fixed.inset-0.bg-black\/50,
+        html.dark .fixed.inset-0.bg-slate-900\/60 {
+            background-color: rgba(0, 0, 0, 0.75) !important;
+        }
+
+        /* Pasek skrótów mobilnych */
+        html.dark .md\:hidden.bg-slate-50 {
+            background-color: var(--theme-bg-card) !important;
+            border-color: var(--theme-border) !important;
+        }
+        html.dark .md\:hidden a.bg-white {
+            background-color: var(--theme-bg-subtle) !important;
+            border-color: var(--theme-border) !important;
+            color: var(--theme-text-secondary) !important;
+        }
+
+        /* Paski przewijania */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb {
+            background-color: var(--theme-scrollbar-thumb);
+            border-radius: 9999px;
+        }
+
+        /* Płynne otwieranie mobilnego panelu drawer */
+        #mobile-drawer {
+            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+    </style>
+    
+</head>
+<body class="h-full flex flex-col antialiased selection:bg-indigo-500 selection:text-white" hx-headers='{"X-CSRFToken": "static_demo_csrf_token_librus2mail"}'>
+
+    <!-- Pasek nawigacyjny -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
+        <div class="max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16 gap-2">
+                <!-- Lewa strona: Logo + Nawigacja Desktop -->
+                <div class="flex items-center gap-2 xl:gap-3 2xl:gap-6 flex-shrink-0">
+                    <a href="web_dashboard.html" class="flex items-center gap-2.5 sm:gap-3 group flex-shrink-0">
+                        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-sky-500 flex items-center justify-center text-white text-lg sm:text-xl shadow-md shadow-indigo-100 group-hover:scale-105 transition-transform flex-shrink-0">
+                            🏫
+                        </div>
+                        <div class="min-w-0">
+                            <span class="font-extrabold text-base sm:text-lg text-slate-900 tracking-tight flex items-center gap-1">
+                                Librus<span class="text-indigo-600">2mail</span>
+                            </span>
+                            <span class="hidden sm:block text-[9px] sm:text-[10px] uppercase font-bold text-slate-400 tracking-wider truncate">Web Dashboard</span>
+                        </div>
+                    </a>
+
+                    <!-- Nawigacja Desktop (widoczna na dużych ekranach od xl >= 1280px) -->
+                    
+                    <nav class="hidden xl:flex items-center gap-1 2xl:gap-1.5 flex-shrink-0">
+                        <a href="web_dashboard.html"
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📊 Pulpit
+                        </a>
+                        <a href="web_plan.html"
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📅 Plan<span class="hidden 2xl:inline"> lekcji</span>
+                        </a>
+                        <a href="web_oceny.html"
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📝 Oceny
+                        </a>
+                        <a href="web_terminarz.html"
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            🔔 Terminarz
+                        </a>
+                        <a href="web_frekwencja.html"
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            ⏱️ Frekwencja
+                        </a>
+                        <a href="web_wiadomosci.html"
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            ✉️ Wiadomości
+                        </a>
+                        <a href="web_raporty_podsumowanie.html"
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                            📈 Raporty
+                        </a>
+                        <a href="web_ustawienia.html"
+                           class="whitespace-nowrap flex-shrink-0 px-2 xl:px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg text-xs 2xl:text-sm font-semibold transition-colors bg-indigo-50 text-indigo-700">
+                            ⚙️ Ustawienia
+                        </a>
+                    </nav>
+                    
+                </div>
+
+                <!-- Prawa strona: Przełącznik motywu + Uczeń + Rok + Auth + Hamburger -->
+                <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                    <!-- Selektor motywu / skórki (kompaktowy przycisk 36x36px) -->
+                    <div class="relative inline-block text-left" id="theme-menu-container">
+                        <button type="button"
+                                id="theme-menu-button"
+                                onclick="toggleThemeDropdown()"
+                                class="flex items-center justify-center gap-1 w-9 h-9 sm:w-auto sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-bold border border-slate-200 hover:border-slate-300 transition-colors cursor-pointer shadow-2xs"
+                                style="background-color: var(--theme-bg-card); color: var(--theme-text-primary);"
+                                title="Wybierz motyw panelu"
+                                aria-expanded="false"
+                                aria-haspopup="true">
+                            <span id="theme-active-icon" class="text-sm">☀️</span>
+                            <span class="text-[9px] opacity-60">▾</span>
+                        </button>
+                        <div id="theme-dropdown"
+                             class="hidden absolute right-0 mt-2 w-48 rounded-xl shadow-xl border border-slate-200 z-50 py-1.5 focus:outline-none"
+                             style="background-color: var(--theme-bg-card);"
+                             role="menu">
+                            <div class="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 mb-1">
+                                Motyw panelu
+                            </div>
+                            <button type="button" onclick="setTheme('light')" class="w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer" style="color: var(--theme-text-primary);">
+                                <span class="flex items-center gap-2"><span>☀️</span> Jasny (Domyślny)</span>
+                                <span class="theme-check text-indigo-600 hidden font-bold" data-theme-check="light">✓</span>
+                            </button>
+                            <button type="button" onclick="setTheme('dark')" class="w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer" style="color: var(--theme-text-primary);">
+                                <span class="flex items-center gap-2"><span>🌙</span> Ciemny (Grafit)</span>
+                                <span class="theme-check text-indigo-600 hidden font-bold" data-theme-check="dark">✓</span>
+                            </button>
+                            <button type="button" onclick="setTheme('midnight')" class="w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer" style="color: var(--theme-text-primary);">
+                                <span class="flex items-center gap-2"><span>🌌</span> Północ (OLED)</span>
+                                <span class="theme-check text-indigo-600 hidden font-bold" data-theme-check="midnight">✓</span>
+                            </button>
+                            <button type="button" onclick="setTheme('forest')" class="w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer" style="color: var(--theme-text-primary);">
+                                <span class="flex items-center gap-2"><span>🌲</span> Szmaragd (Leśny)</span>
+                                <span class="theme-check text-indigo-600 hidden font-bold" data-theme-check="forest">✓</span>
+                            </button>
+                            <div class="border-t border-slate-100 my-1"></div>
+                            <button type="button" onclick="setTheme('auto')" class="w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer" style="color: var(--theme-text-primary);">
+                                <span class="flex items-center gap-2"><span>💻</span> Auto (Systemowy)</span>
+                                <span class="theme-check text-indigo-600 hidden font-bold" data-theme-check="auto">✓</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    
+                        <!-- Selektor ucznia (Desktop: od sm) -->
+                        
+                        <div class="hidden sm:inline-block relative text-left">
+                            <select onchange="window.location.href='/student/' + this.value + '?next=' + encodeURIComponent(window.location.pathname + window.location.search)"
+                                    class="bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold rounded-xl px-2.5 py-1.5 pr-6 max-w-[230px] xl:max-w-[265px] 2xl:max-w-[345px] truncate focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
+                                
+                                <option value="8912345" >
+                                    👤 Jan Kowalski (klasa 5A) (8912345)
+                                </option>
+                                
+                                <option value="8976543" >
+                                    👤 Anna Kowalska (Liceum 2A) (8976543)
+                                </option>
+                                
+                                <option value="8979296" selected>
+                                    👤 Jan Kowalski (8979296)
+                                </option>
+                                
+                            </select>
+                        </div>
+                        
+
+                        <!-- Selektor roku szkolnego (Desktop: od sm) -->
+                        
+
+                        <!-- Wskaźnik ucznia na małych ekranach mobilnych (< sm) otwierający Drawer -->
+                        
+                        <button type="button"
+                                onclick="openMobileMenu()"
+                                class="sm:hidden flex items-center gap-1 px-2 py-1 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 transition-colors"
+                                title="Profil: Jan Kowalski (8979296)">
+                            <span>👤</span>
+                            <span class="max-w-[70px] truncate text-[11px]">Jan</span>
+                            
+                        </button>
+                        
+
+                        <!-- Wyloguj -->
+                        
+                        <a href="web_login.html"
+                           class="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors"
+                           title="Wyloguj rodzica">
+                            <span>🔒</span>
+                            <span class="hidden 2xl:inline">Wyloguj</span>
+                        </a>
+                        
+                    
+
+                    
+
+                    <!-- Przycisk Mobile Menu (Hamburger ☰ - widoczny poniżej xl) -->
+                    
+                    <button type="button"
+                            id="mobile-menu-toggle-btn"
+                            onclick="toggleMobileMenu()"
+                            class="xl:hidden flex items-center justify-center w-9 h-9 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shadow-2xs"
+                            style="background-color: var(--theme-bg-card); color: var(--theme-text-primary);"
+                            aria-label="Otwórz menu nawigacji">
+                        <span class="text-lg leading-none">☰</span>
+                    </button>
+                    
+                </div>
+            </div>
+        </div>
+
+        <!-- Pasek nawigacyjny na średnich i małych ekranach (< xl) -->
+        
+        <div class="xl:hidden border-t border-slate-100 bg-slate-50 px-3 py-1.5 overflow-x-auto flex items-center gap-1.5 scrollbar-none">
+            <a href="web_dashboard.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📊 Pulpit</a>
+            <a href="web_plan.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📅 Plan lekcji</a>
+            <a href="web_oceny.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📝 Oceny</a>
+            <a href="web_terminarz.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">🔔 Terminarz</a>
+            <a href="web_frekwencja.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">⏱️ Frekwencja</a>
+            <a href="web_wiadomosci.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">✉️ Wiadomości</a>
+            <a href="web_raporty_podsumowanie.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 bg-white border border-slate-200">📈 Raporty</a>
+            <a href="web_ustawienia.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap bg-indigo-600 text-white">⚙️ Ustawienia</a>
+        </div>
+        
+    </header>
+
+    <!-- Mobilny Drawer (Menu boczne z wysuwanym panelem) -->
+    
+    <div id="mobile-drawer-backdrop"
+         onclick="closeMobileMenu()"
+         class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 transition-opacity xl:hidden">
+    </div>
+
+    <aside id="mobile-drawer"
+           class="fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] z-50 shadow-2xl flex flex-col transform translate-x-full xl:hidden border-l border-slate-200"
+           style="background-color: var(--theme-bg-card); color: var(--theme-text-primary);"
+           aria-label="Menu mobilne">
+        <!-- Nagłówek Drawer -->
+        <div class="p-4 border-b border-slate-100 flex items-center justify-between" style="border-color: var(--theme-border);">
+            <div class="flex items-center gap-2">
+                <span class="text-xl">🏫</span>
+                <span class="font-extrabold text-sm tracking-tight">Menu nawigacji</span>
+            </div>
+            <button type="button"
+                    onclick="closeMobileMenu()"
+                    class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                    style="color: var(--theme-text-muted);"
+                    aria-label="Zamknij menu">
+                ✕
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-4 space-y-5">
+            <!-- Sekcja 1: Profil ucznia -->
+            
+            <div>
+                <label class="block text-[11px] font-extrabold uppercase tracking-wider mb-2" style="color: var(--theme-text-muted);">
+                    👤 Wybierz profil ucznia:
+                </label>
+                <div class="space-y-1.5">
+                    
+                    <a href="/student/8912345?next=/ustawienia"
+                       class="flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold transition-all
+                       
+                       border-slate-200 hover:bg-slate-50 text-slate-700
+                       ">
+                        <span class="flex items-center gap-2">
+                            <span>👤</span>
+                            <span>Jan Kowalski (klasa 5A) (8912345)</span>
+                        </span>
+                        
+                    </a>
+                    
+                    <a href="/student/8976543?next=/ustawienia"
+                       class="flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold transition-all
+                       
+                       border-slate-200 hover:bg-slate-50 text-slate-700
+                       ">
+                        <span class="flex items-center gap-2">
+                            <span>👤</span>
+                            <span>Anna Kowalska (Liceum 2A) (8976543)</span>
+                        </span>
+                        
+                    </a>
+                    
+                    <a href="/student/8979296?next=/ustawienia"
+                       class="flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold transition-all
+                       
+                       border-indigo-500 bg-indigo-50/70 text-indigo-700
+                       ">
+                        <span class="flex items-center gap-2">
+                            <span>👤</span>
+                            <span>Jan Kowalski (8979296)</span>
+                        </span>
+                        
+                        <span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-indigo-600 text-white">Aktywny</span>
+                        
+                    </a>
+                    
+                </div>
+            </div>
+            
+
+            <!-- Sekcja 2: Rok szkolny (bieżący vs archiwa) -->
+            
+
+            <!-- Sekcja 3: Nawigacja po modułach -->
+            <div>
+                <label class="block text-[11px] font-extrabold uppercase tracking-wider mb-2" style="color: var(--theme-text-muted);">
+                    🧭 Moduły:
+                </label>
+                <div class="space-y-1">
+                    <a href="web_dashboard.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
+                        <span class="text-base">📊</span> <span>Pulpit główny</span>
+                    </a>
+                    <a href="web_plan.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
+                        <span class="text-base">📅</span> <span>Plan lekcji</span>
+                    </a>
+                    <a href="web_oceny.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
+                        <span class="text-base">📝</span> <span>Oceny i średnie</span>
+                    </a>
+                    <a href="web_terminarz.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
+                        <span class="text-base">🔔</span> <span>Terminarz i sprawdziany</span>
+                    </a>
+                    <a href="web_frekwencja.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
+                        <span class="text-base">⏱️</span> <span>Frekwencja i obecność</span>
+                    </a>
+                    <a href="web_wiadomosci.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
+                        <span class="text-base">✉️</span> <span>Wiadomości i ogłoszenia</span>
+                    </a>
+                    <a href="web_raporty_podsumowanie.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-slate-100">
+                        <span class="text-base">📈</span> <span>Raporty i analizy</span>
+                    </a>
+                    <a href="web_ustawienia.html"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors bg-indigo-600 text-white">
+                        <span class="text-base">⚙️</span> <span>Ustawienia systemu</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Sekcja 4: Motyw w Drawerze -->
+            <div>
+                <label class="block text-[11px] font-extrabold uppercase tracking-wider mb-2" style="color: var(--theme-text-muted);">
+                    🎨 Motyw wyglądu:
+                </label>
+                <div class="grid grid-cols-2 gap-1.5">
+                    <button type="button" onclick="setTheme('light')" class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 text-xs font-bold cursor-pointer hover:border-indigo-400">
+                        <span>☀️</span> Jasny
+                    </button>
+                    <button type="button" onclick="setTheme('dark')" class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 text-xs font-bold cursor-pointer hover:border-indigo-400">
+                        <span>🌙</span> Grafit
+                    </button>
+                    <button type="button" onclick="setTheme('midnight')" class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 text-xs font-bold cursor-pointer hover:border-indigo-400">
+                        <span>🌌</span> OLED
+                    </button>
+                    <button type="button" onclick="setTheme('forest')" class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 text-xs font-bold cursor-pointer hover:border-indigo-400">
+                        <span>🌲</span> Szmaragd
+                    </button>
+                    <button type="button" onclick="setTheme('auto')" class="col-span-2 flex items-center justify-center gap-2 p-2 rounded-lg border border-slate-200 text-xs font-bold cursor-pointer hover:border-indigo-400">
+                        <span>💻</span> Auto (Systemowy)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sekcja 5: Wyloguj / Tryb otwarty -->
+            <div class="pt-2 border-t border-slate-100" style="border-color: var(--theme-border);">
+                
+                <a href="web_login.html"
+                   class="flex items-center justify-center gap-2 w-full p-2.5 rounded-xl text-xs font-bold text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 transition">
+                    🔒 Wyloguj rodzica
+                </a>
+                
+            </div>
+        </div>
+    </aside>
+    
+
+    <!-- Baner trybu archiwalnego (Read-Only) -->
+    
+
+    <!-- Komunikaty Flash -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 w-full">
+        
+            
+        
+    </div>
+
+    <!-- Główna zawartość -->
+    <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
+        
+<div class="max-w-5xl mx-auto py-4 sm:py-6">
+    <!-- Nagłówek -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-200">
+        <div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
+                <span>⚙️ Konfiguracja i Ustawienia</span>
+            </h1>
+            <p class="text-xs text-slate-500 mt-1">
+                Zarządzaj kontami uczniów, parametrami wysyłki e-mail, harmonogramem pracy oraz zabezpieczeniami panelu.
+            </p>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <span class="text-xs font-mono px-3 py-1.5 bg-slate-100 text-slate-600 rounded-xl border border-slate-200">
+                📄 config.yaml
+            </span>
+        </div>
+    </div>
+
+    <!-- Główny formularz ustawień -->
+    <form method="POST" action="/ustawienia" class="mt-8 space-y-8">
+        <input type="hidden" name="csrf_token" value="static_demo_csrf_token_librus2mail">
+
+        <!-- ================================================================= -->
+        <!-- SEKCJA 1: KONTA UCZNIÓW -->
+        <!-- ================================================================= -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
+                <div>
+                    <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                        <span>👨‍👩‍👧‍👦</span> Konta uczniów w Librus Synergia
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        Profile dzieci, dla których pobierane są oceny, terminarz i wiadomości ze szkoły.
+                    </p>
+                </div>
+                <button type="button" onclick="addStudentSettingsCard()"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 rounded-xl transition">
+                    <span>➕ Dodaj ucznia</span>
+                </button>
+            </div>
+
+            <div id="students-settings-container" class="space-y-6">
+                
+                
+                <div class="student-settings-card p-5 rounded-2xl border-2 border-slate-200 bg-slate-50/50 relative" data-index="0">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-xs font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-lg">
+                            Profil Ucznia #1
+                        </span>
+                        
+                        <button type="button" onclick="this.closest('.student-settings-card').remove()"
+                                class="text-xs font-bold text-rose-600 hover:text-rose-800 bg-rose-50 border border-rose-200 px-2.5 py-1 rounded-lg">
+                            ✕ Usuń konto
+                        </button>
+                        
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                                Imię / Etykieta wyświetlana *
+                            </label>
+                            <input type="text" name="student_name_0" required value="Jan Kowalski (klasa 5A)"
+                                   class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                                Odbiorcy e-mail powiadomień *
+                            </label>
+                            <input type="text" name="student_receivers_0" required
+                                   value="rodzic.kowalski@example.com, mama.kowalska@example.com"
+                                   placeholder="mama@example.com, tata@example.com"
+                                   class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                                Login do portalu Librus *
+                            </label>
+                            <input type="text" id="librus_login_0" name="student_login_0" required
+                                   value="8912345"
+                                   class="w-full text-sm font-mono px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                                Nowe hasło do portalu Librus (zostaw puste, aby zachować obecne)
+                            </label>
+                            <input type="password" id="librus_password_0" name="student_password_0"
+                                   placeholder="•••••••••••• (obecne hasło zachowane)"
+                                   class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <!-- Opcje monitorowania i test połączenia -->
+                    <div class="mt-4 pt-4 border-t border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="flex flex-wrap items-center gap-4 text-xs font-medium text-slate-700">
+                            <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                                <input type="checkbox" name="student_grades_0" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                                <span>Monitoruj oceny</span>
+                            </label>
+                            <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                                <input type="checkbox" name="student_timetable_0" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                                <span>Terminarz</span>
+                            </label>
+                            <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                                <input type="checkbox" name="student_schedule_0" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                                <span>Plan lekcji</span>
+                            </label>
+                            <label class="inline-flex items-center gap-1.5 cursor-pointer" title="Wiadomości w Librusie zostaną oznaczone jako przeczytane">
+                                <input type="checkbox" name="student_messages_0" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                                <span>Wiadomości</span>
+                            </label>
+                            <label class="inline-flex items-center gap-1.5 cursor-pointer" title="Konsoliduje oceny, wiadomości, ogłoszenia i terminarz w jeden wspólny e-mail (one_summary_message)">
+                                <input type="hidden" name="student_one_summary_present_0" value="1">
+                                <input type="checkbox" name="student_one_summary_0" id="student_one_summary_0" checked class="student-summary-checkbox-settings rounded text-indigo-600 focus:ring-indigo-500">
+                                <span class="font-semibold text-indigo-900">📦 Zbiorczy e-mail (wszystko w jednym)</span>
+                            </label>
+                        </div>
+
+                        <div>
+                            <button type="button" onclick="testLibrusAccountSettings(0)"
+                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-indigo-700 bg-white border border-indigo-300 hover:bg-indigo-50 rounded-xl transition shadow-xs cursor-pointer">
+                                <span>🔍 Testuj logowanie Librus</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Opcjonalny raport motywacyjny dla samego dziecka (student_report) -->
+                    <div class="mt-4 pt-4 border-t border-slate-200/80">
+                        
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="inline-flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" name="student_report_enabled_0" id="student_report_enabled_settings_0"
+                                       checked
+                                       onchange="toggleStudentReportBoxSettings(0)"
+                                       class="rounded text-amber-500 focus:ring-amber-400">
+                                <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                    <span>🏆</span> Włącz raport motywacyjny dla dziecka (student_report)
+                                </span>
+                            </label>
+                            <span class="text-[11px] text-slate-400 font-medium">Opcjonalnie</span>
+                        </div>
+
+                        <div id="student-report-box-settings-0" class="mt-3 p-4 bg-amber-50/50 border border-amber-200/80 rounded-2xl space-y-3">
+                            <p class="text-xs text-amber-900 leading-relaxed">
+                                Dedykowany raport motywacyjny z osiągnięciami, supermocami, odznakami grywalizacyjnymi i wyzwaniami dopasowanymi do wieku ucznia.
+                            </p>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                                        Adres e-mail dziecka (lub rodzica)
+                                    </label>
+                                    <input type="email" name="student_report_email_0" id="student_report_email_settings_0"
+                                           value="uczen.kowalski@example.com"
+                                           placeholder="np. janek@example.com lub email rodzica"
+                                           class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:outline-none bg-white">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                                        Szablon raportu (dopasowany do wieku)
+                                    </label>
+                                    <select name="student_report_template_0" id="student_report_template_settings_0"
+                                            class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:outline-none bg-white">
+                                        <option value="kids" selected>🎮 Kids (Szkoła podstawowa, klasy 4–6: odznaki, Karta Mocy)</option>
+                                        <option value="teens" >⚡ Teens (Starsze klasy podstawówki, klasy 7–8: Quick Wins, egzamin)</option>
+                                        <option value="youth" >📊 Youth (Szkoła średnia / liceum / technikum: Dashboard, KPI)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="test-feedback-settings-0" class="hidden mt-3 text-xs p-3 rounded-xl"></div>
+                </div>
+                
+                
+                <div class="student-settings-card p-5 rounded-2xl border-2 border-slate-200 bg-slate-50/50 relative" data-index="1">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-xs font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-lg">
+                            Profil Ucznia #2
+                        </span>
+                        
+                        <button type="button" onclick="this.closest('.student-settings-card').remove()"
+                                class="text-xs font-bold text-rose-600 hover:text-rose-800 bg-rose-50 border border-rose-200 px-2.5 py-1 rounded-lg">
+                            ✕ Usuń konto
+                        </button>
+                        
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                                Imię / Etykieta wyświetlana *
+                            </label>
+                            <input type="text" name="student_name_1" required value="Anna Kowalska (Liceum 2A)"
+                                   class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                                Odbiorcy e-mail powiadomień *
+                            </label>
+                            <input type="text" name="student_receivers_1" required
+                                   value="rodzic.kowalski@example.com"
+                                   placeholder="mama@example.com, tata@example.com"
+                                   class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                                Login do portalu Librus *
+                            </label>
+                            <input type="text" id="librus_login_1" name="student_login_1" required
+                                   value="8976543"
+                                   class="w-full text-sm font-mono px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                                Nowe hasło do portalu Librus (zostaw puste, aby zachować obecne)
+                            </label>
+                            <input type="password" id="librus_password_1" name="student_password_1"
+                                   placeholder="•••••••••••• (obecne hasło zachowane)"
+                                   class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <!-- Opcje monitorowania i test połączenia -->
+                    <div class="mt-4 pt-4 border-t border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="flex flex-wrap items-center gap-4 text-xs font-medium text-slate-700">
+                            <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                                <input type="checkbox" name="student_grades_1" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                                <span>Monitoruj oceny</span>
+                            </label>
+                            <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                                <input type="checkbox" name="student_timetable_1" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                                <span>Terminarz</span>
+                            </label>
+                            <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                                <input type="checkbox" name="student_schedule_1" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                                <span>Plan lekcji</span>
+                            </label>
+                            <label class="inline-flex items-center gap-1.5 cursor-pointer" title="Wiadomości w Librusie zostaną oznaczone jako przeczytane">
+                                <input type="checkbox" name="student_messages_1" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                                <span>Wiadomości</span>
+                            </label>
+                            <label class="inline-flex items-center gap-1.5 cursor-pointer" title="Konsoliduje oceny, wiadomości, ogłoszenia i terminarz w jeden wspólny e-mail (one_summary_message)">
+                                <input type="hidden" name="student_one_summary_present_1" value="1">
+                                <input type="checkbox" name="student_one_summary_1" id="student_one_summary_1" checked class="student-summary-checkbox-settings rounded text-indigo-600 focus:ring-indigo-500">
+                                <span class="font-semibold text-indigo-900">📦 Zbiorczy e-mail (wszystko w jednym)</span>
+                            </label>
+                        </div>
+
+                        <div>
+                            <button type="button" onclick="testLibrusAccountSettings(1)"
+                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-indigo-700 bg-white border border-indigo-300 hover:bg-indigo-50 rounded-xl transition shadow-xs cursor-pointer">
+                                <span>🔍 Testuj logowanie Librus</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Opcjonalny raport motywacyjny dla samego dziecka (student_report) -->
+                    <div class="mt-4 pt-4 border-t border-slate-200/80">
+                        
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="inline-flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" name="student_report_enabled_1" id="student_report_enabled_settings_1"
+                                       checked
+                                       onchange="toggleStudentReportBoxSettings(1)"
+                                       class="rounded text-amber-500 focus:ring-amber-400">
+                                <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                    <span>🏆</span> Włącz raport motywacyjny dla dziecka (student_report)
+                                </span>
+                            </label>
+                            <span class="text-[11px] text-slate-400 font-medium">Opcjonalnie</span>
+                        </div>
+
+                        <div id="student-report-box-settings-1" class="mt-3 p-4 bg-amber-50/50 border border-amber-200/80 rounded-2xl space-y-3">
+                            <p class="text-xs text-amber-900 leading-relaxed">
+                                Dedykowany raport motywacyjny z osiągnięciami, supermocami, odznakami grywalizacyjnymi i wyzwaniami dopasowanymi do wieku ucznia.
+                            </p>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                                        Adres e-mail dziecka (lub rodzica)
+                                    </label>
+                                    <input type="email" name="student_report_email_1" id="student_report_email_settings_1"
+                                           value="anna.kowalska@example.com"
+                                           placeholder="np. janek@example.com lub email rodzica"
+                                           class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:outline-none bg-white">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                                        Szablon raportu (dopasowany do wieku)
+                                    </label>
+                                    <select name="student_report_template_1" id="student_report_template_settings_1"
+                                            class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:outline-none bg-white">
+                                        <option value="kids" >🎮 Kids (Szkoła podstawowa, klasy 4–6: odznaki, Karta Mocy)</option>
+                                        <option value="teens" >⚡ Teens (Starsze klasy podstawówki, klasy 7–8: Quick Wins, egzamin)</option>
+                                        <option value="youth" selected>📊 Youth (Szkoła średnia / liceum / technikum: Dashboard, KPI)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="test-feedback-settings-1" class="hidden mt-3 text-xs p-3 rounded-xl"></div>
+                </div>
+                
+            </div>
+        </div>
+
+        <!-- ================================================================= -->
+        <!-- SEKCJA 2: WYSYŁKA POCZTY E-MAIL -->
+        <!-- ================================================================= -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7">
+            <div class="border-b border-slate-100 pb-4 mb-6">
+                <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>📬</span> Wysyłka powiadomień e-mail
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Konto pocztowe nadawcy używane przez usługę do powiadamiania o nowościach.
+                </p>
+            </div>
+
+            <!-- Wybór dostawcy poczty -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+                <label class="provider-radio-settings flex items-center gap-3 p-4 border-2 border-indigo-600 bg-indigo-50/40 rounded-2xl cursor-pointer transition">
+                    <input type="radio" name="mail_provider" value="gmail" checked onchange="toggleMailProviderSettings()"
+                           class="text-indigo-600 focus:ring-indigo-500">
+                    <div>
+                        <span class="block text-sm font-extrabold text-slate-900">Poczta Gmail</span>
+                        <span class="block text-xs text-slate-500 mt-0.5">Hasło aplikacji lub Google OAuth2</span>
+                    </div>
+                </label>
+
+                <label class="provider-radio-settings flex items-center gap-3 p-4 border-2 border-slate-200 bg-white rounded-2xl cursor-pointer transition">
+                    <input type="radio" name="mail_provider" value="smtp"  onchange="toggleMailProviderSettings()"
+                           class="text-indigo-600 focus:ring-indigo-500">
+                    <div>
+                        <span class="block text-sm font-extrabold text-slate-900">Własny serwer SMTP</span>
+                        <span class="block text-xs text-slate-500 mt-0.5">WP, Onet, Interia, OVH, własna domena (STARTTLS)</span>
+                    </div>
+                </label>
+            </div>
+
+            
+            
+            <!-- Sekcja wyboru metody autoryzacji dla Gmail -->
+            <div id="gmail-auth-mode-settings-box" class=" mb-5 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl">
+                <span class="block text-xs font-bold text-slate-700 uppercase mb-2">Metoda logowania do Gmail</span>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <label class="gmail-auth-settings-radio flex items-center gap-2 p-2.5 rounded-xl border border-indigo-600 bg-white cursor-pointer transition text-xs font-bold text-slate-800">
+                        <input type="radio" name="gmail_auth_mode" value="app_password" checked onchange="toggleGmailAuthModeSettings()"
+                               class="text-indigo-600 focus:ring-indigo-500">
+                        <span>🔑 Hasło do aplikacji Google (zalecane)</span>
+                    </label>
+                    <label class="gmail-auth-settings-radio flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-white/70 hover:bg-white cursor-pointer transition text-xs font-semibold text-slate-700">
+                        <input type="radio" name="gmail_auth_mode" value="oauth2"  onchange="toggleGmailAuthModeSettings()"
+                               class="text-indigo-600 focus:ring-indigo-500">
+                        <span>🛡️ Google OAuth2 (plik credentials .json)</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Dane konta nadawcy -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                        Adres e-mail nadawcy
+                    </label>
+                    <input type="email" name="mail_login" value="twoje.powiadomienia@gmail.com" placeholder="twoje.powiadomienia@gmail.com"
+                           class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+
+                <div id="mail-password-settings-container" class="">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1" id="mail-password-settings-label">
+                        Nowe hasło / Hasło aplikacji (zostaw puste, aby zachować obecne)
+                    </label>
+                    <input type="password" name="mail_password" placeholder="•••••••••••• (obecne hasło zachowane)"
+                           class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+
+                <div id="gmail-oauth2-settings-container" class="hidden">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                        Ścieżka do pliku OAuth2 JSON
+                    </label>
+                    <input type="text" name="gmail_oauth2_file" value="None" placeholder="np. yagmail_client.json"
+                           class="w-full text-sm font-mono px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+            </div>
+
+            
+            <div id="smtp-settings-settings-box" class="hidden mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                        Host serwera SMTP
+                    </label>
+                    <input type="text" name="smtp_host" value="smtp.twoj-serwer-poczty.pl" placeholder="smtp.twojadomena.pl"
+                           class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                        Port SMTP
+                    </label>
+                    <input type="number" name="smtp_port" value="587"
+                           class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+            </div>
+
+            <div id="gmail-settings-tip-box" class=" mt-4 p-4 bg-sky-50 border border-sky-200 rounded-xl text-xs text-sky-800">
+                💡 <strong>Wskazówka:</strong> Dla konta Gmail włącz weryfikację dwuetapową na koncie Google i wygeneruj specjalne
+                <strong>Hasło do aplikacji</strong> w zakładce Bezpieczeństwo.
+            </div>
+
+            <div id="gmail-oauth-settings-tip-box" class="hidden mt-4 p-4 bg-indigo-50 border border-indigo-200 rounded-xl text-xs text-indigo-900">
+                🛡️ <strong>Wskazówka OAuth2:</strong> Wskaż ścieżkę do pliku JSON (np. <code>yagmail_client.json</code>) zawierającego dane dostępowe Google OAuth2 (<code>client_id</code>, <code>client_secret</code>, <code>refresh_token</code>). W tym trybie hasło do konta nie jest wymagane.
+            </div>
+
+            <!-- Format powiadomień e-mail (wszystko w jednym vs osobne) -->
+            
+            <div class="mt-6 pt-5 border-t border-slate-100">
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-2">
+                    Format i organizacja powiadomień e-mail (one_summary_message)
+                </label>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <label class="summary-mode-settings-radio flex items-start gap-3 p-4 border-2 border-indigo-600 bg-indigo-50/40 rounded-2xl cursor-pointer transition">
+                        <input type="radio" name="one_summary_message" value="1" checked onchange="toggleSummaryModeSettings()"
+                               class="mt-1 text-indigo-600 focus:ring-indigo-500">
+                        <div>
+                            <span class="block text-sm font-extrabold text-slate-900">📦 Wszystko w jednym e-mailu (zalecane)</span>
+                            <span class="block text-xs text-slate-600 mt-0.5">Wysyła jedno zbiorcze powiadomienie łączące nowe oceny, wiadomości i ogłoszenia ze szkoły.</span>
+                        </div>
+                    </label>
+
+                    <label class="summary-mode-settings-radio flex items-start gap-3 p-4 border-2 border-slate-200 bg-white rounded-2xl cursor-pointer transition">
+                        <input type="radio" name="one_summary_message" value="0"  onchange="toggleSummaryModeSettings()"
+                               class="mt-1 text-indigo-600 focus:ring-indigo-500">
+                        <div>
+                            <span class="block text-sm font-extrabold text-slate-900">📨 Osobne e-maile dla każdej kategorii</span>
+                            <span class="block text-xs text-slate-600 mt-0.5">Wysyła osobny e-mail o nowych ocenach, osobny o wiadomościach i osobny o ogłoszeniach.</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================================================================= -->
+        <!-- SEKCJA 3: HARMONOGRAM I AUTOMATYZACJA -->
+        <!-- ================================================================= -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7">
+            <div class="border-b border-slate-100 pb-4 mb-6">
+                <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>📅</span> Harmonogram i automatyzacja
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Zarządzaj porami sprawdzania dziennika oraz automatyczną wysyłką raportów postępów.
+                </p>
+            </div>
+
+            
+            
+            
+            
+
+            <!-- 1. SPRAWDZANIE OCEN I WIADOMOŚCI -->
+            <div class="mb-6 pb-6 border-b border-slate-100">
+                <div class="mb-3">
+                    <h3 class="text-sm font-extrabold text-slate-800 flex items-center gap-2">
+                        <span>🔔</span> 1. Sprawdzanie ocen i wiadomości (librus_collect_and_notify)
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        Wybierz, jak często usługa ma łączyć się ze szkołą i wysyłać powiadomienia e-mail o nowościach.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                    <label class="collection-mode-radio-settings flex items-start gap-3 p-4 border-2 border-indigo-600 bg-indigo-50/40 rounded-2xl cursor-pointer transition">
+                        <input type="radio" name="collection_mode" value="daily" checked onchange="toggleCollectionModeSettings()"
+                               class="mt-1 text-indigo-600 focus:ring-indigo-500">
+                        <div>
+                            <span class="block text-sm font-bold text-slate-900">O stałej porze dnia</span>
+                            <span class="block text-xs text-slate-500 mt-0.5">Jedno sprawdzenie dziennie (np. po powrocie ze szkoły)</span>
+                        </div>
+                    </label>
+
+                    <label class="collection-mode-radio-settings flex items-start gap-3 p-4 border-2 border-slate-200 bg-white rounded-2xl cursor-pointer transition">
+                        <input type="radio" name="collection_mode" value="interval"  onchange="toggleCollectionModeSettings()"
+                               class="mt-1 text-indigo-600 focus:ring-indigo-500">
+                        <div>
+                            <span class="block text-sm font-bold text-slate-900">Cyklicznie w ciągu dnia</span>
+                            <span class="block text-xs text-slate-500 mt-0.5">Regularne odpytywanie co określoną liczbę godzin</span>
+                        </div>
+                    </label>
+                </div>
+
+                <div id="collection-daily-settings-box" class=" grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                            Godzina sprawdzania
+                        </label>
+                        <select name="collection_time" id="collection_time_settings" onchange="updateCronPreviewSettings()" class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+                            
+                            
+                            <option value="06:00" >06:00 </option>
+                            
+                            <option value="06:30" >06:30 </option>
+                            
+                            <option value="07:00" >07:00 </option>
+                            
+                            <option value="07:30" >07:30 </option>
+                            
+                            <option value="08:00" >08:00 </option>
+                            
+                            <option value="08:30" >08:30 </option>
+                            
+                            <option value="09:00" >09:00 </option>
+                            
+                            <option value="09:30" >09:30 </option>
+                            
+                            <option value="10:00" >10:00 </option>
+                            
+                            <option value="10:30" >10:30 </option>
+                            
+                            <option value="11:00" >11:00 </option>
+                            
+                            <option value="11:30" >11:30 </option>
+                            
+                            <option value="12:00" >12:00 </option>
+                            
+                            <option value="12:30" >12:30 </option>
+                            
+                            <option value="13:00" >13:00 </option>
+                            
+                            <option value="13:30" >13:30 </option>
+                            
+                            <option value="14:00" >14:00 </option>
+                            
+                            <option value="14:30" >14:30 </option>
+                            
+                            <option value="15:00" >15:00 </option>
+                            
+                            <option value="15:30" >15:30 </option>
+                            
+                            <option value="16:00" selected>16:00 (zalecane)</option>
+                            
+                            <option value="16:30" >16:30 </option>
+                            
+                            <option value="17:00" >17:00 </option>
+                            
+                            <option value="17:30" >17:30 </option>
+                            
+                            <option value="18:00" >18:00 </option>
+                            
+                            <option value="18:30" >18:30 </option>
+                            
+                            <option value="19:00" >19:00 </option>
+                            
+                            <option value="19:30" >19:30 </option>
+                            
+                            <option value="20:00" >20:00 </option>
+                            
+                            <option value="20:30" >20:30 </option>
+                            
+                            <option value="21:00" >21:00 </option>
+                            
+                            <option value="21:30" >21:30 </option>
+                            
+                            <option value="22:00" >22:00 </option>
+                            
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                            Dni sprawdzania
+                        </label>
+                        
+                        <select name="collection_days" id="collection_days_settings" onchange="updateCronPreviewSettings()" class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+                            <option value="all" >Codziennie (poniedziałek – niedziela)</option>
+                            <option value="workdays" selected>Tylko w dni robocze (poniedziałek – piątek)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="collection-interval-settings-box" class="hidden bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                        Częstotliwość odpytywania
+                    </label>
+                    
+                    <select name="collection_interval_hours" id="collection_interval_hours_settings" onchange="updateCronPreviewSettings()" class="w-full sm:w-1/2 text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+                        <option value="1" selected>Co 1 godzinę (zalecane)</option>
+                        <option value="2" >Co 2 godziny</option>
+                        <option value="3" >Co 3 godziny</option>
+                        <option value="4" >Co 4 godziny</option>
+                        <option value="6" >Co 6 godzin</option>
+                        <option value="12" >Co 12 godzin</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 2. CYKLICZNY RAPORT POSTĘPÓW -->
+            <div class="mb-6 pb-6 border-b border-slate-100">
+                <div class="mb-3">
+                    <h3 class="text-sm font-extrabold text-slate-800 flex items-center gap-2">
+                        <span>📊</span> 2. Cykliczne raporty postępów ucznia (librus_progress_report)
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        Możesz skonfigurować więcej niż jeden raport (np. podsumowanie tygodnia w każdy piątek oraz miesięczny bilans ocen 1. dnia miesiąca).
+                    </p>
+                </div>
+
+                <div id="reports-settings-cards-container" class="space-y-4 mb-4">
+                    
+                    
+                    
+                    <div class="report-settings-card p-4 rounded-2xl border-2 border-slate-200 bg-slate-50/70 relative" data-index="0">
+                        <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-200/60">
+                            <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800">
+                                <input type="checkbox" name="report_enabled_0" checked onchange="updateCronPreviewSettings()"
+                                       class="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+                                <span>Włącz raport</span>
+                            </label>
+                            <div class="flex items-center gap-2">
+                                <input type="text" name="report_name_0" value="Raport tygodniowy" placeholder="Nazwa raportu"
+                                       class="text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg px-2.5 py-1 focus:ring-1 focus:ring-indigo-500 focus:outline-none">
+                                <button type="button" onclick="this.closest('.report-settings-card').remove(); updateCronPreviewSettings();"
+                                        class="text-xs font-bold text-rose-600 hover:text-rose-800 bg-rose-50 border border-rose-200 px-2 py-1 rounded-lg cursor-pointer">
+                                    ✕ Usuń
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Częstotliwość</label>
+                                
+                                <select name="report_frequency_0" onchange="toggleReportFrequencySettings(0); updateCronPreviewSettings()"
+                                        class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                    <option value="weekly" selected>Co tydzień</option>
+                                    <option value="monthly" >Co miesiąc</option>
+                                </select>
+                            </div>
+
+                            <div id="report-weekly-settings-col-0" class="">
+                                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Dzień tygodnia</label>
+                                
+                                <select name="report_weekday_0" onchange="updateCronPreviewSettings()"
+                                        class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                    <option value="friday" selected>Piątek (podsumowanie tygodnia)</option>
+                                    <option value="saturday" >Sobota</option>
+                                    <option value="sunday" >Niedziela</option>
+                                    <option value="monday" >Poniedziałek</option>
+                                    <option value="tuesday" >Wtorek</option>
+                                    <option value="wednesday" >Środa</option>
+                                    <option value="thursday" >Czwartek</option>
+                                </select>
+                            </div>
+
+                            <div id="report-monthly-settings-col-0" class="hidden">
+                                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Dzień miesiąca</label>
+                                
+                                <select name="report_day_of_month_0" onchange="updateCronPreviewSettings()"
+                                        class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                    <option value="1" selected>1. dzień miesiąca</option>
+                                    <option value="last" >Ostatni dzień miesiąca</option>
+                                    <option value="15" >15. dzień miesiąca</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Godzina wysyłki</label>
+                                
+                                <select name="report_time_0" onchange="updateCronPreviewSettings()"
+                                        class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                    
+                                    <option value="15:00" >15:00 </option>
+                                    
+                                    <option value="15:30" >15:30 </option>
+                                    
+                                    <option value="16:00" >16:00 </option>
+                                    
+                                    <option value="16:30" >16:30 </option>
+                                    
+                                    <option value="17:00" selected>17:00 (zalecane)</option>
+                                    
+                                    <option value="17:30" >17:30 </option>
+                                    
+                                    <option value="18:00" >18:00 </option>
+                                    
+                                    <option value="18:30" >18:30 </option>
+                                    
+                                    <option value="19:00" >19:00 </option>
+                                    
+                                    <option value="19:30" >19:30 </option>
+                                    
+                                    <option value="20:00" >20:00 </option>
+                                    
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Okres raportu</label>
+                                
+                                <select name="report_interval_days_0" onchange="updateCronPreviewSettings()"
+                                        class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                    <option value="7" selected>Ostatnie 7 dni (--days 7)</option>
+                                    <option value="14" >Ostatnie 14 dni (--days 14)</option>
+                                    <option value="30" >Ostatnie 30 dni (--days 30)</option>
+                                    <option value="3" >Ostatnie 3 dni (--days 3)</option>
+                                    <option value="60" >Ostatnie 60 dni (--days 60)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    
+                    <div class="report-settings-card p-4 rounded-2xl border-2 border-slate-200 bg-slate-50/70 relative" data-index="1">
+                        <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-200/60">
+                            <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800">
+                                <input type="checkbox" name="report_enabled_1"  onchange="updateCronPreviewSettings()"
+                                       class="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+                                <span>Włącz raport</span>
+                            </label>
+                            <div class="flex items-center gap-2">
+                                <input type="text" name="report_name_1" value="Raport miesięczny" placeholder="Nazwa raportu"
+                                       class="text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg px-2.5 py-1 focus:ring-1 focus:ring-indigo-500 focus:outline-none">
+                                <button type="button" onclick="this.closest('.report-settings-card').remove(); updateCronPreviewSettings();"
+                                        class="text-xs font-bold text-rose-600 hover:text-rose-800 bg-rose-50 border border-rose-200 px-2 py-1 rounded-lg cursor-pointer">
+                                    ✕ Usuń
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Częstotliwość</label>
+                                
+                                <select name="report_frequency_1" onchange="toggleReportFrequencySettings(1); updateCronPreviewSettings()"
+                                        class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                    <option value="weekly" >Co tydzień</option>
+                                    <option value="monthly" selected>Co miesiąc</option>
+                                </select>
+                            </div>
+
+                            <div id="report-weekly-settings-col-1" class="hidden">
+                                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Dzień tygodnia</label>
+                                
+                                <select name="report_weekday_1" onchange="updateCronPreviewSettings()"
+                                        class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                    <option value="friday" selected>Piątek (podsumowanie tygodnia)</option>
+                                    <option value="saturday" >Sobota</option>
+                                    <option value="sunday" >Niedziela</option>
+                                    <option value="monday" >Poniedziałek</option>
+                                    <option value="tuesday" >Wtorek</option>
+                                    <option value="wednesday" >Środa</option>
+                                    <option value="thursday" >Czwartek</option>
+                                </select>
+                            </div>
+
+                            <div id="report-monthly-settings-col-1" class="">
+                                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Dzień miesiąca</label>
+                                
+                                <select name="report_day_of_month_1" onchange="updateCronPreviewSettings()"
+                                        class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                    <option value="1" selected>1. dzień miesiąca</option>
+                                    <option value="last" >Ostatni dzień miesiąca</option>
+                                    <option value="15" >15. dzień miesiąca</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Godzina wysyłki</label>
+                                
+                                <select name="report_time_1" onchange="updateCronPreviewSettings()"
+                                        class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                    
+                                    <option value="15:00" >15:00 </option>
+                                    
+                                    <option value="15:30" >15:30 </option>
+                                    
+                                    <option value="16:00" >16:00 </option>
+                                    
+                                    <option value="16:30" >16:30 </option>
+                                    
+                                    <option value="17:00" selected>17:00 (zalecane)</option>
+                                    
+                                    <option value="17:30" >17:30 </option>
+                                    
+                                    <option value="18:00" >18:00 </option>
+                                    
+                                    <option value="18:30" >18:30 </option>
+                                    
+                                    <option value="19:00" >19:00 </option>
+                                    
+                                    <option value="19:30" >19:30 </option>
+                                    
+                                    <option value="20:00" >20:00 </option>
+                                    
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Okres raportu</label>
+                                
+                                <select name="report_interval_days_1" onchange="updateCronPreviewSettings()"
+                                        class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                    <option value="7" >Ostatnie 7 dni (--days 7)</option>
+                                    <option value="14" >Ostatnie 14 dni (--days 14)</option>
+                                    <option value="30" selected>Ostatnie 30 dni (--days 30)</option>
+                                    <option value="3" >Ostatnie 3 dni (--days 3)</option>
+                                    <option value="60" >Ostatnie 60 dni (--days 60)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+
+                <div>
+                    <button type="button" onclick="addReportCardSettings()"
+                            class="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl transition cursor-pointer">
+                        <span>➕ Dodaj kolejny zaplanowany raport</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3. DODATKOWE PARAMETRY TECHNICZNE -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-6">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                        Odstęp pomiędzy ściąganiem danych kolejnych dzieci (sekundy)
+                    </label>
+                    <input type="number" name="delay_between_users_s" value="10" min="5"
+                           class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                        Przesunięcie dnia planu lekcji
+                    </label>
+                    <select name="schedule_day_offset" class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <option value="1" selected>Kolejny dzień szkolny (+1 dzień roboczy)</option>
+                        <option value="0" >Bieżący dzień (dzisiaj)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="mt-4 pt-4 border-t border-slate-100 flex flex-wrap gap-6 text-xs font-medium text-slate-700 mb-6">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="send_error_notifications" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                    <span>Wysyłaj alerty e-mail o awariach połączenia</span>
+                </label>
+            </div>
+
+            <!-- 4. PODGLĄD REGUŁ CRON -->
+            <div class="p-4 bg-slate-900 text-slate-200 rounded-2xl text-xs font-mono">
+                <div class="flex items-center justify-between text-slate-400 text-[11px] pb-2 border-b border-slate-800 mb-2">
+                    <span>💡 PODGLĄD HARMONOGRAMU DLA LINUX CRONTAB GDYBYŚ WOLAŁ SAM URUCHAMIAĆ</span>
+                    <span class="text-indigo-400">Aktualizuje się automatycznie</span>
+                </div>
+                <div id="cron-preview-settings-lines" class="space-y-1">
+                    <!-- Generowane przez JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ================================================================= -->
+        <!-- SEKCJA 4: BEZPIECZEŃSTWO PANELU WWW -->
+        <!-- ================================================================= -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7">
+            <div class="border-b border-slate-100 pb-4 mb-6">
+                <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>🔒</span> Zabezpieczenie panelu rodzica WWW
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Hasło logowania chroniące interfejs oraz parametry ochrony przed brute-force.
+                </p>
+            </div>
+
+            <div class="max-w-md space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                        Nowe hasło panelu rodzica (zostaw puste, aby zachować obecne)
+                    </label>
+                    <input type="password" name="web_password" placeholder="•••••••••••• (obecne hasło zachowane)"
+                           class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                            Port WWW
+                        </label>
+                        <input type="number" name="web_port" value="5000"
+                               class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                            Host nasłuchu
+                        </label>
+                        <input type="text" name="web_host" value="127.0.0.1"
+                               class="w-full text-sm font-mono px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================================================================= -->
+        <!-- SEKCJA 5: ROK SZKOLNY, SEMESTRY I PREDYKCJA OCEN ROCZNYCH -->
+        <!-- ================================================================= -->
+        <div id="semestry" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 scroll-mt-20">
+            <div class="border-b border-slate-100 pb-4 mb-6">
+                <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>🎓</span> Rok szkolny, semestry i predykcja ocen rocznych
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Skonfiguruj datę podziału roku na semestry oraz regułę wyliczania ocen rocznych na świadectwo.
+                </p>
+            </div>
+
+            <div class="space-y-6">
+                <!-- 1. DATA PODZIAŁU NA SEMESTRY -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                        Data graniczna podziału na semestry (semester_split_date)
+                    </label>
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                        <input type="date" name="semester_split_date" id="semester_split_date"
+                               value=""
+                               class="w-full sm:w-64 text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <span class="text-xs text-slate-500">
+                            Format: RRRR-MM-DD. Oceny do tej daty włącznie zaliczają się do <strong>Semestru I</strong>, a po niej do <strong>Semestru II</strong>.
+                        </span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
+                        💡 Pozostaw puste, aby system przyjął domyślny 1 lutego bieżącego roku szkolnego. Podział ten służy do filtrowania ocen, wyliczania średniej semestralnej oraz wykrywania przedmiotów zakończonych w I semestrze (np. Technika, Muzyka, Filozofia).
+                    </p>
+                </div>
+
+                <!-- 2. METODA PREDYKCJI OCEN ROCZNYCH -->
+                
+                <div class="pt-4 border-t border-slate-100">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-2">
+                        Algorytm predykcji oceny rocznej na świadectwo (dla przedmiotów całorocznych)
+                    </label>
+                    <p class="text-xs text-slate-500 mb-4">
+                        Wybierz sposób prognozowania oceny rocznej, gdy nauczyciel nie wpisał jeszcze oficjalnej propozycji w Librusie. Oficjalna propozycja wystawiona przez szkołę zawsze ma pierwszeństwo i zastępuje poniższą regułę.
+                    </p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- Opcja 1: all_year_weighted -->
+                        <label class="flex flex-col p-4 border-2 border-indigo-600 bg-indigo-50/40 rounded-2xl cursor-pointer transition">
+                            <div class="flex items-center gap-2 mb-2">
+                                <input type="radio" name="annual_grade_algorithm" value="all_year_weighted"
+                                       checked
+                                       class="text-indigo-600 focus:ring-indigo-500">
+                                <span class="text-xs font-bold text-slate-900">⚖️ Całoroczna średnia ważona</span>
+                            </div>
+                            <span class="text-[11px] text-slate-600 leading-relaxed">
+                                Domyślny tryb Librusa. Wszystkie oceny cząstkowe z obu semestrów liczone są razem ze swoimi wagami w jedną średnią roczną.
+                            </span>
+                        </label>
+
+                        <!-- Opcja 2: semesters_average -->
+                        <label class="flex flex-col p-4 border-2 border-slate-200 bg-white hover:border-slate-300 rounded-2xl cursor-pointer transition">
+                            <div class="flex items-center gap-2 mb-2">
+                                <input type="radio" name="annual_grade_algorithm" value="semesters_average"
+                                       
+                                       class="text-indigo-600 focus:ring-indigo-500">
+                                <span class="text-xs font-bold text-slate-900">📐 Średnia z dwóch semestrów</span>
+                            </div>
+                            <span class="text-[11px] text-slate-600 leading-relaxed">
+                                Średnia arytmetyczna z oceny za Semestr I i oceny za Semestr II: <code>(O₁ + O₂) / 2</code>. Równomierny wpływ obu półroczy.
+                            </span>
+                        </label>
+
+                        <!-- Opcja 3: progress_favored -->
+                        <label class="flex flex-col p-4 border-2 border-slate-200 bg-white hover:border-slate-300 rounded-2xl cursor-pointer transition">
+                            <div class="flex items-center gap-2 mb-2">
+                                <input type="radio" name="annual_grade_algorithm" value="progress_favored"
+                                       
+                                       class="text-indigo-600 focus:ring-indigo-500">
+                                <span class="text-xs font-bold text-slate-900">🚀 Promowanie progresu (WSO)</span>
+                            </div>
+                            <span class="text-[11px] text-slate-600 leading-relaxed">
+                                Jeśli uczeń w II semestrze poprawił ocenę względem I semestru, ocena roczna podąża za progresem (np. I sem: 4, II sem: 5 ➔ Roczna: 5).
+                            </span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================================================================= -->
+        <!-- SEKCJA 6: KALENDARIUM ZDARZEŃ NA PULPICIE (DASHBOARD) -->
+        <!-- ================================================================= -->
+        <div id="kalendarium" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 scroll-mt-20">
+            <div class="border-b border-slate-100 pb-4 mb-6">
+                <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>🗓️</span> Moduł kalendarium zdarzeń (Pulpit główny)
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Dostosuj wyświetlanie graficznego paska ostatnich dni prezentującego oceny, wiadomości, ogłoszenia i sprawdziany.
+                </p>
+            </div>
+
+            <input type="hidden" name="timeline_settings_present" value="1">
+
+            <div class="max-w-2xl space-y-5">
+                <!-- Włącznik / wyłącznik kalendarium -->
+                <div class="flex items-start gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <input type="checkbox" id="timeline_enabled" name="timeline_enabled"
+                           checked
+                           class="mt-1 rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                    <label for="timeline_enabled" class="text-xs text-slate-700 cursor-pointer">
+                        <span class="font-bold text-slate-900 block text-sm">Wyświetlaj kalendarium zdarzeń na stronie głównej</span>
+                        Pokazuje pełnoszerokościowy graficzny harmonogram dzień po dniu bezpośrednio pod kafelkami podsumowującymi.
+                    </label>
+                </div>
+
+                <!-- Liczba dni wstecz -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                        Liczba dni wstecz objętych kalendarium (zakres: 1 – 14 dni)
+                    </label>
+                    <div class="flex items-center gap-3">
+                        <input type="number" name="timeline_days" min="1" max="14"
+                               value="5"
+                               class="w-32 text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <span class="text-xs text-slate-500 font-medium">dni (domyślnie: 5 dni)</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-1">
+                        Określa ile kolumn/kart kolejnych dni pojawi się w kalendarium na pulpicie.
+                    </p>
+                </div>
+
+                <!-- Ukrywanie weekendów -->
+                <div class="flex items-start gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <input type="checkbox" id="timeline_hide_weekends" name="timeline_hide_weekends"
+                           
+                           class="mt-1 rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                    <label for="timeline_hide_weekends" class="text-xs text-slate-700 cursor-pointer">
+                        <span class="font-bold text-slate-900 block text-sm">Ukryj dni weekendu (sobota i niedziela)</span>
+                        Pokazuje wyłącznie dni robocze nauki szkolnej (od poniedziałku do piątku), pomijając karty weekendowe.
+                    </label>
+                </div>
+
+                <!-- Odwrotna kolejność dni (najnowsze na początku / u góry) -->
+                <div class="flex items-start gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <input type="checkbox" id="timeline_reverse_order" name="timeline_reverse_order"
+                           
+                           class="mt-1 rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                    <label for="timeline_reverse_order" class="text-xs text-slate-700 cursor-pointer">
+                        <span class="font-bold text-slate-900 block text-sm">Odwrotna kolejność kart (najnowsze na początku / u góry)</span>
+                        Wygodne zwłaszcza na telefonach: dzisiejszy dzień pojawia się na samej górze listy, a wcześniejsze dni po przewinięciu w dół (od najnowszego do najstarszego).
+                    </label>
+                </div>
+
+                <!-- Wybór typów zdarzeń -->
+                <div class="pt-2">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-2">
+                        Typy zdarzeń widoczne w kalendarium:
+                    </label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        
+                        <!-- Oceny -->
+                        <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                            <input type="checkbox" name="timeline_type_grades" checked
+                                   class="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                            <div>
+                                <span class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                    <span>📝</span> Oceny
+                                </span>
+                                <span class="text-[11px] text-slate-500 block">Nowo wystawione oceny z przedmiotów</span>
+                            </div>
+                        </label>
+
+                        <!-- Frekwencja i nieobecności -->
+                        <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                            <input type="checkbox" name="timeline_type_attendance" checked
+                                   class="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                            <div>
+                                <span class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                    <span>⏱️</span> Frekwencja i obecność
+                                </span>
+                                <span class="text-[11px] text-slate-500 block">Nieobecności, spóźnienia i zwolnienia</span>
+                            </div>
+                        </label>
+
+                        <!-- Wiadomości -->
+                        <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                            <input type="checkbox" name="timeline_type_messages" checked
+                                   class="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                            <div>
+                                <span class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                    <span>✉️</span> Wiadomości
+                                </span>
+                                <span class="text-[11px] text-slate-500 block">Wiadomości od nauczycieli i wychowawcy</span>
+                            </div>
+                        </label>
+
+                        <!-- Ogłoszenia szkolne -->
+                        <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                            <input type="checkbox" name="timeline_type_notifications" checked
+                                   class="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                            <div>
+                                <span class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                    <span>📢</span> Ogłoszenia szkolne
+                                </span>
+                                <span class="text-[11px] text-slate-500 block">Komunikaty dyrekcji i ogłoszenia ze szkoły</span>
+                            </div>
+                        </label>
+
+                        <!-- Sprawdziany i terminarz -->
+                        <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-100 transition sm:col-span-2 lg:col-span-1">
+                            <input type="checkbox" name="timeline_type_tests" checked
+                                   class="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                            <div>
+                                <span class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                    <span>🔔</span> Sprawdziany i zapowiedzi
+                                </span>
+                                <span class="text-[11px] text-slate-500 block">Sprawdziany, kartkówki i nowe zapowiedzi</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        <!-- ================================================================= -->
+        <!-- SEKCJA: WYGLĄD I MOTYW PANELU (SKÓRKI) -->
+        <!-- ================================================================= -->
+        <div id="wyglad-i-motyw" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 scroll-mt-20">
+            <div class="border-b border-slate-100 pb-4 mb-6">
+                <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>🎨</span> Wygląd i skórki panelu (Theme Engine)
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Wybierz preferowany motyw wizualny panelu. Zmiana motywu jest natychmiastowa i zostaje zapamiętana w przeglądarce.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Karta 1: Jasny -->
+                <button type="button"
+                        onclick="setTheme('light')"
+                        data-theme-card="light"
+                        class="theme-card-selector text-left p-4 rounded-xl border-2 border-slate-200 hover:border-indigo-400 bg-white transition-all cursor-pointer relative group">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-2xl">☀️</span>
+                        <span class="theme-card-selected-badge hidden px-2 py-0.5 text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full">
+                            Aktywny ✓
+                        </span>
+                    </div>
+                    <div class="font-bold text-sm text-slate-900">Jasny (Domyślny)</div>
+                    <p class="text-xs text-slate-500 mt-1">Czysty, czytelny motyw ze zrównoważonym kontrastem i akcentem indygo.</p>
+                    <div class="mt-4 flex gap-1.5 items-center">
+                        <div class="w-5 h-5 rounded-md bg-slate-50 border border-slate-200"></div>
+                        <div class="w-5 h-5 rounded-md bg-white border border-slate-200"></div>
+                        <div class="w-5 h-5 rounded-md bg-indigo-600"></div>
+                    </div>
+                </button>
+
+                <!-- Karta 2: Ciemny Grafit -->
+                <button type="button"
+                        onclick="setTheme('dark')"
+                        data-theme-card="dark"
+                        class="theme-card-selector text-left p-4 rounded-xl border-2 border-slate-200 hover:border-indigo-400 bg-slate-900 text-white transition-all cursor-pointer relative group">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-2xl">🌙</span>
+                        <span class="theme-card-selected-badge hidden px-2 py-0.5 text-[10px] font-bold text-indigo-300 bg-indigo-950/80 border border-indigo-700 rounded-full">
+                            Aktywny ✓
+                        </span>
+                    </div>
+                    <div class="font-bold text-sm text-white">Ciemny (Grafit)</div>
+                    <p class="text-xs text-slate-400 mt-1">Nowoczesne barwy Slate 900, doskonałe do wieczornego przeglądania ocen.</p>
+                    <div class="mt-4 flex gap-1.5 items-center">
+                        <div class="w-5 h-5 rounded-md bg-slate-950 border border-slate-800"></div>
+                        <div class="w-5 h-5 rounded-md bg-slate-800 border border-slate-700"></div>
+                        <div class="w-5 h-5 rounded-md bg-indigo-500"></div>
+                    </div>
+                </button>
+
+                <!-- Karta 3: Północ OLED -->
+                <button type="button"
+                        onclick="setTheme('midnight')"
+                        data-theme-card="midnight"
+                        class="theme-card-selector text-left p-4 rounded-xl border-2 border-slate-200 hover:border-sky-400 bg-black text-white transition-all cursor-pointer relative group">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-2xl">🌌</span>
+                        <span class="theme-card-selected-badge hidden px-2 py-0.5 text-[10px] font-bold text-sky-300 bg-sky-950/80 border border-sky-700 rounded-full">
+                            Aktywny ✓
+                        </span>
+                    </div>
+                    <div class="font-bold text-sm text-white">Północ (OLED)</div>
+                    <p class="text-xs text-slate-400 mt-1">Głęboka, prawdziwa czerń i błękit Sky – energooszczędność i maksymalny kontrast.</p>
+                    <div class="mt-4 flex gap-1.5 items-center">
+                        <div class="w-5 h-5 rounded-md bg-black border border-slate-800"></div>
+                        <div class="w-5 h-5 rounded-md bg-slate-900 border border-slate-700"></div>
+                        <div class="w-5 h-5 rounded-md bg-sky-500"></div>
+                    </div>
+                </button>
+
+                <!-- Karta 4: Szmaragd / Leśny -->
+                <button type="button"
+                        onclick="setTheme('forest')"
+                        data-theme-card="forest"
+                        class="theme-card-selector text-left p-4 rounded-xl border-2 border-slate-200 hover:border-emerald-400 bg-emerald-950 text-white transition-all cursor-pointer relative group">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-2xl">🌲</span>
+                        <span class="theme-card-selected-badge hidden px-2 py-0.5 text-[10px] font-bold text-emerald-300 bg-emerald-900/80 border border-emerald-600 rounded-full">
+                            Aktywny ✓
+                        </span>
+                    </div>
+                    <div class="font-bold text-sm text-emerald-100">Szmaragd (Leśny)</div>
+                    <p class="text-xs text-emerald-300/70 mt-1">Ciemnozielona tonacja leśna o łagodnym dla oczu kontraście.</p>
+                    <div class="mt-4 flex gap-1.5 items-center">
+                        <div class="w-5 h-5 rounded-md bg-emerald-950 border border-emerald-800"></div>
+                        <div class="w-5 h-5 rounded-md bg-emerald-900 border border-emerald-700"></div>
+                        <div class="w-5 h-5 rounded-md bg-emerald-500"></div>
+                    </div>
+                </button>
+            </div>
+
+            <div class="mt-4 p-3.5 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <span class="text-xs text-slate-600 flex items-center gap-2">
+                    <span>💻</span> Możesz także wybrać automatyczne dopasowywanie do motywu systemu operacyjnego (Auto):
+                </span>
+                <button type="button" onclick="setTheme('auto')" class="px-3.5 py-1.5 text-xs font-bold rounded-lg border border-slate-300 hover:bg-slate-100 transition cursor-pointer shrink-0">
+                    Włącz tryb Auto (System)
+                </button>
+            </div>
+        </div>
+
+        <!-- Zapis zmian -->
+        <div class="flex items-center justify-end gap-3 pt-4">
+            <a href="web_dashboard.html"
+               class="px-5 py-2.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition">
+                Anuluj
+            </a>
+            <button type="submit"
+                    class="px-7 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md shadow-indigo-100 transition cursor-pointer">
+                💾 Zapisz zmiany w konfiguracji
+            </button>
+        </div>
+
+    </form>
+
+    <!-- ================================================================= -->
+    <!-- SEKCJA: ARCHIWIZACJA I ZARZĄDZANIE ROKIEM SZKOLNYM -->
+    <!-- ================================================================= -->
+    <div class="mt-10 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7">
+        <div class="border-b border-slate-100 pb-4 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+                <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>📦</span> Archiwizacja i zarządzanie rokiem szkolnym
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Tworzy trwały snapshot bieżącego roku w <code>storage/archive/</code> i przygotowuje czysty stan na nowy rok szkolny.
+                </p>
+            </div>
+            
+        </div>
+
+        <!-- Wskazówka jak przełączać lata -->
+        <div class="mb-6 p-4 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 text-xs text-indigo-950 dark:text-slate-200 flex items-start gap-3">
+            <span class="text-xl flex-shrink-0">💡</span>
+            <div class="leading-relaxed">
+                <span class="font-bold text-indigo-950 dark:text-white">Jak przeglądać dane z minionych lat?</span>
+                <p class="text-indigo-800 dark:text-slate-300 mt-1">
+                    Po wykonaniu archiwizacji archiwalny okres staje się w każdej chwili dostępny w <strong class="dark:text-white">rozwijanym menu lat w górnym pasku nawigacyjnym</strong> (tuż obok wyboru profilu ucznia, np. <em class="dark:text-indigo-300">👤 Uczeń | 🏫 Rok bieżący ▾</em>). Wybranie zarchiwizowanego roku natychmiast przełącza cały panel (oceny, świadectwo, wykresy, terminarz i wiadomości) w bezpieczny tryb tylko do odczytu.
+                </p>
+            </div>
+        </div>
+
+        
+
+        
+        <form id="archive-year-form" method="POST" action="/actions/archive-year" onsubmit="event.preventDefault(); openArchiveConfirmModal();" class="p-5 bg-slate-50/70 rounded-2xl border border-slate-200 max-w-2xl">
+            <input type="hidden" name="csrf_token" value="static_demo_csrf_token_librus2mail">
+            <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">Ręczna archiwizacja bieżącego roku szkolnego:</h4>
+            <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+                Wpisz etykietę zamykanego roku (np. <code>2024/2025</code>). System utworzy trwały snapshot w <code>storage/archive/</code>, wyczyści oceny, terminarz i plan lekcji do czystego stanu, pozostawiając konfigurację oraz ciągłość wiadomości. Zarchiwizowany rok natychmiast pojawi się w menu wyboru okresu w prawym górnym rogu ekranu.
+            </p>
+
+            
+            <div class="mb-4 p-3.5 bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 rounded-xl text-xs text-indigo-950 dark:text-slate-200">
+                <label class="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" id="archive_all_students" name="archive_all_students" value="1"
+                           class="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                    <div>
+                        <span class="font-extrabold text-indigo-950 dark:text-white block text-xs">
+                            Zarchiwizuj jednocześnie dla wszystkich dzieci (Jan Kowalski (klasa 5A) (8912345), Anna Kowalska (Liceum 2A) (8976543), Jan Kowalski (8979296))
+                        </span>
+                        <span class="text-[11px] text-indigo-800 dark:text-slate-300 block mt-0.5">
+                            Gdy zaznaczone, rok zostanie zarchiwizowany równolegle dla każdego dziecka. Gdy odznaczone, zarchiwizowany zostanie wyłącznie aktualny profil: <strong class="dark:text-white">Jan Kowalski (8979296)</strong> (dla pozostałych dzieci należy powtórzyć operację po przełączeniu profilu).
+                        </span>
+                    </div>
+                </label>
+            </div>
+            
+
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <input type="text" id="archive_school_year_input" name="school_year_label" placeholder="np. 2024/2025" required
+                       onkeydown="if(event.key === 'Enter'){ event.preventDefault(); openArchiveConfirmModal(); }"
+                       class="px-3.5 py-2 text-xs font-bold border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white flex-1">
+                <button type="button" onclick="openArchiveConfirmModal()"
+                        class="px-4 py-2 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-xl shadow-sm transition whitespace-nowrap cursor-pointer">
+                    📦 Zarchiwizuj i rozpocznij nowy rok
+                </button>
+            </div>
+        </form>
+        
+    </div>
+
+    <!-- Modal potwierdzenia archiwizacji roku szkolnego (Custom Application Modal) -->
+    <div id="archive-confirm-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 hidden" onclick="handleArchiveModalBackdrop(event)">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 sm:p-7 relative" onclick="event.stopPropagation()">
+            <!-- Przycisk zamknięcia X -->
+            <button type="button" onclick="closeArchiveConfirmModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-lg font-bold p-1 rounded-lg hover:bg-slate-100 transition cursor-pointer" title="Zamknij">
+                ✕
+            </button>
+
+            <!-- Nagłówek z ikoną -->
+            <div class="flex items-start gap-4 mb-4">
+                <div class="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center text-2xl flex-shrink-0 shadow-xs">
+                    📦
+                </div>
+                <div>
+                    <h3 class="text-base font-extrabold text-slate-900">
+                        Potwierdzenie archiwizacji roku szkolnego
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        Tworzenie trwałego snapshotu i przygotowanie czystego stanu.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Zawartość / Szczegóły archiwizacji -->
+            <div class="space-y-3.5 my-5">
+                <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
+                    <span class="text-slate-600 font-medium">Etykieta zamykanego roku:</span>
+                    <span id="archive-modal-year-display" class="font-extrabold font-mono text-slate-900 px-2.5 py-1 bg-white border border-slate-200 rounded-lg"></span>
+                </div>
+
+                <!-- Zakres: Wszystkie dzieci -->
+                <div id="archive-modal-scope-all" class="hidden p-3.5 bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 rounded-xl text-xs text-indigo-950 dark:text-slate-200">
+                    <div class="font-extrabold flex items-center gap-1.5 mb-1 text-indigo-900 dark:text-white">
+                        <span>👨‍👩‍👧‍👦</span> Zakres: Jednocześnie wszystkie dzieci
+                    </div>
+                    <p class="text-indigo-800 dark:text-slate-300 leading-relaxed text-[11px]">
+                        Zostaną zarchiwizowane dane dla każdego profilu:
+                        <strong class="dark:text-white">Jan Kowalski (klasa 5A) (8912345), Anna Kowalska (Liceum 2A) (8976543), Jan Kowalski (8979296)</strong>.
+                        Oceny, terminarz i plan lekcji każdego dziecka zostaną zarchiwizowane do <code>storage/archive/</code>, a na nowy rok szkolny rozpocznie się czysty stan.
+                    </p>
+                </div>
+
+                <!-- Zakres: Tylko bieżące dziecko -->
+                <div id="archive-modal-scope-single" class="p-3.5 bg-amber-50/80 border border-amber-200 rounded-xl text-xs text-amber-950">
+                    <div class="font-extrabold flex items-center gap-1.5 mb-1 text-amber-900">
+                        <span>👤</span> Zakres: Wyłącznie aktywny uczeń
+                    </div>
+                    <p class="text-amber-900 leading-relaxed text-[11px]">
+                        Zarchiwizowane zostaną dane tylko dla profilu: <strong>Jan Kowalski (8979296)</strong>.
+                        
+                        <span class="block mt-2 p-2 bg-amber-100/70 border border-amber-300 rounded-lg text-amber-950 font-semibold text-[11px]">
+                            ⚠️ <strong>Ważne:</strong> Po zakończeniu przełącz profil ucznia w prawym górnym rogu menu i powtórz archiwizację dla pozostałych dzieci (Jan Kowalski (klasa 5A) (8912345), Anna Kowalska (Liceum 2A) (8976543)).
+                        </span>
+                        
+                    </p>
+                </div>
+
+                <!-- Bezpieczeństwo i gwarancja ciągłości -->
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/80 text-[11px] text-slate-600 flex items-center gap-2">
+                    <span class="text-emerald-600 text-sm">🛡️</span>
+                    <span>Historia wiadomości i ogłoszeń ze szkoły oraz preferencje powiadomień zostaną zachowane.</span>
+                </div>
+            </div>
+
+            <!-- Przyciski akcji -->
+            <div class="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
+                <button type="button" onclick="closeArchiveConfirmModal()"
+                        class="px-4 py-2.5 text-xs font-bold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer">
+                    Anuluj
+                </button>
+                <button type="button" onclick="submitArchiveForm()"
+                        class="px-5 py-2.5 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-xl shadow-md shadow-amber-200 transition cursor-pointer">
+                    📦 Tak, zarchiwizuj i rozpocznij nowy rok
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- SEKCJA: ZAAWANSOWANE AKCJE I NARZĘDZIA CLI -->
+    <!-- ================================================================= -->
+    <div class="mt-10 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div class="max-w-2xl">
+                <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>⚡</span> Zaawansowane akcje i narzędzia CLI
+                </h2>
+                <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+                    Dedykowany panel do ręcznego uruchamiania zadań konsolowych bezpośrednio z poziomu przeglądarki: wymuszenie natychmiastowej synchronizacji z Librusem (Sync), wysyłka powiadomień e-mail, generowanie raportów postępów oraz motywacyjnych raportów ucznia z podglądem logów konsoli w czasie rzeczywistym.
+                </p>
+                <div class="flex flex-wrap gap-2 mt-3">
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                        🔄 librus_collector (Sync)
+                    </span>
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                        📧 librus_updates_notifier
+                    </span>
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                        📈 librus_progress_report
+                    </span>
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                        🎓 librus_student_report
+                    </span>
+                </div>
+            </div>
+            <div class="flex sm:flex-col items-center sm:items-end justify-start gap-2 flex-shrink-0">
+                <a href="web_akcje.html"
+                   class="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition cursor-pointer">
+                    <span>⚡</span>
+                    <span>Przejdź do Akcji CLI →</span>
+                </a>
+                <span class="text-[10px] text-slate-400">Podgląd konsoli na żywo</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let studentSettingsCount = 2;
+
+function openArchiveConfirmModal() {
+    const input = document.getElementById('archive_school_year_input');
+    const val = input ? input.value.trim() : '';
+    if (!val) {
+        if (input) {
+            input.focus();
+            if (input.reportValidity) input.reportValidity();
+        }
+        return;
+    }
+
+    const yearDisplay = document.getElementById('archive-modal-year-display');
+    if (yearDisplay) yearDisplay.textContent = val;
+
+    const isAll = document.getElementById('archive_all_students')?.checked;
+    const scopeAll = document.getElementById('archive-modal-scope-all');
+    const scopeSingle = document.getElementById('archive-modal-scope-single');
+
+    if (isAll) {
+        if (scopeAll) scopeAll.classList.remove('hidden');
+        if (scopeSingle) scopeSingle.classList.add('hidden');
+    } else {
+        if (scopeAll) scopeAll.classList.add('hidden');
+        if (scopeSingle) scopeSingle.classList.remove('hidden');
+    }
+
+    const modal = document.getElementById('archive-confirm-modal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeArchiveConfirmModal() {
+    const modal = document.getElementById('archive-confirm-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function handleArchiveModalBackdrop(event) {
+    if (event.target.id === 'archive-confirm-modal') {
+        closeArchiveConfirmModal();
+    }
+}
+
+function submitArchiveForm() {
+    const form = document.getElementById('archive-year-form');
+    if (form) {
+        form.submit();
+    }
+}
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeArchiveConfirmModal();
+    }
+});
+
+function toggleGmailAuthModeSettings() {
+    const isGmail = document.querySelector('input[name="mail_provider"]:checked')?.value === 'gmail';
+    if (!isGmail) return;
+
+    const authMode = document.querySelector('input[name="gmail_auth_mode"]:checked')?.value || 'app_password';
+    const pwdContainer = document.getElementById('mail-password-settings-container');
+    const oauthContainer = document.getElementById('gmail-oauth2-settings-container');
+    const gmailTipBox = document.getElementById('gmail-settings-tip-box');
+    const oauthTipBox = document.getElementById('gmail-oauth-settings-tip-box');
+
+    document.querySelectorAll('.gmail-auth-settings-radio').forEach(label => {
+        const radio = label.querySelector('input[type="radio"]');
+        if (radio && radio.checked) {
+            label.className = "gmail-auth-settings-radio flex items-center gap-2 p-2.5 rounded-xl border border-indigo-600 bg-white cursor-pointer transition text-xs font-bold text-slate-800";
+        } else {
+            label.className = "gmail-auth-settings-radio flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-white/70 hover:bg-white cursor-pointer transition text-xs font-semibold text-slate-700";
+        }
+    });
+
+    if (authMode === 'oauth2') {
+        if (pwdContainer) pwdContainer.classList.add('hidden');
+        if (oauthContainer) oauthContainer.classList.remove('hidden');
+        if (gmailTipBox) gmailTipBox.classList.add('hidden');
+        if (oauthTipBox) oauthTipBox.classList.remove('hidden');
+    } else {
+        if (pwdContainer) pwdContainer.classList.remove('hidden');
+        if (oauthContainer) oauthContainer.classList.add('hidden');
+        if (gmailTipBox) gmailTipBox.classList.remove('hidden');
+        if (oauthTipBox) oauthTipBox.classList.add('hidden');
+    }
+}
+
+function toggleMailProviderSettings() {
+    const isGmail = document.querySelector('input[name="mail_provider"]:checked')?.value === 'gmail';
+    const gmailAuthBox = document.getElementById('gmail-auth-mode-settings-box');
+    const smtpBox = document.getElementById('smtp-settings-settings-box');
+    const pwdContainer = document.getElementById('mail-password-settings-container');
+    const oauthContainer = document.getElementById('gmail-oauth2-settings-container');
+    const tipBox = document.getElementById('gmail-settings-tip-box');
+    const oauthTipBox = document.getElementById('gmail-oauth-settings-tip-box');
+
+    document.querySelectorAll('.provider-radio-settings').forEach(label => {
+        const radio = label.querySelector('input[type="radio"]');
+        if (radio && radio.checked) {
+            label.className = "provider-radio-settings flex items-center gap-3 p-4 border-2 border-indigo-600 bg-indigo-50/40 rounded-2xl cursor-pointer transition";
+        } else {
+            label.className = "provider-radio-settings flex items-center gap-3 p-4 border-2 border-slate-200 bg-white rounded-2xl cursor-pointer transition";
+        }
+    });
+
+    if (isGmail) {
+        if (gmailAuthBox) gmailAuthBox.classList.remove('hidden');
+        if (smtpBox) smtpBox.classList.add('hidden');
+        toggleGmailAuthModeSettings();
+    } else {
+        if (gmailAuthBox) gmailAuthBox.classList.add('hidden');
+        if (smtpBox) smtpBox.classList.remove('hidden');
+        if (pwdContainer) pwdContainer.classList.remove('hidden');
+        if (oauthContainer) oauthContainer.classList.add('hidden');
+        if (tipBox) tipBox.classList.add('hidden');
+        if (oauthTipBox) oauthTipBox.classList.add('hidden');
+    }
+}
+
+function toggleSummaryModeSettings() {
+    const isOneSummary = document.querySelector('input[name="one_summary_message"]:checked')?.value === '1';
+    document.querySelectorAll('.summary-mode-settings-radio').forEach(label => {
+        const radio = label.querySelector('input[type="radio"]');
+        if (radio && radio.checked) {
+            label.className = "summary-mode-settings-radio flex items-start gap-3 p-4 border-2 border-indigo-600 bg-indigo-50/40 rounded-2xl cursor-pointer transition";
+        } else {
+            label.className = "summary-mode-settings-radio flex items-start gap-3 p-4 border-2 border-slate-200 bg-white rounded-2xl cursor-pointer transition";
+        }
+    });
+    // Synchronizuj checkboxy na kartach uczniów
+    document.querySelectorAll('.student-summary-checkbox-settings').forEach(cb => {
+        cb.checked = isOneSummary;
+    });
+}
+
+function addStudentSettingsCard() {
+    const idx = studentSettingsCount;
+    const container = document.getElementById('students-settings-container');
+    const div = document.createElement('div');
+    div.className = "student-settings-card p-5 rounded-2xl border-2 border-slate-200 bg-slate-50/50 relative";
+    div.setAttribute('data-index', idx);
+    div.innerHTML = `
+        <div class="flex items-center justify-between mb-4">
+            <span class="text-xs font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-lg">
+                Profil Ucznia #${idx + 1}
+            </span>
+            <button type="button" onclick="this.closest('.student-settings-card').remove()"
+                    class="text-xs font-bold text-rose-600 hover:text-rose-800 bg-rose-50 border border-rose-200 px-2.5 py-1 rounded-lg">
+                ✕ Usuń konto
+            </button>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Imię / Etykieta wyświetlana *
+                </label>
+                <input type="text" name="student_name_${idx}" required placeholder="np. Nowy Uczeń"
+                       class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Odbiorcy e-mail powiadomień *
+                </label>
+                <input type="text" name="student_receivers_${idx}" required placeholder="mama@example.com"
+                       class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Login do portalu Librus *
+                </label>
+                <input type="text" id="librus_login_${idx}" name="student_login_${idx}" required placeholder="np. 8976543"
+                       class="w-full text-sm font-mono px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Hasło do portalu Librus *
+                </label>
+                <input type="password" id="librus_password_${idx}" name="student_password_${idx}" required placeholder="Hasło ucznia w Librusie"
+                       class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+        </div>
+        <div class="mt-4 pt-4 border-t border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-4 text-xs font-medium text-slate-700">
+                <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" name="student_grades_${idx}" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                    <span>Monitoruj oceny</span>
+                </label>
+                <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" name="student_timetable_${idx}" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                    <span>Terminarz</span>
+                </label>
+                <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" name="student_schedule_${idx}" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                    <span>Plan lekcji</span>
+                </label>
+                <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" name="student_messages_${idx}" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                    <span>Wiadomości</span>
+                </label>
+                <label class="inline-flex items-center gap-1.5 cursor-pointer" title="Konsoliduje oceny, wiadomości, ogłoszenia i terminarz w jeden wspólny e-mail (one_summary_message)">
+                    <input type="hidden" name="student_one_summary_present_${idx}" value="1">
+                    <input type="checkbox" name="student_one_summary_${idx}" id="student_one_summary_${idx}" checked class="student-summary-checkbox-settings rounded text-indigo-600 focus:ring-indigo-500">
+                    <span class="font-semibold text-indigo-900">📦 Zbiorczy e-mail (wszystko w jednym)</span>
+                </label>
+            </div>
+            <div>
+                <button type="button" onclick="testLibrusAccountSettings(${idx})"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-indigo-700 bg-white border border-indigo-300 hover:bg-indigo-50 rounded-xl transition shadow-xs cursor-pointer">
+                    <span>🔍 Testuj logowanie Librus</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Opcjonalny raport motywacyjny dla samego dziecka (student_report) -->
+        <div class="mt-4 pt-4 border-t border-slate-200/80">
+            <div class="flex items-center justify-between mb-2">
+                <label class="inline-flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="student_report_enabled_${idx}" id="student_report_enabled_settings_${idx}"
+                           onchange="toggleStudentReportBoxSettings(${idx})"
+                           class="rounded text-amber-500 focus:ring-amber-400">
+                    <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                        <span>🏆</span> Włącz raport motywacyjny dla dziecka (student_report)
+                    </span>
+                </label>
+                <span class="text-[11px] text-slate-400 font-medium">Opcjonalnie</span>
+            </div>
+
+            <div id="student-report-box-settings-${idx}" class="hidden mt-3 p-4 bg-amber-50/50 border border-amber-200/80 rounded-2xl space-y-3">
+                <p class="text-xs text-amber-900 leading-relaxed">
+                    Dedykowany raport motywacyjny z osiągnięciami, supermocami, odznakami grywalizacyjnymi i wyzwaniami dopasowanymi do wieku ucznia.
+                </p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                            Adres e-mail dziecka (lub rodzica)
+                        </label>
+                        <input type="email" name="student_report_email_${idx}" id="student_report_email_settings_${idx}"
+                               placeholder="np. dziecko@example.com lub email rodzica"
+                               class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:outline-none bg-white">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                            Szablon raportu (dopasowany do wieku)
+                        </label>
+                        <select name="student_report_template_${idx}" id="student_report_template_settings_${idx}"
+                                class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:outline-none bg-white">
+                            <option value="kids" selected>🎮 Kids (Szkoła podstawowa, klasy 4–6: odznaki, Karta Mocy)</option>
+                            <option value="teens">⚡ Teens (Starsze klasy podstawówki, klasy 7–8: Quick Wins, egzamin)</option>
+                            <option value="youth">📊 Youth (Szkoła średnia / liceum / technikum: Dashboard, KPI)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="test-feedback-settings-${idx}" class="hidden mt-3 text-xs p-3 rounded-xl"></div>
+    `;
+    container.appendChild(div);
+    studentSettingsCount++;
+}
+
+function toggleStudentReportBoxSettings(idx) {
+    const cb = document.getElementById(`student_report_enabled_settings_${idx}`);
+    const box = document.getElementById(`student-report-box-settings-${idx}`);
+    if (!cb || !box) return;
+    if (cb.checked) {
+        box.classList.remove('hidden');
+    } else {
+        box.classList.add('hidden');
+    }
+}
+
+async function testLibrusAccountSettings(idx) {
+    const loginInput = document.getElementById(`librus_login_${idx}`);
+    const passInput = document.getElementById(`librus_password_${idx}`);
+    const feedback = document.getElementById(`test-feedback-settings-${idx}`);
+
+    const login = loginInput ? loginInput.value.trim() : '';
+    const pass = passInput ? passInput.value.trim() : '';
+
+    if (!login || !pass) {
+        feedback.className = "mt-3 text-xs p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 block";
+        feedback.innerText = "⚠️ Aby przetestować logowanie, wprowadź login oraz hasło.";
+        return;
+    }
+
+    feedback.className = "mt-3 text-xs p-3 rounded-xl bg-sky-50 border border-sky-200 text-sky-800 flex items-center gap-2 block";
+    feedback.innerHTML = "<span>⏳ Trwa sprawdzanie autoryzacji w portalu Librus Synergia... Proszę czekać.</span>";
+
+    try {
+        const formData = new FormData();
+        formData.append('login', login);
+        formData.append('password', pass);
+
+        const res = await fetch("/api/test-librus", {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            feedback.className = "mt-3 text-xs p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 block";
+            feedback.innerHTML = `<strong>Sukces!</strong> ${data.message}`;
+        } else {
+            feedback.className = "mt-3 text-xs p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 block";
+            feedback.innerHTML = `<strong>Błąd autoryzacji:</strong> ${data.message}`;
+        }
+    } catch (err) {
+        feedback.className = "mt-3 text-xs p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 block";
+        feedback.innerHTML = `<strong>Błąd połączenia:</strong> ${err.message}`;
+    }
+}
+
+function toggleCollectionModeSettings() {
+    const mode = document.querySelector('input[name="collection_mode"]:checked')?.value || 'daily';
+    const dailyBox = document.getElementById('collection-daily-settings-box');
+    const intervalBox = document.getElementById('collection-interval-settings-box');
+
+    document.querySelectorAll('.collection-mode-radio-settings').forEach(label => {
+        const radio = label.querySelector('input[type="radio"]');
+        if (radio && radio.checked) {
+            label.className = "collection-mode-radio-settings flex items-start gap-3 p-4 border-2 border-indigo-600 bg-indigo-50/40 rounded-2xl cursor-pointer transition";
+        } else {
+            label.className = "collection-mode-radio-settings flex items-start gap-3 p-4 border-2 border-slate-200 bg-white rounded-2xl cursor-pointer transition";
+        }
+    });
+
+    if (mode === 'daily') {
+        if (dailyBox) dailyBox.classList.remove('hidden');
+        if (intervalBox) intervalBox.classList.add('hidden');
+    } else {
+        if (dailyBox) dailyBox.classList.add('hidden');
+        if (intervalBox) intervalBox.classList.remove('hidden');
+    }
+    updateCronPreviewSettings();
+}
+
+let reportCardsSettingsCount = 2;
+
+function toggleReportFrequencySettings(idx) {
+    const freq = document.querySelector(`select[name="report_frequency_${idx}"]`)?.value || 'weekly';
+    const weeklyCol = document.getElementById(`report-weekly-settings-col-${idx}`);
+    const monthlyCol = document.getElementById(`report-monthly-settings-col-${idx}`);
+    if (weeklyCol && monthlyCol) {
+        if (freq === 'monthly') {
+            weeklyCol.classList.add('hidden');
+            monthlyCol.classList.remove('hidden');
+        } else {
+            weeklyCol.classList.remove('hidden');
+            monthlyCol.classList.add('hidden');
+        }
+    }
+}
+
+function addReportCardSettings() {
+    const idx = reportCardsSettingsCount;
+    const container = document.getElementById('reports-settings-cards-container');
+    const div = document.createElement('div');
+    div.className = "report-settings-card p-4 rounded-2xl border-2 border-slate-200 bg-slate-50/70 relative";
+    div.setAttribute('data-index', idx);
+    div.innerHTML = `
+        <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-200/60">
+            <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800">
+                <input type="checkbox" name="report_enabled_${idx}" checked onchange="updateCronPreviewSettings()"
+                       class="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+                <span>Włącz raport</span>
+            </label>
+            <div class="flex items-center gap-2">
+                <input type="text" name="report_name_${idx}" value="Nowy raport postępów" placeholder="Nazwa raportu"
+                       class="text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg px-2.5 py-1 focus:ring-1 focus:ring-indigo-500 focus:outline-none">
+                <button type="button" onclick="this.closest('.report-settings-card').remove(); updateCronPreviewSettings();"
+                        class="text-xs font-bold text-rose-600 hover:text-rose-800 bg-rose-50 border border-rose-200 px-2 py-1 rounded-lg cursor-pointer">
+                    ✕ Usuń
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div>
+                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Częstotliwość</label>
+                <select name="report_frequency_${idx}" onchange="toggleReportFrequencySettings(${idx}); updateCronPreviewSettings()"
+                        class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <option value="weekly">Co tydzień</option>
+                    <option value="monthly">Co miesiąc</option>
+                </select>
+            </div>
+
+            <div id="report-weekly-settings-col-${idx}">
+                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Dzień tygodnia</label>
+                <select name="report_weekday_${idx}" onchange="updateCronPreviewSettings()"
+                        class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <option value="friday">Piątek (podsumowanie tygodnia)</option>
+                    <option value="saturday">Sobota</option>
+                    <option value="sunday">Niedziela</option>
+                    <option value="monday">Poniedziałek</option>
+                    <option value="tuesday">Wtorek</option>
+                    <option value="wednesday">Środa</option>
+                    <option value="thursday">Czwartek</option>
+                </select>
+            </div>
+
+            <div id="report-monthly-settings-col-${idx}" class="hidden">
+                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Dzień miesiąca</label>
+                <select name="report_day_of_month_${idx}" onchange="updateCronPreviewSettings()"
+                        class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <option value="1">1. dzień miesiąca</option>
+                    <option value="last">Ostatni dzień miesiąca</option>
+                    <option value="15">15. dzień miesiąca</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Godzina wysyłki</label>
+                <select name="report_time_${idx}" onchange="updateCronPreviewSettings()"
+                        class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <option value="17:00">17:00 (zalecane)</option>
+                    <option value="15:00">15:00</option>
+                    <option value="16:00">16:00</option>
+                    <option value="18:00">18:00</option>
+                    <option value="19:00">19:00</option>
+                    <option value="20:00">20:00</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Okres raportu</label>
+                <select name="report_interval_days_${idx}" onchange="updateCronPreviewSettings()"
+                        class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <option value="7">Ostatnie 7 dni (--days 7)</option>
+                    <option value="14">Ostatnie 14 dni (--days 14)</option>
+                    <option value="30">Ostatnie 30 dni (--days 30)</option>
+                    <option value="3">Ostatnie 3 dni (--days 3)</option>
+                    <option value="60">Ostatnie 60 dni (--days 60)</option>
+                </select>
+            </div>
+        </div>
+    `;
+    container.appendChild(div);
+    reportCardsSettingsCount++;
+    updateCronPreviewSettings();
+}
+
+function updateCronPreviewSettings() {
+    const preview = document.getElementById('cron-preview-settings-lines');
+    if (!preview) return;
+
+    const mode = document.querySelector('input[name="collection_mode"]:checked')?.value || 'daily';
+    let collectCron = "";
+
+    if (mode === 'daily') {
+        const timeVal = document.getElementById('collection_time_settings')?.value || "16:00";
+        const parts = timeVal.split(':');
+        const h = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        const daysVal = document.getElementById('collection_days_settings')?.value || "all";
+        const dayPart = (daysVal === 'workdays') ? "1-5" : "*";
+        collectCron = `${m} ${h} * * ${dayPart} python librus_collect_and_notify.py --once`;
+    } else {
+        const intHours = document.getElementById('collection_interval_hours_settings')?.value || "1";
+        if (intHours === "1") {
+            collectCron = `0 * * * * python librus_collect_and_notify.py --once`;
+        } else {
+            collectCron = `0 */${intHours} * * * python librus_collect_and_notify.py --once`;
+        }
+    }
+
+    const reportCards = document.querySelectorAll('.report-settings-card');
+    const weekdayMap = {
+        'monday': 1, 'tuesday': 2, 'wednesday': 3, 'thursday': 4,
+        'friday': 5, 'saturday': 6, 'sunday': 0
+    };
+    const reportCronLines = [];
+
+    reportCards.forEach(card => {
+        const enabledChk = card.querySelector('input[type="checkbox"][name^="report_enabled_"]');
+        if (!enabledChk || !enabledChk.checked) return;
+
+        const nameInput = card.querySelector('input[name^="report_name_"]');
+        const rName = nameInput ? nameInput.value.trim() : 'Raport postępów';
+
+        const freqSelect = card.querySelector('select[name^="report_frequency_"]');
+        const freq = freqSelect ? freqSelect.value : 'weekly';
+
+        const timeSelect = card.querySelector('select[name^="report_time_"]');
+        const rTime = timeSelect ? timeSelect.value : "17:00";
+        const parts = rTime.split(':');
+        const rh = parseInt(parts[0], 10);
+        const rm = parseInt(parts[1], 10);
+
+        const daysSelect = card.querySelector('select[name^="report_interval_days_"]');
+        const rDays = daysSelect ? daysSelect.value : "7";
+
+        if (freq === 'monthly') {
+            const domSelect = card.querySelector('select[name^="report_day_of_month_"]');
+            const dom = domSelect ? domSelect.value : "1";
+            if (dom === 'last') {
+                reportCronLines.push(`${rm} ${rh} 28-31 * * [ $(date -d tomorrow +\\%d) -eq 1 ] && python librus_progress_report.py --days ${rDays} # ${rName}`);
+            } else {
+                reportCronLines.push(`${rm} ${rh} ${dom} * * python librus_progress_report.py --days ${rDays} # ${rName}`);
+            }
+        } else {
+            const weekdaySelect = card.querySelector('select[name^="report_weekday_"]');
+            const rWeekday = weekdaySelect ? weekdaySelect.value : "friday";
+            const dayNum = weekdayMap[rWeekday] ?? 5;
+            reportCronLines.push(`${rm} ${rh} * * ${dayNum} python librus_progress_report.py --days ${rDays} # ${rName}`);
+        }
+    });
+
+    let html = `<div class="text-slate-400"># 1. Pobieranie ocen i wiadomości ze szkoły:</div>`;
+    html += `<div class="text-emerald-400 select-all font-mono">${collectCron}</div>`;
+    if (reportCronLines.length > 0) {
+        html += `<div class="text-slate-400 mt-2"># 2. Zaplanowane raporty postępów ucznia:</div>`;
+        reportCronLines.forEach(line => {
+            html += `<div class="text-sky-400 select-all font-mono">${line}</div>`;
+        });
+    }
+    preview.innerHTML = html;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    toggleCollectionModeSettings();
+    updateCronPreviewSettings();
+});
+</script>
+
+    </main>
+
+    <!-- Stopka -->
+    <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex items-center gap-2 font-medium">
+                <span>🏫 Librus2mail v2.9.0</span>
+                <span>•</span>
+                <span>Prywatny Dashboard Rodzica</span>
+            </div>
+            <div class="text-slate-400 text-[11px]">
+                Bezpieczny odczyt z lokalnej pamięci <code>storage/</code> • Stan na: 18.09.2026 00:00
+            </div>
+        </div>
+    </footer>
+
+    <!-- Theme Manager Script -->
+    <script>
+        const THEME_DATA = {
+            light: { name: 'Jasny', icon: '☀️' },
+            dark: { name: 'Ciemny', icon: '🌙' },
+            midnight: { name: 'Północ', icon: '🌌' },
+            forest: { name: 'Szmaragd', icon: '🌲' },
+            auto: { name: 'Auto', icon: '💻' }
+        };
+
+        function getEffectiveTheme(theme) {
+            if (theme === 'auto') {
+                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            return theme;
+        }
+
+        function applyTheme(theme) {
+            const effective = getEffectiveTheme(theme);
+            document.documentElement.setAttribute('data-theme', effective);
+            if (effective !== 'light') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+
+            // Aktualizacja ikony i nazwy w pasku nawigacyjnym
+            const activeIcon = document.getElementById('theme-active-icon');
+            const activeName = document.getElementById('theme-active-name');
+            if (activeIcon) activeIcon.textContent = THEME_DATA[theme]?.icon || '☀️';
+            if (activeName) activeName.textContent = THEME_DATA[theme]?.name || 'Jasny';
+
+            // Zaznaczenie w menu dropdown
+            document.querySelectorAll('[data-theme-check]').forEach(el => {
+                const isCurrent = el.getAttribute('data-theme-check') === theme;
+                el.classList.toggle('hidden', !isCurrent);
+            });
+
+            // Aktualizacja kafelków w zakładce Ustawienia (jeśli obecne)
+            document.querySelectorAll('.theme-card-selector').forEach(card => {
+                const cTheme = card.getAttribute('data-theme-card');
+                const isSelected = cTheme === theme;
+                card.classList.toggle('ring-2', isSelected);
+                card.classList.toggle('ring-indigo-500', isSelected);
+                card.classList.toggle('border-indigo-500', isSelected);
+                const checkEl = card.querySelector('.theme-card-selected-badge');
+                if (checkEl) checkEl.classList.toggle('hidden', !isSelected);
+            });
+
+            // Emitowanie zdarzenia dla innych komponentów (np. wykresów Chart.js)
+            window.dispatchEvent(new CustomEvent('themechange', { detail: { theme, effective } }));
+        }
+
+        function setTheme(theme) {
+            try {
+                localStorage.setItem('librus2mail_theme', theme);
+            } catch (e) {}
+            applyTheme(theme);
+            closeThemeDropdown();
+        }
+
+        function toggleThemeDropdown() {
+            const dropdown = document.getElementById('theme-dropdown');
+            if (!dropdown) return;
+            dropdown.classList.toggle('hidden');
+        }
+
+        function closeThemeDropdown() {
+            const dropdown = document.getElementById('theme-dropdown');
+            if (dropdown) dropdown.classList.add('hidden');
+        }
+
+        // Zamknięcie menu po kliknięciu poza obszar
+        document.addEventListener('click', function(e) {
+            const container = document.getElementById('theme-menu-container');
+            if (container && !container.contains(e.target)) {
+                closeThemeDropdown();
+            }
+        });
+
+        // Reakcja na zmianę preferencji systemowych
+        try {
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+                if ((localStorage.getItem('librus2mail_theme') || 'auto') === 'auto') {
+                    applyTheme('auto');
+                }
+            });
+        } catch (e) {}
+
+        // Inicjalizacja stanu kontrolek po załadowaniu DOM
+        document.addEventListener('DOMContentLoaded', function() {
+            const saved = localStorage.getItem('librus2mail_theme') || 'auto';
+            applyTheme(saved);
+        });
+
+        // ==========================================================================
+        // Mobile Drawer Controller
+        // ==========================================================================
+        function openMobileMenu() {
+            const backdrop = document.getElementById('mobile-drawer-backdrop');
+            const drawer = document.getElementById('mobile-drawer');
+            if (backdrop && drawer) {
+                backdrop.classList.remove('hidden');
+                drawer.classList.remove('translate-x-full');
+                document.body.classList.add('overflow-hidden');
+            }
+        }
+
+        function closeMobileMenu() {
+            const backdrop = document.getElementById('mobile-drawer-backdrop');
+            const drawer = document.getElementById('mobile-drawer');
+            if (backdrop && drawer) {
+                backdrop.classList.add('hidden');
+                drawer.classList.add('translate-x-full');
+                document.body.classList.remove('overflow-hidden');
+            }
+        }
+
+        function toggleMobileMenu() {
+            const drawer = document.getElementById('mobile-drawer');
+            if (drawer && drawer.classList.contains('translate-x-full')) {
+                openMobileMenu();
+            } else {
+                closeMobileMenu();
+            }
+        }
+
+        // Klawisz Escape zamyka otwarte menu i panel mobilny
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeMobileMenu();
+                closeThemeDropdown();
+            }
+        });
+    </script>
+
+    
+</body>
+</html>

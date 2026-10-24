@@ -16,7 +16,7 @@ from typing import Any
 import requests
 
 from .base_logger import setup_logging
-from .config import read_config
+from .config import read_config, resolve_config_and_storage_paths
 from .config_watcher import (
     ConfigWatcher,
 )
@@ -661,6 +661,12 @@ def main():
         help="Ścieżka do katalogu pamięci stanu (nadpisuje config.yaml)"
     )
     parser.add_argument(
+        '--data-dir',
+        dest='data_dir',
+        default=None,
+        help="Bazowy katalog danych aplikacji (np. /data). Gdy ustawiony, config.yaml i storage/ będą domyślnie lokowane w tym katalogu."
+    )
+    parser.add_argument(
         '-u', '--user',
         dest='user_filter',
         default=None,
@@ -735,11 +741,15 @@ def main():
         help="Ścieżka do pliku konfiguracyjnego YAML (domyślnie: config.yaml)"
     )
     args = parser.parse_args()
-    config_path = args.config_opt or args.config or 'config.yaml'
+    config_path, storage_dir = resolve_config_and_storage_paths(
+        cli_config=args.config_opt or args.config,
+        cli_storage=args.storage_dir,
+        data_dir=args.data_dir,
+    )
     setup_logging()
     run_collector(
         config_path=config_path,
-        storage_dir=args.storage_dir,
+        storage_dir=storage_dir,
         days=args.days,
         hours=args.hours,
         dry_run=args.dry_run,

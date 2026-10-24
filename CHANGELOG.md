@@ -9,6 +9,14 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ## [Unreleased]
 
+### Dodane
+- **Opcjonalny bazowy katalog danych (`--data-dir` / `LIBRUS_DATA_DIR`)**:
+  - Dodano parametr CLI `--data-dir` (oraz `-d` w `librus_web.py`) i odpowiadającą mu zmienną środowiskową `LIBRUS_DATA_DIR` (lub `DATA_DIR`), pozwalające jawnie wskazać wspólny katalog roboczy (np. trwały dysk `/data` na RunxBuild).
+  - Wskazanie bazowego katalogu powoduje, że plik `config.yaml` oraz katalog `storage/` są domyślnie lokowane wewnątrz tej ścieżki (np. `/data/config.yaml` oraz `/data/storage/`), bez niejawnego zgadywania ścieżek.
+  - Zachowano pełną hierarchię pierwszeństwa: jawne parametry `--config` oraz `--storage-dir` (lub dedykowane zmienne `LIBRUS_CONFIG_PATH` / `LIBRUS_STORAGE_DIR`) mogą w razie potrzeby nadpisać poszczególne ścieżki.
+  - Dodano plik [`Procfile`](file:///home/acacko/PycharmProjects/librus2mail/Procfile) ze startem procesu `web: python librus_web.py`.
+  - Dodano obsługę dynamicznego portu chmurowego ze zmiennej `PORT`.
+
 ---
 
 ## [2.9.0] – 2026-10-23

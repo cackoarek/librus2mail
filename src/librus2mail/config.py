@@ -64,6 +64,59 @@ def get_reports_schedules(config: Any) -> list[dict]:
     return []
 
 
+def resolve_config_and_storage_paths(
+    cli_config: str | None = None,
+    cli_storage: str | None = None,
+    data_dir: str | None = None,
+) -> tuple[str, str | None]:
+    """Ustala ścieżki do config.yaml oraz katalogu storage na podstawie parametrów CLI i zmiennych ENV.
+
+    Hierarchia pierwszeństwa:
+    1. Parametry przekazane bezpośrednio w CLI dla konkretnych ścieżek:
+       - cli_config (np. -c / --config)
+       - cli_storage (np. -s / --storage-dir)
+    2. Zmienne środowiskowe dla konkretnych ścieżek:
+       - LIBRUS_CONFIG_PATH / CONFIG_PATH
+       - LIBRUS_STORAGE_DIR / STORAGE_DIR
+    3. Bazowy katalog danych (gdy wskazany parametrem CLI --data-dir lub zmienną LIBRUS_DATA_DIR / DATA_DIR):
+       - config_path = <data_dir>/config.yaml
+       - storage_dir = <data_dir>/storage
+    4. Domyślne wartości lokalne:
+       - config_path = 'config.yaml'
+       - storage_dir = None (wtedy aplikacja użyje domyślnego 'storage' z konfiguracji)
+    """
+    effective_data_dir = (
+        (data_dir.strip() if data_dir and data_dir.strip() else None)
+        or os.environ.get('LIBRUS_DATA_DIR', '').strip()
+        or os.environ.get('DATA_DIR', '').strip()
+        or None
+    )
+
+    # 1. Ścieżka konfiguracji (CLI -> ENV config -> data_dir -> domyślna)
+    env_config = os.environ.get('LIBRUS_CONFIG_PATH', '').strip() or os.environ.get('CONFIG_PATH', '').strip() or None
+    if cli_config and cli_config.strip():
+        config_path = cli_config.strip()
+    elif env_config:
+        config_path = env_config
+    elif effective_data_dir:
+        config_path = os.path.join(effective_data_dir, 'config.yaml')
+    else:
+        config_path = 'config.yaml'
+
+    # 2. Ścieżka pamięci stanu storage (CLI -> ENV storage -> data_dir -> domyślna)
+    env_storage = os.environ.get('LIBRUS_STORAGE_DIR', '').strip() or os.environ.get('STORAGE_DIR', '').strip() or None
+    if cli_storage and cli_storage.strip():
+        storage_dir = cli_storage.strip()
+    elif env_storage:
+        storage_dir = env_storage
+    elif effective_data_dir:
+        storage_dir = os.path.join(effective_data_dir, 'storage')
+    else:
+        storage_dir = None
+
+    return config_path, storage_dir
+
+
 __all__ = [
     "AppSettings",
     "LibrusUserConfig",
@@ -77,4 +130,5 @@ __all__ = [
     "WebConfig",
     "get_reports_schedules",
     "read_config",
+    "resolve_config_and_storage_paths",
 ]

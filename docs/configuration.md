@@ -215,7 +215,9 @@ W środowiskach kontenerowych zaleca się przekazywanie danych wrażliwych za po
 | `WEB_PASSWORD` | `web.password` | Hasło dostępu do panelu WWW |
 | `FLASK_SECRET_KEY` | `web.secret_key` | Klucz szyfrowania ciasteczek sesyjnych |
 | `WAIT_TIME_S` | `wait_time_s` | Czas uśpienia demona w sekundach |
-| `STORAGE_DIR` | `storage_dir` | Ścieżka do pamięci stanu (domyślnie `/app/storage`) |
+| `LIBRUS_DATA_DIR` / `DATA_DIR` | — | Bazowy katalog danych aplikacji (np. `/data` na RunxBuild/Render). Gdy ustawiony, `config.yaml` i `storage/` są domyślnie lokowane wewnątrz tego katalogu (`/data/config.yaml`, `/data/storage`). |
+| `LIBRUS_CONFIG_PATH` / `CONFIG_PATH` | — | Jawna ścieżka do pliku konfiguracyjnego YAML (odpowiednik flagi CLI `-c`) |
+| `STORAGE_DIR` / `LIBRUS_STORAGE_DIR` | `storage_dir` | Ścieżka do pamięci stanu (domyślnie `storage` lub `/app/storage`) |
 
 ### Przykład pliku `.env` dla Docker Compose:
 ```env

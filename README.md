@@ -144,7 +144,7 @@ Szczegółowe podręczniki, specyfikacje i instrukcje wdrożeniowe zostały podz
 | 🏛️ **[docs/modules.md](docs/modules.md)** | Szczegółowa specyfikacja wszystkich 5 modułów, architektura, przepływ danych i flagi CLI. |
 | ⚙️ **[docs/configuration.md](docs/configuration.md)** | Pełny opis pliku `config.yaml`, zmienne środowiskowe, konfiguracja Gmail (App Password), SMTP, frekwencja i bezpieczeństwo. |
 | 🛠️ **[docs/useful-scripts.md](docs/useful-scripts.md)** | Podręcznik CLI: wszystkie przełączniki, symulacje offline, generowanie raportów HTML i testy w terminalu. |
-| 🐳 **[docs/deployment.md](docs/deployment.md)** | Wdrożenie produkcyjne: Docker & Docker Compose, usługi `systemd` (Linux/Raspberry Pi), reguły `cron` i reverse proxy Nginx. |
+| 🐳 **[docs/deployment.md](docs/deployment.md)** | Wdrożenie produkcyjne: Docker & Docker Compose, usługi `systemd` (Linux/Raspberry Pi), platformy chmurowe PaaS (RunxBuild, Render, Fly.io), reguły `cron` i reverse proxy Nginx. |
 | 📐 **[docs/architecture.md](docs/architecture.md)** | Architektura systemu, zasada Local-First, format bazy danych `storage/`, modele Pydantic i bezpieczeństwo sesji. |
 | 💻 **[docs/development.md](docs/development.md)** | Przewodnik dla programistów: środowisko testowe `pytest`, linter `ruff`, generowanie raportów demo i procedura wydawania wersji. |
 | ❓ **[docs/faq-and-troubleshooting.md](docs/faq-and-troubleshooting.md)** | Najczęstsze pytania, diagnoza błędów (`NotLogged`, błędy SMTP), polityka oznaczania wiadomości jako przeczytane i bezpieczeństwo konta. |

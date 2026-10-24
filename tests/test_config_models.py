@@ -14,6 +14,7 @@ from librus2mail.config import (
     ScheduleConfig,
     TimelineConfig,
     read_config,
+    resolve_config_and_storage_paths,
 )
 
 
@@ -272,6 +273,55 @@ class TestConfigModels(unittest.TestCase):
         self.assertTrue(dict_app['timeline']['hide_weekends'])
         self.assertTrue(dict_app['timeline']['reverse_order'])
         self.assertIn('custom_extra_key', dict_app)
+
+    def test_resolve_config_and_storage_paths(self):
+        """Weryfikuje ustalanie ścieżek do config.yaml oraz storage (CLI, ENV, parametr data-dir)."""
+        # 1. Domyślne wartości lokalne (brak data-dir)
+        c_path, s_dir = resolve_config_and_storage_paths()
+        self.assertEqual(c_path, 'config.yaml')
+        self.assertIsNone(s_dir)
+
+        # 2. Parametr CLI data_dir (/data)
+        c_path, s_dir = resolve_config_and_storage_paths(data_dir='/data')
+        self.assertEqual(c_path, '/data/config.yaml')
+        self.assertEqual(s_dir, '/data/storage')
+
+        # 3. Zmienna środowiskowa LIBRUS_DATA_DIR / DATA_DIR
+        os.environ['LIBRUS_DATA_DIR'] = '/srv/librus-data'
+        try:
+            c_path, s_dir = resolve_config_and_storage_paths()
+            self.assertEqual(c_path, '/srv/librus-data/config.yaml')
+            self.assertEqual(s_dir, '/srv/librus-data/storage')
+        finally:
+            os.environ.pop('LIBRUS_DATA_DIR', None)
+
+        os.environ['DATA_DIR'] = '/my/data'
+        try:
+            c_path, s_dir = resolve_config_and_storage_paths()
+            self.assertEqual(c_path, '/my/data/config.yaml')
+            self.assertEqual(s_dir, '/my/data/storage')
+        finally:
+            os.environ.pop('DATA_DIR', None)
+
+        # 4. Jawne parametry CLI (--config, --storage-dir) nadpisują katalog bazowy data_dir
+        c_path, s_dir = resolve_config_and_storage_paths(
+            cli_config='/custom/my_config.yaml',
+            cli_storage='/custom/my_storage',
+            data_dir='/data',
+        )
+        self.assertEqual(c_path, '/custom/my_config.yaml')
+        self.assertEqual(s_dir, '/custom/my_storage')
+
+        # 5. Zmienne środowiskowe LIBRUS_CONFIG_PATH i LIBRUS_STORAGE_DIR
+        os.environ['LIBRUS_CONFIG_PATH'] = '/env/config.yaml'
+        os.environ['LIBRUS_STORAGE_DIR'] = '/env/storage'
+        try:
+            c_path, s_dir = resolve_config_and_storage_paths(data_dir='/data')
+            self.assertEqual(c_path, '/env/config.yaml')
+            self.assertEqual(s_dir, '/env/storage')
+        finally:
+            os.environ.pop('LIBRUS_CONFIG_PATH', None)
+            os.environ.pop('LIBRUS_STORAGE_DIR', None)
 
 
 if __name__ == '__main__':

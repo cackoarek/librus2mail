@@ -10,6 +10,7 @@ import argparse
 import logging
 
 from .base_logger import setup_logging
+from .config import resolve_config_and_storage_paths
 from .librus_collector import run_collector
 from .progress_report import run_progress_reports
 from .student_report import run_student_reports
@@ -180,6 +181,12 @@ def main():
         help="Ścieżka do katalogu pamięci stanu (nadpisuje storage_dir z config.yaml)"
     )
     parser.add_argument(
+        '--data-dir',
+        dest='data_dir',
+        default=None,
+        help="Bazowy katalog danych aplikacji (np. /data). Gdy ustawiony, config.yaml i storage/ będą lokowane w tym katalogu."
+    )
+    parser.add_argument(
         '-u', '--user',
         dest='user_filter',
         default=None,
@@ -259,12 +266,16 @@ def main():
     )
 
     args = parser.parse_args()
-    config_path = args.config_opt or args.config or 'config.yaml'
+    config_path, storage_dir = resolve_config_and_storage_paths(
+        cli_config=args.config_opt or args.config,
+        cli_storage=args.storage_dir,
+        data_dir=args.data_dir,
+    )
 
     setup_logging()
     run_pipeline(
         config_path=config_path,
-        storage_dir=args.storage_dir,
+        storage_dir=storage_dir,
         user_filter=args.user_filter,
         days=args.days,
         hours=args.hours,

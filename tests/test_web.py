@@ -2940,6 +2940,29 @@ class TestWebDashboard(unittest.TestCase):
         self.assertEqual(res_redir.status_code, 302)
         self.assertTrue(res_redir.location.endswith('/terminarz?view=chronicle'))
 
+    def test_persistent_data_mount_auto_detection_and_env_bootstrap(self):
+        """Weryfikuje konfigurację bazowego katalogu danych (parametr data_dir lub ENV) oraz zapis początkowej konfiguracji z ENV."""
+        with tempfile.TemporaryDirectory() as tmp_data_dir:
+            os.environ['LIBRUS_LOGIN'] = '999888'
+            os.environ['LIBRUS_PASSWORD'] = 'secret999'
+            os.environ['LIBRUS_LOGIN_NAME'] = 'Uczeń Chmurowy'
+            os.environ['LIBRUS_NOTIFICATION_RECEIVERS'] = 'cloud@example.com'
+            try:
+                # 1. Test przez jawny parametr data_dir
+                app = create_app(data_dir=tmp_data_dir, no_auth=True, secret_key='test-key')
+                self.assertEqual(app.config['CONFIG_PATH'], os.path.join(tmp_data_dir, 'config.yaml'))
+                self.assertEqual(app.config['STORAGE_DIR'], os.path.join(tmp_data_dir, 'storage'))
+
+                # Sprawdzamy czy plik config.yaml został automatycznie zapisany w katalogu bazowym
+                expected_cfg_file = os.path.join(tmp_data_dir, 'config.yaml')
+                self.assertTrue(os.path.isfile(expected_cfg_file))
+
+                # Sprawdzamy czy katalog storage został zainicjalizowany
+                expected_storage_dir = os.path.join(tmp_data_dir, 'storage')
+                self.assertTrue(os.path.isdir(expected_storage_dir))
+            finally:
+                for k in ['LIBRUS_LOGIN', 'LIBRUS_PASSWORD', 'LIBRUS_LOGIN_NAME', 'LIBRUS_NOTIFICATION_RECEIVERS']:
+                    os.environ.pop(k, None)
 
 
 if __name__ == '__main__':

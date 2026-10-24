@@ -2648,6 +2648,9 @@ class TestWebDashboard(unittest.TestCase):
         self.assertIn('id="attendance-view-heatmap"', html)
         self.assertIn('id="attendance-view-month"', html)
         self.assertIn('Roczna mapa obecności (styl GitHub)', html)
+        self.assertNotIn('Mniej', html)
+        self.assertNotIn('Więcej', html)
+        self.assertIn('Legenda:', html)
 
         # 2. Jawne wymuszenie widoku przez parametr query ?view=month
         res_month = client.get('/frekwencja?view=month')

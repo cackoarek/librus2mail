@@ -17,6 +17,15 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
   - Dodano plik [`Procfile`](file:///home/acacko/PycharmProjects/librus2mail/Procfile) ze startem procesu `web: python librus_web.py`.
   - Dodano obsługę dynamicznego portu chmurowego ze zmiennej `PORT`.
 
+### Naprawione
+- **Pobieranie treści wiadomości i obsługa zróżnicowanych układów tabel Synergii**:
+  - Naprawiono problem pustej treści (`body: ""`) w pobieranych wiadomościach dla wybranych kont uczniów (np. w szkołach ponadpodstawowych / liceach).
+  - Wprowadzono funkcję [`extract_message_link`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/dom_parser.py), która defensywnie wyszukuje linki do wiadomości w komórkach tematu i nadawcy, poprawnie obsługując wywołania `javascript:otworz_w_nowym_oknie(...)`, zdarzenia `onclick` oraz względne i bezwzględne adresy URL.
+  - Dodano dynamiczne mapowanie kolumn tabeli wiadomości na podstawie nagłówków `<thead>` (*Nadawca*, *Temat*, *Data wysłania*, *Załącznik*), co zapobiega przesunięciom indeksów komórek w tabelach o niestandardowej liczbie kolumn.
+  - Zastosowano `urllib.parse.urljoin` oraz zapasowe selektory kontenera treści (`.container-message-content`, `#message-content`, `.message-content`, komórki `table.container-message`).
+  - Zastąpiono ciche połykanie wyjątków jawnym logowaniem ostrzeżeń (`logger.warning`).
+  - Dodano automatyczny mechanizm naprawczy (backfill) w `librus.py`, który przy kolejnej synchronizacji dociąga brakujące treści dla wiadomości zapisanych wcześniej w bazie `storage` z pustym polem `body`.
+
 ---
 
 ## [2.9.0] – 2026-10-23

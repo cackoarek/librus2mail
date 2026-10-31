@@ -97,6 +97,76 @@ class TestLibrus(unittest.TestCase):
             with self.assertRaises(NotLogged):
                 self.librus.fetch_messages()
 
+    def test_get_message_body_with_urljoin_and_containers(self):
+        """Test pobierania treści wiadomości z relatywnym URL oraz różnymi kontenerami treści."""
+        self.librus.logged = True
+        mock_session = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.content = b"""
+        <html>
+        <head><title>Wiadomosc</title></head>
+        <body>
+            <div class="container-message-content">
+                Drodzy Rodzice, przypominamy o wycieczce.
+            </div>
+        </body>
+        </html>
+        """
+        mock_session.get.return_value = mock_resp
+        self.librus._Librus__session = mock_session
+
+        with patch('librus2mail.librus.sleep'):
+            body = self.librus._Librus__get_message_body("/wiadomosci/1/5/3704610/f0")
+            self.assertEqual(body, "Drodzy Rodzice, przypominamy o wycieczce.")
+            # Sprawdzenie czy url został poprawnie złożony
+            called_url = mock_session.get.call_args[0][0]
+            self.assertEqual(called_url, "https://synergia.librus.pl/wiadomosci/1/5/3704610/f0")
+
+    def test_fetch_messages_with_backfill_for_empty_body(self):
+        """Test automatycznego dociągania treści dla wiadomości istniejących w storage z pustym body."""
+        sample_html = """
+        <html>
+        <body>
+            <table class="decorated stretch">
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td></td>
+                        <td>Kowalski Jan (Fizyka)</td>
+                        <td><a href="/wiadomosci/1/5/456">Temat lekcji</a></td>
+                        <td>2026-10-31 12:00:00</td>
+                    </tr>
+                </tbody>
+            </table>
+        </body>
+        </html>
+        """
+        self.librus.logged = True
+        self.librus._Librus__do_read_messages = True
+        # Symulujemy, że storage ma zapisaną wiadomość z pustym body
+        mock_storage = MagicMock()
+        mock_storage.get_stored_messages.return_value = [{
+            'id': 'Temat lekcji2026-10-31 12:00:00Kowalski Jan (Fizyka)',
+            'title': 'Temat lekcji',
+            'body': '',
+        }]
+        self.librus._Librus__storage = mock_storage
+        self.librus._Librus__known_messages = {'Temat lekcji2026-10-31 12:00:00Kowalski Jan (Fizyka)'}
+
+        with patch.object(self.librus, 'parse_page') as mock_parse, \
+             patch.object(self.librus, '_Librus__get_message_body') as mock_body:
+            from bs4 import BeautifulSoup
+            mock_parse.return_value = BeautifulSoup(sample_html, 'html.parser')
+            mock_body.return_value = "Pobrana treść lekcji fizyki"
+
+            self.librus.fetch_messages()
+
+            self.assertEqual(len(self.librus.messages), 1)
+            msg = self.librus.messages[0]
+            self.assertEqual(msg['body'], "Pobrana treść lekcji fizyki")
+            mock_body.assert_called_once_with("/wiadomosci/1/5/456")
+
     def test_fetch_notifications_missing_container_does_not_crash(self):
         empty_html = "<html><body><div>Pusto</div></body></html>"
         self.librus.logged = True

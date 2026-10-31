@@ -4,11 +4,14 @@ Zawiera odporne na zmiany layoutu helpery wyciągające dane dla wiadomości,
 ogłoszeń, ocen, terminarza i planu lekcji. Działa w 100% offline na obiektach BeautifulSoup.
 """
 
+import logging
 import re
 from collections.abc import Callable
 from typing import Any
 
 from bs4 import BeautifulSoup, Tag
+
+logger = logging.getLogger(__name__)
 
 from .domain_models import (
     Announcement,
@@ -85,11 +88,70 @@ def correct_sender_name(sender_raw: str) -> str:
     return sender
 
 
+def extract_message_link(sender_td, title_td, msg_row=None) -> str:
+    """
+    Defensywnie ekstraktuje relatywny lub absolutny URL szczegółów wiadomości.
+    Obsługuje standardowe linki <a>, wywołania javascript: oraz onclick na wierszu.
+    """
+    candidates: list[str] = []
+    # 1. Sprawdź znaczniki <a> w komórkach tematu i nadawcy, a potem w całym wierszu
+    for td in [title_td, sender_td]:
+        if td:
+            for a in td.find_all('a'):
+                href = (a.get('href') or '').strip()
+                if href:
+                    candidates.append(href)
+    if msg_row:
+        for a in msg_row.find_all('a'):
+            href = (a.get('href') or '').strip()
+            if href and href not in candidates:
+                candidates.append(href)
+        onclick = (msg_row.get('onclick') or '').strip()
+        if onclick:
+            candidates.append(onclick)
+
+    # 2. Wzorce specyficzne dla szczegółów wiadomości w Librus Synergia:
+    # np. /wiadomosci/1/5/3704610/f0, /wiadomosci/1/5/3704610, /wiadomosci/szczegoly/101
+    msg_url_pattern = re.compile(
+        r"(/wiadomosci/(?:1/\d+/\d+(?:/f\d+)?|szczegoly/\d+|1/[^'\" ]+))",
+        re.IGNORECASE,
+    )
+    general_msg_pattern = re.compile(r"(/wiadomosci/[^'\" \(\)]+)", re.IGNORECASE)
+
+    for cand in candidates:
+        if m := msg_url_pattern.search(cand):
+            return m.group(1)
+
+    for cand in candidates:
+        if 'javascript:' in cand.lower() or 'location' in cand.lower():
+            if m := general_msg_pattern.search(cand):
+                url = m.group(1)
+                # Odrzuć foldery główne i akcje formularzy
+                if not any(url.rstrip('/').endswith(f) for f in ['/2', '/5', '/6', '/7', '/10', '/wiadomosci']):
+                    return url
+        elif cand.startswith('/') or cand.startswith('http'):
+            if '/wiadomosci/' in cand:
+                if not any(cand.rstrip('/').endswith(f) for f in ['/2', '/5', '/6', '/7', '/10', '/wiadomosci']):
+                    return cand
+
+    # 3. Fallback dla uproszczonych struktur (np. testy jednostkowe)
+    for td in [title_td, sender_td]:
+        if td:
+            a = td.find('a')
+            if a and a.get('href'):
+                href = a.get('href', '').strip()
+                if not href.startswith('javascript:'):
+                    return href
+
+    return ""
+
+
 def parse_messages_html(
     html_or_soup: str | BeautifulSoup,
     known_messages: set | None = None,
     fetch_body_fn: Callable[[str], str] | None = None,
     do_read_messages: bool = True,
+    known_messages_with_body: set[str] | None = None,
 ) -> list[Message]:
     """
     Defensywnie parsuje stronę skrzynki wiadomości (/wiadomosci lub /wiadomosci/5).
@@ -111,19 +173,49 @@ def parse_messages_html(
     tbody = mess_tab.find('tbody') or mess_tab
     messages: list[Message] = []
 
+    # Dynamiczne mapowanie kolumn na podstawie nagłówków thead (jeśli dostępne)
+    col_map: dict[str, int] = {}
+    thead = mess_tab.find('thead')
+    if thead:
+        for idx, th in enumerate(thead.find_all(['th', 'td'])):
+            th_text = th.get_text().strip().lower()
+            if 'nadaw' in th_text:
+                col_map['sender'] = idx
+            elif 'temat' in th_text:
+                col_map['title'] = idx
+            elif 'data' in th_text or 'wysł' in th_text:
+                col_map['date'] = idx
+            elif 'załącz' in th_text or 'plik' in th_text:
+                col_map['attachment'] = idx
+
     for msg_row in tbody.find_all('tr'):
         tds = msg_row.find_all('td')
         if len(tds) < 4:
             continue
 
-        # Wyszukiwanie kolumn defensywnie
-        # Zwykle: 0=checkbox, 1=załącznik, 2=nadawca, 3=temat, 4=data
         sender_td = None
         title_td = None
         date_td = None
         has_attachment = False
 
-        if len(tds) >= 5:
+        if 'sender' in col_map and 'title' in col_map and 'date' in col_map:
+            # Użyj wykrytych nagłówków
+            s_idx = col_map['sender']
+            t_idx = col_map['title']
+            d_idx = col_map['date']
+            sender_td = tds[s_idx] if len(tds) > s_idx else None
+            title_td = tds[t_idx] if len(tds) > t_idx else None
+            date_td = tds[d_idx] if len(tds) > d_idx else None
+            if 'attachment' in col_map and len(tds) > col_map['attachment']:
+                has_attachment = bool(tds[col_map['attachment']].find('img'))
+            else:
+                # Sprawdź komórki przed nadawcą pod kątem ikony załącznika (np. img w tds[1])
+                for idx in range(min(s_idx, len(tds))):
+                    if tds[idx].find('img'):
+                        has_attachment = True
+                        break
+        elif len(tds) >= 5:
+            # Domyślny układ 5-kolumnowy: 0=checkbox, 1=załącznik, 2=nadawca, 3=temat, 4=data
             has_attachment = bool(tds[1].find('img'))
             sender_td = tds[2]
             title_td = tds[3]
@@ -143,22 +235,37 @@ def parse_messages_html(
             continue
 
         sender = correct_sender_name(sender_raw)
-        link_elem = (sender_td.find('a') if sender_td else None) or (title_td.find('a') if title_td else None)
-        link = link_elem.get('href', '').strip() if link_elem else ""
+        link = extract_message_link(sender_td, title_td, msg_row)
 
         composite_id = f"{title}{dt}{sender_raw}"
         is_unread = composite_id not in known
 
+        # Weryfikacja pogrubienia (bold w stylu CSS lub znacznik <b>)
+        row_style = (msg_row.get('style') or '').lower()
+        sender_style = (sender_td.get('style') or '').lower() if sender_td else ''
+        title_style = (title_td.get('style') or '').lower() if title_td else ''
+        if (
+            'bold' in sender_style
+            or 'bold' in title_style
+            or 'bold' in row_style
+            or (sender_td and sender_td.find('b'))
+            or (title_td and title_td.find('b'))
+        ):
+            is_unread = True
+
+        # Wiadomość wymaga pobrania treści, jeśli jest nieprzeczytana LUB jeśli
+        # jest już znana, ale w storage ma pustą treść (backfill naprawczy).
+        need_body = is_unread
+        if known_messages_with_body is not None:
+            need_body = is_unread or (composite_id not in known_messages_with_body)
+
         body = ""
-        if is_unread and do_read_messages and link and fetch_body_fn:
+        if need_body and do_read_messages and link and fetch_body_fn:
             try:
                 body = fetch_body_fn(link)
-            except Exception:
+            except Exception as e:
+                logger.warning(f"Nie udało się pobrać treści wiadomości '{title}' ({link}): {e}")
                 body = ""
-
-        # Weryfikacja pogrubienia (bold w stylu CSS)
-        if sender_td and 'bold' in sender_td.get('style', '').lower():
-            is_unread = True
 
         msg = Message.model_validate({
             'id': composite_id,

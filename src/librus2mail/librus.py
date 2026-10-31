@@ -265,21 +265,35 @@ class Librus:
         if not self.logged:
             raise NotLogged()
 
-        url = f"{MESSAGE_BODY_URL}{link}"
-        logger.info(f"Pobieram treść wiadomość {link}")
+        if not link or not str(link).strip():
+            logger.warning("Pominięto pobieranie treści wiadomości: brak poprawnego linku")
+            return ""
+
+        url = urllib.parse.urljoin(MESSAGE_BODY_URL, link.strip())
+        logger.info(f"Pobieram treść wiadomości: {url}")
         try:
             res = self.__session.get(url, headers=self.__headers, timeout=DEFAULT_TIMEOUT)
         except requests.RequestException as e:
-            logger.error(f"Błąd sieciowy przy pobieraniu wiadomości {link}: {e}")
+            logger.error(f"Błąd sieciowy przy pobieraniu wiadomości {url}: {e}")
             raise LibrusNetworkError(f"Błąd sieciowy przy pobieraniu wiadomości: {e}", request=getattr(e, 'request', None), response=getattr(e, 'response', None)) from e
 
         if res.status_code != 200:
-            logger.error(f"Pobieranie treści wiadomości {link}: {res.status_code} {res.reason}")
+            logger.error(f"Pobieranie treści wiadomości {url}: {res.status_code} {res.reason}")
             raise LibrusNetworkError(f"HTTP {res.status_code}: {res.reason} przy pobieraniu treści wiadomości", response=res)
 
         soup = BeautifulSoup(res.content, 'html.parser')
-        message_body_elem = soup.find('div', attrs={'class': 'container-message-content'})
-        message_body = message_body_elem.get_text().strip() if message_body_elem else ""
+        message_body_elem = (
+            soup.find('div', attrs={'class': 'container-message-content'})
+            or soup.select_one('.container-message-content')
+            or soup.find('div', id='message-content')
+            or soup.find('div', attrs={'class': 'message-content'})
+            or soup.select_one('table.container-message tr:last-child td')
+        )
+        if not message_body_elem:
+            logger.warning(f"Nie znaleziono kontenera treści wiadomości pod adresem {url} (tytuł strony: {soup.title.get_text().strip() if soup.title else 'brak'})")
+            message_body = ""
+        else:
+            message_body = message_body_elem.get_text().strip()
 
         sleep(5)
         return message_body
@@ -333,6 +347,15 @@ class Librus:
             self.unread_count = 0
             return
 
+        known_with_body = set()
+        if self.__storage and hasattr(self.__storage, 'get_stored_messages'):
+            stored_msgs = self.__storage.get_stored_messages(str(self.__librus_login))
+            known_with_body = {
+                str(m.get('id', ''))
+                for m in stored_msgs
+                if m.get('body') and str(m.get('body', '')).strip()
+            }
+
         fetch_body_cb = (lambda link: self.__get_message_body(link)) if self.__do_read_messages else None
         try:
             messages = parse_messages_html(
@@ -340,6 +363,7 @@ class Librus:
                 known_messages=self.__known_messages,
                 fetch_body_fn=fetch_body_cb,
                 do_read_messages=self.__do_read_messages,
+                known_messages_with_body=known_with_body,
             )
         except (LibrusError, requests.RequestException):
             raise

@@ -82,6 +82,90 @@ class TestMessagesParser:
         assert parse_messages_html("<html><body>Brak wiadomości</body></html>") == []
         assert parse_messages_html("<table><tr><td>Za mało kolumn</td></tr></table>") == []
 
+    def test_extract_message_link_formats(self):
+        from bs4 import BeautifulSoup
+        from librus2mail.dom_parser import extract_message_link
+
+        # Standardowy link w komórce tematu
+        s1 = BeautifulSoup("<td><a href=\"javascript:void(0)\">Nauczyciel</a></td><td><a href=\"/wiadomosci/1/5/3704610/f0\">Temat</a></td>", "html.parser")
+        tds1 = s1.find_all("td")
+        assert extract_message_link(tds1[0], tds1[1]) == "/wiadomosci/1/5/3704610/f0"
+
+        # Link w wywołaniu javascript:otworz_w_nowym_oknie
+        s2 = BeautifulSoup("<td>Nauczyciel</td><td><a href=\"javascript:otworz_w_nowym_oknie('/wiadomosci/1/5/12345', 'wnd', 800, 600)\">Temat</a></td>", "html.parser")
+        tds2 = s2.find_all("td")
+        assert extract_message_link(tds2[0], tds2[1]) == "/wiadomosci/1/5/12345"
+
+        # Onclick na poziomie wiersza tr
+        s3 = BeautifulSoup("<tr onclick=\"window.location.href='/wiadomosci/1/5/99999'\"><td>Nauczyciel</td><td>Temat</td></tr>", "html.parser")
+        tr3 = s3.find("tr")
+        tds3 = tr3.find_all("td")
+        assert extract_message_link(tds3[0], tds3[1], tr3) == "/wiadomosci/1/5/99999"
+
+    def test_parse_messages_dynamic_headers_and_backfill(self):
+        # Tabela 6-kolumnowa z nagłówkami thead (np. liceum)
+        html = """
+        <table class="decorated stretch">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>Status</th>
+                    <th>Plik</th>
+                    <th>Nadawca</th>
+                    <th>Temat</th>
+                    <th>Data wysłania</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><input type="checkbox"></td>
+                    <td><img src="/icons/read.png"></td>
+                    <td></td>
+                    <td>Kowalski Jan (Fizyka)</td>
+                    <td><a href="/wiadomosci/1/5/77777">Sprawdzian z optyki</a></td>
+                    <td>2026-10-31 10:00:00</td>
+                </tr>
+            </tbody>
+        </table>
+        """
+        calls = []
+        def mock_fetch(link):
+            calls.append(link)
+            return "Treść sprawdzianu"
+
+        # 1. Nowa wiadomość - pobiera treść
+        msgs = parse_messages_html(html, known_messages=set(), fetch_body_fn=mock_fetch)
+        assert len(msgs) == 1
+        assert msgs[0].title == "Sprawdzian z optyki"
+        assert msgs[0].sender == "Jan Kowalski"
+        assert msgs[0].link == "/wiadomosci/1/5/77777"
+        assert msgs[0].body == "Treść sprawdzianu"
+        assert calls == ["/wiadomosci/1/5/77777"]
+
+        # 2. Wiadomość jest w known_messages, ale brak jej w known_messages_with_body (backfill)
+        calls.clear()
+        known = {msgs[0].id}
+        msgs2 = parse_messages_html(
+            html,
+            known_messages=known,
+            fetch_body_fn=mock_fetch,
+            known_messages_with_body=set(),  # puste -> wymaga backfillu treści
+        )
+        assert len(msgs2) == 1
+        assert msgs2[0].body == "Treść sprawdzianu"
+        assert calls == ["/wiadomosci/1/5/77777"]
+
+        # 3. Wiadomość jest w known_messages oraz w known_messages_with_body -> nie pobiera ponownie
+        calls.clear()
+        msgs3 = parse_messages_html(
+            html,
+            known_messages=known,
+            fetch_body_fn=mock_fetch,
+            known_messages_with_body=known,
+        )
+        assert len(msgs3) == 1
+        assert calls == []
+
 
 class TestAnnouncementsParser:
     """Testy parsowania ogłoszeń szkolnych."""

@@ -1497,6 +1497,56 @@ class TestWebDashboard(unittest.TestCase):
         self.assertIn(b'value="2026-08-15"', res_empty_day.data)
         self.assertIn('Brak lekcji w planie dla tego dnia', res_empty_day.data.decode('utf-8'))
 
+        # 4. Weryfikacja odfiltrowywania oryginalnej lekcji, gdy występuje zastępstwo (np. Informatyka zastąpiona Matematyką)
+        storage.save_schedule_entries('123456', [
+            {
+                'id': 'orig_sub_1',
+                'date': '2026-09-25',
+                'lesson_no': 1,
+                'time_from': '08:00',
+                'time_to': '08:45',
+                'subject': 'Informatyka',
+                'teacher': 'Jan Informatyk',
+                'classroom': '101',
+                'is_substitution': False,
+                'is_cancelled': True,
+            },
+            {
+                'id': 'new_sub_1',
+                'date': '2026-09-25',
+                'lesson_no': 1,
+                'time_from': '08:00',
+                'time_to': '08:45',
+                'subject': 'Matematyka',
+                'teacher': 'Adam Nowak',
+                'classroom': '102',
+                'is_substitution': True,
+                'is_cancelled': False,
+                'substitution_info': 'Informatyka, p. Adam Nowak, s. 102',
+                'info': 'Zastępstwo za: Informatyka',
+            },
+        ])
+        app_sub = create_app(
+            config_path=self.config_path,
+            storage_dir=self.storage_dir,
+            no_auth=True,
+            actual_date=datetime(2026, 9, 25, 7, 30, 0),
+        )
+        plan_sub_html = app_sub.test_client().get('/plan?date=2026-09-25').data.decode('utf-8')
+        dash_sub_html = app_sub.test_client().get('/').data.decode('utf-8')
+
+        # W planie lekcji (/plan) widoczna jest tylko nowa lekcja (Matematyka) z badge zastępstwa,
+        # a oryginalna odwołana Informatyka nie tworzy drugiego kafelka lekcji.
+        self.assertIn('Matematyka', plan_sub_html)
+        self.assertIn('Zastępstwo', plan_sub_html)
+        self.assertIn('ℹ️ Informatyka', plan_sub_html)
+        self.assertNotIn('❌ Odwołana', plan_sub_html)
+
+        # Na pulpicie (/) w module planu lekcji widoczna jest tylko nowa lekcja (Matematyka)
+        self.assertIn('Matematyka', dash_sub_html)
+        self.assertIn('ℹ️ Informatyka', dash_sub_html)
+        self.assertNotIn('❌ Odwołana', dash_sub_html)
+
         # 4. Widok wszystkich dni (?view=all)
         res_all = client_finished.get('/plan?view=all')
         self.assertEqual(res_all.status_code, 200)

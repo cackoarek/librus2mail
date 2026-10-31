@@ -9,6 +9,7 @@ Działa w 100% offline na bazie danych ze storage/.
 
 import argparse
 import logging
+import re
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from typing import Any
@@ -187,6 +188,47 @@ def prepare_schedule_summary(
 
     if not day_lessons:
         return {'has_any': False, 'lessons': []}
+
+    # Gdy dla danej godziny (np. lekcja 1) zarejestrowano zastępstwo, odfiltrowujemy oryginalną zastąpioną lekcję
+    # (np. Informatyka zastąpiona Matematyką), aby nie dublować lekcji w tym samym czasie.
+    if any(x.get('is_substitution') for x in day_lessons):
+        filtered_day_lessons: list[dict[str, Any]] = []
+        by_lesson_no: dict[int, list[dict[str, Any]]] = {}
+        for x in day_lessons:
+            les_no = int(x.get('lesson_no', 0)) if str(x.get('lesson_no', '')).isdigit() else 0
+            by_lesson_no.setdefault(les_no, []).append(x)
+
+        for les_no, slot_lessons in by_lesson_no.items():
+            if len(slot_lessons) <= 1 or not any(x.get('is_substitution') for x in slot_lessons):
+                filtered_day_lessons.extend(slot_lessons)
+                continue
+
+            orig_names = set()
+            for x in slot_lessons:
+                if x.get('is_substitution'):
+                    s_info = f"{x.get('substitution_info', '')} {x.get('info', '')}"
+                    m = re.search(r'zastępstwo\s+za(?:\s+zajęcia)?:\s*([^\n\r]+)', s_info, re.IGNORECASE)
+                    if m:
+                        clean = re.sub(r',?\s*(?:s\.|sala).*$', '', m.group(1), flags=re.IGNORECASE).strip(' ,.-').lower()
+                        if clean:
+                            orig_names.add(clean)
+
+            kept_slot: list[dict[str, Any]] = []
+            for x in slot_lessons:
+                if x.get('is_substitution'):
+                    kept_slot.append(x)
+                    continue
+                subj_lower = str(x.get('subject', '')).strip().lower()
+                raw_lower = str(x.get('raw_entry', '') or x.get('raw_text', '')).lower()
+                is_canc = bool(x.get('is_cancelled'))
+                is_named_orig = any(orig in subj_lower or subj_lower in orig or orig in raw_lower for orig in orig_names if orig)
+                if is_named_orig or is_canc:
+                    continue
+                kept_slot.append(x)
+
+            filtered_day_lessons.extend(kept_slot or [x for x in slot_lessons if x.get('is_substitution')])
+
+        day_lessons = filtered_day_lessons
 
     day_lessons.sort(key=lambda x: (int(x.get('lesson_no', 0)) if str(x.get('lesson_no', '')).isdigit() else 99, x.get('time_from', '')))
 

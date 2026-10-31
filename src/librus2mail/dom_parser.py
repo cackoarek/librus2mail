@@ -566,6 +566,13 @@ def parse_schedule_html(
             raw_title = a_tag.get('title', '') if a_tag else ''
             tooltip_attrs = parse_tooltip_kv(raw_title)
 
+            cell_entries: list[ScheduleLesson] = []
+            has_cell_strike = bool(
+                cell.find(['s', 'strike', 'del'])
+                or 'line-through' in cell.get('style', '')
+                or 'odwolana' in cell.get('class', [])
+            )
+
             for b_idx, block in enumerate(blocks):
                 block_text = safe_get_text(block)
                 if not block_text:
@@ -600,27 +607,51 @@ def parse_schedule_html(
                     else:
                         teacher = rest.strip(' ,()')
 
+                block_a = block.find('a')
+                block_raw_title = block_a.get('title', '') if block_a else ''
+                block_tooltip = parse_tooltip_kv(block_raw_title) if block_a else {}
+                effective_tooltip = block_tooltip or tooltip_attrs
+
                 teacher = re.sub(r'\s+', ' ', teacher).strip(' ,.-')
-                if 'nauczyciel' in tooltip_attrs and not teacher:
-                    teacher = re.sub(r'\s+', ' ', tooltip_attrs['nauczyciel']).strip()
-                if 'sala' in tooltip_attrs and not classroom:
-                    classroom = re.sub(r'\s+', ' ', tooltip_attrs['sala']).strip('. ')
+                if 'nauczyciel' in effective_tooltip and not teacher:
+                    teacher = re.sub(r'\s+', ' ', effective_tooltip['nauczyciel']).strip()
+                if 'sala' in effective_tooltip and not classroom:
+                    classroom = re.sub(r'\s+', ' ', effective_tooltip['sala']).strip('. ')
 
                 has_strike = bool(
                     block.find(['s', 'strike', 'del'])
                     or 'line-through' in block.get('style', '')
-                    or 'line-through' in cell.get('style', '')
                     or 'odwolana' in block.get('class', [])
-                    or 'odwolana' in cell.get('class', [])
+                    or (len(blocks) == 1 and has_cell_strike)
                 )
 
+                block_context = f"{block_text} {block_raw_title} {' '.join(block_tooltip.values())}".lower()
                 all_context = f"{info_text} {cell_text} {raw_title} {' '.join(tooltip_attrs.values())}".lower()
                 is_cancelled = False
                 is_substitution = False
                 is_moved = False
                 substitution_info = ""
 
-                if 'odwołan' in all_context or 'odwolana' in all_context or (has_strike and 'zastęp' not in all_context):
+                # Sprawdzenie w kontekście bloku lub komórki
+                if 'odwołan' in block_context or 'odwolana' in block_context or (has_strike and 'zastęp' not in block_context and 'zastep' not in block_context):
+                    is_cancelled = True
+                elif 'zastęp' in block_context or 'zastep' in block_context or (len(blocks) == 1 and ('zastęp' in all_context or 'zastep' in all_context)):
+                    is_substitution = True
+                    active_tooltip = block_tooltip or tooltip_attrs
+                    if active_tooltip:
+                        sub_parts = []
+                        if 'przedmiot' in active_tooltip:
+                            sub_parts.append(active_tooltip['przedmiot'])
+                        if 'nauczyciel' in active_tooltip:
+                            sub_parts.append(f"p. {active_tooltip['nauczyciel']}")
+                        if 'sala' in active_tooltip:
+                            sub_parts.append(f"s. {active_tooltip['sala']}")
+                        substitution_info = ", ".join(sub_parts)
+                    elif info_text:
+                        substitution_info = info_text
+                elif 'przesunię' in block_context or 'przesunie' in block_context:
+                    is_moved = True
+                elif 'odwołan' in all_context or 'odwolana' in all_context or (has_strike and 'zastęp' not in all_context):
                     is_cancelled = True
                 elif 'zastęp' in all_context or 'zastep' in all_context:
                     is_substitution = True
@@ -635,11 +666,9 @@ def parse_schedule_html(
                         substitution_info = ", ".join(sub_parts)
                     elif info_text:
                         substitution_info = info_text
-                elif 'przesunię' in all_context or 'przesunie' in all_context:
-                    is_moved = True
 
                 entry_id = f"sched_{date_str}_{lesson_no}_{subject}_{b_idx}"
-                entries.append(ScheduleLesson.model_validate({
+                cell_entries.append(ScheduleLesson.model_validate({
                     'id': entry_id,
                     'date': date_str,
                     'lesson_no': lesson_no,
@@ -655,6 +684,43 @@ def parse_schedule_html(
                     'substitution_info': substitution_info,
                     'raw_entry': block_text,
                 }))
+
+            # Gdy w danej komórce (okienku lekcyjnym) jest zastępstwo i więcej niż jeden wpis,
+            # odfiltrowujemy oryginalną zastąpioną lekcję (np. przekreśloną Informatykę zastąpioną Matematyką),
+            # aby na planie nie dublować lekcji w tym samym czasie.
+            if len(cell_entries) > 1 and any(e.is_substitution for e in cell_entries):
+                sub_entries = [e for e in cell_entries if e.is_substitution]
+                orig_names = set()
+                for s in sub_entries:
+                    s_info = f"{s.substitution_info} {info_text}"
+                    m = re.search(r'zastępstwo\s+za(?:\s+zajęcia)?:\s*([^\n\r]+)', s_info, re.IGNORECASE)
+                    if m:
+                        clean = re.sub(r',?\s*(?:s\.|sala).*$', '', m.group(1), flags=re.IGNORECASE).strip(' ,.-').lower()
+                        if clean:
+                            orig_names.add(clean)
+                if info_text:
+                    m = re.search(r'zastępstwo\s+za(?:\s+zajęcia)?:\s*([^\n\r]+)', info_text, re.IGNORECASE)
+                    if m:
+                        clean = re.sub(r',?\s*(?:s\.|sala).*$', '', m.group(1), flags=re.IGNORECASE).strip(' ,.-').lower()
+                        if clean:
+                            orig_names.add(clean)
+
+                kept_entries: list[ScheduleLesson] = []
+                for e in cell_entries:
+                    if e.is_substitution:
+                        kept_entries.append(e)
+                        continue
+                    subj_lower = str(e.subject).strip().lower()
+                    raw_lower = str(e.raw_entry).lower()
+                    # Jeśli lekcja jest wymieniona jako zastąpiona lub jest przekreślona/odwołana przy obecności zastępstwa, pomijamy ją
+                    is_named_orig = any(orig in subj_lower or subj_lower in orig or orig in raw_lower for orig in orig_names if orig)
+                    if is_named_orig or e.is_cancelled:
+                        continue
+                    kept_entries.append(e)
+
+                cell_entries = kept_entries or sub_entries
+
+            entries.extend(cell_entries)
 
     return entries
 

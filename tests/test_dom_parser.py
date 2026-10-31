@@ -227,6 +227,40 @@ class TestScheduleParser:
     def test_parse_schedule_empty_html(self):
         assert parse_schedule_html("<div>Brak planu</div>") == []
 
+    def test_parse_schedule_substitution_filters_original_lesson(self):
+        """Test weryfikujący, że gdy lekcja została zastąpiona inną (np. Informatyka zastąpiona Matematyką),
+        oryginalna lekcja nie jest dublowana w tym samym oknie czasowym."""
+        html = """
+        <table class="plan-lekcji decorated">
+          <thead>
+            <tr><th>Nr</th><th>Godz</th><th>Poniedziałek (2026-10-12)</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td>08:00 - 08:45</td>
+              <td id="timetableEntryBox" data-date="2026-10-12">
+                <div class="text" style="text-decoration: line-through;">
+                  <b>Informatyka</b> s. 101 Jan Informatyk
+                </div>
+                <div class="text">
+                  <a title="Zastępstwo<br>Przedmiot: Informatyka<br>Nauczyciel: Adam Nowak<br>Sala: 102">
+                    <b>Matematyka</b> s. 102
+                  </a>
+                </div>
+                <div class="plan-lekcji-info">Zastępstwo za: Informatyka</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        """
+        lessons = parse_schedule_html(html)
+        assert len(lessons) == 1
+        assert lessons[0].subject == "Matematyka"
+        assert lessons[0].is_substitution is True
+        assert lessons[0].classroom == "102"
+        assert "Informatyka" in lessons[0].substitution_info
+
 
 class TestAttendanceParser:
     """Testy parsowania frekwencji ucznia (/przegladaj_nb/uczen)."""

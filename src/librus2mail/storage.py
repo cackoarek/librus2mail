@@ -137,11 +137,18 @@ class BaseStorage(ABC):
 
     @abstractmethod
     def load_known_items(self, user_login: str) -> dict[str, set]:
-        """Wczytuje zbiory znanych identyfikatorów (messages, notifications, grades)."""
+        """Wczytuje zbiory znanych identyfikatorów (messages, notifications, grades, attendance)."""
         pass
 
     @abstractmethod
-    def save_known_items(self, user_login: str, known_messages: set, known_notifications: set, known_grades: set) -> None:
+    def save_known_items(
+        self,
+        user_login: str,
+        known_messages: set,
+        known_notifications: set,
+        known_grades: set,
+        known_attendance: set | None = None,
+    ) -> None:
         """Zapisuje zbiory znanych identyfikatorów."""
         pass
 
@@ -386,26 +393,39 @@ class FileStorage(BaseStorage):
         if not path.is_file():
             return False
         data = read_json_safe(path)
-        return bool(data.get('known_messages') or data.get('known_notifications') or data.get('known_grades'))
+        return bool(
+            data.get('known_messages')
+            or data.get('known_notifications')
+            or data.get('known_grades')
+            or data.get('known_attendance')
+        )
 
     def load_known_items(self, user_login: str) -> dict[str, set]:
         path = self._get_file_path(user_login)
         if not path.is_file():
             logger.info(f"Brak pliku stanu dla {user_login} ({path}). Zostanie utworzony nowy stan.")
-            return {'messages': set(), 'notifications': set(), 'grades': set()}
+            return {'messages': set(), 'notifications': set(), 'grades': set(), 'attendance': set()}
 
         data = read_json_safe(path)
         messages = set(data.get('known_messages', []))
         notifications = set(data.get('known_notifications', []))
         grades = set(data.get('known_grades', []))
+        raw_att = data.get('known_attendance')
+        if raw_att is None and data.get('attendance_history'):
+            # Backfill known_attendance z zapisanej historii frekwencji, aby dawne nieobecności nie były traktowane jako nowe
+            attendance = {str(a.get('id')) for a in data.get('attendance_history', []) if a.get('id')}
+        else:
+            attendance = set(raw_att or [])
+
         logger.info(
             f"Wczytano stan z {path} dla konta {user_login}: "
-            f"wiadomości: {len(messages)}, ogłoszenia: {len(notifications)}, oceny: {len(grades)}"
+            f"wiadomości: {len(messages)}, ogłoszenia: {len(notifications)}, oceny: {len(grades)}, frekwencja: {len(attendance)}"
         )
         return {
             'messages': messages,
             'notifications': notifications,
             'grades': grades,
+            'attendance': attendance,
         }
 
     def get_last_error(self, user_login: str) -> dict | None:
@@ -434,7 +454,14 @@ class FileStorage(BaseStorage):
             data['last_error'] = None
             write_json_atomic(path, data)
 
-    def save_known_items(self, user_login: str, known_messages: set, known_notifications: set, known_grades: set) -> None:
+    def save_known_items(
+        self,
+        user_login: str,
+        known_messages: set,
+        known_notifications: set,
+        known_grades: set,
+        known_attendance: set | None = None,
+    ) -> None:
         path = self._get_file_path(user_login)
         data = read_json_safe(path)
         data['librus_login'] = str(user_login)
@@ -443,6 +470,8 @@ class FileStorage(BaseStorage):
         data['known_messages'] = sorted(list(known_messages))
         data['known_notifications'] = sorted(list(known_notifications))
         data['known_grades'] = sorted(list(known_grades))
+        if known_attendance is not None:
+            data['known_attendance'] = sorted(list(known_attendance))
         write_json_atomic(path, data)
         logger.debug(f"Zapisano stan do pliku {path} dla {user_login}")
 
@@ -1155,7 +1184,17 @@ class ArchivedFileStorage(FileStorage):
     def write_json_atomic(self, path: Path | str, data: Any) -> None:
         logger.warning(f"Próba zapisu do zarchiwizowanego roku szkolnego {self.school_year_label} ({path}) - zablokowano.")
 
-    def save_known_items(self, user_login: str, messages: set, notifications: set, grades: set) -> None:
+    def load_known_items(self, user_login: str) -> dict[str, set]:
+        return {'messages': set(), 'notifications': set(), 'grades': set(), 'attendance': set()}
+
+    def save_known_items(
+        self,
+        user_login: str,
+        messages: set,
+        notifications: set,
+        grades: set,
+        attendance: set | None = None,
+    ) -> None:
         pass
 
     def save_last_error(self, user_login: str, error_str: str, step: str = "") -> None:

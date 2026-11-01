@@ -203,6 +203,7 @@ class MailSender:
         timetable: dict = None,
         schedule: dict = None,
         attendance: list = None,
+        attendance_summary: dict = None,
     ) -> str:
         template = jinja_env.get_template('summary.html')
         return template.render(
@@ -213,6 +214,7 @@ class MailSender:
             timetable=timetable,
             schedule=schedule,
             attendance=attendance or [],
+            attendance_summary=attendance_summary,
         )
 
     def send_mail_with_messages(self, user_config, messages):
@@ -224,7 +226,17 @@ class MailSender:
     def send_mail_with_grades(self, user_config, grades):
         pass
 
-    def send_mail_with_summary(self, user_config, messages=None, notifications=None, grades=None, timetable=None, schedule=None, attendance=None):
+    def send_mail_with_summary(
+        self,
+        user_config,
+        messages=None,
+        notifications=None,
+        grades=None,
+        timetable=None,
+        schedule=None,
+        attendance=None,
+        attendance_summary=None,
+    ):
         pass
 
     @classmethod

@@ -70,15 +70,25 @@ class Librus:
             else raw_password
         )
 
-        if self.__storage:
-            known = self.__storage.load_known_items(str(self.__librus_login))
-            self.__known_messages = known.get('messages', set())
-            self.__known_notifications = known.get('notifications', set())
-            self.__known_grades = known.get('grades', set())
-        else:
-            self.__known_messages = set()
-            self.__known_notifications = set()
-            self.__known_grades = set()
+        self.__known_messages: set[str] = set()
+        self.__known_notifications: set[str] = set()
+        self.__known_grades: set[str] = set()
+        self.__known_attendance: set[str] = set()
+
+        if self.__storage and hasattr(self.__storage, 'load_known_items'):
+            try:
+                known = self.__storage.load_known_items(str(self.__librus_login))
+                if isinstance(known, dict):
+                    if isinstance(known.get('messages'), (set, list, tuple)):
+                        self.__known_messages = set(known.get('messages'))
+                    if isinstance(known.get('notifications'), (set, list, tuple)):
+                        self.__known_notifications = set(known.get('notifications'))
+                    if isinstance(known.get('grades'), (set, list, tuple)):
+                        self.__known_grades = set(known.get('grades'))
+                    if isinstance(known.get('attendance'), (set, list, tuple)):
+                        self.__known_attendance = set(known.get('attendance'))
+            except Exception as e:
+                logger.warning(f"Nie udało się wczytać stanu znanych wpisów z pamięci storage: {e}")
 
         self.grades = []
         self.timetable = []
@@ -379,7 +389,8 @@ class Librus:
                 str(self.__librus_login),
                 self.__known_messages,
                 self.__known_notifications,
-                self.__known_grades
+                self.__known_grades,
+                self.__known_attendance,
             )
             if hasattr(self, 'grades') and self.grades:
                 self.__storage.save_grades_details(

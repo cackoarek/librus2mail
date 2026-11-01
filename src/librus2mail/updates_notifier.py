@@ -365,9 +365,9 @@ def parse_item_datetime(item: Any) -> datetime | None:
     if isinstance(item, dict):
         raw_str = (
             item.get('datetime')
-            or item.get('added_at')
             or item.get('date')
             or item.get('data')
+            or item.get('added_at')
             or ""
         )
     elif isinstance(item, str):
@@ -376,6 +376,30 @@ def parse_item_datetime(item: Any) -> datetime | None:
         raw_str = ""
 
     return parse_datetime_safe(raw_str)
+
+
+def compute_attendance_stats(
+    all_attendance: list[dict] | None,
+    raw_summary: Any = None,
+) -> dict[str, Any]:
+    """Przygotowuje syntetyczne podsumowanie statystyk frekwencji (nieobecności, spóźnienia) dla e-maila."""
+    all_att = all_attendance or []
+    absences = [a for a in all_att if a.get('is_absence')]
+    unjustified = [a for a in absences if not a.get('is_justified')]
+    justified = [a for a in absences if a.get('is_justified')]
+    lates = [a for a in all_att if a.get('is_late')]
+    exempt = [a for a in all_att if a.get('is_exempt')]
+
+    return {
+        'has_any': bool(all_att or raw_summary),
+        'total_entries': len(all_att),
+        'total_absences': len(absences),
+        'unjustified_absences': len(unjustified),
+        'justified_absences': len(justified),
+        'lates': len(lates),
+        'exemptions': len(exempt),
+        'raw_summary': raw_summary,
+    }
 
 
 def print_cli_summary(
@@ -666,6 +690,14 @@ class UpdatesNotifier:
             else None
         )
 
+        # 2.6 Przygotowanie statystyk frekwencji ogółem
+        raw_att_summary = self.storage.get_attendance_summary(login) if hasattr(self.storage, 'get_attendance_summary') else None
+        attendance_stats = (
+            compute_attendance_stats(all_attendance, raw_summary=raw_att_summary)
+            if user_config.get('read_attendance', True)
+            else None
+        )
+
         # 3. Zapis do pliku HTML (jeśli podano -o / --save-html)
         if output_html:
             out_file = resolve_output_path(output_html, login, total_users, default_prefix="powiadomienie")
@@ -686,6 +718,7 @@ class UpdatesNotifier:
                 timetable=timetable_summary,
                 schedule=schedule_summary,
                 attendance=filtered_attendance,
+                attendance_summary=attendance_stats,
             )
             full_html = render_standalone_html(title, body)
             try:
@@ -777,6 +810,7 @@ class UpdatesNotifier:
                         timetable=timetable_summary,
                         schedule=schedule_summary,
                         attendance=filtered_attendance,
+                        attendance_summary=attendance_stats,
                     )
                 else:
                     if filtered_messages:

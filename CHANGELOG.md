@@ -18,6 +18,12 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
   - Dodano obsługę dynamicznego portu chmurowego ze zmiennej `PORT`.
 
 ### Naprawione
+- **Trwała pamięć zaraportowanych nieobecności i kompaktowy status frekwencji w e-mailach**:
+  - Naprawiono problem ponownego raportowania dawnych nieobecności (sprzed tygodni lub miesięcy) jako „nowe” przy każdym uruchomieniu skryptu lub codziennym generowaniu raportu.
+  - Wprowadzono trwałą persystencję zbioru `known_attendance` w bazie `storage.py` ([`save_known_items`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/storage.py), [`load_known_items`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/storage.py)) oraz w module [`librus.py`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/librus.py).
+  - Dodano automatyczny mechanizm wstecznej kompatybilności (backfill), który przy pierwszym odczycie istniejącej bazy `storage` automatycznie oznacza dotychczasową historię frekwencji jako znaną, zapobiegając fałszywym alarmom o dawnych nieobecnościach.
+  - Naprawiono priorytet pól dat w [`parse_item_datetime`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/updates_notifier.py), faworyzując rzeczywistą datę zdarzenia (`date` / `data`) ponad techniczny znacznik zrzutu do bazy (`added_at`).
+  - **Szablon e-mail ([`summary.html`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/templates/emails/summary.html))**: usunięto prezentację wielkich kart dla dawnych nieobecności – szczegółowe karty lekcji pojawiają się wyłącznie dla świeżo dodanych wpisów z danego dnia, a dla całej historii dodano dyskretny, kompaktowy pasek statusu frekwencji w semestrze (z pigułkami liczbowymi: nieusprawiedliwione, usprawiedliwione, spóźnienia, zwolnienia).
 - **Prezentacja całodniowych wydarzeń szkolnych (wycieczek, konkursów, imprez) w Terminarzu, Planie lekcji, Pulpicie i e-mailach**:
   - Naprawiono problem pomijania wpisów z terminarza o typie `event` (m.in. całodniowych wycieczek szkolnych, imprez i uroczystości) w widokach aplikacji oraz powiadomieniach e-mail, mimo ich prawidłowego pobierania przez scraper do bazy `storage`.
   - Wprowadzono dedykowaną, uniwersalną odznakę **`Wydarzenie`** (z akcentem 🎉) dla wszystkich zdarzeń szkolnych oznaczonych jako `event`.

@@ -120,7 +120,7 @@
     </div>
 
     <!-- Sekcja 1: Najbliższy dzień nauki (Pilne) -->
-    {% if data.timetable_summary and (data.timetable_summary.immediate_tests or data.timetable_summary.immediate_absences) %}
+    {% if data.timetable_summary and (data.timetable_summary.immediate_tests or data.timetable_summary.immediate_absences or data.timetable_summary.immediate_events) %}
     <div class="mb-8 bg-indigo-50/70 border-2 border-indigo-200 rounded-2xl p-5 shadow-sm">
         <div class="flex items-center justify-between pb-3 border-b border-indigo-100 mb-4">
             <div class="flex items-center gap-2">
@@ -133,6 +133,31 @@
                 Ważne
             </span>
         </div>
+
+        <!-- Wydarzenia w najbliższym dniu -->
+        {% if data.timetable_summary.immediate_events %}
+        <div class="space-y-2.5 mb-4">
+            {% for ev in data.timetable_summary.immediate_events %}
+            <div class="p-4 bg-white rounded-xl border border-sky-300 shadow-xs flex items-center justify-between gap-4">
+                <div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="px-2.5 py-0.5 bg-sky-100 text-sky-800 text-xs font-extrabold rounded-md border border-sky-200">
+                            🎉 Wydarzenie{% if ev.category and ev.category != 'Wydarzenie' %} • {{ ev.category }}{% endif %}
+                        </span>
+                        <span class="font-extrabold text-slate-900 text-sm">
+                            {{ ev.description or ev.category or 'Wydarzenie szkolne' }}
+                        </span>
+                    </div>
+                    {% if ev.teacher %}
+                    <div class="text-xs text-slate-500 mt-1 font-medium">
+                        👨‍🏫 {{ ev.teacher }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
 
         <!-- Sprawdziany w najbliższym dniu -->
         {% if data.timetable_summary.immediate_tests %}
@@ -203,13 +228,36 @@
                         <span class="font-extrabold text-sm text-slate-900">{{ day.weekday }}</span>
                         <span class="text-xs font-medium text-slate-500">({{ day.date_str }})</span>
                     </div>
+                    {% set day_total_items = (day.tests|length) + (day.events|length) + (day.absences|length) %}
                     <span class="text-xs font-semibold px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md">
-                        {{ day.tests|length }} zapowiedzi
+                        {{ day_total_items }} wpis{{ 'y' if (day_total_items in [2, 3, 4]) else ('ów' if day_total_items != 1 else '') }}
                     </span>
                 </div>
 
-                <!-- Lista sprawdzianów w danym dniu -->
+                <!-- Lista pozycji w danym dniu -->
                 <div class="p-4 space-y-2.5">
+                    <!-- Wydarzenia szkolne (wycieczki, konkursy, imprezy) -->
+                    {% for ev in day.events %}
+                    <div class="p-3.5 rounded-xl border border-sky-200 bg-sky-50/40 hover:border-sky-300 transition-colors flex items-center justify-between gap-3">
+                        <div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="px-2.5 py-0.5 bg-sky-100 text-sky-800 text-xs font-bold rounded-md border border-sky-200">
+                                    🎉 Wydarzenie{% if ev.category and ev.category != 'Wydarzenie' %} • {{ ev.category }}{% endif %}
+                                </span>
+                                <span class="font-bold text-sm text-slate-900">
+                                    {{ ev.description or ev.category or 'Wydarzenie szkolne' }}
+                                </span>
+                            </div>
+                            {% if ev.teacher %}
+                            <div class="text-xs text-slate-500 mt-1 font-medium">
+                                👨‍🏫 {{ ev.teacher }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    <!-- Sprawdziany -->
                     {% for t in day.tests %}
                     <div class="p-3.5 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-colors flex items-center justify-between gap-3">
                         <div>

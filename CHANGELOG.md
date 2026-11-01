@@ -18,6 +18,14 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
   - Dodano obsługę dynamicznego portu chmurowego ze zmiennej `PORT`.
 
 ### Naprawione
+- **Prezentacja całodniowych wydarzeń szkolnych (wycieczek, konkursów, imprez) w Terminarzu, Planie lekcji, Pulpicie i e-mailach**:
+  - Naprawiono problem pomijania wpisów z terminarza o typie `event` (m.in. całodniowych wycieczek szkolnych, imprez i uroczystości) w widokach aplikacji oraz powiadomieniach e-mail, mimo ich prawidłowego pobierania przez scraper do bazy `storage`.
+  - Wprowadzono dedykowaną, uniwersalną odznakę **`Wydarzenie`** (z akcentem 🎉) dla wszystkich zdarzeń szkolnych oznaczonych jako `event`.
+  - **Plan lekcji ([schedule.html](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/templates/web/schedule.html))**: dodano wyróżniony baner informacyjny o wydarzeniach na wybrany dzień ponad siatką godzinową, pigułkę liczbową w nagłówku dnia oraz indykatory na zakładkach dni tygodnia.
+  - **Terminarz ([timetable.html](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/templates/web/timetable.html))**: rozszerzono sekcję najbliższego dnia nauki (`immediate_events`) oraz zestawienie kolejnych dni tygodnia (`day.events`) o wyświetlanie wydarzeń z kategorią, opisem i nauczycielem.
+  - **Pulpit główny ([dashboard.html](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/templates/web/dashboard.html))**: zintegrowano komunikaty o wydarzeniach szkolnych w kafelku planu lekcji oraz w podsumowaniu terminarza.
+  - **Powiadomienia e-mail ([summary.html](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/templates/emails/summary.html))**: dodano estetyczne boksy informacyjne o nadchodzących wydarzeniach szkolnych w planie dnia i terminarzu.
+  - **Kronika szkolna ([services.py](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/web/services.py))**: usunięto mylne przypisywanie sztucznej etykiety przedmiotu dla wycieczek i wydarzeń z pustym polem `subject`.
 - **Pobieranie treści wiadomości i obsługa zróżnicowanych układów tabel Synergii**:
   - Naprawiono problem pustej treści (`body: ""`) w pobieranych wiadomościach dla wybranych kont uczniów (np. w szkołach ponadpodstawowych / liceach).
   - Wprowadzono funkcję [`extract_message_link`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/dom_parser.py), która defensywnie wyszukuje linki do wiadomości w komórkach tematu i nadawcy, poprawnie obsługując wywołania `javascript:otworz_w_nowym_oknie(...)`, zdarzenia `onclick` oraz względne i bezwzględne adresy URL.

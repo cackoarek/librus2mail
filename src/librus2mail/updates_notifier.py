@@ -260,6 +260,13 @@ def prepare_schedule_summary(
             if matched_att:
                 lesson['attendance'] = matched_att
 
+    day_events = []
+    if timetable_entries:
+        day_events = [
+            t for t in timetable_entries
+            if t.get('date') == target_date_str and t.get('type') not in ('test', 'absence') and not t.get('is_absence')
+        ]
+
     active_lessons = [entry for entry in day_lessons if not entry.get('is_cancelled')]
     cancelled_lessons = [entry for entry in day_lessons if entry.get('is_cancelled')]
     substitutions = [entry for entry in day_lessons if entry.get('is_substitution')]
@@ -275,6 +282,7 @@ def prepare_schedule_summary(
         'weekday': weekdays_pl[target_date.weekday()].capitalize(),
         'label': target_label,
         'lessons': day_lessons,
+        'day_events': day_events,
         'total_count': len(day_lessons),
         'active_count': len(active_lessons),
         'cancelled_count': len(cancelled_lessons),

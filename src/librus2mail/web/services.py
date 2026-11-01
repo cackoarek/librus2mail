@@ -1281,10 +1281,14 @@ def build_schedule_day_context(
     """
     now = ref_now or datetime.now()
     tests_by_date: dict[str, list] = {}
+    events_by_date: dict[str, list] = {}
     for t in timetable_entries or []:
         t_d = t.get('date')
-        if t_d and t.get('type') == 'test':
-            tests_by_date.setdefault(t_d, []).append(t)
+        if t_d:
+            if t.get('type') == 'test':
+                tests_by_date.setdefault(t_d, []).append(t)
+            elif t.get('type') not in ('test', 'absence') and not t.get('is_absence'):
+                events_by_date.setdefault(t_d, []).append(t)
 
     attendance_by_date_and_lesson: dict[tuple[str, int], dict] = {}
     for att in attendance_entries or []:
@@ -1317,6 +1321,12 @@ def build_schedule_day_context(
                 e_copy['attendance'] = attendance_by_date_and_lesson[(clean_d, e_les_no)]
 
             by_date[clean_d].append(e_copy)
+
+    # Upewnij się, że dni z wydarzeniami całodniowymi z terminarza (np. wycieczki) są dostępne w planie lekcji
+    for ev_d in events_by_date:
+        clean_ev_d = ev_d.split()[0] if ' ' in ev_d else ev_d
+        if clean_ev_d not in by_date:
+            by_date[clean_ev_d] = []
 
     for d, l_list in by_date.items():
         # Gdy dla danej lekcji (np. lekcja 1) zarejestrowano zastępstwo, odfiltrowujemy oryginalną zastąpioną lekcję
@@ -1410,7 +1420,11 @@ def build_schedule_day_context(
         default_target_date = today_str
         target_reason = 'today_finished'
     elif sorted_dates:
-        default_target_date = sorted_dates[-1]
+        dates_with_lessons = [d for d in sorted_dates if by_date.get(d)]
+        if dates_with_lessons:
+            default_target_date = dates_with_lessons[-1]
+        else:
+            default_target_date = sorted_dates[-1]
         target_reason = 'latest_available'
     else:
         default_target_date = today_str
@@ -1584,6 +1598,7 @@ def build_schedule_day_context(
         else:
             label = f"Plan lekcji ({w_name.lower()}, {f_date})"
 
+        day_events = events_by_date.get(d_str, [])
         day_dict = {
             'date': d_str,
             'label': label,
@@ -1600,6 +1615,8 @@ def build_schedule_day_context(
             'lessons_ongoing': lessons_ongoing if (d_str == today_str) else False,
             'lessons_finished': lessons_finished if (d_str == today_str) else False,
             'lessons': day_lessons,
+            'day_events': day_events,
+            'events_count': len(day_events),
             'total_count': len(day_lessons),
             'active_count': len(active_day_lessons),
             'cancelled_count': cancelled_count,
@@ -1610,7 +1627,7 @@ def build_schedule_day_context(
             'justified_count': justified_count,
             'lates_count': lates_count,
             'time_span': time_span,
-            'has_any': len(day_lessons) > 0,
+            'has_any': len(day_lessons) > 0 or len(day_events) > 0,
             'is_break_now': is_break_now,
             'break_info': break_info,
             'current_lesson': current_lesson,
@@ -1624,6 +1641,8 @@ def build_schedule_day_context(
     empty_summary = {
         'has_any': False,
         'lessons': [],
+        'day_events': [],
+        'events_count': 0,
         'label': 'Brak lekcji w planie',
         'total_count': 0,
         'active_count': 0,
@@ -2171,26 +2190,42 @@ def build_chronicle_timeline(
     # 4. Sprawdziany i terminarz
     seen_test_events: set[tuple[str, str, str, str]] = set()
     for t in timetable:
-        # A. Sprawdzian odbywający się w danym dniu
+        # A. Sprawdzian lub wydarzenie odbywające się w danym dniu
         raw_test_date = t.get('date')
         test_dt = parse_datetime_safe(raw_test_date)
         if test_dt:
             d = test_dt.date()
             d_str = d.strftime('%Y-%m-%d')
-            cat = t.get('category') or 'Sprawdzian'
-            subj = t.get('subject') or 'Przedmiot'
+            is_event = (t.get('type') == 'event')
+            cat = t.get('category') or ('Wydarzenie' if is_event else 'Sprawdzian')
+            raw_subj = (t.get('subject') or '').strip()
             desc = (t.get('description') or '').strip()
             teacher = t.get('teacher', '')
             lesson_no = t.get('lesson_no', '')
-            dedup_key = ('test', subj, cat, d_str)
+
+            if is_event:
+                subj = raw_subj if raw_subj else (desc if desc else cat)
+                title = f"{cat}: {desc}" if (desc and desc != cat) else (f"{cat}: {subj}" if raw_subj else cat)
+                ev_icon = '🎉'
+                badge_name = 'Wydarzenie'
+                ev_type = 'event'
+            else:
+                subj = raw_subj if raw_subj else 'Przedmiot'
+                title = f'{cat}: {subj}'
+                ev_icon = '🔔'
+                badge_name = cat
+                ev_type = 'test'
+
+            dedup_key = (ev_type, subj, cat, d_str)
             if dedup_key not in seen_test_events:
                 seen_test_events.add(dedup_key)
                 day = get_or_create_day(d)
                 day['events'].append({
-                    'type': 'test',
-                    'icon': '🔔',
-                    'badge': cat,
-                    'title': f'{cat}: {subj}',
+                    'type': ev_type,
+                    'icon': ev_icon,
+                    'badge': badge_name,
+                    'category': cat,
+                    'title': title,
                     'subject': subj,
                     'description': desc,
                     'lesson_no': lesson_no,
@@ -2201,8 +2236,12 @@ def build_chronicle_timeline(
                     'is_announced_future': False,
                     'raw': t,
                 })
-                day['tests_count'] += 1
-                day['types_set'].add('test')
+                if is_event:
+                    day['events_count'] += 1
+                    day['types_set'].add('event')
+                else:
+                    day['tests_count'] += 1
+                    day['types_set'].add('test')
                 day['search_tokens'].extend([subj, cat, desc, teacher])
 
         # B. Sprawdzian zapowiedziany w danym dniu na przyszłość
@@ -3040,9 +3079,14 @@ def get_student_dashboard_bundle(
         recent_timeline_days = []
         recent_timeline_total_events = 0
 
-    # Liczba nadchodzących sprawdzianów w horyzoncie
-    upcoming_tests_count = len(timetable_summary.get('immediate_tests', [])) + sum(
-        len(d.get('tests', [])) for d in timetable_summary.get('upcoming_days', [])
+    # Liczba nadchodzących sprawdzianów i wydarzeń w horyzoncie
+    upcoming_tests_count = (
+        len(timetable_summary.get('immediate_tests', []))
+        + len(timetable_summary.get('immediate_events', []))
+        + sum(
+            len(d.get('tests', [])) + len(d.get('events', []))
+            for d in timetable_summary.get('upcoming_days', [])
+        )
     )
 
     # Pełna kronika / kalendarium szkolne z całej historii

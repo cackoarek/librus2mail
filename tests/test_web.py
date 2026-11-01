@@ -2366,6 +2366,104 @@ class TestWebDashboard(unittest.TestCase):
         self.assertIn('attendance', saved_cfg['timeline']['event_types'])
         self.assertEqual(saved_cfg['timeline']['event_types'], ['grades', 'attendance'])
 
+    def test_events_and_school_trips_integration(self):
+        """Weryfikuje obsługę całodniowych wydarzeń szkolnych (np. wycieczek) w terminarzu, planie lekcji i powiadomieniach."""
+        from librus2mail.updates_notifier import prepare_schedule_summary, prepare_timetable_summary
+        from librus2mail.web.services import build_schedule_day_context
+
+        trip_event = {
+            'id': 'ev_zoo_123',
+            'date': '2026-11-05',
+            'type': 'event',
+            'category': 'Wycieczka',
+            'subject': '',
+            'description': 'Wycieczka 2-dniowa zoo, orientarium w Łodzi',
+            'teacher': 'Magdalena Nowak',
+        }
+
+        # 1. updates_notifier.prepare_schedule_summary
+        sched_summary = prepare_schedule_summary(
+            schedule_entries=[{
+                'id': 'sch_1',
+                'date': '2026-11-05',
+                'lesson_no': 1,
+                'subject': 'Matematyka',
+                'time_from': '08:00',
+                'time_to': '08:45',
+            }],
+            timetable_entries=[trip_event],
+            now=datetime(2026, 11, 4, 18, 0, 0),
+            day_offset=1,
+        )
+        self.assertEqual(len(sched_summary['day_events']), 1)
+        self.assertEqual(sched_summary['day_events'][0]['category'], 'Wycieczka')
+        self.assertIn('orientarium', sched_summary['day_events'][0]['description'])
+
+        # 2. updates_notifier.prepare_timetable_summary
+        from datetime import date
+        tt_summary = prepare_timetable_summary(
+            raw_entries=[trip_event],
+            reference_date=date(2026, 11, 4),
+        )
+        self.assertTrue(tt_summary['has_any'])
+        self.assertEqual(len(tt_summary['immediate_events']), 1)
+        self.assertEqual(tt_summary['immediate_events'][0]['category'], 'Wycieczka')
+
+        # 3. web.services.build_schedule_day_context
+        ctx = build_schedule_day_context(
+            all_lessons=[],
+            timetable_entries=[trip_event],
+            ref_now=datetime(2026, 11, 5, 8, 0, 0),
+            requested_date='2026-11-05',
+        )
+        self.assertEqual(ctx['selected_date'], '2026-11-05')
+        self.assertEqual(ctx['selected_day']['events_count'], 1)
+        self.assertEqual(len(ctx['selected_day']['day_events']), 1)
+        self.assertEqual(ctx['selected_day']['day_events'][0]['category'], 'Wycieczka')
+
+        # 4. Widoki w aplikacji Flask (/plan, /terminarz, /)
+        storage = get_storage(self.mock_config, self.storage_dir)
+        storage.save_timetable_entries('123456', [trip_event])
+
+        app = create_app(
+            config_path=self.config_path,
+            storage_dir=self.storage_dir,
+            no_auth=True,
+            actual_date=datetime(2026, 11, 4, 18, 0, 0),
+        )
+        client = app.test_client()
+
+        # /terminarz
+        res_tt = client.get('/terminarz')
+        self.assertEqual(res_tt.status_code, 200)
+        tt_html = res_tt.data.decode('utf-8')
+        self.assertIn('Wydarzenie', tt_html)
+        self.assertIn('Wycieczka 2-dniowa zoo', tt_html)
+
+        # /plan?date=2026-11-05
+        res_plan = client.get('/plan?date=2026-11-05')
+        self.assertEqual(res_plan.status_code, 200)
+        plan_html = res_plan.data.decode('utf-8')
+        self.assertIn('Wydarzenie', plan_html)
+        self.assertIn('Wycieczka 2-dniowa zoo', plan_html)
+
+        # / (Pulpit)
+        res_dash = client.get('/')
+        self.assertEqual(res_dash.status_code, 200)
+        dash_html = res_dash.data.decode('utf-8')
+        self.assertIn('Wydarzenie', dash_html)
+        self.assertIn('Wycieczka 2-dniowa zoo', dash_html)
+
+        # 5. Szablon e-mail (summary.html)
+        from librus2mail.mail_sender import MailSender
+        email_html = MailSender.create_mail_content_for_summary(
+            user_config={'librus_login': '123456', 'librus_login_name': 'Jan Kowalski'},
+            timetable=tt_summary,
+            schedule=sched_summary,
+        )
+        self.assertIn('Wydarzenie', email_html)
+        self.assertIn('Wycieczka 2-dniowa zoo', email_html)
+
     def test_annual_archive_and_historical_browser(self):
         """Testuje moduł archiwizacji rocznej (storage.py) oraz przeglądarkę historyczną w panelu WWW."""
         app = create_app(config_path=self.config_path, storage_dir=self.storage_dir, no_auth=True)

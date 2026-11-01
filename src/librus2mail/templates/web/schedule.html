@@ -73,6 +73,8 @@
         <span class="w-2 h-2 rounded-full bg-amber-500" title="Zastępstwa"></span>
         {% elif day.tests_count > 0 %}
         <span class="w-2 h-2 rounded-full bg-indigo-400" title="Zapowiedziany sprawdzian"></span>
+        {% elif day.events_count is defined and day.events_count > 0 %}
+        <span class="w-2 h-2 rounded-full bg-sky-500" title="Wydarzenie szkolne"></span>
         {% endif %}
     </a>
     {% endfor %}
@@ -227,6 +229,11 @@
                     📝 {{ day.tests_count }} {% if day.tests_count == 1 %}sprawdzian{% else %}sprawdziany{% endif %}
                 </span>
                 {% endif %}
+                {% if day.events_count is defined and day.events_count > 0 %}
+                <span class="px-2.5 py-1 bg-sky-100 text-sky-800 font-bold rounded-lg border border-sky-200">
+                    🎉 {{ day.events_count }} {% if day.events_count == 1 %}wydarzenie{% elif day.events_count in [2, 3, 4] %}wydarzenia{% else %}wydarzeń{% endif %}
+                </span>
+                {% endif %}
                 {% if day.substitution_count > 0 %}
                 <span class="px-2.5 py-1 bg-amber-100 text-amber-800 font-bold rounded-lg border border-amber-200">
                     🔄 {{ day.substitution_count }} {% if day.substitution_count == 1 %}zastępstwo{% else %}zastępstwa{% endif %}
@@ -244,6 +251,32 @@
                 {% endif %}
             </div>
         </div>
+
+        <!-- Wydarzenia całodniowe / wpisy z terminarza (np. wycieczki, konkursy) -->
+        {% if day.day_events %}
+        <div class="p-4 bg-sky-50/60 border-b border-sky-100 space-y-2">
+            {% for ev in day.day_events %}
+            <div class="p-3 bg-white border border-sky-200 rounded-xl shadow-2xs flex items-center gap-3">
+                <span class="text-xl">🎉</span>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="px-2 py-0.5 bg-sky-100 text-sky-800 text-[10px] font-extrabold rounded uppercase tracking-wider">
+                            Wydarzenie{% if ev.category and ev.category != 'Wydarzenie' %} • {{ ev.category }}{% endif %}
+                        </span>
+                        <span class="font-bold text-sm text-slate-900">
+                            {{ ev.description or ev.category or 'Wydarzenie szkolne' }}
+                        </span>
+                    </div>
+                    {% if ev.teacher %}
+                    <div class="text-xs text-slate-500 mt-1 font-medium">
+                        👨‍🏫 Opiekun / Nauczyciel: {{ ev.teacher }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
 
         <!-- Tabela / Lista lekcji -->
         {% if day.total_count == 0 %}

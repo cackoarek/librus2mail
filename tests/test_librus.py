@@ -97,6 +97,76 @@ class TestLibrus(unittest.TestCase):
             with self.assertRaises(NotLogged):
                 self.librus.fetch_messages()
 
+    def test_get_message_body_with_urljoin_and_containers(self):
+        """Test pobierania treści wiadomości z relatywnym URL oraz różnymi kontenerami treści."""
+        self.librus.logged = True
+        mock_session = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.content = b"""
+        <html>
+        <head><title>Wiadomosc</title></head>
+        <body>
+            <div class="container-message-content">
+                Drodzy Rodzice, przypominamy o wycieczce.
+            </div>
+        </body>
+        </html>
+        """
+        mock_session.get.return_value = mock_resp
+        self.librus._Librus__session = mock_session
+
+        with patch('librus2mail.librus.sleep'):
+            body = self.librus._Librus__get_message_body("/wiadomosci/1/5/3704610/f0")
+            self.assertEqual(body, "Drodzy Rodzice, przypominamy o wycieczce.")
+            # Sprawdzenie czy url został poprawnie złożony
+            called_url = mock_session.get.call_args[0][0]
+            self.assertEqual(called_url, "https://synergia.librus.pl/wiadomosci/1/5/3704610/f0")
+
+    def test_fetch_messages_with_backfill_for_empty_body(self):
+        """Test automatycznego dociągania treści dla wiadomości istniejących w storage z pustym body."""
+        sample_html = """
+        <html>
+        <body>
+            <table class="decorated stretch">
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td></td>
+                        <td>Kowalski Jan (Fizyka)</td>
+                        <td><a href="/wiadomosci/1/5/456">Temat lekcji</a></td>
+                        <td>2026-10-31 12:00:00</td>
+                    </tr>
+                </tbody>
+            </table>
+        </body>
+        </html>
+        """
+        self.librus.logged = True
+        self.librus._Librus__do_read_messages = True
+        # Symulujemy, że storage ma zapisaną wiadomość z pustym body
+        mock_storage = MagicMock()
+        mock_storage.get_stored_messages.return_value = [{
+            'id': 'Temat lekcji2026-10-31 12:00:00Kowalski Jan (Fizyka)',
+            'title': 'Temat lekcji',
+            'body': '',
+        }]
+        self.librus._Librus__storage = mock_storage
+        self.librus._Librus__known_messages = {'Temat lekcji2026-10-31 12:00:00Kowalski Jan (Fizyka)'}
+
+        with patch.object(self.librus, 'parse_page') as mock_parse, \
+             patch.object(self.librus, '_Librus__get_message_body') as mock_body:
+            from bs4 import BeautifulSoup
+            mock_parse.return_value = BeautifulSoup(sample_html, 'html.parser')
+            mock_body.return_value = "Pobrana treść lekcji fizyki"
+
+            self.librus.fetch_messages()
+
+            self.assertEqual(len(self.librus.messages), 1)
+            msg = self.librus.messages[0]
+            self.assertEqual(msg['body'], "Pobrana treść lekcji fizyki")
+            mock_body.assert_called_once_with("/wiadomosci/1/5/456")
+
     def test_fetch_notifications_missing_container_does_not_crash(self):
         empty_html = "<html><body><div>Pusto</div></body></html>"
         self.librus.logged = True
@@ -347,7 +417,7 @@ class TestLibrus(unittest.TestCase):
             storage = FileStorage(storage_dir=tmpdir)
             self.assertFalse(storage.has_existing_data("user1"))
 
-            storage.save_known_items("user1", {"m1", "m2"}, {"n1"}, {"g1"})
+            storage.save_known_items("user1", {"m1", "m2"}, {"n1"}, {"g1"}, {"a1", "a2"})
             self.assertTrue(storage.has_existing_data("user1"))
 
             # Now create a new FileStorage instance pointing to same directory
@@ -356,6 +426,21 @@ class TestLibrus(unittest.TestCase):
             self.assertEqual(data['messages'], {"m1", "m2"})
             self.assertEqual(data['notifications'], {"n1"})
             self.assertEqual(data['grades'], {"g1"})
+            self.assertEqual(data['attendance'], {"a1", "a2"})
+
+            # Test backfill from attendance_history when known_attendance is missing
+            storage.save_attendance("user2", [{'id': 'att_old_1', 'date': '2026-10-01'}, {'id': 'att_old_2', 'date': '2026-10-02'}])
+            # Directly remove known_attendance from the JSON file to simulate legacy file
+            p2 = storage._get_file_path("user2")
+            import json
+            with open(p2, encoding='utf-8') as f:
+                d2 = json.load(f)
+            d2.pop('known_attendance', None)
+            with open(p2, 'w', encoding='utf-8') as f:
+                json.dump(d2, f)
+
+            data2 = storage.load_known_items("user2")
+            self.assertEqual(data2['attendance'], {"att_old_1", "att_old_2"})
 
             # Test factory function with storage_dir
             file_s = create_storage(storage_dir=tmpdir)
@@ -374,18 +459,24 @@ class TestLibrus(unittest.TestCase):
                 'read_grades': True
             }
 
-            # 1. Instance A discovers a grade
+            # 1. Instance A discovers a grade and attendance
             librus_a = Librus(cfg, storage=storage)
             librus_a.grades = [{'id': 'grade_99', 'subject': 'Fizyka', 'grade': '5'}]
+            librus_a.attendance = [{'id': 'att_101', 'subject': 'Matematyka', 'symbol': 'nb', 'date': '2026-10-15'}]
             new_grades = librus_a.get_not_known_grades_and_mark_as_known()
+            new_attendance = librus_a.get_not_known_attendance_and_mark_as_known()
             self.assertEqual(len(new_grades), 1)
+            self.assertEqual(len(new_attendance), 1)
 
             # 2. Instance B (like after application restart) loads the same storage
             librus_b = Librus(cfg, storage=storage)
             librus_b.grades = [{'id': 'grade_99', 'subject': 'Fizyka', 'grade': '5'}]
+            librus_b.attendance = [{'id': 'att_101', 'subject': 'Matematyka', 'symbol': 'nb', 'date': '2026-10-15'}]
             new_grades_b = librus_b.get_not_known_grades_and_mark_as_known()
-            # Grade is already known from file!
+            new_attendance_b = librus_b.get_not_known_attendance_and_mark_as_known()
+            # Grade and attendance are already known from file!
             self.assertEqual(len(new_grades_b), 0)
+            self.assertEqual(len(new_attendance_b), 0)
 
     def test_work_in_loop_config_handling(self):
         # Domyślnie True
@@ -969,6 +1060,31 @@ class TestLibrus(unittest.TestCase):
         self.assertIn("nowe wpisy", summary_html)
         self.assertIn("nieobecność uspr.", summary_html)
         self.assertIn("Geografia", summary_html)
+
+        # 6. Test Variant A: compact attendance summary bar without big cards when no new attendance
+        from librus2mail.updates_notifier import compute_attendance_stats
+        att_stats = compute_attendance_stats(
+            all_attendance=att_entries,
+            raw_summary={'period': 'Okres 1'},
+        )
+        self.assertEqual(att_stats['total_entries'], 2)
+        self.assertEqual(att_stats['total_absences'], 1)
+        self.assertEqual(att_stats['justified_absences'], 1)
+        self.assertEqual(att_stats['unjustified_absences'], 0)
+        self.assertEqual(att_stats['lates'], 1)
+
+        summary_html_no_new = MailSender.create_mail_content_for_summary(
+            user_cfg,
+            attendance=[],
+            attendance_summary=att_stats,
+        )
+        # Should not show new attendance cards/tiles
+        self.assertNotIn("Nowe wpisy frekwencji", summary_html_no_new)
+        self.assertNotIn("nowe w skrzynce", summary_html_no_new)
+        # Should show compact summary bar
+        self.assertIn("Stan frekwencji ogółem", summary_html_no_new)
+        self.assertIn("1 uspr.", summary_html_no_new)
+        self.assertIn("1 spóźn.", summary_html_no_new)
 
     def test_send_progress_report_gmail_and_smtp(self):
         from librus2mail.gmail_sender import GmailSender

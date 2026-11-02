@@ -216,3 +216,41 @@ server {
 
 > [!TIP]
 > Wbudowane mechanizmy bezpieczeństwa Librus2mail (ochrona przed atakami brute-force z blokadą IP, obsługa `X-Forwarded-For` oraz żetony CSRF) automatycznie współpracują z serwerami reverse proxy.
+
+---
+
+## ☁️ Wariant 4: Usługi chmurowe PaaS (RunxBuild, Render, Fly.io, Railway)
+
+Platformy PaaS umożliwiają szybkie uruchomienie aplikacji z repozytorium Git z automatycznym certyfikatem HTTPS.
+
+### 1. Trwałość danych (Persistent Disks / Volumes)
+Większość platform PaaS korzysta z kontenerów z ulotnym systemem plików (ephemeral filesystem). Aby historia ocen, frekwencja oraz plik `config.yaml` nie uległy skasowaniu po restarcie lub wdrożeniu nowej wersji:
+1. W panelu usługi podepnij dysk trwały (Persistent Volume / Disk), wskazując punkt montowania (np. `/data`).
+2. Wskaż aplikacji ten katalog za pomocą zmiennej środowiskowej:
+   ```env
+   LIBRUS_DATA_DIR=/data
+   ```
+   lub parametru CLI:
+   ```bash
+   python librus_web.py -d /data
+   ```
+
+Aplikacja automatycznie umieści:
+- Plik konfiguracyjny: `/data/config.yaml`
+- Bazę danych JSON: `/data/storage/`
+- Trwały klucz sesji logowania: `/data/storage/.secret_key`
+
+### 2. Konfiguracja zmiennych środowiskowych
+W panelu dostawcy chmury (sekcja *Environment Variables* / *Secrets*) skonfiguruj:
+- `LIBRUS_LOGIN`, `LIBRUS_PASSWORD`, `LIBRUS_LOGIN_NAME`, `LIBRUS_NOTIFICATION_RECEIVERS` (lub `LIBRUS_USERS`)
+- `LIBRUS_MAIL__LOGIN`, `LIBRUS_MAIL__PASSWORD`, `LIBRUS_MAIL__USE_GMAIL=true`
+- `LIBRUS_WEB__PASSWORD` (hasło do panelu WWW)
+- `LIBRUS_DATA_DIR=/data`
+- `TZ=Europe/Warsaw`
+
+### 3. Polecenie startowe i Procfile
+W repozytorium znajduje się plik [`Procfile`](../Procfile) definiujący start usługi WWW:
+```text
+web: python librus_web.py
+```
+Aplikacja automatycznie odczytuje dynamiczny port przydzielony przez chmurę ze standardowej zmiennej środowiskowej `$PORT` oraz nasłuchuje na adresie `0.0.0.0`. Panel WWW automatycznie uruchamia w tle wątek kolektora pobierającego dane ze szkoły.

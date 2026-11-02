@@ -682,12 +682,8 @@
                             <select onchange="window.location.href='/student/' + this.value + '?next=' + encodeURIComponent(window.location.pathname + window.location.search)"
                                     class="bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold rounded-xl px-2.5 py-1.5 pr-6 max-w-[230px] xl:max-w-[265px] 2xl:max-w-[345px] truncate focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
                                 
-                                <option value="8912345" >
-                                    👤 Jan Kowalski (klasa 5A) (8912345)
-                                </option>
-                                
-                                <option value="8976543" >
-                                    👤 Anna Kowalska (Liceum 2A) (8976543)
+                                <option value="11030948" >
+                                    👤 Jan Kowalski (11030948)
                                 </option>
                                 
                                 <option value="8979296" selected>
@@ -791,26 +787,14 @@
                 </label>
                 <div class="space-y-1.5">
                     
-                    <a href="/student/8912345?next=/frekwencja"
+                    <a href="/student/11030948?next=/frekwencja"
                        class="flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold transition-all
                        
                        border-slate-200 hover:bg-slate-50 text-slate-700
                        ">
                         <span class="flex items-center gap-2">
                             <span>👤</span>
-                            <span>Jan Kowalski (klasa 5A) (8912345)</span>
-                        </span>
-                        
-                    </a>
-                    
-                    <a href="/student/8976543?next=/frekwencja"
-                       class="flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold transition-all
-                       
-                       border-slate-200 hover:bg-slate-50 text-slate-700
-                       ">
-                        <span class="flex items-center gap-2">
-                            <span>👤</span>
-                            <span>Anna Kowalska (Liceum 2A) (8976543)</span>
+                            <span>Jan Kowalski (11030948)</span>
                         </span>
                         
                     </a>
@@ -1041,7 +1025,7 @@
             </h2>
             <p class="text-xs text-slate-500 mt-0.5" id="attendance-view-subtitle">
                 
-                    Roczna mapa obecności (styl GitHub). Kliknij na zaznaczony dzień, aby przejść do szczegółów.
+                    Widok wybranego miesiąca z nawigacją i wskaźnikami obecności.
                 
             </p>
         </div>
@@ -1055,10 +1039,10 @@
                 <select id="attendance-view-select"
                         onchange="onAttendanceViewChange(this.value)"
                         class="text-xs font-bold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 shadow-xs hover:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition cursor-pointer">
-                    <option value="heatmap" selected>
+                    <option value="heatmap" >
                         🔥 Heatmapa roczna (GitHub)
                     </option>
-                    <option value="month" >
+                    <option value="month" selected>
                         📅 Miesiąc z nawigacją
                     </option>
                 </select>
@@ -1076,7 +1060,7 @@
     </div>
 
     <!-- Widok 2 (Opcja 2): Horyzontalna Heatmapa roczna (styl GitHub) -->
-    <div id="attendance-view-heatmap" class=" pt-4">
+    <div id="attendance-view-heatmap" class="hidden pt-4">
         <div class="overflow-x-auto pb-2 scrollbar-thin">
             <div class="inline-block min-w-[760px]">
                 <!-- Etykiety miesięcy nad kolumnami -->
@@ -5606,22 +5590,20 @@
                 
             </div>
 
-            <div class="flex items-center gap-2 text-[11px] text-slate-400">
-                <span>Mniej</span>
-                <div class="flex items-center gap-1">
-                    <span class="w-2.5 h-2.5 rounded-[2px] bg-slate-200"></span>
-                    <span class="w-2.5 h-2.5 rounded-[2px] bg-sky-400"></span>
-                    <span class="w-2.5 h-2.5 rounded-[2px] bg-amber-400"></span>
-                    <span class="w-2.5 h-2.5 rounded-[2px] bg-emerald-500"></span>
-                    <span class="w-2.5 h-2.5 rounded-[2px] bg-rose-500"></span>
-                </div>
-                <span>Więcej</span>
+            
+            <div class="flex flex-wrap items-center gap-3 text-[11px] text-slate-500 select-none">
+                <span class="font-semibold text-slate-400">Legenda:</span>
+                <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-[2px] bg-rose-500"></span> Nieuspr.</span>
+                <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-[2px] bg-emerald-500"></span> Uspr.</span>
+                <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-[2px] bg-amber-400"></span> Spóźn.</span>
+                <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-[2px] bg-sky-400"></span> Zwoln.</span>
+                <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-[2px] bg-slate-200"></span> Obecny</span>
             </div>
         </div>
     </div>
 
     <!-- Widok 1 (Opcja 1): Miesiąc z nawigacją -->
-    <div id="attendance-view-month" class="hidden pt-4">
+    <div id="attendance-view-month" class=" pt-4">
         <!-- Pigułki wyboru miesięcy (Tabs) -->
         <div class="flex items-center gap-1.5 overflow-x-auto pb-3 mb-4 border-b border-slate-100 scrollbar-none">
             
@@ -11876,7 +11858,7 @@ document.addEventListener('scroll', function(e) {
     <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500">
         <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div class="flex items-center gap-2 font-medium">
-                <span>🏫 Librus2mail v2.8.0</span>
+                <span>🏫 Librus2mail v2.9.0</span>
                 <span>•</span>
                 <span>Prywatny Dashboard Rodzica</span>
             </div>

@@ -9,6 +9,37 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ## [Unreleased]
 
+### Dodane
+- **Opcjonalny bazowy katalog danych (`--data-dir` / `LIBRUS_DATA_DIR`)**:
+  - Dodano parametr CLI `--data-dir` (oraz `-d` w `librus_web.py`) i odpowiadającą mu zmienną środowiskową `LIBRUS_DATA_DIR` (lub `DATA_DIR`), pozwalające jawnie wskazać wspólny katalog roboczy (np. trwały dysk `/data` na RunxBuild).
+  - Wskazanie bazowego katalogu powoduje, że plik `config.yaml` oraz katalog `storage/` są domyślnie lokowane wewnątrz tej ścieżki (np. `/data/config.yaml` oraz `/data/storage/`), bez niejawnego zgadywania ścieżek.
+  - Zachowano pełną hierarchię pierwszeństwa: jawne parametry `--config` oraz `--storage-dir` (lub dedykowane zmienne `LIBRUS_CONFIG_PATH` / `LIBRUS_STORAGE_DIR`) mogą w razie potrzeby nadpisać poszczególne ścieżki.
+  - Dodano plik [`Procfile`](file:///home/acacko/PycharmProjects/librus2mail/Procfile) ze startem procesu `web: python librus_web.py`.
+  - Dodano obsługę dynamicznego portu chmurowego ze zmiennej `PORT`.
+
+### Naprawione
+- **Trwała pamięć zaraportowanych nieobecności i kompaktowy status frekwencji w e-mailach**:
+  - Naprawiono problem ponownego raportowania dawnych nieobecności (sprzed tygodni lub miesięcy) jako „nowe” przy każdym uruchomieniu skryptu lub codziennym generowaniu raportu.
+  - Wprowadzono trwałą persystencję zbioru `known_attendance` w bazie `storage.py` ([`save_known_items`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/storage.py), [`load_known_items`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/storage.py)) oraz w module [`librus.py`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/librus.py).
+  - Dodano automatyczny mechanizm wstecznej kompatybilności (backfill), który przy pierwszym odczycie istniejącej bazy `storage` automatycznie oznacza dotychczasową historię frekwencji jako znaną, zapobiegając fałszywym alarmom o dawnych nieobecnościach.
+  - Naprawiono priorytet pól dat w [`parse_item_datetime`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/updates_notifier.py), faworyzując rzeczywistą datę zdarzenia (`date` / `data`) ponad techniczny znacznik zrzutu do bazy (`added_at`).
+  - **Szablon e-mail ([`summary.html`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/templates/emails/summary.html))**: usunięto prezentację wielkich kart dla dawnych nieobecności – szczegółowe karty lekcji pojawiają się wyłącznie dla świeżo dodanych wpisów z danego dnia, a dla całej historii dodano dyskretny, kompaktowy pasek statusu frekwencji w semestrze (z pigułkami liczbowymi: nieusprawiedliwione, usprawiedliwione, spóźnienia, zwolnienia).
+- **Prezentacja całodniowych wydarzeń szkolnych (wycieczek, konkursów, imprez) w Terminarzu, Planie lekcji, Pulpicie i e-mailach**:
+  - Naprawiono problem pomijania wpisów z terminarza o typie `event` (m.in. całodniowych wycieczek szkolnych, imprez i uroczystości) w widokach aplikacji oraz powiadomieniach e-mail, mimo ich prawidłowego pobierania przez scraper do bazy `storage`.
+  - Wprowadzono dedykowaną, uniwersalną odznakę **`Wydarzenie`** (z akcentem 🎉) dla wszystkich zdarzeń szkolnych oznaczonych jako `event`.
+  - **Plan lekcji ([schedule.html](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/templates/web/schedule.html))**: dodano wyróżniony baner informacyjny o wydarzeniach na wybrany dzień ponad siatką godzinową, pigułkę liczbową w nagłówku dnia oraz indykatory na zakładkach dni tygodnia.
+  - **Terminarz ([timetable.html](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/templates/web/timetable.html))**: rozszerzono sekcję najbliższego dnia nauki (`immediate_events`) oraz zestawienie kolejnych dni tygodnia (`day.events`) o wyświetlanie wydarzeń z kategorią, opisem i nauczycielem.
+  - **Pulpit główny ([dashboard.html](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/templates/web/dashboard.html))**: zintegrowano komunikaty o wydarzeniach szkolnych w kafelku planu lekcji oraz w podsumowaniu terminarza.
+  - **Powiadomienia e-mail ([summary.html](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/templates/emails/summary.html))**: dodano estetyczne boksy informacyjne o nadchodzących wydarzeniach szkolnych w planie dnia i terminarzu.
+  - **Kronika szkolna ([services.py](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/web/services.py))**: usunięto mylne przypisywanie sztucznej etykiety przedmiotu dla wycieczek i wydarzeń z pustym polem `subject`.
+- **Pobieranie treści wiadomości i obsługa zróżnicowanych układów tabel Synergii**:
+  - Naprawiono problem pustej treści (`body: ""`) w pobieranych wiadomościach dla wybranych kont uczniów (np. w szkołach ponadpodstawowych / liceach).
+  - Wprowadzono funkcję [`extract_message_link`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/dom_parser.py), która defensywnie wyszukuje linki do wiadomości w komórkach tematu i nadawcy, poprawnie obsługując wywołania `javascript:otworz_w_nowym_oknie(...)`, zdarzenia `onclick` oraz względne i bezwzględne adresy URL.
+  - Dodano dynamiczne mapowanie kolumn tabeli wiadomości na podstawie nagłówków `<thead>` (*Nadawca*, *Temat*, *Data wysłania*, *Załącznik*), co zapobiega przesunięciom indeksów komórek w tabelach o niestandardowej liczbie kolumn.
+  - Zastosowano `urllib.parse.urljoin` oraz zapasowe selektory kontenera treści (`.container-message-content`, `#message-content`, `.message-content`, komórki `table.container-message`).
+  - Zastąpiono ciche połykanie wyjątków jawnym logowaniem ostrzeżeń (`logger.warning`).
+  - Dodano automatyczny mechanizm naprawczy (backfill) w `librus.py`, który przy kolejnej synchronizacji dociąga brakujące treści dla wiadomości zapisanych wcześniej w bazie `storage` z pustym polem `body`.
+
 ---
 
 ## [2.9.0] – 2026-10-23
@@ -34,6 +65,9 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
   - Spójna obsługa dymka zarówno w rocznej Heatmapie w stylu GitHub, jak i w widoku kalendarza miesięcznego.
 
 ### Naprawione
+- **Poprawa legendy pod roczną heatmapą frekwencji (styl GitHub)**:
+  - Usunięto mylącą skalę natężenia `Mniej ... Więcej` (pochodzącą z szablonu commitów GitHuba), która nie miała zastosowania do kategorycznych statusów obecności.
+  - Zastąpiono ją czytelną legendą ze skrótami i kolorami rzeczywistych typów zdarzeń (`🔴 Nieuspr.`, `🟢 Uspr.`, `🟡 Spóźn.`, `🔵 Zwoln.`, `⬜ Obecny`).
 - **Trwałość ustawień modułu Kalendarium (Pulpit główny)**:
   - Naprawiono problem samoistnego resetowania się ustawień Kalendarium (`timeline`: liczba dni, ukrywanie weekendów, odwrotna kolejność kart) do domyślnych wartości (5 dni, brak ukrywania, standardowa kolejność).
   - Dodano model [TimelineConfig](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/config_models.py) do `AppSettings` oraz zaktualizowano mechanizm serializacji `_serialize_value()`, aby nie gubił dynamicznych pól `__pydantic_extra__` przy wywołaniach `to_dict()`.

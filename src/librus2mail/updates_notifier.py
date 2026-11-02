@@ -9,6 +9,7 @@ Działa w 100% offline na bazie danych ze storage/.
 
 import argparse
 import logging
+import re
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from typing import Any
@@ -188,6 +189,47 @@ def prepare_schedule_summary(
     if not day_lessons:
         return {'has_any': False, 'lessons': []}
 
+    # Gdy dla danej godziny (np. lekcja 1) zarejestrowano zastępstwo, odfiltrowujemy oryginalną zastąpioną lekcję
+    # (np. Informatyka zastąpiona Matematyką), aby nie dublować lekcji w tym samym czasie.
+    if any(x.get('is_substitution') for x in day_lessons):
+        filtered_day_lessons: list[dict[str, Any]] = []
+        by_lesson_no: dict[int, list[dict[str, Any]]] = {}
+        for x in day_lessons:
+            les_no = int(x.get('lesson_no', 0)) if str(x.get('lesson_no', '')).isdigit() else 0
+            by_lesson_no.setdefault(les_no, []).append(x)
+
+        for les_no, slot_lessons in by_lesson_no.items():
+            if len(slot_lessons) <= 1 or not any(x.get('is_substitution') for x in slot_lessons):
+                filtered_day_lessons.extend(slot_lessons)
+                continue
+
+            orig_names = set()
+            for x in slot_lessons:
+                if x.get('is_substitution'):
+                    s_info = f"{x.get('substitution_info', '')} {x.get('info', '')}"
+                    m = re.search(r'zastępstwo\s+za(?:\s+zajęcia)?:\s*([^\n\r]+)', s_info, re.IGNORECASE)
+                    if m:
+                        clean = re.sub(r',?\s*(?:s\.|sala).*$', '', m.group(1), flags=re.IGNORECASE).strip(' ,.-').lower()
+                        if clean:
+                            orig_names.add(clean)
+
+            kept_slot: list[dict[str, Any]] = []
+            for x in slot_lessons:
+                if x.get('is_substitution'):
+                    kept_slot.append(x)
+                    continue
+                subj_lower = str(x.get('subject', '')).strip().lower()
+                raw_lower = str(x.get('raw_entry', '') or x.get('raw_text', '')).lower()
+                is_canc = bool(x.get('is_cancelled'))
+                is_named_orig = any(orig in subj_lower or subj_lower in orig or orig in raw_lower for orig in orig_names if orig)
+                if is_named_orig or is_canc:
+                    continue
+                kept_slot.append(x)
+
+            filtered_day_lessons.extend(kept_slot or [x for x in slot_lessons if x.get('is_substitution')])
+
+        day_lessons = filtered_day_lessons
+
     day_lessons.sort(key=lambda x: (int(x.get('lesson_no', 0)) if str(x.get('lesson_no', '')).isdigit() else 99, x.get('time_from', '')))
 
     if timetable_entries:
@@ -218,6 +260,13 @@ def prepare_schedule_summary(
             if matched_att:
                 lesson['attendance'] = matched_att
 
+    day_events = []
+    if timetable_entries:
+        day_events = [
+            t for t in timetable_entries
+            if t.get('date') == target_date_str and t.get('type') not in ('test', 'absence') and not t.get('is_absence')
+        ]
+
     active_lessons = [entry for entry in day_lessons if not entry.get('is_cancelled')]
     cancelled_lessons = [entry for entry in day_lessons if entry.get('is_cancelled')]
     substitutions = [entry for entry in day_lessons if entry.get('is_substitution')]
@@ -233,6 +282,7 @@ def prepare_schedule_summary(
         'weekday': weekdays_pl[target_date.weekday()].capitalize(),
         'label': target_label,
         'lessons': day_lessons,
+        'day_events': day_events,
         'total_count': len(day_lessons),
         'active_count': len(active_lessons),
         'cancelled_count': len(cancelled_lessons),
@@ -315,9 +365,9 @@ def parse_item_datetime(item: Any) -> datetime | None:
     if isinstance(item, dict):
         raw_str = (
             item.get('datetime')
-            or item.get('added_at')
             or item.get('date')
             or item.get('data')
+            or item.get('added_at')
             or ""
         )
     elif isinstance(item, str):
@@ -326,6 +376,30 @@ def parse_item_datetime(item: Any) -> datetime | None:
         raw_str = ""
 
     return parse_datetime_safe(raw_str)
+
+
+def compute_attendance_stats(
+    all_attendance: list[dict] | None,
+    raw_summary: Any = None,
+) -> dict[str, Any]:
+    """Przygotowuje syntetyczne podsumowanie statystyk frekwencji (nieobecności, spóźnienia) dla e-maila."""
+    all_att = all_attendance or []
+    absences = [a for a in all_att if a.get('is_absence')]
+    unjustified = [a for a in absences if not a.get('is_justified')]
+    justified = [a for a in absences if a.get('is_justified')]
+    lates = [a for a in all_att if a.get('is_late')]
+    exempt = [a for a in all_att if a.get('is_exempt')]
+
+    return {
+        'has_any': bool(all_att or raw_summary),
+        'total_entries': len(all_att),
+        'total_absences': len(absences),
+        'unjustified_absences': len(unjustified),
+        'justified_absences': len(justified),
+        'lates': len(lates),
+        'exemptions': len(exempt),
+        'raw_summary': raw_summary,
+    }
 
 
 def print_cli_summary(
@@ -616,6 +690,14 @@ class UpdatesNotifier:
             else None
         )
 
+        # 2.6 Przygotowanie statystyk frekwencji ogółem
+        raw_att_summary = self.storage.get_attendance_summary(login) if hasattr(self.storage, 'get_attendance_summary') else None
+        attendance_stats = (
+            compute_attendance_stats(all_attendance, raw_summary=raw_att_summary)
+            if user_config.get('read_attendance', True)
+            else None
+        )
+
         # 3. Zapis do pliku HTML (jeśli podano -o / --save-html)
         if output_html:
             out_file = resolve_output_path(output_html, login, total_users, default_prefix="powiadomienie")
@@ -636,6 +718,7 @@ class UpdatesNotifier:
                 timetable=timetable_summary,
                 schedule=schedule_summary,
                 attendance=filtered_attendance,
+                attendance_summary=attendance_stats,
             )
             full_html = render_standalone_html(title, body)
             try:
@@ -727,6 +810,7 @@ class UpdatesNotifier:
                         timetable=timetable_summary,
                         schedule=schedule_summary,
                         attendance=filtered_attendance,
+                        attendance_summary=attendance_stats,
                     )
                 else:
                     if filtered_messages:

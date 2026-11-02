@@ -250,16 +250,14 @@
                 {% endif %}
             </div>
 
-            <div class="flex items-center gap-2 text-[11px] text-slate-400">
-                <span>Mniej</span>
-                <div class="flex items-center gap-1">
-                    <span class="w-2.5 h-2.5 rounded-[2px] bg-slate-200"></span>
-                    <span class="w-2.5 h-2.5 rounded-[2px] bg-sky-400"></span>
-                    <span class="w-2.5 h-2.5 rounded-[2px] bg-amber-400"></span>
-                    <span class="w-2.5 h-2.5 rounded-[2px] bg-emerald-500"></span>
-                    <span class="w-2.5 h-2.5 rounded-[2px] bg-rose-500"></span>
-                </div>
-                <span>Więcej</span>
+            {# Legenda typów obecności pod heatmapą #}
+            <div class="flex flex-wrap items-center gap-3 text-[11px] text-slate-500 select-none">
+                <span class="font-semibold text-slate-400">Legenda:</span>
+                <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-[2px] bg-rose-500"></span> Nieuspr.</span>
+                <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-[2px] bg-emerald-500"></span> Uspr.</span>
+                <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-[2px] bg-amber-400"></span> Spóźn.</span>
+                <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-[2px] bg-sky-400"></span> Zwoln.</span>
+                <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-[2px] bg-slate-200"></span> Obecny</span>
             </div>
         </div>
     </div>

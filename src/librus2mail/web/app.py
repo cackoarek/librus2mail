@@ -33,7 +33,11 @@ from flask import (
 )
 
 from librus2mail.base_logger import setup_logging
-from librus2mail.config import get_reports_schedules, read_config
+from librus2mail.config import (
+    get_reports_schedules,
+    read_config,
+    resolve_config_and_storage_paths,
+)
 from librus2mail.date_utils import parse_date_safe, parse_datetime_safe
 from librus2mail.librus_collector import run_collector
 from librus2mail.progress_report import run_progress_reports
@@ -1514,8 +1518,9 @@ def start_background_collector(
 
 
 def create_app(
-    config_path: str = 'config.yaml',
+    config_path: str | None = None,
     storage_dir: str | None = None,
+    data_dir: str | None = None,
     web_password: str | None = None,
     no_auth: bool = False,
     secret_key: str | None = None,
@@ -1532,9 +1537,38 @@ def create_app(
     templates_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'templates')
     app = Flask(__name__, template_folder=templates_dir)
 
-    # Wczytanie konfiguracji z pliku YAML
-    app_config = read_config(config_path) if os.path.isfile(config_path) else {}
-    effective_storage = storage_dir or app_config.get('storage_dir', 'storage')
+    # Ustalenie docelowych ścieżek z uwzględnieniem CLI, ENV oraz bazowego katalogu danych (data_dir)
+    resolved_config_path, resolved_storage_dir = resolve_config_and_storage_paths(
+        cli_config=config_path,
+        cli_storage=storage_dir,
+        data_dir=data_dir,
+    )
+    config_path = resolved_config_path
+    storage_dir = resolved_storage_dir or storage_dir
+
+    # Wczytanie konfiguracji z pliku YAML lub zmiennych środowiskowych (ENV)
+    if os.path.isfile(config_path):
+        app_config = read_config(config_path)
+    else:
+        try:
+            app_config = read_config(config_path)
+            # Jeśli załadowano konfigurację z ENV, a wskazano bazowy katalog danych (data_dir lub LIBRUS_DATA_DIR / DATA_DIR),
+            # utrwalamy config.yaml w tym katalogu, aby konfiguracja była trwała po restarcie
+            has_explicit_data_dir = bool(data_dir or os.environ.get('LIBRUS_DATA_DIR') or os.environ.get('DATA_DIR'))
+            if app_config and getattr(app_config, 'librus_users', None) and has_explicit_data_dir:
+                try:
+                    save_config_yaml(app_config, config_path)
+                    logger.info(f"Zapisano początkową konfigurację ze zmiennych środowiskowych do {config_path}")
+                except Exception as save_err:
+                    logger.debug(f"Nie udało się zapisać konfiguracji z ENV do {config_path}: {save_err}")
+        except Exception:
+            app_config = {}
+
+    effective_storage = (
+        storage_dir
+        or (app_config.get('storage_dir') if isinstance(app_config, (dict, collections.abc.Mapping)) else None)
+        or 'storage'
+    )
     storage = get_storage(app_config, effective_storage)
 
     # Konfiguracja hasła i sesji
@@ -1721,8 +1755,9 @@ def main():
     parser = argparse.ArgumentParser(
         description="Librus2mail Web Dashboard - Interaktywny pulpit rodzica."
     )
-    parser.add_argument('-c', '--config', default='config.yaml', help="Ścieżka do pliku konfiguracyjnego YAML")
-    parser.add_argument('-s', '--storage-dir', default=None, help="Katalog pamięci stanu storage/")
+    parser.add_argument('-c', '--config', default=None, help="Ścieżka do pliku konfiguracyjnego YAML (domyślnie: config.yaml lub <data-dir>/config.yaml)")
+    parser.add_argument('-s', '--storage-dir', default=None, help="Katalog pamięci stanu storage/ (domyślnie: storage/ lub <data-dir>/storage)")
+    parser.add_argument('-d', '--data-dir', default=None, help="Bazowy katalog danych aplikacji (np. /data). Gdy ustawiony, config.yaml i storage/ będą domyślnie lokowane w tym katalogu.")
     parser.add_argument('-u', '--user', default=None, help="Filtr / domyślny login ucznia do wyświetlenia")
     parser.add_argument('-p', '--port', type=int, default=None, help="Port serwera HTTP (domyślnie z config.yaml lub 5000)")
     parser.add_argument('-b', '--bind', '--host', dest='host', default=None, help="Adres nasłuchu (domyślnie z config.yaml lub 0.0.0.0 dla serwera)")
@@ -1738,12 +1773,18 @@ def main():
     args = parser.parse_args()
     setup_logging()
 
+    resolved_config, resolved_storage = resolve_config_and_storage_paths(
+        cli_config=args.config,
+        cli_storage=args.storage_dir,
+        data_dir=args.data_dir,
+    )
+
     if args.export_html:
         from .export import export_web_views
         files = export_web_views(
             output_dir=args.export_html,
-            config_path=args.config,
-            storage_dir=args.storage_dir,
+            config_path=resolved_config,
+            storage_dir=resolved_storage,
             user_login=args.user,
             actual_date=args.actual_date,
         )
@@ -1757,8 +1798,9 @@ def main():
     run_scheduler = not no_collector and (not args.debug or is_reloader_child)
 
     app = create_app(
-        config_path=args.config,
-        storage_dir=args.storage_dir,
+        config_path=resolved_config,
+        storage_dir=resolved_storage,
+        data_dir=args.data_dir,
         web_password=args.password,
         no_auth=args.no_auth,
         max_login_attempts=args.max_attempts,
@@ -1769,8 +1811,9 @@ def main():
 
     cfg_app = app.config.get('APP_CONFIG', {}) if isinstance(app.config.get('APP_CONFIG'), (dict, collections.abc.Mapping)) else {}
     cfg_web = cfg_app.get('web', {}) if isinstance(cfg_app.get('web'), (dict, collections.abc.Mapping)) else {}
-    effective_host = args.host or cfg_web.get('host') or '0.0.0.0'  # nosec
-    effective_port = args.port or int(cfg_web.get('port', 5000))
+    env_port = int(os.environ['PORT']) if 'PORT' in os.environ and os.environ['PORT'].isdigit() else None
+    effective_host = args.host or os.environ.get('HOST') or cfg_web.get('host') or '0.0.0.0'  # nosec
+    effective_port = args.port or env_port or int(cfg_web.get('port', 5000))
 
     is_loop_enabled = cfg_app.get('work_in_loop', True) if isinstance(cfg_app, (dict, collections.abc.Mapping)) else True
 

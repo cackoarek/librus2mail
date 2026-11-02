@@ -189,6 +189,7 @@ librus-collector [opcje]
 | :--- | :--- | :--- | :--- |
 | `-c`, `--config <plik>` | opcja | `config.yaml` | Ścieżka do pliku konfiguracyjnego YAML. |
 | `-s`, `--storage-dir <kat>` | opcja | `storage` | Ścieżka do katalogu pamięci stanu. |
+| `--data-dir <kat>` | opcja | `None` | Bazowy katalog danych (np. `/data`). Gdy podany, `config.yaml` i `storage/` są lokowane wewnątrz tego folderu. |
 | `-u`, `--user <login/nazwa>` | opcja | `None` (wszyscy) | Zawęża pobieranie tylko do wskazanego ucznia. |
 | `--sync-only` | flaga | `False` | Tylko synchronizuje dane z Librusem do storage (bez powiadomień). |
 | `--offline` | flaga | `False` | Tryb testowy: symuluje pobieranie na podstawie lokalnego storage. |
@@ -423,6 +424,7 @@ python librus_web.py [-h] [-c CONFIG] [-s STORAGE_DIR] [-u USER] [-p PORT] [-b H
 | :--- | :--- | :--- | :--- |
 | `-c`, `--config` | Ścieżka do pliku | `config.yaml` | Ścieżka do pliku konfiguracyjnego YAML |
 | `-s`, `--storage-dir` | Ścieżka katalogu | z konfiguracji lub `storage/` | Ścieżka do katalogu z danymi stanu `storage/` |
+| `-d`, `--data-dir` | Ścieżka katalogu | `None` | Bazowy katalog roboczy/danych (np. `/data`). Gdy podany, `config.yaml` oraz `storage/` są lokowane wewnątrz tej ścieżki |
 | `-u`, `--user` | Ciąg znaków | `None` (pierwszy uczeń) | Domyślny aktywny profil ucznia na starcie |
 | `-p`, `--port` | Liczba całkowita | `5000` | Port serwera HTTP |
 | `-b`, `--bind`, `--host`| Adres IP | `127.0.0.1` | Adres nasłuchu (`127.0.0.1` tylko lokalnie, `0.0.0.0` dla sieci domowej/Wi-Fi) |

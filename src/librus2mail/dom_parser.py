@@ -4,6 +4,7 @@ Zawiera odporne na zmiany layoutu helpery wyciągające dane dla wiadomości,
 ogłoszeń, ocen, terminarza i planu lekcji. Działa w 100% offline na obiektach BeautifulSoup.
 """
 
+import logging
 import re
 from collections.abc import Callable
 from typing import Any
@@ -19,6 +20,8 @@ from .domain_models import (
     ScheduleLesson,
     TimetableEntry,
 )
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_LESSON_TIMES: dict[int, tuple[str, str]] = {
     1: ("08:00", "08:45"),
@@ -85,11 +88,70 @@ def correct_sender_name(sender_raw: str) -> str:
     return sender
 
 
+def extract_message_link(sender_td, title_td, msg_row=None) -> str:
+    """
+    Defensywnie ekstraktuje relatywny lub absolutny URL szczegółów wiadomości.
+    Obsługuje standardowe linki <a>, wywołania javascript: oraz onclick na wierszu.
+    """
+    candidates: list[str] = []
+    # 1. Sprawdź znaczniki <a> w komórkach tematu i nadawcy, a potem w całym wierszu
+    for td in [title_td, sender_td]:
+        if td:
+            for a in td.find_all('a'):
+                href = (a.get('href') or '').strip()
+                if href:
+                    candidates.append(href)
+    if msg_row:
+        for a in msg_row.find_all('a'):
+            href = (a.get('href') or '').strip()
+            if href and href not in candidates:
+                candidates.append(href)
+        onclick = (msg_row.get('onclick') or '').strip()
+        if onclick:
+            candidates.append(onclick)
+
+    # 2. Wzorce specyficzne dla szczegółów wiadomości w Librus Synergia:
+    # np. /wiadomosci/1/5/3704610/f0, /wiadomosci/1/5/3704610, /wiadomosci/szczegoly/101
+    msg_url_pattern = re.compile(
+        r"(/wiadomosci/(?:1/\d+/\d+(?:/f\d+)?|szczegoly/\d+|1/[^'\" ]+))",
+        re.IGNORECASE,
+    )
+    general_msg_pattern = re.compile(r"(/wiadomosci/[^'\" \(\)]+)", re.IGNORECASE)
+
+    for cand in candidates:
+        if m := msg_url_pattern.search(cand):
+            return m.group(1)
+
+    for cand in candidates:
+        if 'javascript:' in cand.lower() or 'location' in cand.lower():
+            if m := general_msg_pattern.search(cand):
+                url = m.group(1)
+                # Odrzuć foldery główne i akcje formularzy
+                if not any(url.rstrip('/').endswith(f) for f in ['/2', '/5', '/6', '/7', '/10', '/wiadomosci']):
+                    return url
+        elif cand.startswith('/') or cand.startswith('http'):
+            if '/wiadomosci/' in cand:
+                if not any(cand.rstrip('/').endswith(f) for f in ['/2', '/5', '/6', '/7', '/10', '/wiadomosci']):
+                    return cand
+
+    # 3. Fallback dla uproszczonych struktur (np. testy jednostkowe)
+    for td in [title_td, sender_td]:
+        if td:
+            a = td.find('a')
+            if a and a.get('href'):
+                href = a.get('href', '').strip()
+                if not href.startswith('javascript:'):
+                    return href
+
+    return ""
+
+
 def parse_messages_html(
     html_or_soup: str | BeautifulSoup,
     known_messages: set | None = None,
     fetch_body_fn: Callable[[str], str] | None = None,
     do_read_messages: bool = True,
+    known_messages_with_body: set[str] | None = None,
 ) -> list[Message]:
     """
     Defensywnie parsuje stronę skrzynki wiadomości (/wiadomosci lub /wiadomosci/5).
@@ -111,19 +173,49 @@ def parse_messages_html(
     tbody = mess_tab.find('tbody') or mess_tab
     messages: list[Message] = []
 
+    # Dynamiczne mapowanie kolumn na podstawie nagłówków thead (jeśli dostępne)
+    col_map: dict[str, int] = {}
+    thead = mess_tab.find('thead')
+    if thead:
+        for idx, th in enumerate(thead.find_all(['th', 'td'])):
+            th_text = th.get_text().strip().lower()
+            if 'nadaw' in th_text:
+                col_map['sender'] = idx
+            elif 'temat' in th_text:
+                col_map['title'] = idx
+            elif 'data' in th_text or 'wysł' in th_text:
+                col_map['date'] = idx
+            elif 'załącz' in th_text or 'plik' in th_text:
+                col_map['attachment'] = idx
+
     for msg_row in tbody.find_all('tr'):
         tds = msg_row.find_all('td')
         if len(tds) < 4:
             continue
 
-        # Wyszukiwanie kolumn defensywnie
-        # Zwykle: 0=checkbox, 1=załącznik, 2=nadawca, 3=temat, 4=data
         sender_td = None
         title_td = None
         date_td = None
         has_attachment = False
 
-        if len(tds) >= 5:
+        if 'sender' in col_map and 'title' in col_map and 'date' in col_map:
+            # Użyj wykrytych nagłówków
+            s_idx = col_map['sender']
+            t_idx = col_map['title']
+            d_idx = col_map['date']
+            sender_td = tds[s_idx] if len(tds) > s_idx else None
+            title_td = tds[t_idx] if len(tds) > t_idx else None
+            date_td = tds[d_idx] if len(tds) > d_idx else None
+            if 'attachment' in col_map and len(tds) > col_map['attachment']:
+                has_attachment = bool(tds[col_map['attachment']].find('img'))
+            else:
+                # Sprawdź komórki przed nadawcą pod kątem ikony załącznika (np. img w tds[1])
+                for idx in range(min(s_idx, len(tds))):
+                    if tds[idx].find('img'):
+                        has_attachment = True
+                        break
+        elif len(tds) >= 5:
+            # Domyślny układ 5-kolumnowy: 0=checkbox, 1=załącznik, 2=nadawca, 3=temat, 4=data
             has_attachment = bool(tds[1].find('img'))
             sender_td = tds[2]
             title_td = tds[3]
@@ -143,22 +235,37 @@ def parse_messages_html(
             continue
 
         sender = correct_sender_name(sender_raw)
-        link_elem = (sender_td.find('a') if sender_td else None) or (title_td.find('a') if title_td else None)
-        link = link_elem.get('href', '').strip() if link_elem else ""
+        link = extract_message_link(sender_td, title_td, msg_row)
 
         composite_id = f"{title}{dt}{sender_raw}"
         is_unread = composite_id not in known
 
+        # Weryfikacja pogrubienia (bold w stylu CSS lub znacznik <b>)
+        row_style = (msg_row.get('style') or '').lower()
+        sender_style = (sender_td.get('style') or '').lower() if sender_td else ''
+        title_style = (title_td.get('style') or '').lower() if title_td else ''
+        if (
+            'bold' in sender_style
+            or 'bold' in title_style
+            or 'bold' in row_style
+            or (sender_td and sender_td.find('b'))
+            or (title_td and title_td.find('b'))
+        ):
+            is_unread = True
+
+        # Wiadomość wymaga pobrania treści, jeśli jest nieprzeczytana LUB jeśli
+        # jest już znana, ale w storage ma pustą treść (backfill naprawczy).
+        need_body = is_unread
+        if known_messages_with_body is not None:
+            need_body = is_unread or (composite_id not in known_messages_with_body)
+
         body = ""
-        if is_unread and do_read_messages and link and fetch_body_fn:
+        if need_body and do_read_messages and link and fetch_body_fn:
             try:
                 body = fetch_body_fn(link)
-            except Exception:
+            except Exception as e:
+                logger.warning(f"Nie udało się pobrać treści wiadomości '{title}' ({link}): {e}")
                 body = ""
-
-        # Weryfikacja pogrubienia (bold w stylu CSS)
-        if sender_td and 'bold' in sender_td.get('style', '').lower():
-            is_unread = True
 
         msg = Message.model_validate({
             'id': composite_id,
@@ -566,6 +673,13 @@ def parse_schedule_html(
             raw_title = a_tag.get('title', '') if a_tag else ''
             tooltip_attrs = parse_tooltip_kv(raw_title)
 
+            cell_entries: list[ScheduleLesson] = []
+            has_cell_strike = bool(
+                cell.find(['s', 'strike', 'del'])
+                or 'line-through' in cell.get('style', '')
+                or 'odwolana' in cell.get('class', [])
+            )
+
             for b_idx, block in enumerate(blocks):
                 block_text = safe_get_text(block)
                 if not block_text:
@@ -600,27 +714,51 @@ def parse_schedule_html(
                     else:
                         teacher = rest.strip(' ,()')
 
+                block_a = block.find('a')
+                block_raw_title = block_a.get('title', '') if block_a else ''
+                block_tooltip = parse_tooltip_kv(block_raw_title) if block_a else {}
+                effective_tooltip = block_tooltip or tooltip_attrs
+
                 teacher = re.sub(r'\s+', ' ', teacher).strip(' ,.-')
-                if 'nauczyciel' in tooltip_attrs and not teacher:
-                    teacher = re.sub(r'\s+', ' ', tooltip_attrs['nauczyciel']).strip()
-                if 'sala' in tooltip_attrs and not classroom:
-                    classroom = re.sub(r'\s+', ' ', tooltip_attrs['sala']).strip('. ')
+                if 'nauczyciel' in effective_tooltip and not teacher:
+                    teacher = re.sub(r'\s+', ' ', effective_tooltip['nauczyciel']).strip()
+                if 'sala' in effective_tooltip and not classroom:
+                    classroom = re.sub(r'\s+', ' ', effective_tooltip['sala']).strip('. ')
 
                 has_strike = bool(
                     block.find(['s', 'strike', 'del'])
                     or 'line-through' in block.get('style', '')
-                    or 'line-through' in cell.get('style', '')
                     or 'odwolana' in block.get('class', [])
-                    or 'odwolana' in cell.get('class', [])
+                    or (len(blocks) == 1 and has_cell_strike)
                 )
 
+                block_context = f"{block_text} {block_raw_title} {' '.join(block_tooltip.values())}".lower()
                 all_context = f"{info_text} {cell_text} {raw_title} {' '.join(tooltip_attrs.values())}".lower()
                 is_cancelled = False
                 is_substitution = False
                 is_moved = False
                 substitution_info = ""
 
-                if 'odwołan' in all_context or 'odwolana' in all_context or (has_strike and 'zastęp' not in all_context):
+                # Sprawdzenie w kontekście bloku lub komórki
+                if 'odwołan' in block_context or 'odwolana' in block_context or (has_strike and 'zastęp' not in block_context and 'zastep' not in block_context):
+                    is_cancelled = True
+                elif 'zastęp' in block_context or 'zastep' in block_context or (len(blocks) == 1 and ('zastęp' in all_context or 'zastep' in all_context)):
+                    is_substitution = True
+                    active_tooltip = block_tooltip or tooltip_attrs
+                    if active_tooltip:
+                        sub_parts = []
+                        if 'przedmiot' in active_tooltip:
+                            sub_parts.append(active_tooltip['przedmiot'])
+                        if 'nauczyciel' in active_tooltip:
+                            sub_parts.append(f"p. {active_tooltip['nauczyciel']}")
+                        if 'sala' in active_tooltip:
+                            sub_parts.append(f"s. {active_tooltip['sala']}")
+                        substitution_info = ", ".join(sub_parts)
+                    elif info_text:
+                        substitution_info = info_text
+                elif 'przesunię' in block_context or 'przesunie' in block_context:
+                    is_moved = True
+                elif 'odwołan' in all_context or 'odwolana' in all_context or (has_strike and 'zastęp' not in all_context):
                     is_cancelled = True
                 elif 'zastęp' in all_context or 'zastep' in all_context:
                     is_substitution = True
@@ -635,11 +773,9 @@ def parse_schedule_html(
                         substitution_info = ", ".join(sub_parts)
                     elif info_text:
                         substitution_info = info_text
-                elif 'przesunię' in all_context or 'przesunie' in all_context:
-                    is_moved = True
 
                 entry_id = f"sched_{date_str}_{lesson_no}_{subject}_{b_idx}"
-                entries.append(ScheduleLesson.model_validate({
+                cell_entries.append(ScheduleLesson.model_validate({
                     'id': entry_id,
                     'date': date_str,
                     'lesson_no': lesson_no,
@@ -655,6 +791,43 @@ def parse_schedule_html(
                     'substitution_info': substitution_info,
                     'raw_entry': block_text,
                 }))
+
+            # Gdy w danej komórce (okienku lekcyjnym) jest zastępstwo i więcej niż jeden wpis,
+            # odfiltrowujemy oryginalną zastąpioną lekcję (np. przekreśloną Informatykę zastąpioną Matematyką),
+            # aby na planie nie dublować lekcji w tym samym czasie.
+            if len(cell_entries) > 1 and any(e.is_substitution for e in cell_entries):
+                sub_entries = [e for e in cell_entries if e.is_substitution]
+                orig_names = set()
+                for s in sub_entries:
+                    s_info = f"{s.substitution_info} {info_text}"
+                    m = re.search(r'zastępstwo\s+za(?:\s+zajęcia)?:\s*([^\n\r]+)', s_info, re.IGNORECASE)
+                    if m:
+                        clean = re.sub(r',?\s*(?:s\.|sala).*$', '', m.group(1), flags=re.IGNORECASE).strip(' ,.-').lower()
+                        if clean:
+                            orig_names.add(clean)
+                if info_text:
+                    m = re.search(r'zastępstwo\s+za(?:\s+zajęcia)?:\s*([^\n\r]+)', info_text, re.IGNORECASE)
+                    if m:
+                        clean = re.sub(r',?\s*(?:s\.|sala).*$', '', m.group(1), flags=re.IGNORECASE).strip(' ,.-').lower()
+                        if clean:
+                            orig_names.add(clean)
+
+                kept_entries: list[ScheduleLesson] = []
+                for e in cell_entries:
+                    if e.is_substitution:
+                        kept_entries.append(e)
+                        continue
+                    subj_lower = str(e.subject).strip().lower()
+                    raw_lower = str(e.raw_entry).lower()
+                    # Jeśli lekcja jest wymieniona jako zastąpiona lub jest przekreślona/odwołana przy obecności zastępstwa, pomijamy ją
+                    is_named_orig = any(orig in subj_lower or subj_lower in orig or orig in raw_lower for orig in orig_names if orig)
+                    if is_named_orig or e.is_cancelled:
+                        continue
+                    kept_entries.append(e)
+
+                cell_entries = kept_entries or sub_entries
+
+            entries.extend(cell_entries)
 
     return entries
 

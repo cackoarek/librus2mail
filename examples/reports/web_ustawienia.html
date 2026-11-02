@@ -682,12 +682,8 @@
                             <select onchange="window.location.href='/student/' + this.value + '?next=' + encodeURIComponent(window.location.pathname + window.location.search)"
                                     class="bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold rounded-xl px-2.5 py-1.5 pr-6 max-w-[230px] xl:max-w-[265px] 2xl:max-w-[345px] truncate focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
                                 
-                                <option value="8912345" >
-                                    👤 Jan Kowalski (klasa 5A) (8912345)
-                                </option>
-                                
-                                <option value="8976543" >
-                                    👤 Anna Kowalska (Liceum 2A) (8976543)
+                                <option value="11030948" >
+                                    👤 Jan Kowalski (11030948)
                                 </option>
                                 
                                 <option value="8979296" selected>
@@ -791,26 +787,14 @@
                 </label>
                 <div class="space-y-1.5">
                     
-                    <a href="/student/8912345?next=/ustawienia"
+                    <a href="/student/11030948?next=/ustawienia"
                        class="flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold transition-all
                        
                        border-slate-200 hover:bg-slate-50 text-slate-700
                        ">
                         <span class="flex items-center gap-2">
                             <span>👤</span>
-                            <span>Jan Kowalski (klasa 5A) (8912345)</span>
-                        </span>
-                        
-                    </a>
-                    
-                    <a href="/student/8976543?next=/ustawienia"
-                       class="flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold transition-all
-                       
-                       border-slate-200 hover:bg-slate-50 text-slate-700
-                       ">
-                        <span class="flex items-center gap-2">
-                            <span>👤</span>
-                            <span>Anna Kowalska (Liceum 2A) (8976543)</span>
+                            <span>Jan Kowalski (11030948)</span>
                         </span>
                         
                     </a>
@@ -941,7 +925,7 @@
 
         <div class="flex items-center gap-2">
             <span class="text-xs font-mono px-3 py-1.5 bg-slate-100 text-slate-600 rounded-xl border border-slate-200">
-                📄 config-example.yaml
+                📄 config.yaml
             </span>
         </div>
     </div>
@@ -978,11 +962,6 @@
                             Profil Ucznia #1
                         </span>
                         
-                        <button type="button" onclick="this.closest('.student-settings-card').remove()"
-                                class="text-xs font-bold text-rose-600 hover:text-rose-800 bg-rose-50 border border-rose-200 px-2.5 py-1 rounded-lg">
-                            ✕ Usuń konto
-                        </button>
-                        
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -990,7 +969,7 @@
                             <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
                                 Imię / Etykieta wyświetlana *
                             </label>
-                            <input type="text" name="student_name_0" required value="Jan Kowalski (klasa 5A)"
+                            <input type="text" name="student_name_0" required value="Jan Kowalski"
                                    class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                         </div>
 
@@ -999,7 +978,7 @@
                                 Odbiorcy e-mail powiadomień *
                             </label>
                             <input type="text" name="student_receivers_0" required
-                                   value="rodzic.kowalski@example.com, mama.kowalska@example.com"
+                                   value="cackoarek@gmail.com"
                                    placeholder="mama@example.com, tata@example.com"
                                    class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                         </div>
@@ -1009,7 +988,7 @@
                                 Login do portalu Librus *
                             </label>
                             <input type="text" id="librus_login_0" name="student_login_0" required
-                                   value="8912345"
+                                   value="11030948"
                                    class="w-full text-sm font-mono px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                         </div>
 
@@ -1063,7 +1042,7 @@
                         <div class="flex items-center justify-between mb-2">
                             <label class="inline-flex items-center gap-2 cursor-pointer">
                                 <input type="checkbox" name="student_report_enabled_0" id="student_report_enabled_settings_0"
-                                       checked
+                                       
                                        onchange="toggleStudentReportBoxSettings(0)"
                                        class="rounded text-amber-500 focus:ring-amber-400">
                                 <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
@@ -1073,7 +1052,7 @@
                             <span class="text-[11px] text-slate-400 font-medium">Opcjonalnie</span>
                         </div>
 
-                        <div id="student-report-box-settings-0" class="mt-3 p-4 bg-amber-50/50 border border-amber-200/80 rounded-2xl space-y-3">
+                        <div id="student-report-box-settings-0" class="hidden mt-3 p-4 bg-amber-50/50 border border-amber-200/80 rounded-2xl space-y-3">
                             <p class="text-xs text-amber-900 leading-relaxed">
                                 Dedykowany raport motywacyjny z osiągnięciami, supermocami, odznakami grywalizacyjnymi i wyzwaniami dopasowanymi do wieku ucznia.
                             </p>
@@ -1083,7 +1062,7 @@
                                         Adres e-mail dziecka (lub rodzica)
                                     </label>
                                     <input type="email" name="student_report_email_0" id="student_report_email_settings_0"
-                                           value="uczen.kowalski@example.com"
+                                           value=""
                                            placeholder="np. janek@example.com lub email rodzica"
                                            class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:outline-none bg-white">
                                 </div>
@@ -1105,140 +1084,6 @@
                     <div id="test-feedback-settings-0" class="hidden mt-3 text-xs p-3 rounded-xl"></div>
                 </div>
                 
-                
-                <div class="student-settings-card p-5 rounded-2xl border-2 border-slate-200 bg-slate-50/50 relative" data-index="1">
-                    <div class="flex items-center justify-between mb-4">
-                        <span class="text-xs font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-lg">
-                            Profil Ucznia #2
-                        </span>
-                        
-                        <button type="button" onclick="this.closest('.student-settings-card').remove()"
-                                class="text-xs font-bold text-rose-600 hover:text-rose-800 bg-rose-50 border border-rose-200 px-2.5 py-1 rounded-lg">
-                            ✕ Usuń konto
-                        </button>
-                        
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
-                                Imię / Etykieta wyświetlana *
-                            </label>
-                            <input type="text" name="student_name_1" required value="Anna Kowalska (Liceum 2A)"
-                                   class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
-                                Odbiorcy e-mail powiadomień *
-                            </label>
-                            <input type="text" name="student_receivers_1" required
-                                   value="rodzic.kowalski@example.com"
-                                   placeholder="mama@example.com, tata@example.com"
-                                   class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
-                                Login do portalu Librus *
-                            </label>
-                            <input type="text" id="librus_login_1" name="student_login_1" required
-                                   value="8976543"
-                                   class="w-full text-sm font-mono px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
-                                Nowe hasło do portalu Librus (zostaw puste, aby zachować obecne)
-                            </label>
-                            <input type="password" id="librus_password_1" name="student_password_1"
-                                   placeholder="•••••••••••• (obecne hasło zachowane)"
-                                   class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                        </div>
-                    </div>
-
-                    <!-- Opcje monitorowania i test połączenia -->
-                    <div class="mt-4 pt-4 border-t border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div class="flex flex-wrap items-center gap-4 text-xs font-medium text-slate-700">
-                            <label class="inline-flex items-center gap-1.5 cursor-pointer">
-                                <input type="checkbox" name="student_grades_1" checked class="rounded text-indigo-600 focus:ring-indigo-500">
-                                <span>Monitoruj oceny</span>
-                            </label>
-                            <label class="inline-flex items-center gap-1.5 cursor-pointer">
-                                <input type="checkbox" name="student_timetable_1" checked class="rounded text-indigo-600 focus:ring-indigo-500">
-                                <span>Terminarz</span>
-                            </label>
-                            <label class="inline-flex items-center gap-1.5 cursor-pointer">
-                                <input type="checkbox" name="student_schedule_1" checked class="rounded text-indigo-600 focus:ring-indigo-500">
-                                <span>Plan lekcji</span>
-                            </label>
-                            <label class="inline-flex items-center gap-1.5 cursor-pointer" title="Wiadomości w Librusie zostaną oznaczone jako przeczytane">
-                                <input type="checkbox" name="student_messages_1" checked class="rounded text-indigo-600 focus:ring-indigo-500">
-                                <span>Wiadomości</span>
-                            </label>
-                            <label class="inline-flex items-center gap-1.5 cursor-pointer" title="Konsoliduje oceny, wiadomości, ogłoszenia i terminarz w jeden wspólny e-mail (one_summary_message)">
-                                <input type="hidden" name="student_one_summary_present_1" value="1">
-                                <input type="checkbox" name="student_one_summary_1" id="student_one_summary_1" checked class="student-summary-checkbox-settings rounded text-indigo-600 focus:ring-indigo-500">
-                                <span class="font-semibold text-indigo-900">📦 Zbiorczy e-mail (wszystko w jednym)</span>
-                            </label>
-                        </div>
-
-                        <div>
-                            <button type="button" onclick="testLibrusAccountSettings(1)"
-                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-indigo-700 bg-white border border-indigo-300 hover:bg-indigo-50 rounded-xl transition shadow-xs cursor-pointer">
-                                <span>🔍 Testuj logowanie Librus</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Opcjonalny raport motywacyjny dla samego dziecka (student_report) -->
-                    <div class="mt-4 pt-4 border-t border-slate-200/80">
-                        
-                        <div class="flex items-center justify-between mb-2">
-                            <label class="inline-flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" name="student_report_enabled_1" id="student_report_enabled_settings_1"
-                                       checked
-                                       onchange="toggleStudentReportBoxSettings(1)"
-                                       class="rounded text-amber-500 focus:ring-amber-400">
-                                <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                                    <span>🏆</span> Włącz raport motywacyjny dla dziecka (student_report)
-                                </span>
-                            </label>
-                            <span class="text-[11px] text-slate-400 font-medium">Opcjonalnie</span>
-                        </div>
-
-                        <div id="student-report-box-settings-1" class="mt-3 p-4 bg-amber-50/50 border border-amber-200/80 rounded-2xl space-y-3">
-                            <p class="text-xs text-amber-900 leading-relaxed">
-                                Dedykowany raport motywacyjny z osiągnięciami, supermocami, odznakami grywalizacyjnymi i wyzwaniami dopasowanymi do wieku ucznia.
-                            </p>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <div>
-                                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                                        Adres e-mail dziecka (lub rodzica)
-                                    </label>
-                                    <input type="email" name="student_report_email_1" id="student_report_email_settings_1"
-                                           value="anna.kowalska@example.com"
-                                           placeholder="np. janek@example.com lub email rodzica"
-                                           class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:outline-none bg-white">
-                                </div>
-                                <div>
-                                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                                        Szablon raportu (dopasowany do wieku)
-                                    </label>
-                                    <select name="student_report_template_1" id="student_report_template_settings_1"
-                                            class="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:outline-none bg-white">
-                                        <option value="kids" >🎮 Kids (Szkoła podstawowa, klasy 4–6: odznaki, Karta Mocy)</option>
-                                        <option value="teens" >⚡ Teens (Starsze klasy podstawówki, klasy 7–8: Quick Wins, egzamin)</option>
-                                        <option value="youth" selected>📊 Youth (Szkoła średnia / liceum / technikum: Dashboard, KPI)</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="test-feedback-settings-1" class="hidden mt-3 text-xs p-3 rounded-xl"></div>
-                </div>
-                
             </div>
         </div>
 
@@ -1257,8 +1102,8 @@
 
             <!-- Wybór dostawcy poczty -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
-                <label class="provider-radio-settings flex items-center gap-3 p-4 border-2 border-indigo-600 bg-indigo-50/40 rounded-2xl cursor-pointer transition">
-                    <input type="radio" name="mail_provider" value="gmail" checked onchange="toggleMailProviderSettings()"
+                <label class="provider-radio-settings flex items-center gap-3 p-4 border-2 border-slate-200 bg-white rounded-2xl cursor-pointer transition">
+                    <input type="radio" name="mail_provider" value="gmail"  onchange="toggleMailProviderSettings()"
                            class="text-indigo-600 focus:ring-indigo-500">
                     <div>
                         <span class="block text-sm font-extrabold text-slate-900">Poczta Gmail</span>
@@ -1266,8 +1111,8 @@
                     </div>
                 </label>
 
-                <label class="provider-radio-settings flex items-center gap-3 p-4 border-2 border-slate-200 bg-white rounded-2xl cursor-pointer transition">
-                    <input type="radio" name="mail_provider" value="smtp"  onchange="toggleMailProviderSettings()"
+                <label class="provider-radio-settings flex items-center gap-3 p-4 border-2 border-indigo-600 bg-indigo-50/40 rounded-2xl cursor-pointer transition">
+                    <input type="radio" name="mail_provider" value="smtp" checked onchange="toggleMailProviderSettings()"
                            class="text-indigo-600 focus:ring-indigo-500">
                     <div>
                         <span class="block text-sm font-extrabold text-slate-900">Własny serwer SMTP</span>
@@ -1279,7 +1124,7 @@
             
             
             <!-- Sekcja wyboru metody autoryzacji dla Gmail -->
-            <div id="gmail-auth-mode-settings-box" class=" mb-5 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl">
+            <div id="gmail-auth-mode-settings-box" class="hidden mb-5 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl">
                 <span class="block text-xs font-bold text-slate-700 uppercase mb-2">Metoda logowania do Gmail</span>
                 <div class="flex flex-col sm:flex-row gap-3">
                     <label class="gmail-auth-settings-radio flex items-center gap-2 p-2.5 rounded-xl border border-indigo-600 bg-white cursor-pointer transition text-xs font-bold text-slate-800">
@@ -1301,7 +1146,7 @@
                     <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
                         Adres e-mail nadawcy
                     </label>
-                    <input type="email" name="mail_login" value="twoje.powiadomienia@gmail.com" placeholder="twoje.powiadomienia@gmail.com"
+                    <input type="email" name="mail_login" value="aa@pl" placeholder="twoje.powiadomienia@gmail.com"
                            class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 </div>
 
@@ -1323,12 +1168,12 @@
             </div>
 
             
-            <div id="smtp-settings-settings-box" class="hidden mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div id="smtp-settings-settings-box" class=" mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
                         Host serwera SMTP
                     </label>
-                    <input type="text" name="smtp_host" value="smtp.twoj-serwer-poczty.pl" placeholder="smtp.twojadomena.pl"
+                    <input type="text" name="smtp_host" value="aaa.pl" placeholder="smtp.twojadomena.pl"
                            class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 </div>
 
@@ -1341,7 +1186,7 @@
                 </div>
             </div>
 
-            <div id="gmail-settings-tip-box" class=" mt-4 p-4 bg-sky-50 border border-sky-200 rounded-xl text-xs text-sky-800">
+            <div id="gmail-settings-tip-box" class="hidden mt-4 p-4 bg-sky-50 border border-sky-200 rounded-xl text-xs text-sky-800">
                 💡 <strong>Wskazówka:</strong> Dla konta Gmail włącz weryfikację dwuetapową na koncie Google i wygeneruj specjalne
                 <strong>Hasło do aplikacji</strong> w zakładce Bezpieczeństwo.
             </div>
@@ -1510,8 +1355,8 @@
                         </label>
                         
                         <select name="collection_days" id="collection_days_settings" onchange="updateCronPreviewSettings()" class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
-                            <option value="all" >Codziennie (poniedziałek – niedziela)</option>
-                            <option value="workdays" selected>Tylko w dni robocze (poniedziałek – piątek)</option>
+                            <option value="all" selected>Codziennie (poniedziałek – niedziela)</option>
+                            <option value="workdays" >Tylko w dni robocze (poniedziałek – piątek)</option>
                         </select>
                     </div>
                 </div>
@@ -2223,7 +2068,7 @@
                            class="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
                     <div>
                         <span class="font-extrabold text-indigo-950 dark:text-white block text-xs">
-                            Zarchiwizuj jednocześnie dla wszystkich dzieci (Jan Kowalski (klasa 5A) (8912345), Anna Kowalska (Liceum 2A) (8976543), Jan Kowalski (8979296))
+                            Zarchiwizuj jednocześnie dla wszystkich dzieci (Jan Kowalski (11030948), Jan Kowalski (8979296))
                         </span>
                         <span class="text-[11px] text-indigo-800 dark:text-slate-300 block mt-0.5">
                             Gdy zaznaczone, rok zostanie zarchiwizowany równolegle dla każdego dziecka. Gdy odznaczone, zarchiwizowany zostanie wyłącznie aktualny profil: <strong class="dark:text-white">Jan Kowalski (8979296)</strong> (dla pozostałych dzieci należy powtórzyć operację po przełączeniu profilu).
@@ -2283,7 +2128,7 @@
                     </div>
                     <p class="text-indigo-800 dark:text-slate-300 leading-relaxed text-[11px]">
                         Zostaną zarchiwizowane dane dla każdego profilu:
-                        <strong class="dark:text-white">Jan Kowalski (klasa 5A) (8912345), Anna Kowalska (Liceum 2A) (8976543), Jan Kowalski (8979296)</strong>.
+                        <strong class="dark:text-white">Jan Kowalski (11030948), Jan Kowalski (8979296)</strong>.
                         Oceny, terminarz i plan lekcji każdego dziecka zostaną zarchiwizowane do <code>storage/archive/</code>, a na nowy rok szkolny rozpocznie się czysty stan.
                     </p>
                 </div>
@@ -2297,7 +2142,7 @@
                         Zarchiwizowane zostaną dane tylko dla profilu: <strong>Jan Kowalski (8979296)</strong>.
                         
                         <span class="block mt-2 p-2 bg-amber-100/70 border border-amber-300 rounded-lg text-amber-950 font-semibold text-[11px]">
-                            ⚠️ <strong>Ważne:</strong> Po zakończeniu przełącz profil ucznia w prawym górnym rogu menu i powtórz archiwizację dla pozostałych dzieci (Jan Kowalski (klasa 5A) (8912345), Anna Kowalska (Liceum 2A) (8976543)).
+                            ⚠️ <strong>Ważne:</strong> Po zakończeniu przełącz profil ucznia w prawym górnym rogu menu i powtórz archiwizację dla pozostałych dzieci (Jan Kowalski (11030948)).
                         </span>
                         
                     </p>
@@ -2364,7 +2209,7 @@
 </div>
 
 <script>
-let studentSettingsCount = 2;
+let studentSettingsCount = 1;
 
 function openArchiveConfirmModal() {
     const input = document.getElementById('archive_school_year_input');
@@ -2896,7 +2741,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500">
         <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div class="flex items-center gap-2 font-medium">
-                <span>🏫 Librus2mail v2.8.0</span>
+                <span>🏫 Librus2mail v2.9.0</span>
                 <span>•</span>
                 <span>Prywatny Dashboard Rodzica</span>
             </div>

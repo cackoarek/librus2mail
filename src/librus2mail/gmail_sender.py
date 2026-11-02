@@ -44,11 +44,30 @@ class GmailSender(MailSender):
         title = f"{user_config['librus_login_name']} ma nowe oceny w Librusie ({grades_summary})"
         self.__send_gmail(user_config, title, mail_content, self.sender_email, self.password)
 
-    def send_mail_with_summary(self, user_config, messages=None, notifications=None, grades=None, timetable=None, schedule=None, attendance=None):
+    def send_mail_with_summary(
+        self,
+        user_config,
+        messages=None,
+        notifications=None,
+        grades=None,
+        timetable=None,
+        schedule=None,
+        attendance=None,
+        attendance_summary=None,
+    ):
         messages = messages or []
         notifications = notifications or []
         grades = grades or []
-        mail_content = self.create_mail_content_for_summary(user_config, messages, notifications, grades, timetable=timetable, schedule=schedule, attendance=attendance)
+        mail_content = self.create_mail_content_for_summary(
+            user_config,
+            messages,
+            notifications,
+            grades,
+            timetable=timetable,
+            schedule=schedule,
+            attendance=attendance,
+            attendance_summary=attendance_summary,
+        )
         title = self._create_summary_title(user_config, messages, notifications, grades, timetable=timetable, schedule=schedule, attendance=attendance)
         self.__send_gmail(user_config, title, mail_content, self.sender_email, self.password)
 

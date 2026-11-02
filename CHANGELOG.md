@@ -9,6 +9,10 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ## [Unreleased]
 
+---
+
+## [2.10.0] – 2026-11-02
+
 ### Dodane
 - **Opcjonalny bazowy katalog danych (`--data-dir` / `LIBRUS_DATA_DIR`)**:
   - Dodano parametr CLI `--data-dir` (oraz `-d` w `librus_web.py`) i odpowiadającą mu zmienną środowiskową `LIBRUS_DATA_DIR` (lub `DATA_DIR`), pozwalające jawnie wskazać wspólny katalog roboczy (np. trwały dysk `/data` na RunxBuild).
@@ -41,7 +45,6 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
   - Dodano automatyczny mechanizm naprawczy (backfill) w `librus.py`, który przy kolejnej synchronizacji dociąga brakujące treści dla wiadomości zapisanych wcześniej w bazie `storage` z pustym polem `body`.
 
 ---
-
 ## [2.9.0] – 2026-10-23
 
 ### Dodane
@@ -465,7 +468,8 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ---
 
-[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v2.9.0...HEAD
+[Unreleased]: https://github.com/cackoarek/librus2mail/compare/v2.10.0...HEAD
+[2.10.0]: https://github.com/cackoarek/librus2mail/compare/v2.9.0...v2.10.0
 [2.9.0]: https://github.com/cackoarek/librus2mail/compare/v2.8.0...v2.9.0
 [2.8.0]: https://github.com/cackoarek/librus2mail/compare/v2.7.0...v2.8.0
 [2.7.0]: https://github.com/cackoarek/librus2mail/compare/v2.6.0...v2.7.0

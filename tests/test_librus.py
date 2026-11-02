@@ -433,7 +433,7 @@ class TestLibrus(unittest.TestCase):
             # Directly remove known_attendance from the JSON file to simulate legacy file
             p2 = storage._get_file_path("user2")
             import json
-            with open(p2, 'r', encoding='utf-8') as f:
+            with open(p2, encoding='utf-8') as f:
                 d2 = json.load(f)
             d2.pop('known_attendance', None)
             with open(p2, 'w', encoding='utf-8') as f:

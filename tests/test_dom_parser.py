@@ -84,6 +84,7 @@ class TestMessagesParser:
 
     def test_extract_message_link_formats(self):
         from bs4 import BeautifulSoup
+
         from librus2mail.dom_parser import extract_message_link
 
         # Standardowy link w komórce tematu

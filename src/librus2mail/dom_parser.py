@@ -11,8 +11,6 @@ from typing import Any
 
 from bs4 import BeautifulSoup, Tag
 
-logger = logging.getLogger(__name__)
-
 from .domain_models import (
     Announcement,
     AttendanceEntry,
@@ -22,6 +20,8 @@ from .domain_models import (
     ScheduleLesson,
     TimetableEntry,
 )
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_LESSON_TIMES: dict[int, tuple[str, str]] = {
     1: ("08:00", "08:45"),

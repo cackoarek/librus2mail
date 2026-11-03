@@ -10,9 +10,11 @@ import requests
 from bs4 import BeautifulSoup
 
 from .dom_parser import (
+    ensure_soup,
     parse_announcements_html,
     parse_attendance_html,
     parse_grades_html,
+    parse_message_details_html,
     parse_messages_html,
     parse_schedule_html,
     parse_subjects_from_html,
@@ -291,19 +293,11 @@ class Librus:
             logger.error(f"Pobieranie treści wiadomości {url}: {res.status_code} {res.reason}")
             raise LibrusNetworkError(f"HTTP {res.status_code}: {res.reason} przy pobieraniu treści wiadomości", response=res)
 
-        soup = BeautifulSoup(res.content, 'html.parser')
-        message_body_elem = (
-            soup.find('div', attrs={'class': 'container-message-content'})
-            or soup.select_one('.container-message-content')
-            or soup.find('div', id='message-content')
-            or soup.find('div', attrs={'class': 'message-content'})
-            or soup.select_one('table.container-message tr:last-child td')
-        )
-        if not message_body_elem:
-            logger.warning(f"Nie znaleziono kontenera treści wiadomości pod adresem {url} (tytuł strony: {soup.title.get_text().strip() if soup.title else 'brak'})")
-            message_body = ""
-        else:
-            message_body = message_body_elem.get_text().strip()
+        soup = ensure_soup(res.content)
+        message_body = parse_message_details_html(soup)
+        if not message_body:
+            title_str = soup.title.get_text().strip() if soup.title else 'brak'
+            logger.warning(f"Nie znaleziono kontenera treści wiadomości pod adresem {url} (tytuł strony: {title_str})")
 
         sleep(5)
         return message_body

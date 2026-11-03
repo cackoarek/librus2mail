@@ -9,6 +9,7 @@ from librus2mail.dom_parser import (
     parse_announcements_html,
     parse_attendance_html,
     parse_grades_html,
+    parse_message_details_html,
     parse_messages_html,
     parse_schedule_html,
     parse_subjects_from_html,
@@ -166,6 +167,34 @@ class TestMessagesParser:
         )
         assert len(msgs3) == 1
         assert calls == []
+
+    def test_parse_message_details_html(self):
+        # 1. Zwykły HTML z kontenerem container-message-content
+        html1 = '<html><body><div class="container-message-content">Treść wiadomości testowej</div></body></html>'
+        assert parse_message_details_html(html1) == "Treść wiadomości testowej"
+
+        # 2. Alternatywny kontener table.container-message
+        html2 = '<table class="container-message"><tr><td>Nagłówek</td></tr><tr><td>Treść w tabeli</td></tr></table>'
+        assert parse_message_details_html(html2) == "Treść w tabeli"
+
+        # 3. Pusty lub brak kontenera
+        assert parse_message_details_html("<html><body>Brak treści</body></html>") == ""
+
+    def test_parse_message_details_from_view_source(self):
+        # Zrzut Chrome view-source z znacznikami <td class="line-content">
+        view_source_html = """
+        <html><body><div class="source-container"><table><tbody>
+            <tr><td class="line-number" value="1"></td><td class="line-content">&lt;div class="container-message-content"&gt;Treść z view source&lt;/div&gt;</td></tr>
+        </tbody></table></div></body></html>
+        """
+        assert parse_message_details_html(view_source_html) == "Treść z view source"
+
+        # Sprawdzenie na realnym pliku od użytkownika jeśli istnieje
+        root_file = Path(__file__).parent.parent / "wiadomosci_1_5_3704610_f0.html"
+        if root_file.exists():
+            body = parse_message_details_html(root_file.read_text(encoding="utf-8"))
+            assert "Szanowni Państwo" in body
+            assert "obiad" in body.lower()
 
 
 class TestAnnouncementsParser:

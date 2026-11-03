@@ -37,11 +37,23 @@ DEFAULT_LESSON_TIMES: dict[int, tuple[str, str]] = {
 }
 
 
-def ensure_soup(html_or_soup: str | BeautifulSoup) -> BeautifulSoup:
-    """Zwraca obiekt BeautifulSoup z przekazanego ciągu znaków lub istniejącego soup."""
+def ensure_soup(html_or_soup: str | bytes | BeautifulSoup) -> BeautifulSoup:
+    """Zwraca obiekt BeautifulSoup z przekazanego ciągu znaków, bajtów lub istniejącego soup."""
     if isinstance(html_or_soup, BeautifulSoup):
-        return html_or_soup
-    return BeautifulSoup(str(html_or_soup), "html.parser")
+        soup = html_or_soup
+    else:
+        if isinstance(html_or_soup, (bytes, bytearray)):
+            html_text = html_or_soup.decode("utf-8", errors="replace")
+        else:
+            html_text = str(html_or_soup)
+        soup = BeautifulSoup(html_text, "html.parser")
+
+    # Automatyczne odpakowanie zrzutów "Wyświetl źródło" (Chromium / Firefox view-source dump)
+    if soup.find('td', class_='line-content'):
+        extracted_text = '\n'.join(c.get_text() for c in soup.find_all('td', class_='line-content'))
+        soup = BeautifulSoup(extracted_text, "html.parser")
+
+    return soup
 
 
 def safe_get_text(element: Tag | None, default: str = "", strip: bool = True, separator: str = " ") -> str:
@@ -281,6 +293,24 @@ def parse_messages_html(
 
     messages.sort(key=lambda m: m.datetime, reverse=True)
     return messages
+
+
+def parse_message_details_html(html_or_soup: str | BeautifulSoup) -> str:
+    """
+    Defensywnie parsuje stronę podglądu pojedynczej wiadomości (/wiadomosci/1/5/... lub /wiadomosci/szczegoly/...).
+    Wyciąga treść wiadomości, normalizując kontenery. Działa również na zrzutach view-source.
+    """
+    soup = ensure_soup(html_or_soup)
+    message_body_elem = (
+        soup.find('div', attrs={'class': 'container-message-content'})
+        or soup.select_one('.container-message-content')
+        or soup.find('div', id='message-content')
+        or soup.find('div', attrs={'class': 'message-content'})
+        or soup.select_one('table.container-message tr:last-child td')
+    )
+    if not message_body_elem:
+        return ""
+    return message_body_elem.get_text().strip()
 
 
 def parse_announcements_html(
@@ -841,11 +871,6 @@ def parse_attendance_html(
     Zwraca słownik z kluczami 'entries' (AttendanceEntry) oraz 'periods_summary' (AttendancePeriodSummary).
     """
     soup = ensure_soup(html_or_soup)
-
-    # Obsługa zrzutów źródeł stron (Chromium / Firefox view-source dump)
-    if soup.find('td', class_='line-content'):
-        extracted_text = '\n'.join(c.get_text() for c in soup.find_all('td', class_='line-content'))
-        soup = ensure_soup(extracted_text)
 
     table = soup.find('table', class_='big')
     if not table:

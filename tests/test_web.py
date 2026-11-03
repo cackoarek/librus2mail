@@ -1669,12 +1669,13 @@ class TestWebDashboard(unittest.TestCase):
         self.assertIn('id="ogloszenie-1"', html)
         self.assertIn('id="wiadomosc-1"', html)
 
-        # 4. Weryfikacja klikalnych linków do ogłoszeń na pulpicie (dashboard)
+        # 4. Weryfikacja klikalnych linków do ogłoszeń i ocen na pulpicie (dashboard)
         res_dash = client.get('/')
         self.assertEqual(res_dash.status_code, 200)
         dash_html = res_dash.data.decode('utf-8')
         self.assertIn('/wiadomosci#ogloszenie-1', dash_html)
         self.assertIn('/wiadomosci#sekcja-ogloszenia', dash_html)
+        self.assertIn('/przedmiot/Matematyka', dash_html)
 
     def test_api_grade_update_and_reset(self):
         """Testuje endpointy edycji oceny/wagi oraz przywracania oryginalnych wartości."""

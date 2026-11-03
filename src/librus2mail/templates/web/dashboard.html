@@ -797,10 +797,12 @@
             {% if data.recent_grades %}
                 <div class="divide-y divide-slate-100">
                     {% for g in data.recent_grades %}
-                    <div class="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
-                        <div class="flex items-center gap-3.5">
+                    <a href="{{ url_for('web.subject_detail_view', subject_name=g.subject) if g.subject else url_for('web.grades_view') }}"
+                       class="p-4 flex items-center justify-between hover:bg-indigo-50/40 transition-all group cursor-pointer"
+                       title="Przejdź do pełnej analizy ocen z przedmiotu: {{ g.subject }}">
+                        <div class="flex items-center gap-3.5 min-w-0">
                             <!-- Odznaka oceny -->
-                            <div class="w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-base shadow-sm
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-base shadow-sm shrink-0 group-hover:scale-105 transition-transform
                                 {% if g.grade in ['5', '6', '5+', '6-'] %} bg-emerald-500 text-white
                                 {% elif g.grade in ['4', '4+', '4-'] %} bg-sky-500 text-white
                                 {% elif g.grade in ['3', '3+', '3-'] %} bg-amber-500 text-white
@@ -809,9 +811,9 @@
                                 {{ g.grade }}
                             </div>
 
-                            <div>
-                                <div class="font-bold text-sm text-slate-900 flex items-center gap-2">
-                                    <span>{{ g.subject }}</span>
+                            <div class="min-w-0">
+                                <div class="font-bold text-sm text-slate-900 flex items-center gap-2 flex-wrap">
+                                    <span class="group-hover:text-indigo-700 transition-colors">{{ g.subject }}</span>
                                     {% if g.category and g.category != '-' %}
                                     <span class="text-[11px] font-semibold text-slate-500 px-2 py-0.5 bg-slate-100 rounded-md">
                                         {{ g.category }}
@@ -827,10 +829,15 @@
                             </div>
                         </div>
 
-                        <div class="text-right text-xs text-slate-400 hidden sm:block">
-                            {{ g.teacher or '' }}
+                        <div class="flex items-center gap-3 shrink-0 ml-3">
+                            <div class="text-right text-xs text-slate-400 hidden sm:block">
+                                {{ g.teacher or '' }}
+                            </div>
+                            <span class="text-xs font-bold text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 whitespace-nowrap">
+                                <span class="hidden md:inline text-[11px]">Analiza</span> ➔
+                            </span>
                         </div>
-                    </div>
+                    </a>
                     {% endfor %}
                 </div>
             {% else %}

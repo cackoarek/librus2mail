@@ -825,7 +825,8 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-slate-700">
                     {% for g in analytics.table_grades %}
-                    <tr onclick="openEditGradeModal({
+                    <tr id="grade-{{ g.id or loop.index }}"
+                        onclick="openEditGradeModal({
                             id: '{{ g.id }}',
                             subject: '{{ analytics.subject|e }}',
                             grade: '{{ g.grade|e }}',
@@ -837,7 +838,7 @@
                             original_grade: '{{ g.original_grade or ''|e }}',
                             original_weight: '{{ g.original_weight or ''|e }}'
                         })"
-                        class="hover:bg-slate-50 transition-colors cursor-pointer group {{ 'bg-amber-50/20' if g.is_custom else '' }}"
+                        class="hover:bg-slate-50 transition-colors cursor-pointer group scroll-mt-24 target:bg-indigo-50/70 target:ring-2 target:ring-indigo-400 {{ 'bg-amber-50/20' if g.is_custom else '' }}"
                         title="Kliknij, aby edytować ocenę lub wagę{% if g.is_custom %} (skorygowana ręcznie, oryg. waga: {{ g.original_weight }}){% endif %}">
                         <td class="py-3 px-3 font-semibold text-slate-600 whitespace-nowrap">
                             {{ g.date_raw or g.date }}

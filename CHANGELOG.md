@@ -9,6 +9,20 @@ Projekt stosuje [Semantic Versioning](https://semver.org/lang/pl/).
 
 ## [Unreleased]
 
+### Dodane
+- **Bezpośrednia nawigacja z ostatnich ocen do pełnej analizy przedmiotu na pulpicie**:
+  - W module *„Ostatnio wystawione oceny”* na pulpicie rodzica ([`dashboard.html`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/templates/web/dashboard.html)) każda pozycja oceny stała się klikalnym odnośnikiem prowadzącym wprost do dedykowanego widoku analizy przedmiotu ([`subject_detail_view`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/web/app.py)).
+  - Rodzic może jednym kliknięciem sprawdzić pozostałe oceny cząstkowe ucznia z danego przedmiotu, średnią ważoną, trajektorię, cele podwyższenia stopnia oraz scenariusze ryzyka.
+  - Dodano interaktywną oprawę wizualną: podświetlenie wiersza, mikroanimację odznaki stopnia przy najechaniu myszą oraz dynamiczny indykator `Analiza ➔`.
+  - W tabeli ocen widoku szczegółowego przedmiotu ([`subject_detail.html`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/templates/web/subject_detail.html)) dodano kotwice `id="grade-{{ g.id or loop.index }}"` ze wsparciem dla pseudoklasy `:target`.
+- **Interaktywne odnośniki w sekcji „Ogłoszenia szkolne” na pulpicie i precyzyjne przewijanie**:
+  - Kafelki ogłoszeń szkolnych na pulpicie ([`dashboard.html`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/templates/web/dashboard.html)) przekształcono w bezpośrednie odnośniki prowadzące do zakładki *Wiadomości i Ogłoszenia* z natychmiastowym przewinięciem do klikniętego komunikatu (`/wiadomosci#ogloszenie-{{ loop.index }}`).
+  - W szablonie [`messages.html`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/templates/web/messages.html) wprowadzono kotwice `id="ogloszenie-{{ loop.index }}"` oraz `id="wiadomosc-{{ loop.index }}"` z marginesem przewijania `scroll-mt-24` i bursztynowym podświetleniem celu (`target:ring-2 target:ring-amber-400`).
+  - Przycisk *„Wszystkie (X) ➔”* w module ogłoszeń na pulpicie przewija teraz bezpośrednio do kolumny ogłoszeń (`#sekcja-ogloszenia`).
+- **Automatyczne odpakowywanie zrzutów „Wyświetl źródło” (view-source) i funkcja `parse_message_details_html`**:
+  - Rozszerzono funkcję [`ensure_soup`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/dom_parser.py) o automatyczne wykrywanie i odpakowywanie plików HTML zapisanych w przeglądarkach w trybie *„Wyświetl źródło strony”* (`view-source:` z kontenerami `<td class="line-content">`), a także bezpieczną obsługę danych wejściowych w formacie `bytes`.
+  - Wprowadzono funkcję [`parse_message_details_html`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/dom_parser.py) ujednolicającą ekstrakcję treści pojedynczych wiadomości i zintegrowano ją z klientem [`librus.py`](file:///home/acacko/PycharmProjects/librus2mail/src/librus2mail/librus.py).
+
 ---
 
 ## [2.10.0] – 2026-11-02

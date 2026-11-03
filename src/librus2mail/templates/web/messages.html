@@ -100,7 +100,7 @@
         {% else %}
         <div class="space-y-3">
             {% for m in data.messages %}
-            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
+            <div id="wiadomosc-{{ loop.index }}" class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all scroll-mt-24 target:ring-2 target:ring-indigo-400 target:bg-indigo-50/30">
                 <div class="flex items-start justify-between gap-3">
                     <div class="font-extrabold text-sm text-slate-900 leading-snug">
                         {{ m.title or 'Wiadomość ze szkoły' }}
@@ -147,7 +147,7 @@
         {% else %}
         <div class="space-y-3">
             {% for n in data.notifications %}
-            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
+            <div id="ogloszenie-{{ loop.index }}" class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-300 transition-all scroll-mt-24 target:ring-2 target:ring-amber-400 target:bg-amber-50/30">
                 <div class="flex items-start justify-between gap-3">
                     <div class="font-extrabold text-sm text-slate-900 leading-snug">
                         {{ n.title or 'Ogłoszenie szkolne' }}

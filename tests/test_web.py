@@ -1665,6 +1665,17 @@ class TestWebDashboard(unittest.TestCase):
         self.assertLess(pos_notif_new, pos_notif_mid, "Najnowsze ogłoszenie powinno pojawić się przed średnim")
         self.assertLess(pos_notif_mid, pos_notif_old, "Średnie ogłoszenie powinno pojawić się przed najstarszym")
 
+        # 3. Weryfikacja kotwic id="ogloszenie-X" i id="wiadomosc-X"
+        self.assertIn('id="ogloszenie-1"', html)
+        self.assertIn('id="wiadomosc-1"', html)
+
+        # 4. Weryfikacja klikalnych linków do ogłoszeń na pulpicie (dashboard)
+        res_dash = client.get('/')
+        self.assertEqual(res_dash.status_code, 200)
+        dash_html = res_dash.data.decode('utf-8')
+        self.assertIn('/wiadomosci#ogloszenie-1', dash_html)
+        self.assertIn('/wiadomosci#sekcja-ogloszenia', dash_html)
+
     def test_api_grade_update_and_reset(self):
         """Testuje endpointy edycji oceny/wagi oraz przywracania oryginalnych wartości."""
         app = create_app(config_path=self.config_path, storage_dir=self.storage_dir, no_auth=True)
